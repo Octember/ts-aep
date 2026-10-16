@@ -4,6 +4,7 @@
 // representable in both, which is what lets `surrogateescape` round-trip.
 
 import { UnicodeDecodeError, UnicodeEncodeError, LookupError } from "./errors.ts";
+import { CP1252, MAC_ROMAN } from "./codepages.ts";
 
 export type Errors = "strict" | "surrogateescape" | "ignore" | "replace";
 
@@ -15,7 +16,7 @@ function norm(encoding: string): string {
   if (e === "utf-16-le" || e === "utf-16le") return "utf-16-le";
   if (e === "utf-16-be" || e === "utf-16be") return "utf-16-be";
   if (e === "utf-16") return "utf-16";
-  if (e === "mac-roman" || e === "macroman") return "mac-roman";
+  if (e === "mac-roman" || e === "macroman" || e === "mac") return "mac-roman";
   if (e === "cp1252" || e === "windows-1252") return "cp1252";
   return e;
 }
@@ -137,18 +138,18 @@ function encode_utf8(text: string, errors: Errors): Uint8Array {
   return Uint8Array.from(out);
 }
 
-function decode_single_byte(data: Uint8Array, errors: Errors, limit: number, enc: string, table?: string): string {
+function decode_single_byte(data: Uint8Array, errors: Errors, limit: number, enc: string, table?: readonly number[]): string {
   const out: string[] = [];
   for (let i = 0; i < data.length; i++) {
     const b = data[i];
     if (b < limit) out.push(String.fromCharCode(b));
-    else if (table) out.push(table[b - 0x80]);
+    else if (table && table[b - 0x80] >= 0) out.push(String.fromCharCode(table[b - 0x80]));
     else bad_byte(out, b, errors, enc, i);
   }
   return out.join("");
 }
 
-function encode_single_byte(text: string, errors: Errors, limit: number, enc: string, table?: string): Uint8Array {
+function encode_single_byte(text: string, errors: Errors, limit: number, enc: string, table?: readonly number[]): Uint8Array {
   const out: number[] = [];
   for (let i = 0; i < text.length; i++) {
     const c = text.charCodeAt(i);
@@ -156,7 +157,7 @@ function encode_single_byte(text: string, errors: Errors, limit: number, enc: st
       out.push(c);
       continue;
     }
-    const t = table ? table.indexOf(text[i]) : -1;
+    const t = table ? table.indexOf(c) : -1;
     if (t >= 0) {
       out.push(0x80 + t);
       continue;
@@ -166,14 +167,11 @@ function encode_single_byte(text: string, errors: Errors, limit: number, enc: st
     else if (errors === "replace") out.push(0x3f);
     else
       throw new UnicodeEncodeError(
-        `'${enc}' codec can't encode character '\\u${c.toString(16).padStart(4, "0")}' in position ${i}: ordinal not in range(${limit})`,
+        `'${enc}' codec can't encode character '\\u${c.toString(16).padStart(4, "0")}' in position ${i}: ${limit === 0x80 && !table ? "ordinal not in range(128)" : "character maps to <undefined>"}`,
       );
   }
   return Uint8Array.from(out);
 }
-
-const MAC_ROMAN =
-  "ÄÅÇÉÑÖÜáàâäãåçéèêëíìîïñóòôöõúùûü†°¢£§•¶ß®©™´¨≠ÆØ∞±≤≥¥µ∂∑∏π∫ªºΩæø¿¡¬√ƒ≈∆«»… ÀÃÕŒœ–—“”‘’÷◊ÿŸ⁄€‹›ﬁﬂ‡·‚„‰ÂÊÁËÈÍÎÏÌÓÔÒÚÛÙıˆ˜¯˘˙˚¸˝˛ˇ";
 
 function decode_utf16(data: Uint8Array, errors: Errors, le: boolean): string {
   if (data.length % 2 && errors === "strict") {
@@ -206,9 +204,9 @@ export function decode(data: Uint8Array, encoding = "utf-8", errors: Errors = "s
     case "latin-1":
       return decode_single_byte(data, errors, 0x100, "latin-1");
     case "mac-roman":
-      return decode_single_byte(data, errors, 0x80, "mac-roman", MAC_ROMAN);
+      return decode_single_byte(data, errors, 0x80, "charmap", MAC_ROMAN);
     case "cp1252":
-      return new TextDecoder("windows-1252").decode(data);
+      return decode_single_byte(data, errors, 0x80, "charmap", CP1252);
     case "utf-16-le":
       return decode_utf16(data, errors, true);
     case "utf-16-be":
@@ -233,7 +231,9 @@ export function encode(text: string, encoding = "utf-8", errors: Errors = "stric
     case "latin-1":
       return encode_single_byte(text, errors, 0x100, "latin-1");
     case "mac-roman":
-      return encode_single_byte(text, errors, 0x80, "mac-roman", MAC_ROMAN);
+      return encode_single_byte(text, errors, 0x80, "charmap", MAC_ROMAN);
+    case "cp1252":
+      return encode_single_byte(text, errors, 0x80, "charmap", CP1252);
     case "utf-16-le":
       return encode_utf16(text, true);
     case "utf-16-be":

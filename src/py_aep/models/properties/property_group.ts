@@ -184,7 +184,7 @@ export function _set_effect_instance_name(sspc: ListChunk, name: string): void {
   if (tdgp == null) return;
   for (const [i, inner] of tdgp.chunks.entries()) {
     if (inner.chunk_type === "tdsn") {
-      tdgp.chunks[i] = TdsnChunk.new(name);
+      tdgp.chunks[i] = TdsnChunk.new_(name);
       return;
     }
   }
@@ -490,7 +490,7 @@ export class PropertyGroup extends PropertyBase {
     _tdsb._enable_flags = enable_flags;
     // AE writes the unnamed sentinel; the display name resolves
     // from auto_name on the model.
-    const tdsn = TdsnChunk.new(TDSN_SENTINEL, { synthetic });
+    const tdsn = TdsnChunk.new_(TDSN_SENTINEL, { synthetic });
     const name_utf8 = tdsn.utf8;
     const group_end = new TdmnChunk({ value: "ADBE Group End", synthetic });
     const _tdgp = new ListChunk({
@@ -1024,7 +1024,7 @@ export class PropertyGroup extends PropertyBase {
       }
     }
     // AE stores the axis display name in a vfdn sibling after the tdbs.
-    const vfdn = VfdnChunk.new(`Font Axis ${axis.name}`);
+    const vfdn = VfdnChunk.new_(`Font Axis ${axis.name}`);
     py_assert(this._tdgp != null);
     const tdgp = this._tdgp as ListChunk;
     tdgp.chunks.splice(index_by_identity(tdgp.chunks, tdbs) + 1, 0, vfdn);
