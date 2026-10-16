@@ -15,7 +15,7 @@
 // tolerance options object of pyrt `approx`.
 
 import { describe, expect, test } from "bun:test";
-import { approx, raises, skip } from "../../src/pyrt/pytest.ts";
+import { approx, raises, skip, importorskip } from "../../src/pyrt/pytest.ts";
 import {
   NotImplementedError,
   Path,
@@ -35,16 +35,6 @@ import {
 import "../../src/py_aep/binary/_register.ts";
 import { parse_project } from "../conftest.ts";
 import { font_version_string } from "../../src/py_aep/svg/fonts.ts";
-
-// TODO(pyrt): pytest.importorskip has no shim in pytest.ts; local equivalent.
-function importorskip(name: string): boolean {
-  try {
-    require.resolve(name);
-    return true;
-  } catch {
-    return false;
-  }
-}
 
 const SAMPLES_DIR = new Path(import.meta.dir, "..", "..", "samples", "models", "layer");
 const GEOMETRY_AEP = SAMPLES_DIR.div("geometry_probe.aep");
@@ -67,10 +57,7 @@ function _skip_unless_fonts_match(layer: any): boolean {
   // TODO(port): uharfbuzz → harfbuzzjs (package.json pins 0.4.7). This check
   // only proves the package resolves; its shaping is not proven identical to
   // uharfbuzz, which the fixture was measured with.
-  if (!importorskip("harfbuzzjs")) {
-    skip("could not import uharfbuzz");
-    return true;
-  }
+  if (!importorskip("harfbuzzjs")) return true;
   const document = layer.text.__getitem__("ADBE Text Document").value;
   for (const font of document._fonts) {
     if (!py_eq(font_version_string(font.post_script_name), font.version)) {

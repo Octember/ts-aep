@@ -47,6 +47,7 @@ import {
   RuntimeError,
   ValueError,
   NotImplementedError,
+  json_loads,
 } from "../../../pyrt/index.ts";
 
 // NOTE(port): Python's `isinstance(x, bool) or isinstance(x, int)` accepts bools as ints.
@@ -185,15 +186,6 @@ export function _validate_for_format(
 // -- Clamp helpers for format-option-backed keys ----------------------------
 // Reading/writing through the module keeps _CLAMP_ACCESSORS free of
 // isinstance lambdas; every writer is a raw write (validation bypass).
-
-// TODO(pyrt): JSON objects decode to Maps (RULEBOOK: dict -> Map), recursively.
-export function _json_to_maps(v: any): any {
-  if (Array.isArray(v)) return v.map(_json_to_maps);
-  if (v !== null && typeof v === "object") {
-    return new Map(Object.entries(v).map(([k, x]): [string, any] => [k, _json_to_maps(x)]));
-  }
-  return v;
-}
 
 export function _xml_options_of(om: OutputModule, attr: string): any {
   const fo = om._format_options;
@@ -1300,16 +1292,7 @@ export class OutputModule {
     if (!py_bool(text)) {
       return new Map();
     }
-    // TODO(port): json.loads parity: Python also accepts NaN/Infinity literals and keeps big ints
-    // and int/float spelling exact; JSON.parse does not.
-    let data: any;
-    try {
-      data = _json_to_maps(JSON.parse(text));
-    } catch (e) {
-      if (!(e instanceof SyntaxError)) throw e;
-      // json.JSONDecodeError is a ValueError
-      throw new ValueError(e.message);
-    }
+    const data = json_loads(text);
     return data instanceof Map ? data : new Map();
   }
 

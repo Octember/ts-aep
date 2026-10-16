@@ -12,7 +12,6 @@
 import { FLOAT32_MAX } from "../binary/bin_utils.ts";
 import { AE_VERSION_RE, FORMAT_VERSIONS } from "../binary/item_chunks.ts";
 import {
-  OSError,
   Path,
   TypeError_,
   ValueError,
@@ -25,30 +24,12 @@ import {
   sorted,
   split,
   str,
+  FileExistsError,
+  type_name,
 } from "../../pyrt/index.ts";
 
 export type Validator = (value: any, instance?: any) => void;
 export type NumBound = number | ((instance: any) => number | null) | null;
-
-// TODO(pyrt): no `type(x).__name__` shim exists; best-effort names for the
-// types this module reports. Python tuples read here as "list" (both are JS
-// arrays) and int/float follows Number.isInteger (an int-valued float reads as
-// "int").
-export function type_name(value: any): string {
-  if (value == null) return "NoneType";
-  if (typeof value === "boolean") return "bool";
-  if (typeof value === "number") return Number.isInteger(value) ? "int" : "float";
-  if (typeof value === "string") return "str";
-  if (value instanceof Uint8Array) return "bytes";
-  if (Array.isArray(value)) return "list";
-  if (value instanceof Map) return "dict";
-  if (value instanceof Set) return "set";
-  return value.constructor?.name ?? "object";
-}
-
-// TODO(pyrt): `FileExistsError` is not in pyrt/errors.ts; local stand-in with
-// the same base class (OSError).
-export class FileExistsError extends OSError {}
 
 /** Return a validator that checks a numeric value.
  *
@@ -434,7 +415,6 @@ export function validate_ae_version(value: any, instance: any = null): void {
   if (!(typeof value === "string" || value instanceof String)) {
     throw new TypeError_(`expected a version string, got ${type_name(value)}`);
   }
-  // NOTE(port): AE_VERSION_RE (item_chunks.ts) emulates Python `$` with `(?=\n?$)`, so a trailing newline matches as in Python.
   const match = AE_VERSION_RE.exec(String(value));
   if (match == null) {
     throw new ValueError(

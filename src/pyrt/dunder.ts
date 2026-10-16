@@ -77,6 +77,9 @@ export function py_object<T extends object>(self: T): T {
       if (key === TARGET) return target;
       if (typeof key === "symbol" || key in target || !has_getattr) return Reflect.get(target, key, receiver);
       if (key === "then" || key === "toJSON" || key === "constructor") return undefined;
+      // Python looks special methods (`__bool__`, `__eq__`, `__len__`, ...) up on the type,
+      // never through `__getattr__`; pyrt probes them as property reads, so a miss is undefined.
+      if (key.length > 4 && key.startsWith("__") && key.endsWith("__")) return undefined;
       return (receiver as any).__getattr__(key);
     },
     set(target, key, value, receiver) {
@@ -110,4 +113,23 @@ export function object_getattr(self: any, name: string): any {
     throw new AttributeError(`'${target.constructor?.name}' object has no attribute '${name}'`);
   }
   return Reflect.get(target, name, self);
+}
+
+/**
+ * `obj.__dict__`: a per-instance `Map` of instance attributes that bypass
+ * descriptors (parse-time overrides that `ChunkField` / `CosField.__get__`
+ * read first). Stored as an own, non-enumerable `__dict__` property, so
+ * `deepcopy` copies it with the instance and `Object.assign` / spreads skip
+ * it; writable and configurable so a class field named `__dict__` may alias it.
+ */
+export function instance_dict(obj: any): Map<string, any> {
+  if (!Object.prototype.hasOwnProperty.call(obj, "__dict__")) {
+    Object.defineProperty(obj, "__dict__", {
+      value: new Map<string, any>(),
+      enumerable: false,
+      writable: true,
+      configurable: true,
+    });
+  }
+  return obj.__dict__;
 }

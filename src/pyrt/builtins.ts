@@ -1,6 +1,6 @@
 // Python builtins whose JS spelling differs in behavior, not just syntax.
 
-import { AttributeError, IndexError, KeyError, ValueError } from "./errors.ts";
+import { AttributeError, IndexError, KeyError, TypeError_, ValueError } from "./errors.ts";
 import { float_repr, PyFloat } from "./num.ts";
 
 /**
@@ -246,6 +246,9 @@ export function py_eq(a: any, b: any): boolean {
   return false;
 }
 
+// Not `str.isprintable()` (Py_UNICODE_ISPRINTABLE): other / separator categories except the space.
+const NON_PRINTABLE = /^[\p{Cc}\p{Cf}\p{Cs}\p{Co}\p{Cn}\p{Zl}\p{Zp}\p{Zs}]$/u;
+
 /** Python `repr(x)` for messages. */
 export function repr(x: any): string {
   if (x == null) return "None";
@@ -256,19 +259,20 @@ export function repr(x: any): string {
   if (typeof x === "string" || x instanceof String) {
     const s = String(x);
     const q = s.includes("'") && !s.includes('"') ? '"' : "'";
-    const body = s
-      .replace(/\\/g, "\\\\")
-      .replace(/\n/g, "\\n")
-      .replace(/\r/g, "\\r")
-      .replace(/\t/g, "\\t")
-      .replace(q === "'" ? /'/g : /"/g, `\\${q}`)
-      .replace(/[\x00-\x1f\x7f]/g, (c) => "\\x" + c.charCodeAt(0).toString(16).padStart(2, "0"))
-      .replace(/[\ud800-\udfff]/g, (c, i, all) => {
-        const code = c.charCodeAt(0);
-        const pair = code < 0xdc00 ? all.charCodeAt(i + 1) : all.charCodeAt(i - 1);
-        const paired = code < 0xdc00 ? pair >= 0xdc00 && pair <= 0xdfff : pair >= 0xd800 && pair <= 0xdbff;
-        return paired ? c : "\\u" + code.toString(16);
-      });
+    let body = "";
+    for (const ch of s) {
+      const cp = ch.codePointAt(0)!;
+      if (ch === "\\") body += "\\\\";
+      else if (ch === q) body += "\\" + q;
+      else if (ch === "\n") body += "\\n";
+      else if (ch === "\r") body += "\\r";
+      else if (ch === "\t") body += "\\t";
+      else if (cp < 0x20 || cp === 0x7f) body += "\\x" + cp.toString(16).padStart(2, "0");
+      else if (cp < 0x7f || !NON_PRINTABLE.test(ch)) body += ch;
+      else if (cp <= 0xff) body += "\\x" + cp.toString(16).padStart(2, "0");
+      else if (cp <= 0xffff) body += "\\u" + cp.toString(16).padStart(4, "0");
+      else body += "\\U" + cp.toString(16).padStart(8, "0");
+    }
     return q + body + q;
   }
   if (x instanceof Uint8Array) {
@@ -285,8 +289,74 @@ export function repr(x: any): string {
     return `b'${s}'`;
   }
   if (Array.isArray(x)) return `[${x.map(repr).join(", ")}]`;
+  if (x instanceof Map) return `{${[...x].map(([k, v]) => `${repr(k)}: ${repr(v)}`).join(", ")}}`;
+  if (x instanceof Set) return x.size ? `{${[...x].map(repr).join(", ")}}` : "set()";
   if (typeof x.__repr__ === "function") return x.__repr__();
   return String(x);
+}
+
+/**
+ * `type(x).__name__`. JS cannot tell a tuple from a list (both "list") or an
+ * int-valued float from an int unless it is a boxed `PyFloat`; class
+ * instances report their constructor name, which equals the Python class name.
+ */
+export function type_name(x: any): string {
+  if (x == null) return "NoneType";
+  if (typeof x === "boolean") return "bool";
+  if (x instanceof PyFloat) return "float";
+  if (typeof x === "number") return Number.isInteger(x) ? "int" : "float";
+  if (typeof x === "bigint") return "int";
+  if (typeof x === "string") return "str";
+  if (typeof x === "function") return x.prototype && /^class\b/.test(Function.prototype.toString.call(x)) ? "type" : "function";
+  if (x instanceof Uint8Array) return "bytes";
+  if (Array.isArray(x)) return "list";
+  if (x instanceof Map) return "dict";
+  if (x instanceof Set) return "set";
+  return x.constructor?.name ?? "object";
+}
+
+/** `[x, ...] * n` (list repetition; `n <= 0` gives an empty list). */
+export function list_mul<T>(xs: readonly T[], n: number): T[] {
+  const out: T[] = [];
+  for (let i = 0; i < n; i++) out.push(...xs);
+  return out;
+}
+
+/**
+ * `mapping.items()` over the Mapping protocol: a `Map`'s entries, an
+ * object's own `items()`, or `keys()` + `__getitem__`.
+ */
+export function mapping_items(m: any): [any, any][] {
+  if (m instanceof Map) return [...m.entries()];
+  if (typeof m.items === "function") return [...m.items()];
+  if (typeof m.keys === "function" && typeof m.__getitem__ === "function") {
+    return [...m.keys()].map((k: any): [any, any] => [k, m.__getitem__(k)]);
+  }
+  throw new TypeError_(`'${type_name(m)}' object is not a mapping`);
+}
+
+/**
+ * `dict(arg)`: a new `Map` from a mapping (`Map`, an object with `keys()` /
+ * `items()`) or an iterable of key/value pairs, in iteration order.
+ */
+export function dict<K = any, V = any>(arg?: any): Map<K, V> {
+  if (arg == null) return new Map();
+  if (arg instanceof Map) return new Map(arg);
+  // CPython: anything with `keys()` is a mapping, read through `keys()` + `__getitem__`.
+  if (typeof arg.keys === "function" && typeof arg.__getitem__ === "function") {
+    return new Map([...arg.keys()].map((k: any): [any, any] => [k, arg.__getitem__(k)]));
+  }
+  const out = new Map<K, V>();
+  let i = 0;
+  for (const pair of arg as Iterable<any>) {
+    const kv = [...pair];
+    if (kv.length !== 2) {
+      throw new ValueError(`dictionary update sequence element #${i} has length ${kv.length}; 2 is required`);
+    }
+    out.set(kv[0], kv[1]);
+    i++;
+  }
+  return out;
 }
 
 /** Python `str(x)` for messages. */
@@ -322,15 +392,29 @@ export function rstrip(s: string, chars?: string | null): string {
   return s.slice(0, e);
 }
 
+// One `str.isspace()` character (all are in the BMP).
+const PY_WS = /^[\t\n\v\f\r\x1c-\x20\x85\xa0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000]$/;
+
 /** `s.split(sep, maxsplit)`; `sep=None` splits on whitespace runs. */
 export function split(s: string, sep?: string | null, maxsplit = -1): string[] {
   if (sep == null) {
-    const parts = s.trim().split(/\s+/u).filter(Boolean);
-    if (maxsplit < 0 || parts.length <= maxsplit + 1) return parts;
-    const head = parts.slice(0, maxsplit);
-    let rest = s.trim();
-    for (const h of head) rest = rest.slice(rest.indexOf(h) + h.length).replace(/^\s+/u, "");
-    return [...head, rest];
+    // Runs of str.isspace() characters separate fields; a maxsplit remainder keeps its trailing whitespace.
+    const out: string[] = [];
+    const n = s.length;
+    let i = 0;
+    while (i < n) {
+      while (i < n && PY_WS.test(s[i])) i++;
+      if (i === n) break;
+      if (maxsplit >= 0 && out.length === maxsplit) {
+        out.push(s.slice(i));
+        break;
+      }
+      let j = i;
+      while (j < n && !PY_WS.test(s[j])) j++;
+      out.push(s.slice(i, j));
+      i = j;
+    }
+    return out;
   }
   if (sep === "") throw new ValueError("empty separator");
   const parts = s.split(sep);

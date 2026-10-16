@@ -10,11 +10,6 @@ import { CurvesArbpChunk } from "../../src/py_aep/binary/property_chunks.ts";
 import { to_dict } from "../../src/py_aep/cli/validate.ts";
 import { CURVES_CHANNELS, Curves } from "../../src/py_aep/models/properties/curves.ts";
 
-// NOTE(port): struct.pack_into is not in pyrt/struct.ts; this helper writes the struct.pack bytes at the offset, same as pack_into for in-range writes (tests never overflow).
-function pack_into(format: string, buf: Uint8Array, offset: number, ...values: any[]): void {
-  buf.set(struct.pack(format, ...values), offset);
-}
-
 /** A Curves aRbp as After Effects writes it, the maps left identity. */
 function _blob(
   points: Map<string, number[][]>,
@@ -23,19 +18,19 @@ function _blob(
   selected = -1,
 ): Uint8Array {
   const out = new Uint8Array(4 + 5 * 256 + 5 * 72);
-  pack_into(">HH", out, 0, 1, mode);
+  struct.pack_into(">HH", out, 0, 1, mode);
   for (const [c, name] of CURVES_CHANNELS.entries()) {
     const pts = dict_get(points, name, [[0, 0], [255, 255]]);
     out.set(Uint8Array.from(range(256)), 4 + 256 * c);
     const offset = 4 + 5 * 256 + 72 * c;
     for (const [i, [x, y]] of pts.entries()) {
-      pack_into(">hh", out, offset + 4 * i, x, y);
+      struct.pack_into(">hh", out, offset + 4 * i, x, y);
     }
     if (stale) {
       // After Effects leaves old points past the count.
-      pack_into(">hh", out, offset + 4 * len(pts), 5440, 8193);
+      struct.pack_into(">hh", out, offset + 4 * len(pts), 5440, 8193);
     }
-    pack_into(">Ii", out, offset + 64, len(pts), selected);
+    struct.pack_into(">Ii", out, offset + 64, len(pts), selected);
   }
   return new Uint8Array(out);
 }

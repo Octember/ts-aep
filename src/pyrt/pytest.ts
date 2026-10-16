@@ -6,6 +6,8 @@
 //   @pytest.mark.parametrize("a,b", rows)   test.each(rows)("test_x[%#]", (a, b) => ...)
 //   @pytest.mark.skipif(cond, reason=...)   test.skipIf(cond)("test_x", ...)
 //   pytest.skip("why") inside a test        return skip("why")
+//   pytest.fail("why")                      fail("why")
+//   pytest.importorskip("mod")              if (!importorskip("npm-mod")) return
 //   with pytest.raises(E, match="re"):      raises(E, () => { ... }, "re")
 //   with pytest.warns(UserWarning, match=)  warns(() => { ... }, "re")
 //   x == pytest.approx(y, abs=..., rel=...) expect(approx(x, y, { abs, rel })).toBe(true)
@@ -15,6 +17,7 @@
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as nodepath from "node:path";
+import { createRequire } from "node:module";
 import { py_eq } from "./builtins.ts";
 import { warnings } from "./errors.ts";
 import { Path } from "./pathlib.ts";
@@ -63,6 +66,35 @@ export class Skipped extends Error {}
 /** `pytest.skip(reason)` - throw-free: `return skip("why")` from the test body. */
 export function skip(reason = ""): void {
   console.log(`skipped: ${reason}`);
+}
+
+/** `pytest.fail.Exception` */
+export class Failed extends Error {
+  constructor(message = "") {
+    super(message);
+    this.name = "Failed";
+  }
+}
+
+/** `pytest.fail(reason)`: fail the running test. */
+export function fail(reason = ""): never {
+  throw new Failed(reason);
+}
+
+const _require = createRequire(import.meta.url);
+
+/**
+ * `pytest.importorskip(name)`: whether the (npm) module resolves; when it
+ * does not, reports the skip like `skip()` and the caller returns early.
+ */
+export function importorskip(name: string): boolean {
+  try {
+    _require.resolve(name);
+    return true;
+  } catch {
+    skip(`could not import '${name}'`);
+    return false;
+  }
 }
 
 export function make_tmp_path(): Path {

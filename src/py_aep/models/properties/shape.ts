@@ -2,7 +2,6 @@
 
 import {
   ValueError,
-  ZeroDivisionError,
   TypeError_,
   py_assert,
   py_bool,
@@ -12,6 +11,7 @@ import {
   max,
   zip,
   descriptor,
+  truediv,
 } from "../../../pyrt/index.ts";
 import { ShapePoint } from "../../binary/ldat_chunks.ts";
 import { ShphChunk, TensionItem } from "../../binary/misc_chunks.ts";
@@ -23,12 +23,6 @@ import type { AVLayer } from "../layers/av_layer.ts";
 import type { Layer } from "../layers/layer.ts";
 import type { MaskPropertyGroup } from "./mask_property_group.ts";
 import type { Property } from "./property.ts";
-
-// TODO(pyrt): true division that raises ZeroDivisionError like CPython float `/`.
-export function _truediv(a: number, b: number): number {
-  if (b === 0) throw new ZeroDivisionError("float division by zero");
-  return a / b;
-}
 
 export function _interp_transform(raw: number): number {
   /** Map binary interpolation (0=non-Hold, 2=Hold) to ExtendScript (0/1). */
@@ -271,9 +265,9 @@ export class Shape {
     }
     const mask_size = this._is_mask ? this._comp_size : null;
     const [sx, sy] = mask_size ?? [1.0, 1.0];
-    const verts = vertices.map(([x, y]) => [_truediv(x, sx), _truediv(y, sy)]);
-    const ins = zip(verts, in_tangents).map(([[vx, vy], [x, y]]) => [vx + _truediv(x, sx), vy + _truediv(y, sy)]);
-    const outs = zip(verts, out_tangents).map(([[vx, vy], [x, y]]) => [vx + _truediv(x, sx), vy + _truediv(y, sy)]);
+    const verts = vertices.map(([x, y]) => [truediv(x, sx), truediv(y, sy)]);
+    const ins = zip(verts, in_tangents).map(([[vx, vy], [x, y]]) => [vx + truediv(x, sx), vy + truediv(y, sy)]);
+    const outs = zip(verts, out_tangents).map(([[vx, vy], [x, y]]) => [vx + truediv(x, sx), vy + truediv(y, sy)]);
     for (const pt of [...ins, ...outs]) {
       // A vertex plus its tangent can overflow even when both fit.
       validate_f4_point(pt);
@@ -371,8 +365,8 @@ export class Shape {
       vertices,
       this.closed,
       tensions,
-      _truediv(prop._tdb4.pixel_aspect, width),
-      _truediv(1.0, height),
+      truediv(prop._tdb4.pixel_aspect, width),
+      truediv(1.0, height),
     );
   }
 
@@ -418,8 +412,8 @@ export class Shape {
     py_assert(shph != null);
     const dx = shph.bottom_right_x - shph.top_left_x;
     const dy = shph.bottom_right_y - shph.top_left_y;
-    const nx = dx !== 0 ? _truediv(x - shph.top_left_x, dx) : 0.0;
-    const ny = dy !== 0 ? _truediv(y - shph.top_left_y, dy) : 0.0;
+    const nx = dx !== 0 ? truediv(x - shph.top_left_x, dx) : 0.0;
+    const ny = dy !== 0 ? truediv(y - shph.top_left_y, dy) : 0.0;
     return [nx, ny];
   }
 

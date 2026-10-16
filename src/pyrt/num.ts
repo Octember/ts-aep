@@ -54,6 +54,21 @@ export function unbox<T>(x: T): T extends PyFloat ? number : T {
   return (x instanceof PyFloat ? x.value : x) as any;
 }
 
+/**
+ * `a / b` (true division) raising `ZeroDivisionError` like CPython 3.12:
+ * "float division by zero" when an operand is a float, "division by zero"
+ * for int / int. JS cannot see int-ness of an integral number, so the caller
+ * states it: `operands` is `"float"` (default) or `"int"`; a boxed `PyFloat`
+ * operand always counts as float.
+ */
+export function truediv(a: number | PyFloat, b: number | PyFloat, operands: "float" | "int" = "float"): number {
+  const is_float = operands === "float" || a instanceof PyFloat || b instanceof PyFloat;
+  const x = unbox(a);
+  const y = unbox(b);
+  if (y === 0) throw new ZeroDivisionError(is_float ? "float division by zero" : "division by zero");
+  return x / y;
+}
+
 /** `a // b` (floor division; ZeroDivisionError on 0). */
 export function floordiv(a: number, b: number): number {
   if (b === 0) throw new ZeroDivisionError("division by zero");
@@ -86,33 +101,127 @@ export function divmod(a: number, b: number): [number, number] {
   return [floordiv(a, b), mod(a, b)];
 }
 
-/** `int(x)` for a float: truncate toward zero; raises like Python on nan/inf. */
-export function int(x: number | string | boolean | bigint | PyFloat, base = 10): number {
+// `str.isspace()` characters (CPython's Py_UNICODE_ISSPACE).
+const PY_SPACE = /[\t\n\v\f\r\x1c-\x20\x85\xa0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000]/u;
+const ND = /\p{Nd}/u;
+
+/** Digit value of a Unicode decimal digit (Nd digits come in runs of ten from zero). */
+function nd_value(cp: number): number {
+  let start = cp;
+  while (ND.test(String.fromCodePoint(start - 1))) start--;
+  return (cp - start) % 10;
+}
+
+/**
+ * `_PyUnicode_TransformDecimalAndSpaceToASCII`: Unicode whitespace becomes a
+ * space and Unicode decimal digits their ASCII digit; any other non-ASCII
+ * character becomes `?` (always invalid downstream).
+ */
+function to_ascii_number(s: string): string {
+  let out = "";
+  for (const ch of s) {
+    const cp = ch.codePointAt(0)!;
+    if (cp < 128) out += PY_SPACE.test(ch) ? " " : ch;
+    else if (PY_SPACE.test(ch)) out += " ";
+    else if (ND.test(ch)) out += String(nd_value(cp));
+    else out += "?";
+  }
+  return out;
+}
+
+/** Python's `%.200R`: the repr cut to 200 characters. */
+function repr200(x: string): string {
+  // Local repr of a str (num.ts cannot import builtins.ts: cycle).
+  const q = x.includes("'") && !x.includes('"') ? '"' : "'";
+  const body = x
+    .replace(/\\/g, "\\\\")
+    .replace(/\n/g, "\\n")
+    .replace(/\r/g, "\\r")
+    .replace(/\t/g, "\\t")
+    .replace(q === "'" ? /'/g : /"/g, `\\${q}`)
+    .replace(/[\x00-\x1f\x7f]/g, (c) => "\\x" + c.charCodeAt(0).toString(16).padStart(2, "0"));
+  return Array.from(q + body + q).slice(0, 200).join("");
+}
+
+const ASCII_WS = /^[ \t\n\v\f\r]+|[ \t\n\v\f\r]+$/g;
+const DIGITS = "0123456789abcdefghijklmnopqrstuvwxyz";
+
+/**
+ * `int(x)` / `int(text, base)`: floats truncate toward zero (raising like
+ * Python on nan/inf); text follows `PyLong_FromString` - surrounding
+ * whitespace, a sign, base prefixes (base 0, 2, 8, 16), single underscores
+ * between digits, and Unicode decimal digits (`int("\u0663")` is 3).
+ */
+export function int(x: number | string | boolean | bigint | PyFloat | String, base = 10): number {
   if (x instanceof PyFloat) x = x.value;
   if (typeof x === "boolean") return x ? 1 : 0;
   if (typeof x === "bigint") return Number(x);
-  if (typeof x === "string") {
-    const s = x.trim().replace(/_/g, "");
-    const ok = base === 16 ? /^[+-]?(0x)?[0-9a-f]+$/i : base === 10 ? /^[+-]?\d+$/ : /^[+-]?[0-9a-z]+$/i;
-    if (!ok.test(s)) throw new ValueError(`invalid literal for int() with base ${base}: '${x}'`);
-    return Number.parseInt(s, base);
+  if (typeof x === "string" || x instanceof String) {
+    const orig = String(x);
+    if (base !== 0 && (base < 2 || base > 36)) throw new ValueError("int() base must be >= 2 and <= 36, or 0");
+    const bad = (): never => {
+      throw new ValueError(`invalid literal for int() with base ${base}: ${repr200(orig)}`);
+    };
+    let t = to_ascii_number(orig).replace(ASCII_WS, "");
+    let neg = false;
+    if (t[0] === "+" || t[0] === "-") {
+      neg = t[0] === "-";
+      t = t.slice(1);
+    }
+    let b = base;
+    const p = t.slice(0, 2).toLowerCase();
+    const prefixed = (p === "0x" && (b === 16 || b === 0)) || (p === "0o" && (b === 8 || b === 0)) || (p === "0b" && (b === 2 || b === 0));
+    if (b === 0) {
+      if (prefixed) b = p === "0x" ? 16 : p === "0o" ? 8 : 2;
+      else {
+        b = 10;
+        // Base 0: a leading zero is only allowed for zero itself.
+        if (/^0/.test(t) && !/^0+(_0+)*$/.test(t)) bad();
+      }
+    }
+    if (prefixed) {
+      t = t.slice(2);
+      if (t[0] === "_") t = t.slice(1); // `0x_1f`
+    }
+    const valid = DIGITS.slice(0, b);
+    if (t === "" || t[0] === "_" || t.at(-1) === "_" || t.includes("__")) bad();
+    let v = 0n;
+    for (const ch of t.toLowerCase()) {
+      if (ch === "_") continue;
+      const d = valid.indexOf(ch);
+      if (d < 0) bad();
+      v = v * BigInt(b) + BigInt(d);
+    }
+    const n = Number(v);
+    return neg ? (n === 0 ? 0 : -n) : n;
   }
   if (Number.isNaN(x)) throw new ValueError("cannot convert float NaN to integer");
   if (!Number.isFinite(x)) throw new OverflowError("cannot convert float infinity to integer");
   return Math.trunc(x) || 0;
 }
 
-/** `float(text)` */
-export function float(x: string | number | boolean | PyFloat): number {
+/**
+ * `float(text)`: `PyFloat_FromString` - surrounding whitespace, Unicode
+ * decimal digits, underscores between digits, inf / infinity / nan.
+ */
+export function float(x: string | number | boolean | PyFloat | String): number {
   if (x instanceof PyFloat) return x.value;
   if (typeof x === "number") return x;
   if (typeof x === "boolean") return x ? 1 : 0;
-  const s = x.trim().toLowerCase().replace(/_/g, "");
-  if (/^[+-]?(inf|infinity)$/.test(s)) return s.startsWith("-") ? -Infinity : Infinity;
-  if (/^[+-]?nan$/.test(s)) return NaN;
-  if (!/^[+-]?(\d+\.?\d*|\.\d+)(e[+-]?\d+)?$/.test(s)) {
-    throw new ValueError(`could not convert string to float: '${x}'`);
+  const orig = String(x);
+  const bad = (): never => {
+    throw new ValueError(`could not convert string to float: ${repr200(orig)}`);
+  };
+  let s = to_ascii_number(orig).replace(ASCII_WS, "");
+  if (s.includes("_")) {
+    // Each underscore must sit between two digits.
+    if (!/^[^_]*$|^(?:[^_]|(?<=[0-9])_(?=[0-9]))*$/.test(s)) bad();
+    s = s.replace(/_/g, "");
   }
+  const l = s.toLowerCase();
+  if (/^[+-]?(inf|infinity)$/.test(l)) return l.startsWith("-") ? -Infinity : Infinity;
+  if (/^[+-]?nan$/.test(l)) return NaN;
+  if (!/^[+-]?([0-9]+\.?[0-9]*|\.[0-9]+)([eE][+-]?[0-9]+)?$/.test(s)) bad();
   return Number(s);
 }
 

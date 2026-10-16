@@ -2,7 +2,7 @@
 
 import { describe, expect, test } from "bun:test";
 import { approx, raises } from "../../src/pyrt/pytest.ts";
-import { AttributeError, KeyError, Path, len, py_eq } from "../../src/pyrt/index.ts";
+import { AttributeError, KeyError, Path, len, py_eq, dict } from "../../src/pyrt/index.ts";
 import "../../src/py_aep/binary/_register.ts";
 import { RayTracedRendererOptions, parse as parse_aep } from "../../src/py_aep/index.ts";
 import { EnvironmentLightShadowResolution, ShadowMapResolution } from "../../src/py_aep/enums/index.ts";
@@ -11,10 +11,6 @@ import { EnvironmentLightShadowResolution, ShadowMapResolution } from "../../src
 // A TS file's `import.meta.dir` is already its directory, so two `.parent` steps reach the root.
 const SAMPLES_DIR = new Path(import.meta.dir).parent.parent.div("samples", "models");
 const COMPOSITION_DIR = SAMPLES_DIR.div("composition");
-
-/** Python `dict(mapping)`: a Map of the mapping's keys to their values. */
-// TODO(pyrt): dict() of a Mapping has no pyrt shim; local helper for SettingsView.
-const dict_of = (m: any): Map<string, any> => new Map([...m.keys()].map((k: string) => [k, m.__getitem__(k)]));
 
 describe("TestRenderOptionEnums", () => {
   /** Index into AE's dropdown, confirmed at 0, 1 and 8. */
@@ -75,7 +71,7 @@ describe("TestRendererOptionsReads", () => {
     const comp = parse_aep(COMPOSITION_DIR.div("renderer_cinema_4d.aep")).project.compositions[0];
     const opts = comp.renderer_options as any;
 
-    expect(py_eq(dict_of(opts), new Map([["Quality", 25]]))).toBe(true);
+    expect(py_eq(dict(opts), new Map([["Quality", 25]]))).toBe(true);
     expect(py_eq([...opts.keys()], ["Quality"])).toBe(true);
     expect(py_eq(opts, new Map([["Quality", 25]]))).toBe(true);
   });
@@ -86,7 +82,7 @@ describe("TestRendererOptionsReads", () => {
     const opts = comp.renderer_options as any;
 
     expect(opts instanceof RayTracedRendererOptions).toBe(true);
-    expect(py_eq(dict_of(opts), new Map())).toBe(true);
+    expect(py_eq(dict(opts), new Map())).toBe(true);
     raises(KeyError, () => {
       opts.__setitem__("Quality", 1);
     });

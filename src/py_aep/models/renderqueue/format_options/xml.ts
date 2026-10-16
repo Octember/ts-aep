@@ -21,6 +21,7 @@ import {
   repr,
   round,
   str,
+  type_name,
 } from "../../../../pyrt/index.ts";
 import { CLAMP_DEPENDENTS } from "../../../data/output_module_rules.ts";
 import { AudioCodec, AudioInterleave, DnxResolution, MPEGAudioFormat, MPEGAudioLayer, MPEGMultiplexer, MPEGMuxStreamCompatibility, MPEGProfile, VideoCodec } from "../../../enums/index.ts";
@@ -70,19 +71,6 @@ export const _PARAM_RULE_KEYS = new Map<string, string>([
 ]);
 
 type ETElement = ET.Element;
-
-/** `type(value).__name__` for the TypeError message. */
-// NOTE(port): only feeds the TypeError message; covers every value kind this module's callers pass.
-export function _py_type_name(value: any): string {
-  if (value == null) return "NoneType";
-  if (typeof value === "boolean") return "bool";
-  if (typeof value === "string") return "str";
-  if (typeof value === "number") return Number.isInteger(value) ? "int" : "float";
-  if (value instanceof Uint8Array) return "bytes";
-  if (Array.isArray(value)) return "list";
-  if (value instanceof Map) return "dict";
-  return value.constructor?.name ?? "object";
-}
 
 /** `dict(*args).items()` for `ParamsDict.update`. */
 // NOTE(port): covers every `dict(*args)` source `update` receives: mapping, list of pairs, plain record.
@@ -440,7 +428,7 @@ export class XmlFormatOptions extends FormatOptionsBase {
     if (value == null) return;
     // TODO(port): JS cannot tell 2.0 from 2; an integral float is accepted where Python raises TypeError.
     if (!((typeof value === "number" && Number.isInteger(value)) || typeof value === "boolean")) {
-      throw new TypeError_(`expected an int or IntEnum for ${repr(key)}, got ${_py_type_name(value)}`);
+      throw new TypeError_(`expected an int or IntEnum for ${repr(key)}, got ${type_name(value)}`);
     }
     // int() normalizes IntEnum members so str() yields the numeric form.
     const int_value = int(value);

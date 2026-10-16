@@ -13,11 +13,6 @@ import { Tdb4Chunk, TdsbChunk } from "../../src/py_aep/binary/property_chunks.ts
 import { CHUNK_TYPES } from "../../src/py_aep/binary/registry.ts";
 import { BytesIO, b, getitem, len, py_assert, py_eq, struct } from "../../src/pyrt/index.ts";
 
-// NOTE(port): struct.pack_into has no pyrt shim; struct.pack + buf.set writes the same bytes in place (out-of-range raises RangeError instead of struct.error, unreachable in these tests).
-function pack_into(fmt: string, buf: Uint8Array, offset: number, ...values: any[]): void {
-  buf.set(struct.pack(fmt, ...values), offset);
-}
-
 function _read(chunk_type: string, body: Uint8Array): Chunk {
   const cls = getitem(CHUNK_TYPES, chunk_type);
   const chunk = cls.read(new BytesIO(body), len(body), { chunk_type });
@@ -73,8 +68,8 @@ describe("TestSignedCounters", () => {
 describe("TestLdtaDoubles", () => {
   test("test_layout", () => {
     const body = new Uint8Array(new LdtaChunk().tobytes());
-    pack_into(">dd", body, 0x70, 1.5, -2.25);
-    pack_into(">IIId", body, 0x8c, 1, 0x01000000, 1, 36.0);
+    struct.pack_into(">dd", body, 0x70, 1.5, -2.25);
+    struct.pack_into(">IIId", body, 0x8c, 1, 0x01000000, 1, 36.0);
     const chunk = _read("ldta", body);
     expect(chunk instanceof LdtaChunk).toBe(true);
     expect((chunk as LdtaChunk)._reserved_70).toBe(1.5);
@@ -96,10 +91,10 @@ describe("TestLdtaDoubles", () => {
 describe("TestTdb4Layout", () => {
   test("test_layout", () => {
     const body = new Uint8Array(new Tdb4Chunk().tobytes());
-    pack_into(">I", body, 0x48, 0x0000a800);
+    struct.pack_into(">I", body, 0x48, 0x0000a800);
     body[0x4c] = 3;
     body[0x4d] = 1;
-    pack_into(">dddd", body, 0x54, 0.0, 0.16666666667, 0.0, 0.5);
+    struct.pack_into(">dddd", body, 0x54, 0.0, 0.16666666667, 0.0, 0.5);
     const chunk = _read("tdb4", body);
     expect(chunk instanceof Tdb4Chunk).toBe(true);
     expect((chunk as Tdb4Chunk)._reserved_48).toBe(0xa800);

@@ -22,6 +22,7 @@ export class LookupError extends PyException {}
 /** Python's `OSError` (alias `IOError`). */
 export class OSError extends PyException {}
 export class FileNotFoundError extends OSError {}
+export class FileExistsError extends OSError {}
 export class UnicodeError extends ValueError {}
 export class UnicodeDecodeError extends UnicodeError {}
 export class UnicodeEncodeError extends UnicodeError {}
@@ -29,6 +30,19 @@ export class UnicodeEncodeError extends UnicodeError {}
 export class StructError extends PyException {}
 /** Python `SyntaxError` (raised by parsers such as the COS reader). */
 export class SyntaxError_ extends PyException {}
+
+/**
+ * `SystemExit` (a `BaseException`, so not a `PyException`: translated
+ * `except Exception` handlers do not catch it). `code` is the exit status.
+ */
+export class SystemExit extends Error {
+  declare code: number | string | null;
+  constructor(code: number | string | null = null) {
+    super(code == null ? "" : String(code));
+    this.name = "SystemExit";
+    this.code = code;
+  }
+}
 
 /** Python's `assert cond, msg`. */
 export function py_assert(cond: unknown, message = ""): asserts cond {

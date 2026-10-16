@@ -25,59 +25,9 @@
  *   are both zero, 1/3 at any other.
  */
 
-import { mod, zip } from "../../pyrt/index.ts";
+import { mod, zip, hypot } from "../../pyrt/index.ts";
 
 export const DEFAULT_TENSION = 1.0 / 3.0;
-
-function _decompose(v: number): [bigint, number] {
-  const buf = new DataView(new ArrayBuffer(8));
-  buf.setFloat64(0, Math.abs(v));
-  const bits = buf.getBigUint64(0);
-  const exp = Number((bits >> 52n) & 0x7ffn);
-  const frac = bits & ((1n << 52n) - 1n);
-  return exp === 0 ? [frac, -1074] : [frac | (1n << 52n), exp - 1075];
-}
-
-function _isqrt(n: bigint): bigint {
-  if (n < 2n) return n;
-  let x = 1n << BigInt((n.toString(2).length + 1) >> 1);
-  for (;;) {
-    const y = (x + n / x) >> 1n;
-    if (y >= x) return x;
-    x = y;
-  }
-}
-
-// TODO(pyrt): math.hypot for two args (needs a pyrt shim). CPython 3.12's
-// vector_norm is not guaranteed correctly rounded (compensated, <1 ulp, rare
-// 1-ulp misses); V8's Math.hypot is less accurate. This computes the correctly
-// rounded sqrt(x*x + y*y) exactly with BigInt, so it can differ from CPython
-// only on those rare inputs. Parity held on all 644 differential samples.
-function hypot(x: number, y: number): number {
-  if (!Number.isFinite(x) || !Number.isFinite(y)) {
-    return Math.hypot(x, y);
-  }
-  if (x === 0 && y === 0) return 0.0;
-  const [ma, ea] = _decompose(x);
-  const [mb, eb] = _decompose(y);
-  const e = Math.min(ea, eb);
-  const a = ma << BigInt(ea - e);
-  const b = mb << BigInt(eb - e);
-  const s = a * a + b * b;
-  const k = Math.max(0, 60 - (s.toString(2).length >> 1));
-  const shifted = s << BigInt(2 * k);
-  const r = _isqrt(shifted);
-  let sticky = r * r === shifted ? 0n : 1n;
-  // Reduce to 62 significant bits, folding the dropped bits into sticky.
-  const drop = Math.max(0, r.toString(2).length - 62);
-  const kept = r >> BigInt(drop);
-  if (kept << BigInt(drop) !== r) sticky = 1n;
-  // The appended sticky bit makes the final rounding exact.
-  const scaled = Number((kept << 1n) | sticky);
-  const exp = e - k - 1 + drop;
-  const half = Math.trunc(exp / 2);
-  return scaled * 2 ** half * 2 ** (exp - half);
-}
 
 /**
  * `(in_tangents, out_tangents)` of a RotoBezier path.

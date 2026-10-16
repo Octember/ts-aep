@@ -1,7 +1,7 @@
 /** Font object model for After Effects text layers. */
 
-import { TypeError_, descriptor, is_real, split, str } from "../../../pyrt/index.ts";
-import { CosField, instance_dict } from "../../cos/descriptors.ts";
+import { TypeError_, descriptor, is_real, split, str, instance_dict } from "../../../pyrt/index.ts";
+import { CosField } from "../../cos/descriptors.ts";
 
 /** Decode the COS design vector (16.16 fixed-point ints) to floats. */
 export function _design_vector_from_cos(raw: number[]): number[] {

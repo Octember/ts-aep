@@ -29,18 +29,18 @@ import {
   RuntimeError,
   dict_get,
   enumerate,
-  float_repr,
   format,
   getattr,
   int,
   len,
-  num_str,
   py_and,
   py_bool,
   py_or,
   repr,
   round,
   str,
+  json_dumps,
+  pyfloat,
 } from "../../pyrt/index.ts";
 
 import type { Application } from "../models/application.ts";
@@ -140,7 +140,7 @@ export function build_comp_node(comp: CompItem, project: Project, include_proper
   const attrs: Map<string, any> = new Map<string, any>([
     ["size", `${comp.width}x${comp.height}`],
     ["duration", `${format(comp.duration, ".2f")}s`],
-    ["frame_rate", comp.frame_rate],
+    ["frame_rate", pyfloat(comp.frame_rate)],
     ["layers_count", len(comp.layers)],
   ]);
   if (py_bool(comp.markers)) attrs.set("markers", len(comp.markers));
@@ -315,22 +315,6 @@ export function build_output_module_node(om: OutputModule): Node {
 // Output formatters
 // =============================================================================
 
-/**
- * Python `str(dict)`: `{'k': v, ...}` with repr'd keys and values.
- * NOTE(port): matches CPython dict repr; pyrt `repr` has no Map support, so it is spelled locally.
- */
-export function dict_repr(d: Map<any, any>): string {
-  return "{" + [...d].map(([k, v]) => `${repr(k)}: ${attr_repr(k, v)}`).join(", ") + "}";
-}
-
-/**
- * `repr(v)` for an attrs value. NOTE(port): `frame_rate` is always a Python float
- * (`24.0`), so it is spelled via float_repr; other attrs are ints/strs.
- */
-export function attr_repr(k: string, v: any): string {
-  return k === "frame_rate" && typeof v === "number" ? float_repr(v) : repr(v);
-}
-
 /** Output as ASCII tree. */
 export function format_text(
   node: Node,
@@ -367,7 +351,7 @@ export function format_text(
     // Filter out None values
     const filtered = new Map<string, any>([...node.attrs].filter(([, v]) => v != null));
     if (py_bool(filtered)) {
-      attrs_str = " " + dict_repr(filtered);
+      attrs_str = " " + repr(filtered);
     }
   }
 
@@ -427,7 +411,7 @@ export function format_dot(node: Node, output: TextIO, max_depth: number | null 
     const attrs = n.attrs;
     const attrs_lines: string[] = [];
     for (const [k, v] of attrs) {
-      if (v != null) attrs_lines.push(`${k}: ${escape_dot(k === "frame_rate" && typeof v === "number" ? float_repr(v) : str(v))}`);
+      if (v != null) attrs_lines.push(`${k}: ${escape_dot(str(v))}`);
     }
 
     let label: string;
@@ -529,62 +513,8 @@ export function format_json(node: Node, output: TextIO, max_depth: number | null
   }
 
   const filtered = filter_depth(node);
-  output.write(json_dumps(filtered, 2));
+  output.write(json_dumps(filtered, { indent: 2, default_: str }));
   output.write("\n");
-}
-
-// json.dumps(obj, indent=2, default=str) parity (byte-compared CLI output):
-// Python separators with indent, ensure_ascii escaping, float spelling via
-// num_str, and default=str for anything that is not a JSON value.
-export function json_str(s: string): string {
-  let out = '"';
-  for (let i = 0; i < s.length; i++) {
-    const ch = s[i];
-    const c = s.charCodeAt(i);
-    if (ch === '"') out += '\\"';
-    else if (ch === "\\") out += "\\\\";
-    else if (ch === "\n") out += "\\n";
-    else if (ch === "\r") out += "\\r";
-    else if (ch === "\t") out += "\\t";
-    else if (ch === "\b") out += "\\b";
-    else if (ch === "\f") out += "\\f";
-    else if (c < 0x20 || c > 0x7e) out += "\\u" + c.toString(16).padStart(4, "0");
-    else out += ch;
-  }
-  return out + '"';
-}
-
-export function json_dumps(obj: any, indent: number, level: number = 0, is_float: boolean = false): string {
-  const pad = (n: number): string => " ".repeat(indent * n);
-  if (obj == null) return "null";
-  if (obj === true) return "true";
-  if (obj === false) return "false";
-  if (typeof obj === "string") return json_str(obj);
-  if (typeof obj === "number") {
-    if (Number.isNaN(obj)) return "NaN";
-    if (obj === Infinity) return "Infinity";
-    if (obj === -Infinity) return "-Infinity";
-    return num_str(obj, is_float || !Number.isInteger(obj));
-  }
-  if (typeof obj === "bigint") return obj.toString();
-  if (Array.isArray(obj)) {
-    if (obj.length === 0) return "[]";
-    const items = obj.map((x) => pad(level + 1) + json_dumps(x, indent, level + 1));
-    return "[\n" + items.join(",\n") + "\n" + pad(level) + "]";
-  }
-  const entries: [string, any][] | null =
-    obj instanceof Map
-      ? [...obj].map(([k, v]): [string, any] => [String(k), v])
-      : Object.getPrototypeOf(obj) === Object.prototype
-        ? Object.entries(obj)
-        : null;
-  if (entries) {
-    if (entries.length === 0) return "{}";
-    const items = entries.map(([k, v]) => pad(level + 1) + json_str(k) + ": " + json_dumps(v, indent, level + 1, k === "frame_rate"));
-    return "{\n" + items.join(",\n") + "\n" + pad(level) + "}";
-  }
-  // default=str
-  return json_str(str(obj));
 }
 
 // =============================================================================

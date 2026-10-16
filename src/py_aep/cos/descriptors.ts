@@ -27,19 +27,12 @@ import {
   pyfloat,
   repr,
   round,
+  instance_dict,
+  type_name,
 } from "../../pyrt/index.ts";
 import { get_ae_version_major } from "../ae_version.ts";
 
 export const _SENTINEL: unique symbol = Symbol("_SENTINEL");
-
-// NOTE(port): `obj.__dict__` stand-in; a WeakMap side table keyed by instance (TextDocument aliases it as its `__dict__` field).
-export const INSTANCE_DICT = new WeakMap<object, Map<string, any>>();
-
-export function instance_dict(obj: object): Map<string, any> {
-  let d = INSTANCE_DICT.get(obj);
-  if (!d) INSTANCE_DICT.set(obj, (d = new Map()));
-  return d;
-}
 
 /**
  * Read `key` from a COS dict with the descriptors' fault-tolerant
@@ -81,7 +74,7 @@ export function _extract(
 export function _int_float_guard(fn: (x: any) => number): (x: any) => number {
   return (x: any) => {
     if (!is_real(x) && typeof x !== "string" && typeof x !== "boolean" && typeof x !== "bigint") {
-      throw new TypeError_(`argument must be a string or a real number, not '${x?.constructor?.name ?? "NoneType"}'`);
+      throw new TypeError_(`argument must be a string or a real number, not '${type_name(x)}'`);
     }
     return fn(x);
   };

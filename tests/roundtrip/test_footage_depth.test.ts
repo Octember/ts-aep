@@ -1,7 +1,7 @@
 import "../../src/py_aep/binary/_register.ts";
 import * as fs from "node:fs";
 import { expect, test } from "bun:test";
-import { bytes_, fspath, getitem, lshift, Path, py_eq, sorted } from "../../src/pyrt/index.ts";
+import { bytes_, fspath, getitem, lshift, Path, py_eq, sorted, PureWindowsPath } from "../../src/pyrt/index.ts";
 import { make_tmp_path } from "../../src/pyrt/pytest.ts";
 import { parse_project } from "../helpers.ts";
 import { ImportAsType, parse as parse_aep } from "../../src/py_aep/index.ts";
@@ -36,12 +36,6 @@ const _COMP_FILES = [
   "psd_noise_gradient_32bpc.psd",
   "ai.ai",
 ];
-
-// NOTE(port): PureWindowsPath(...).name is the last segment on either separator;
-// identical for the file paths AE stores (no trailing separator or bare drive).
-function PureWindowsPath_name(p: string): string {
-  return p.split(/[\\/]/).pop()!;
-}
 
 /** AE's whole-file footage, by file name (layer items carry a `/`). */
 function _ae_sources(): Map<string, FileSource> {
@@ -108,7 +102,7 @@ test.each(_COMP_FILES)("test_layered_comp_import_caches_after_effects_depth[%#]"
     const source = item.main_source;
     if (
       source instanceof FileSource &&
-      PureWindowsPath_name(source.file) === file_name &&
+      new PureWindowsPath(source.file).name === file_name &&
       source._sspc.layer_index !== 0xffffffff
     ) {
       ours.set(source._sspc.layer_index, source);

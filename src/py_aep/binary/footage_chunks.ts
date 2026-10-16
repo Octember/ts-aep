@@ -35,11 +35,6 @@ import { ascii_field, bool_field, bytes_field, f4_field, f8_field, s2_field, s4_
 import { register } from "./registry.ts";
 const _render_chunks = deferred<typeof import("./render_chunks.ts")>(import.meta.url, "./render_chunks.ts");
 
-// NOTE(port): struct.pack_into is not in pyrt/struct.ts; pack-then-copy writes the same bytes. Only the out-of-range error type differs, and every call site writes into a fixed-size buffer in range.
-export function pack_into(buf: Uint8Array, offset: number, format: string, ...values: any[]): void {
-  buf.set(struct.pack(format, ...values), offset);
-}
-
 // ---------------------------------------------------------------------------
 // sspc - source footage settings (184+ bytes)
 // ---------------------------------------------------------------------------
@@ -782,9 +777,9 @@ export function build_exr_opti_data(compression: number, channel_names: readonly
   );
   const body = new Uint8Array(_OEXR_OPTI_SIZE);
   body.set(b("oEXR"), 0);
-  pack_into(body, 4, ">HI", 1, _OEXR_OPTI_SIZE);
-  pack_into(body, 0x0a, "<HHHHH", 1, 0, compression, 1, len(channel_names));
-  pack_into(body, 0x2e, "<H", len(channel_names) + len(layers));
+  struct.pack_into(">HI", body, 4, 1, _OEXR_OPTI_SIZE);
+  struct.pack_into("<HHHHH", body, 0x0a, 1, 0, compression, 1, len(channel_names));
+  struct.pack_into("<H", body, 0x2e, len(channel_names) + len(layers));
   return body;
 }
 
@@ -919,7 +914,7 @@ export function build_ai_layer_opti_data(
     // BE 16.16 values, replacing the full-page x0/y0/x1/y1 that the typed
     // fields wrote (the fractional/offset bytes live in TextOptiChunk
     // padding, so a parse round-trip stays byte-faithful).
-    pack_into(buf, 0x10, ">4i", ...artwork_bounds.map((v) => round(v * 65536)));
+    struct.pack_into(">4i", buf, 0x10, ...artwork_bounds.map((v) => round(v * 65536)));
   }
   return buf;
 }

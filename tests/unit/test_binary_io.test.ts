@@ -39,12 +39,6 @@ import { _unflag_markers, remove_chunks_by_type, toggle_flag_chunk } from "../..
 // Pull in every chunk registration (Python's `register` side effects).
 import "../../src/py_aep/binary/_register.ts";
 
-/** Python `struct.pack_into`: pack, then write the bytes at `offset`. */
-// TODO(pyrt): struct.pack_into is missing from the shim; this local helper packs and copies.
-function pack_into(fmt: string, buf: Uint8Array, offset: number, ...values: any[]): void {
-  buf.set(struct.pack(fmt, ...values), offset);
-}
-
 const SAMPLES_DIR = new Path(import.meta.dir, "..", "..", "samples");
 
 // -----------------------------------------------------------------------
@@ -1233,14 +1227,14 @@ describe("TestOptiChunk", () => {
   test("test_psd_roundtrip", () => {
     const data = new Uint8Array(344);
     data.set(b("8BPS"), 0);
-    pack_into(">H", data, 4, 7);
-    pack_into(">H", data, 16, 3);
+    struct.pack_into(">H", data, 4, 7);
+    struct.pack_into(">H", data, 16, 3);
     data[30] = 4;
-    pack_into("<H", data, 32, 600);
-    pack_into("<H", data, 36, 800);
+    struct.pack_into("<H", data, 32, 600);
+    struct.pack_into("<H", data, 36, 800);
     data[40] = 8;
     data[48] = 5;
-    pack_into("<iiii", data, 78, 10, 20, 610, 820);
+    struct.pack_into("<iiii", data, 78, 10, 20, 610, 820);
 
     const buf = new BytesIO(data.slice());
     const chunk = OptiChunk.read(buf, 344, { chunk_type: "opti" }) as any;

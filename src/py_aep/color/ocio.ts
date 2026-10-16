@@ -35,6 +35,7 @@ import {
   b,
   concat,
   bytes_,
+  re_search,
 } from "../../pyrt/index.ts";
 import { _compact, build_ocio_envelope } from "./envelope.ts";
 import { ae_guid } from "./murmur3.ts";
@@ -245,9 +246,7 @@ export const _builtin_config_roots = lru_cache((): Path[] => {
 
 /** Sort key for an install directory: its release year, then its name. */
 export function _install_year(install_dir: Path): [number, string] {
-  // TODO(port): Python `\d` matches any Unicode decimal digit; JS `\d` is ASCII-only.
-  // AE install directory names are ASCII in practice; pyrt `int` is ASCII-only too.
-  const match = /(\d{4})/.exec(install_dir.name);
+  const match = re_search(String.raw`(\d{4})`, install_dir.name);
   return [match ? int(match[1]) : 0, install_dir.name];
 }
 
@@ -518,10 +517,7 @@ export function _rule_matches(rule: Map<string, any>, file_path: string): boolea
   if (dict_get(rule, "name") === "Default") return true;
   const regex = dict_get(rule, "regex");
   if (typeof regex === "string") {
-    // `re.search(regex, file_path) is not None`
-    // TODO(port): Python `re` syntax (e.g. `(?P<name>...)`) is not JS RegExp syntax;
-    // no OCIO config in scope uses such patterns. Translate if one does.
-    return new RegExp(regex).test(file_path);
+    return re_search(regex, file_path) != null;
   }
   const pattern = dict_get(rule, "pattern");
   const extension = dict_get(rule, "extension");

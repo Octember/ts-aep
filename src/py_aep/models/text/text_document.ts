@@ -24,12 +24,11 @@ import {
   pyfloat,
   PyFloat,
   unbox,
-
+  instance_dict,
 } from "../../../pyrt/index.ts";
 import { ListChunk } from "../../binary/chunk.ts";
 import type { HeadChunk } from "../../binary/item_chunks.ts";
 import { get_cos_template, cos_get, serialize } from "../../cos/index.ts";
-import { instance_dict } from "../../cos/descriptors.ts";
 import { AutoKernType, BaselineDirection, BoxAutoFitPolicy, BoxFirstBaselineAlignment, BoxVerticalAlignment, ComposerEngine, DigitSet, FontBaselineOption, FontCapsOption, LeadingType, LineJoinType, LineOrientation, ParagraphDirection, ParagraphJustification } from "../../enums/index.ts";
 import { calibrate as calibrate_composition } from "../../resolvers/text_composition.ts";
 import { requires_version } from "../../ae_version.ts";

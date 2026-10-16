@@ -4,9 +4,8 @@ import { describe, expect, test } from "bun:test";
 
 import "../../src/py_aep/binary/_register.ts";
 import { parse as parse_aep } from "../../src/py_aep/index.ts";
-import { FileExistsError } from "../../src/py_aep/models/validators.ts";
 import { recursive_find } from "../../src/py_aep/binary/utils.ts";
-import { b, Path, py_eq } from "../../src/pyrt/index.ts";
+import { b, FileExistsError, Path, py_eq } from "../../src/pyrt/index.ts";
 import { make_tmp_path, raises } from "../../src/pyrt/pytest.ts";
 
 const SAMPLES_DIR = new Path(import.meta.path).parent.parent.parent.div("samples", "models", "project");

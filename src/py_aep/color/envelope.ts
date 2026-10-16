@@ -23,7 +23,7 @@
  * order; reproducing it exactly is required for byte-identical output.
  */
 
-import { decode, encode, dict_get, getitem, num_str, str } from "../../pyrt/index.ts";
+import { encode, dict_get, getitem, json_dumps, json_loads, str } from "../../pyrt/index.ts";
 
 // baseProfileType values.
 
@@ -41,63 +41,6 @@ export const OCIO_TYPE_DISPLAY = 1;
 /** A single color space (`colorSpace1` only). */
 export const OCIO_TYPE_COLORSPACE = 2;
 
-// TODO(pyrt): json.loads shim. Python dicts become Map (RULEBOOK §4), so
-// `outer["x"]` raises KeyError on a miss. Python also accepts NaN/Infinity
-// literals, which JSON.parse rejects, and Object.entries reorders
-// integer-like keys, which Python dicts would not.
-export function json_loads(text: string): any {
-  return JSON.parse(text, (_key, value) =>
-    value !== null && typeof value === "object" && !Array.isArray(value)
-      ? new Map(Object.entries(value))
-      : value,
-  );
-}
-
-// json.dumps parity: string escaping as CPython's `encode_basestring`
-// with ensure_ascii=False (only `"`, `\`, and control characters are escaped).
-export const JSON_ESCAPES = new Map<string, string>([
-  ['"', '\\"'],
-  ["\\", "\\\\"],
-  ["\b", "\\b"],
-  ["\f", "\\f"],
-  ["\n", "\\n"],
-  ["\r", "\\r"],
-  ["\t", "\\t"],
-]);
-
-export function _json_str(s: string): string {
-  let out = '"';
-  for (const c of s) {
-    const esc = JSON_ESCAPES.get(c);
-    if (esc !== undefined) out += esc;
-    else if (c.charCodeAt(0) < 0x20) out += "\\u" + c.charCodeAt(0).toString(16).padStart(4, "0");
-    else out += c;
-  }
-  return out + '"';
-}
-
-// json.dumps parity: compact (`,` / `:`) serializer for the fixed envelope
-// records below. Plain objects keep insertion order because none of their keys
-// is integer-like.
-export function _json_dumps(obj: unknown): string {
-  if (obj === null || obj === undefined) return "null";
-  if (obj === true) return "true";
-  if (obj === false) return "false";
-  if (typeof obj === "string") return _json_str(obj);
-  if (typeof obj === "number") return num_str(obj);
-  if (Array.isArray(obj)) return "[" + obj.map(_json_dumps).join(",") + "]";
-  if (obj instanceof Map) {
-    return "{" + [...obj].map(([k, v]) => _json_str(str(k)) + ":" + _json_dumps(v)).join(",") + "}";
-  }
-  return (
-    "{" +
-    Object.entries(obj as object)
-      .map(([k, v]) => _json_str(k) + ":" + _json_dumps(v))
-      .join(",") +
-    "}"
-  );
-}
-
 export function _compact(obj: object): string {
   /**
    * Serialize `obj` exactly as AE does: compact, no whitespace.
@@ -106,7 +49,7 @@ export function _compact(obj: object): string {
    * raw UTF-8 (matching AE's `Utf8` chunk) rather than `\uXXXX` escapes, which
    * would break the byte-identical round-trip.
    */
-  return _json_dumps(obj);
+  return json_dumps(obj, { separators: [",", ":"], ensure_ascii: false });
 }
 
 export function _b64(text: string): string {
@@ -232,9 +175,7 @@ export class ColorProfile {
   /** The OCIO `(colorSpace1[, colorSpace2])` names, or `()` if not OCIO. */
   get ocio_color_spaces(): readonly string[] {
     if (!this.is_ocio) return [];
-    // TODO(port): json.loads on bytes sniffs utf-8/16/32 and BOMs; this decodes
-    // as utf-8 only, which matches every OCIO payload AE writes.
-    const inner = json_loads(decode(this.data, "utf-8"));
+    const inner: Map<string, any> = json_loads(this.data);
     const names = [getitem(inner, "colorSpace1")];
     if (inner.has("colorSpace2")) names.push(getitem(inner, "colorSpace2"));
     return names;
@@ -247,8 +188,8 @@ export class ColorProfile {
  * @param envelope_json The raw `Utf8` chunk value (the outer JSON string).
  */
 export function parse_envelope(envelope_json: string): ColorProfile {
-  const outer = json_loads(envelope_json);
-  const base = getitem(outer, "baseColorProfile");
+  const outer: Map<string, any> = json_loads(envelope_json);
+  const base: Map<string, any> = getitem(outer, "baseColorProfile");
   // TODO(port): b64decode(validate=False) drops non-alphabet characters and
   // raises on bad padding; Buffer.from(..., "base64") is lenient about padding.
   return new ColorProfile(
@@ -265,6 +206,6 @@ export function parse_envelope(envelope_json: string): ColorProfile {
  * Unlike `parse_envelope`, this does not require `colorProfileData`.
  */
 export function envelope_profile_name(envelope_json: string): string {
-  const outer = json_loads(envelope_json);
+  const outer: Map<string, any> = json_loads(envelope_json);
   return str(dict_get(dict_get(outer, "baseColorProfile", new Map()), "colorProfileName", "None"));
 }

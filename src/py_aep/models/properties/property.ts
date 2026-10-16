@@ -34,32 +34,13 @@ import { PropertyBase } from "./property_base.ts";
 import { Shape } from "./shape.ts";
 import type { PropertyGroup } from "./property_group.ts";
 import { type MaskPropertyGroup } from "./mask_property_group.ts";
-import { deferred, deepcopy, dict_get, getitem, isclose, py_bool, py_eq, py_or, py_and, sorted, warn, int, round, floordiv, TypeError_, ValueError, KeyError, IndexError, AttributeError, NotImplementedError, py_assert, contains, repr, hasattr, getattr, min, max, range, enumerate, zip, len, float, lshift, rshift, and, or, b, descriptor } from "../../../pyrt/index.ts";
+import { deferred, deepcopy, dict_get, getitem, isclose, py_bool, py_eq, py_or, py_and, sorted, warn, int, round, floordiv, TypeError_, ValueError, KeyError, IndexError, AttributeError, NotImplementedError, py_assert, contains, repr, hasattr, getattr, min, max, range, enumerate, zip, len, float, lshift, rshift, and, or, b, descriptor, list_mul, type_name } from "../../../pyrt/index.ts";
 
 const _property_group = deferred<typeof import("./property_group.ts")>(import.meta.url, "./property_group.ts");
 const _av_item = deferred<typeof import("../items/av_item.ts")>(import.meta.url, "../items/av_item.ts");
 const _footage = deferred<typeof import("../items/footage.ts")>(import.meta.url, "../items/footage.ts");
 const _folder = deferred<typeof import("../items/folder.ts")>(import.meta.url, "../items/folder.ts");
 const _essential_properties = deferred<typeof import("../../resolvers/essential_properties.ts")>(import.meta.url, "../../resolvers/essential_properties.ts");
-
-// TODO(pyrt): `list_mul` is Python `[x] * n` for a list; no pyrt shim exists.
-export function list_mul<T>(xs: T[], n: number): T[] {
-  const out: T[] = [];
-  for (let i = 0; i < n; i++) out.push(...xs);
-  return out;
-}
-
-// TODO(pyrt): `type(x).__name__` has no shim; a local stand-in for the error messages.
-export function type_name(x: any): string {
-  if (x == null) return "NoneType";
-  if (typeof x === "boolean") return "bool";
-  if (typeof x === "number") return Number.isInteger(x) ? "int" : "float";
-  if (typeof x === "string") return "str";
-  if (x instanceof Uint8Array) return "bytes";
-  if (Array.isArray(x)) return "list";
-  if (x instanceof Map) return "dict";
-  return x?.constructor?.name ?? "object";
-}
 
 export const logger = {
   debug(_m: string) {},

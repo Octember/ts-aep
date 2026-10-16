@@ -27,6 +27,10 @@ import {
   rstrip,
   split,
   strip,
+  pattern_match,
+  py_re,
+  re_escape,
+  re_match,
 } from "../../pyrt/index.ts";
 import type { Path } from "../../pyrt/index.ts";
 import { OutputModuleSettingsItem, RenderSettingsItem } from "../binary/render_chunks.ts";
@@ -42,25 +46,6 @@ export const _HEADER_SIZE = 32; // bytes before first item
 // Output module prefs format:
 // OutputModuleSettingsItem is 128 bytes (same in prefs and AEP).
 export const _OM_PREFS_ITEM_SIZE = 128;
-
-// NOTE(port): no `re` shim exists; this helper stands in for Python's re.escape. Only used to build
-// patterns whose escaped metacharacters are identical in Python and JS (`u`-flag safe).
-export function _re_escape(text: string): string {
-  return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
-
-// int() of a run of Unicode decimal digits (\p{Nd}), as Python's int() accepts.
-// Nd characters come in contiguous runs of ten starting at digit zero.
-function _int_nd(digits: string): number {
-  let ascii = "";
-  for (const ch of digits) {
-    const cp = ch.codePointAt(0)!;
-    let start = cp;
-    while (/^\p{Nd}$/u.test(String.fromCodePoint(start - 1))) start--;
-    ascii += String((cp - start) % 10);
-  }
-  return int(ascii);
-}
 
 /**
  * An output module template parsed from AE preferences.
@@ -101,7 +86,7 @@ export class OutputModuleTemplate {
 export function _extract_section_value(lines: string[], key: string): Uint8Array | null {
   for (const [i, line] of enumerate(lines)) {
     if (!line.includes(key)) continue;
-    const m = new RegExp('^\\s*"' + _re_escape(key) + '"\\s*=\\s*([^\\n]+)').exec(line);
+    const m = re_match(String.raw`\s*"` + re_escape(key) + String.raw`"\s*=\s*(.+)`, line);
     if (!m) continue;
     const value_parts: string[] = [strip(m[1])];
     for (let j = i + 1; j < lines.length; j++) {
@@ -177,10 +162,9 @@ export function parse_render_templates(prefs_dir: Path): [RenderSettingsItem[], 
 /** Extract an integer value from a preference line like `"Key" = 42`. */
 export function _extract_int_value(lines: string[], key: string): number | null {
   for (const line of lines) {
-    // Python `\d` matches Unicode decimal digits (\p{Nd}); `int()` accepts them too.
-    const m = new RegExp('^\\s*"' + _re_escape(key) + '"\\s*=\\s*"?(\\p{Nd}+)"?', "u").exec(line);
+    const m = re_match(String.raw`\s*"` + re_escape(key) + String.raw`"\s*=\s*"?(\d+)"?`, line);
     if (m) {
-      return _int_nd(m[1]);
+      return int(m[1]);
     }
   }
   return null;
@@ -286,8 +270,7 @@ export function _parse_id_hex_section(text: string, section: string, id_prefix: 
   let current_idx: number | null = null;
   let current_value = "";
   let in_section = false;
-  // Python `\d` matches Unicode decimal digits (\p{Nd}).
-  const entry_re = new RegExp('^\\s*"' + _re_escape(id_prefix) + ' ID #\\s*(\\p{Nd}+)"\\s*=\\s*([^\\n]+)', "u");
+  const entry_re = py_re(String.raw`\s*"` + re_escape(id_prefix) + String.raw` ID #\s*(\d+)"\s*=\s*(.+)`);
 
   // Python `nonlocal current_idx`: the closure writes the enclosing `let`.
   function _flush(): void {
@@ -311,10 +294,10 @@ export function _parse_id_hex_section(text: string, section: string, id_prefix: 
     if (!in_section) {
       continue;
     }
-    const m = entry_re.exec(stripped);
+    const m = pattern_match(entry_re, stripped);
     if (m) {
       _flush();
-      current_idx = _int_nd(m[1]);
+      current_idx = int(m[1]);
       const value = strip(m[2]);
       current_value = value.endsWith("\\") ? value.slice(0, -1) : value;
       continue;
@@ -333,10 +316,9 @@ export function _parse_id_hex_section(text: string, section: string, id_prefix: 
 export function _extract_template_names(lines: string[]): Map<number, string> {
   const names = new Map<number, string>();
   for (const line of lines) {
-    // Python `\d` matches Unicode decimal digits (\p{Nd}).
-    const m = /^\s*"Output Module Spec Strings Name #?(\p{Nd}+)"\s*=\s*"([^\n]*)"/u.exec(line);
+    const m = re_match(String.raw`\s*"Output Module Spec Strings Name #?(\d+)"\s*=\s*"(.*)"`, line);
     if (m) {
-      const idx = _int_nd(m[1]);
+      const idx = int(m[1]);
       names.set(idx, m[2]);
     }
   }

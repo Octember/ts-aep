@@ -29,7 +29,6 @@ import {
   dict_get,
   enumerate,
   float,
-  float_repr,
   format,
   getattr,
   getitem,
@@ -45,6 +44,8 @@ import {
   str,
   sum,
   zip,
+  SystemExit,
+  json_dumps,
 } from "../../pyrt/index.ts";
 
 // NOTE(port): print(*args) with default sep=" " and end="\n"; console.log of one pre-joined string appends the same newline.
@@ -784,35 +785,6 @@ export function print_multi_results(
   print(`${"=".repeat(80)}\n`);
 }
 
-/**
- * json.dumps(obj, indent=2) parity: Python's separators and indent layout,
- * `ensure_ascii` escaping, and `float_repr` float spelling.
- */
-// NOTE(port): json.dumps emits ints plainly; the output dict (to_json_output) holds only ints, strings, bools and null, so no float `1.0` spelling arises.
-export function json_str(s: string): string {
-  return JSON.stringify(s).replace(/[\u007f-￿]/g, (c) => "\\u" + c.charCodeAt(0).toString(16).padStart(4, "0"));
-}
-
-export function json_dumps(value: unknown, indent: number): string {
-  const pad = (n: number): string => " ".repeat(indent * n);
-  const enc = (v: any, level: number): string => {
-    if (v == null) return "null";
-    if (typeof v === "boolean") return v ? "true" : "false";
-    if (typeof v === "number") return Number.isInteger(v) ? String(v) : float_repr(v);
-    if (typeof v === "string") return json_str(v);
-    if (Array.isArray(v)) {
-      if (!v.length) return "[]";
-      const inner = v.map((x) => pad(level + 1) + enc(x, level + 1));
-      return "[\n" + inner.join(",\n") + "\n" + pad(level) + "]";
-    }
-    const entries = Object.entries(v);
-    if (!entries.length) return "{}";
-    const inner = entries.map(([k, x]) => pad(level + 1) + json_str(k) + ": " + enc(x, level + 1));
-    return "{\n" + inner.join(",\n") + "\n" + pad(level) + "}";
-  };
-  return enc(value, 0);
-}
-
 /** Convert comparison results to a JSON-serializable dict. */
 export function to_json_output(
   file1: Path,
@@ -922,16 +894,6 @@ Output shows for each different byte:
     - Byte values (hex and binary)
     - Bit position (7-0) if only one bit differs
         `;
-
-// NOTE(port): SystemExit. Raised by parser errors and --help; the entry point turns it into a process exit code.
-export class SystemExit extends Error {
-  code: number;
-
-  constructor(code: number) {
-    super(`SystemExit: ${code}`);
-    this.code = code;
-  }
-}
 
 /** argparse's `parser.error`: usage plus message to stderr, exit status 2. */
 export function parser_error(message: string): never {
@@ -1101,7 +1063,7 @@ export function main(): number {
   // Output results
   if (args.json) {
     const output = to_json_output(file1, file2, diffs, only1, only2, suppressed.length);
-    print(json_dumps(output, 2));
+    print(json_dumps(output, { indent: 2 }));
   } else {
     print_results(file1, file2, diffs, only1, only2, args.context, ctx1, ctx2, struct_diffs);
   }
@@ -1115,7 +1077,7 @@ if (import.meta.main) {
   try {
     process.exit(main());
   } catch (e) {
-    if (e instanceof SystemExit) process.exit(e.code);
+    if (e instanceof SystemExit) process.exit(typeof e.code === "number" ? e.code : e.code == null ? 0 : 1);
     throw e;
   }
 }

@@ -11,7 +11,7 @@ import { validate_bool, validate_rgb_color } from "../validators.ts";
 // NOTE(port): property_group.ts reaches this module only through `deferred(...)` (the
 // port of Python's in-method import), so `extends PropertyGroup` evaluates after it.
 import { PropertyGroup, _insert_before_group_end } from "./property_group.ts";
-import { deferred, descriptor, getattr, len, mod, py_assert, py_bool, zip } from "../../../pyrt/index.ts";
+import { deferred, descriptor, getattr, len, mod, py_assert, py_bool, zip, instance_dict } from "../../../pyrt/index.ts";
 import type { Utf8Chunk } from "../../binary/scalar_chunks.ts";
 import type { AVLayer } from "../layers/av_layer.ts";
 import type { Property } from "./property.ts";
@@ -332,20 +332,9 @@ export class MaskPropertyGroup extends PropertyGroup {
     const existing = this._properties.find((c) => c.match_name === "ADBE Mask Shape") ?? null;
     if (existing != null) {
       // `existing.__dict__.update(mask_path.__dict__)`: plain own attributes, plus the
-      // ChunkField override Map that stands in for `__dict__` (non-enumerable, so
-      // Object.assign alone would skip it).
-      // NOTE(port): `instance_dict` in descriptors.ts is the `__dict__` stand-in.
+      // `instance_dict` Map (non-enumerable, so Object.assign alone would skip it).
       Object.assign(existing, mask_path);
-      const src_dict = (mask_path as any).__dict__;
-      if (src_dict instanceof Map) {
-        if (!Object.prototype.hasOwnProperty.call(existing, "__dict__")) {
-          Object.defineProperty(existing, "__dict__", {
-            value: new Map<string, any>(),
-            enumerable: false,
-          });
-        }
-        for (const [k, v] of src_dict) (existing as any).__dict__.set(k, v);
-      }
+      for (const [k, v] of instance_dict(mask_path)) instance_dict(existing).set(k, v);
       (existing as Property)._link_keyframes();
     } else {
       this._properties.splice(0, 0, mask_path);

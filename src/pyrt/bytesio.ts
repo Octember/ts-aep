@@ -1,4 +1,8 @@
-// `io.BytesIO`, the `IO[bytes]` every chunk reader/writer takes.
+// `io.BytesIO`, the `IO[bytes]` every chunk reader/writer takes, plus
+// `io.StringIO` and a read-only `open(path, "rb")`.
+
+import * as fs from "node:fs";
+import { FileNotFoundError, OSError } from "./errors.ts";
 
 export class BytesIO {
   private buf: Uint8Array;
@@ -14,6 +18,18 @@ export class BytesIO {
   read(n?: number): Uint8Array {
     const end = n == null || n < 0 ? this.len : Math.min(this.len, this.pos + n);
     const out = this.buf.slice(Math.min(this.pos, end), end);
+    this.pos = Math.max(this.pos, end);
+    return out;
+  }
+
+  /** `fp.readline(size)`: up to and including the next `\n` (or `size` bytes, or EOF). */
+  readline(size?: number | null): Uint8Array {
+    const start = Math.min(this.pos, this.len);
+    let end = this.len;
+    if (size != null && size >= 0) end = Math.min(end, start + size);
+    const nl = this.buf.subarray(start, end).indexOf(0x0a);
+    if (nl !== -1) end = start + nl + 1;
+    const out = this.buf.slice(start, end);
     this.pos = Math.max(this.pos, end);
     return out;
   }
@@ -61,3 +77,159 @@ export class BytesIO {
 }
 
 export type IO = BytesIO;
+
+/**
+ * `io.StringIO` (newline=None translation is not modelled: text is stored
+ * as written). Positions count code points, as in Python.
+ */
+export class StringIO {
+  private chars: string[];
+  private pos = 0;
+
+  constructor(initial_value = "") {
+    this.chars = Array.from(initial_value);
+  }
+
+  /** `write(s)`: overwrite/extend at the position; returns the code points written. */
+  write(s: string): number {
+    const cs = Array.from(s);
+    if (this.pos > this.chars.length) this.chars.push(...new Array(this.pos - this.chars.length).fill("\0"));
+    this.chars.splice(this.pos, cs.length, ...cs);
+    this.pos += cs.length;
+    return cs.length;
+  }
+
+  /** `read(size)`; `size` omitted or negative reads to the end. */
+  read(size?: number | null): string {
+    const end = size == null || size < 0 ? this.chars.length : Math.min(this.chars.length, this.pos + size);
+    const out = this.chars.slice(this.pos, end).join("");
+    this.pos = Math.max(this.pos, end);
+    return out;
+  }
+
+  /** `readline(size)`: through the next `\n`. */
+  readline(size?: number | null): string {
+    let end = this.chars.length;
+    if (size != null && size >= 0) end = Math.min(end, this.pos + size);
+    let i = this.pos;
+    while (i < end && this.chars[i] !== "\n") i++;
+    if (i < end) i++;
+    const out = this.chars.slice(this.pos, i).join("");
+    this.pos = Math.max(this.pos, i);
+    return out;
+  }
+
+  getvalue(): string {
+    return this.chars.join("");
+  }
+
+  tell(): number {
+    return this.pos;
+  }
+
+  seek(offset: number, whence: 0 | 1 | 2 = 0): number {
+    this.pos = whence === 0 ? offset : whence === 1 ? this.pos + offset : this.chars.length + offset;
+    return this.pos;
+  }
+
+  truncate(size?: number | null): number {
+    this.chars.length = Math.min(this.chars.length, size ?? this.pos);
+    return this.chars.length;
+  }
+
+  close(): void {}
+}
+
+/**
+ * `open(path, "rb")`: a read-only binary file over `node:fs` with the
+ * `BufferedReader` methods the port uses (read, readline, iteration, seek,
+ * tell, close). Missing files raise `FileNotFoundError` with CPython's text;
+ * other OS failures raise `OSError`.
+ */
+export class FileReader {
+  private readonly fd: number;
+  private pos = 0;
+  private readonly _size: number;
+
+  constructor(readonly path: string) {
+    try {
+      this.fd = fs.openSync(path, "r");
+    } catch (e: any) {
+      if (e?.code === "ENOENT") throw new FileNotFoundError(`[Errno 2] No such file or directory: '${path}'`);
+      if (typeof e?.code === "string") throw new OSError(`${e.message}`);
+      throw e;
+    }
+    this._size = fs.fstatSync(this.fd).size;
+  }
+
+  /** `read(size)`; `size` omitted or negative reads to the end. */
+  read(size: number | null = -1): Uint8Array {
+    const remaining = Math.max(this._size - this.pos, 0);
+    const n = size == null || size < 0 ? remaining : Math.min(size, remaining);
+    const out = new Uint8Array(n);
+    let got = 0;
+    while (got < n) {
+      const r = fs.readSync(this.fd, out, got, n - got, this.pos + got);
+      if (r === 0) break;
+      got += r;
+    }
+    this.pos += got;
+    return got === n ? out : out.slice(0, got);
+  }
+
+  /** `readline(size)`: through the next `\n`, at most `size` bytes. */
+  readline(size: number | null = -1): Uint8Array {
+    const limit = size == null || size < 0 ? Infinity : size;
+    const parts: Uint8Array[] = [];
+    let total = 0;
+    while (total < limit) {
+      const block = this.read(Math.min(256, limit - total));
+      if (block.length === 0) break;
+      const nl = block.indexOf(0x0a);
+      if (nl !== -1) {
+        // Give back the bytes after the newline.
+        this.pos -= block.length - (nl + 1);
+        parts.push(block.subarray(0, nl + 1));
+        total += nl + 1;
+        break;
+      }
+      parts.push(block);
+      total += block.length;
+    }
+    const out = new Uint8Array(total);
+    let off = 0;
+    for (const p of parts) {
+      out.set(p, off);
+      off += p.length;
+    }
+    return out;
+  }
+
+  *[Symbol.iterator](): Generator<Uint8Array> {
+    for (;;) {
+      const line = this.readline();
+      if (line.length === 0) return;
+      yield line;
+    }
+  }
+
+  /** `seek(offset, whence)`; whence 0 = start, 1 = current, 2 = end. */
+  seek(offset: number, whence: number = 0): number {
+    const base = whence === 0 ? 0 : whence === 1 ? this.pos : this._size;
+    this.pos = base + offset;
+    return this.pos;
+  }
+
+  tell(): number {
+    return this.pos;
+  }
+
+  close(): void {
+    fs.closeSync(this.fd);
+  }
+}
+
+/** `open(path, "rb")` */
+export function open_rb(path: string | { toString(): string }): FileReader {
+  return new FileReader(String(path));
+}

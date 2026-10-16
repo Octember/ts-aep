@@ -1,7 +1,7 @@
 /** Tests for Property model parsing with strengthened assertions. */
 
 import { describe, expect, test } from "bun:test";
-import { approx, skip } from "../../src/pyrt/pytest.ts";
+import { approx, skip, fail } from "../../src/pyrt/pytest.ts";
 import {
   AssertionError_,
   Path,
@@ -28,11 +28,6 @@ import { Project, parse as parse_aep } from "../../src/py_aep/index.ts";
 import { KeyframeInterpolationType, MaskFeatherFalloff, MaskMode, MaskMotionBlur, PropertyType, PropertyValueType } from "../../src/py_aep/enums/index.ts";
 import { MaskPropertyGroup, Property, PropertyGroup, Shape } from "../../src/py_aep/models/index.ts";
 import type { Layer } from "../../src/py_aep/models/index.ts";
-
-// NOTE(port): pytest.fail has no pyrt shim; the tests only need it to fail, which AssertionError_ does.
-function fail(message: string): never {
-  throw new AssertionError_(message);
-}
 
 // `from __future__ import annotations` is dropped: no annotation here is
 // evaluated at runtime. `json.loads` becomes `JSON.parse` (plain objects).

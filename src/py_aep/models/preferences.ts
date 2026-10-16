@@ -30,6 +30,7 @@ import {
   strip,
   tkey,
   zip,
+  type_name,
 } from "../../pyrt/index.ts";
 
 export const _validate_pref_type = validate_enum(PREFType);
@@ -432,19 +433,6 @@ export function default_synthetic_out_point(preferences: Preferences): number | 
   return _default_out_point(preferences, "Pref_DEFAULT_SYNTHETIC_OUT_POINT v2");
 }
 
-// TODO(port): Python's `type(x).__name__` has no pyrt shim; this covers the JS shapes the
-// setters below can receive. int vs float cannot be told apart for integral JS numbers.
-export function py_type_name(x: unknown): string {
-  if (x == null) return "NoneType";
-  if (typeof x === "boolean") return "bool";
-  if (typeof x === "number") return Number.isInteger(x) ? "int" : "float";
-  if (typeof x === "string") return "str";
-  if (x instanceof Uint8Array) return "bytes";
-  if (Array.isArray(x)) return "list";
-  if (x instanceof Map) return "dict";
-  return (x as any).constructor?.name ?? "object";
-}
-
 /**
  * The Preferences object provides an easy way to manage internal AE
  * preferences, such as you find in After Effects' Preferences menu. It
@@ -644,7 +632,7 @@ export class Preferences {
     _validate_pref_type(pref_type);
     // NOTE(port): matches Python: isinstance(value, (int, float)) admits bool, and so does this check.
     if (typeof value !== "number" && typeof value !== "boolean") {
-      throw new TypeError_(`expected a number, got ${py_type_name(value)}`);
+      throw new TypeError_(`expected a number, got ${type_name(value)}`);
     }
     validate_number(value); // rejects NaN/inf
     this._overrides.set(tkey(PREFType.of(pref_type), section_name, key_name), value);
@@ -697,7 +685,7 @@ export class Preferences {
     validate_name(key_name);
     _validate_pref_type(pref_type);
     if (typeof value !== "string") {
-      throw new TypeError_(`expected a string, got ${py_type_name(value)}`);
+      throw new TypeError_(`expected a string, got ${type_name(value)}`);
     }
     this._overrides.set(tkey(PREFType.of(pref_type), section_name, key_name), value);
   }

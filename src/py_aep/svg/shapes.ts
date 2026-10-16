@@ -28,6 +28,7 @@ import {
   py_slice,
   strip,
   zip,
+  pattern_findall,
 } from "../../pyrt/index.ts";
 
 // Control-point distance for a 90-degree circular arc as a cubic bezier.
@@ -51,15 +52,6 @@ export const _PERCENT_AXIS: Record<string, string> = {
   y2: "height",
   r: "diagonal",
 };
-
-// NOTE(port): matches NUMBER_RE.findall: the pattern has no groups and cannot match empty, so
-// global whole-match scanning equals CPython's non-overlapping findall. A fresh "g" regex keeps
-// the non-global NUMBER_RE stateless.
-export function findall(re: RegExp, s: string): string[] {
-  // NUMBER_RE is anchored with a leading ^ (for .match); findall scans, so drop it.
-  const src = re.source.startsWith("^") ? re.source.slice(1) : re.source;
-  return Array.from(s.matchAll(new RegExp(src, "g")), (m) => m[0]);
-}
 
 /**
  * A geometry attribute in user units: units converted and a percentage
@@ -222,7 +214,7 @@ export function _ellipse(
 }
 
 export function _poly(attrs: Map<string, string>, closed: boolean): RawSubpath[] {
-  const nums = findall(NUMBER_RE, dict_get(attrs, "points", "")).map((n) => float(n));
+  const nums = pattern_findall(NUMBER_RE, dict_get(attrs, "points", "")).map((n) => float(n));
   const pts = zip(py_slice(nums, 0, null, 2), py_slice(nums, 1, null, 2));
   if (pts.length < 2) {
     return [];

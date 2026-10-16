@@ -8,14 +8,14 @@
  */
 
 import { describe, expect, test } from "bun:test";
-import { AttributeError, AssertionError_, Path, py_assert, py_eq, repr, RuntimeError } from "../../src/pyrt/index.ts";
+import { AttributeError, AssertionError_, Path, py_assert, py_eq, repr, RuntimeError, instance_dict } from "../../src/pyrt/index.ts";
 import { make_tmp_path, raises } from "../../src/pyrt/pytest.ts";
 import "../../src/py_aep/binary/_register.ts";
 import { parse as parse_aep } from "../../src/py_aep/index.ts";
 import type { Layer } from "../../src/py_aep/models/layers/layer.ts";
 import { Property } from "../../src/py_aep/models/properties/property.ts";
 import { PropertyGroup } from "../../src/py_aep/models/properties/property_group.ts";
-import { _suppress_materialization, instance_dict } from "../../src/py_aep/models/descriptors.ts";
+import { _suppress_materialization } from "../../src/py_aep/models/descriptors.ts";
 import { get_first_layer } from "../helpers.ts";
 
 const SAMPLES_DIR = new Path(import.meta.path).parent.parent.parent.div("samples");

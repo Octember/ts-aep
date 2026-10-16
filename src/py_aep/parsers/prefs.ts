@@ -108,8 +108,6 @@ export function parse_hex_value(value: string): Uint8Array {
       i = end + 1;
     } else if ("0123456789ABCDEFabcdef".includes(value[i])) {
       const pair = value.slice(i, i + 2);
-      // pyrt int() strips underscores, which CPython rejects for "A_".
-      if (pair.includes("_")) throw new ValueError(`invalid literal for int() with base 16: '${pair}'`);
       raw.push(int(pair, 16));
       i += 2;
     } else {

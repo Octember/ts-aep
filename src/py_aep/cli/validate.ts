@@ -16,7 +16,6 @@ import {
   KeyError,
   Path,
   ValueError,
-  ZeroDivisionError,
   attrs_has,
   decode,
   descriptors_of,
@@ -33,6 +32,10 @@ import {
   sorted,
   str,
   zip,
+  is_real,
+  json_loads,
+  truediv,
+  PureWindowsPath,
 } from "../../pyrt/index.ts";
 
 /** A Python `dict`. Both the JSON side and the to_dict side are Maps (rulebook §3). */
@@ -298,7 +301,7 @@ export function compare_values(expected: any, parsed: any, tolerance = 0.001): b
   if (expected == null || parsed == null) return false;
   if (typeof expected === "boolean" && typeof parsed === "boolean") return expected === parsed;
   // `isinstance(x, (int, float))` also holds for bool (and a bigint int).
-  const is_num = (x: any): boolean => typeof x === "number" || typeof x === "boolean" || typeof x === "bigint";
+  const is_num = (x: any): boolean => is_real(x) || typeof x === "boolean" || typeof x === "bigint";
   if (is_num(expected) && is_num(parsed)) {
     return isclose(Number(expected), Number(parsed), tolerance, tolerance);
   }
@@ -308,19 +311,6 @@ export function compare_values(expected: any, parsed: any, tolerance = 0.001): b
     return zip(expected, parsed).every(([e, p]) => compare_values(e, p, tolerance));
   }
   return py_eq(expected, parsed);
-}
-
-/**
- * Python `repr(x)` over the port's values, including dicts (Maps).
- *
- * NOTE(port): pyrt `repr()` has no dict (Map) form; this local helper matches CPython dict repr.
- * TODO(port): int/float distinction - a JS integer-valued number cannot tell
- * `1.0` (repr "1.0") from `1` (repr "1").
- */
-export function _repr(x: any): string {
-  if (x instanceof Map) return `{${[...x].map(([k, v]) => `${_repr(k)}: ${_repr(v)}`).join(", ")}}`;
-  if (Array.isArray(x)) return `[${x.map((item) => _repr(item)).join(", ")}]`;
-  return repr(x);
 }
 
 export class ValidationResult {
@@ -345,7 +335,7 @@ export class ValidationResult {
 
   /** Add a difference. */
   add_diff(path: string, expected: any, parsed: any, category = "other"): void {
-    this.differences.push(`${path}: expected ${_repr(expected)}, got ${_repr(parsed)}`);
+    this.differences.push(`${path}: expected ${repr(expected)}, got ${repr(parsed)}`);
     this.categories.set(category, (dict_get(this.categories, category, 0) as number) + 1);
   }
 
@@ -540,8 +530,7 @@ export function compare_marker(
   // Calculate time from frame_time if available
   let parsed_time: number | null = null;
   if (dict_get(parsed_marker, "frame_time") != null) {
-    if (frame_rate === 0) throw new ZeroDivisionError("float division by zero");
-    parsed_time = getitem(parsed_marker, "frame_time") / frame_rate;
+    parsed_time = truediv(getitem(parsed_marker, "frame_time"), frame_rate);
   }
 
   // Compare time
@@ -1292,21 +1281,6 @@ export function compare_folder_hierarchy(
   }
 }
 
-/**
- * `PureWindowsPath(p).name`: the last path component, splitting on both `/` and `\`
- * on every host OS.
- *
- * NOTE(port): PureWindowsPath is not in pyrt; this local helper is the only user.
- * NOTE(port): the UNC anchor (`\\server\share`) and the drive (`C:`) are stripped like
- * PureWindowsPath's drive, so a root-only path gives "".
- */
-export function pure_windows_name(p: string): string {
-  const unc = /^[\\/]{2}[^\\/]+[\\/]+[^\\/]+/.exec(p);
-  const rest = unc ? p.slice(unc[0].length) : p.replace(/^[A-Za-z]:/, "");
-  const parts = rest.split(/[\\/]/).filter((s) => s !== "");
-  return parts.length ? parts[parts.length - 1] : "";
-}
-
 export function compare_footage_item(
   expected_item: Dict,
   parsed_item: Dict,
@@ -1390,8 +1364,8 @@ export function compare_footage_item(
       // and a parsed sequence frame path mixes the two); plain Path
       // fails to split backslashes when the validator runs on POSIX.
       if (py_bool(exp_file) && py_bool(parsed_file)) {
-        const exp_name = pure_windows_name(exp_file);
-        const parsed_name = pure_windows_name(parsed_file);
+        const exp_name = new PureWindowsPath(exp_file).name;
+        const parsed_name = new PureWindowsPath(parsed_file).name;
         if (exp_name !== parsed_name) {
           result.add_diff(`${source_path}.fileName`, exp_name, parsed_name, "footage");
         }
@@ -1584,8 +1558,8 @@ export function compare_render_queue(
         if (py_bool(exp_file) && py_bool(parsed_file)) {
           // See the footage-source note: PureWindowsPath keeps
           // basename extraction host-OS-independent.
-          const exp_name = pure_windows_name(exp_file);
-          const parsed_name = pure_windows_name(str(parsed_file));
+          const exp_name = new PureWindowsPath(exp_file).name;
+          const parsed_name = new PureWindowsPath(str(parsed_file)).name;
           if (exp_name !== parsed_name) {
             result.add_diff(`${om_path}.fileName`, exp_name, parsed_name, "renderqueue");
           }
@@ -1649,113 +1623,6 @@ export function compare_viewer(
   }
 }
 
-/**
- * `json.load(f)`: JSON objects become Maps (dicts) in file order, arrays stay arrays.
- * A small recursive-descent parser, because `JSON.parse` reorders integer-like keys
- * and rejects the `NaN` / `Infinity` / `-Infinity` tokens Python's json accepts.
- *
- * TODO(port): int/float distinction - `1.0` parses to the number 1, and integers
- * past 2^53 lose precision.
- */
-export function json_load(text: string): any {
-  let pos = 0;
-  const fail = (msg: string): never => {
-    throw new ValueError(`${msg}: char ${pos}`);
-  };
-  const ws = (): void => {
-    while (pos < text.length && " \t\n\r".includes(text[pos])) pos++;
-  };
-  const value = (): any => {
-    ws();
-    const c = text[pos];
-    if (c === "{") {
-      pos++;
-      const out: Dict = new Map();
-      ws();
-      if (text[pos] === "}") {
-        pos++;
-        return out;
-      }
-      for (;;) {
-        ws();
-        if (text[pos] !== '"') fail("Expecting property name enclosed in double quotes");
-        const k = str_token();
-        ws();
-        if (text[pos] !== ":") fail("Expecting ':' delimiter");
-        pos++;
-        out.set(k, value());
-        ws();
-        if (text[pos] === ",") {
-          pos++;
-          continue;
-        }
-        if (text[pos] === "}") {
-          pos++;
-          return out;
-        }
-        fail("Expecting ',' delimiter");
-      }
-    }
-    if (c === "[") {
-      pos++;
-      const out: any[] = [];
-      ws();
-      if (text[pos] === "]") {
-        pos++;
-        return out;
-      }
-      for (;;) {
-        out.push(value());
-        ws();
-        if (text[pos] === ",") {
-          pos++;
-          continue;
-        }
-        if (text[pos] === "]") {
-          pos++;
-          return out;
-        }
-        fail("Expecting ',' delimiter");
-      }
-    }
-    if (c === '"') return str_token();
-    for (const [lit, v] of [
-      ["true", true],
-      ["false", false],
-      ["null", null],
-      ["NaN", NaN],
-      ["Infinity", Infinity],
-      ["-Infinity", -Infinity],
-    ] as const) {
-      if (text.startsWith(lit, pos)) {
-        pos += lit.length;
-        return v;
-      }
-    }
-    const m = /^-?(?:0|[1-9][0-9]*)(?:\.[0-9]+)?(?:[eE][-+]?[0-9]+)?/.exec(text.slice(pos, pos + 400));
-    if (!m) return fail("Expecting value");
-    pos += m[0].length;
-    return Number(m[0]);
-  };
-  const str_token = (): string => {
-    const start = pos;
-    pos++;
-    while (pos < text.length && text[pos] !== '"') pos += text[pos] === "\\" ? 2 : 1;
-    if (pos >= text.length) fail("Unterminated string starting at");
-    pos++;
-    try {
-      return JSON.parse(text.slice(start, pos));
-    } catch {
-      pos = start;
-      return fail("Invalid string");
-    }
-  };
-  const result = value();
-  ws();
-  if (pos !== text.length) fail("Extra data");
-  return result;
-}
-
 export function validate_aep(
   aep_path: Path,
   json_path: Path,
@@ -1781,7 +1648,7 @@ export function validate_aep(
 
   // Load expected JSON
   // Python `open(encoding="utf-8")`: bytes are decoded without dropping a BOM.
-  const expected: Dict = json_load(decode(json_path.read_bytes(), "utf-8"));
+  const expected: Dict = json_loads(decode(json_path.read_bytes(), "utf-8"));
 
   // Compare project-level properties
   if (verbose) console.log("\n=== Comparing Project Properties ===");

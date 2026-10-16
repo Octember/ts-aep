@@ -17,7 +17,6 @@
  */
 
 import { createHash } from "node:crypto";
-import { homedir } from "node:os";
 import {
   LookupError,
   OSError,
@@ -141,8 +140,7 @@ export function default_icc_directories(): Path[] {
   }
   // macOS
   const base = new Path("/Library/Application Support/Adobe/Color");
-  // NOTE(port): Path.home() is expanduser("~"); os.homedir() honours HOME first, same as CPython on POSIX.
-  const home = new Path(homedir());
+  const home = Path.home();
   return [
     base.div("MPProfiles"),
     base.div("Profiles"),

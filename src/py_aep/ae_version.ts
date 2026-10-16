@@ -3,7 +3,7 @@
  * layer each After Effects release writes.
  */
 
-import { AttributeError, TypeError_, getattr, getitem, hasattr, int } from "../pyrt/index.ts";
+import { AttributeError, TypeError_, getattr, getitem, hasattr, int, type_name } from "../pyrt/index.ts";
 
 export type F = (...args: any[]) => any;
 
@@ -92,27 +92,7 @@ export function get_ae_version_major(obj: any): number {
   if (head != null) {
     return int(head.ae_version_major);
   }
-  // type(obj).__name__
-  const type_name =
-    obj == null
-      ? "NoneType"
-      : typeof obj === "boolean"
-        ? "bool"
-        : typeof obj === "number" || typeof obj === "bigint"
-          ? // TODO(port): int/float distinction
-            Number.isInteger(Number(obj)) ? "int" : "float"
-          : typeof obj === "string"
-            ? "str"
-            : obj instanceof Uint8Array
-              ? "bytes"
-              : Array.isArray(obj)
-                ? "list"
-                : obj instanceof Map
-                  ? "dict"
-                  : obj instanceof Set
-                    ? "set"
-                    : obj.constructor?.name;
-  throw new TypeError_(`Cannot determine AE version from ${type_name}`);
+  throw new TypeError_(`Cannot determine AE version from ${type_name(obj)}`);
 }
 
 /**

@@ -13,7 +13,7 @@
  * output pairs (`aep-compare` ground-truth workflow).
  */
 
-import { b, deferred, float, NotImplementedError, py_bool, TypeError_ } from "../../../pyrt/index.ts";
+import { b, deferred, float, NotImplementedError, py_bool, TypeError_, instance_dict } from "../../../pyrt/index.ts";
 import { type Chunk, ListChunk } from "../../binary/chunk.ts";
 import { LdatItemType, type LdatItem } from "../../binary/ldat_chunks.ts";
 import { build_parallel_ldat_item, clone_chunk_tree, set_orientation_item_values } from "../../binary/mutations.ts";
@@ -29,16 +29,6 @@ import type { Property } from "./property.ts";
 const _marker = deferred<typeof import("../../parsers/marker.ts")>(import.meta.url, "../../parsers/marker.ts");
 const _specialized_properties = deferred<typeof import("../../parsers/specialized_properties.ts")>(import.meta.url, "../../parsers/specialized_properties.ts");
 const _gradient = deferred<typeof import("../../parsers/gradient.ts")>(import.meta.url, "../../parsers/gradient.ts");
-
-// NOTE(port): emulates `obj.__dict__[name] = value` (Python line 167-168) with the same non-enumerable
-// per-instance Map that `ChunkField` (descriptors.ts) reads overrides from; `dimensions` is a read-only
-// ChunkField, so plain assignment would throw. Same effect as Python's instance-dict write.
-export function instance_dict_set(obj: any, name: string, value: any): void {
-  if (!Object.prototype.hasOwnProperty.call(obj, "__dict__")) {
-    Object.defineProperty(obj, "__dict__", { value: new Map<string, any>(), enumerable: false });
-  }
-  obj.__dict__.set(name, value);
-}
 
 export const _EMPTY_CDAT_PAD = b("\x00\x00\x00\x00");
 
@@ -194,8 +184,8 @@ export class _OrientationKind extends ParallelKind {
   apply_model_metadata(prop: Property): void {
     prop._property_control_type = PropertyControlType.ANGLE;
     prop._property_value_type = PropertyValueType.ThreeD_SPATIAL;
-    instance_dict_set(prop, "dimensions", 3);
-    instance_dict_set(prop, "_vector", true);
+    instance_dict(prop).set("dimensions", 3);
+    instance_dict(prop).set("_vector", true);
   }
 
   on_wrap(prop: Property): void {

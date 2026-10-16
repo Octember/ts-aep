@@ -53,49 +53,10 @@ import {
   str,
   warn,
   type PathLike,
+  PurePosixPath,
+  PureWindowsPath,
+  py_re,
 } from "../../../pyrt/index.ts";
-
-/**
- * Pure-path helpers standing in for `PureWindowsPath` / `PurePosixPath`
- * (no pyrt shim yet). They cover the calls this module makes: join,
- * final name and parent name.
- */
-// TODO(pyrt): PureWindowsPath / PurePosixPath shim (join, name, parent.name only).
-export function _pure_parts(
-  text: string,
-  windows: boolean,
-): { drive: string; anchored: boolean; parts: string[] } {
-  let drive = "";
-  let rest = text;
-  if (windows) {
-    const unc = /^[\\/]{2}(?![\\/])[^\\/]+[\\/]+[^\\/]+/.exec(text);
-    if (unc != null) {
-      // \\server\share is the drive of a UNC path.
-      drive = "\\\\" + unc[0].slice(2).replace(/[\\/]+/g, "\\");
-      rest = text.slice(unc[0].length);
-    } else {
-      drive = /^[A-Za-z]:/.exec(text)?.[0] ?? "";
-      rest = text.slice(drive.length);
-    }
-  } else if (/^\/\/(?!\/)/.test(text)) {
-    // PurePosixPath keeps exactly two leading slashes.
-    drive = "/";
-  }
-  const anchored = rest.length > 0 && (windows ? /[\\/]/ : /\//).test(rest[0]);
-  const parts = rest
-    .split(windows ? /[\\/]+/ : /\/+/)
-    .filter((c) => c !== "" && c !== ".");
-  return { drive, anchored, parts };
-}
-
-export function _pure_join(folder: string, frame_name: string, windows: boolean): string {
-  const sep = windows ? "\\" : "/";
-  const { drive, anchored, parts } = _pure_parts(folder, windows);
-  const head = drive + (anchored ? sep : "") + parts.join(sep);
-  if (head === "") return frame_name;
-  if (parts.length === 0 && !anchored) return head + frame_name;
-  return head.endsWith(sep) ? head + frame_name : head + sep + frame_name;
-}
 
 /**
  * `NamedTuple._replace(**kw)` for the translated NamedTuples (`MediaInfo`,
@@ -105,18 +66,6 @@ export function _replace<T extends object>(obj: T, kw: Record<string, any>): T {
   const own = (obj as any)._replace;
   if (typeof own === "function") return own.call(obj, kw);
   return Object.assign(Object.create(Object.getPrototypeOf(obj)), obj, kw);
-}
-
-/** `PureWindowsPath(text).name` */
-export function _windows_name(text: string): string {
-  const { parts } = _pure_parts(text, true);
-  return parts.length ? parts[parts.length - 1] : "";
-}
-
-/** `PureWindowsPath(text).parent.name` */
-export function _windows_parent_name(text: string): string {
-  const { parts } = _pure_parts(text, true);
-  return parts.length >= 2 ? parts[parts.length - 2] : "";
 }
 
 /** `os.path.splitext(name)[1]` */
@@ -583,9 +532,7 @@ export const _C9_TO_LAYER_STYLES = new Map<number, string>(
 // A sequence frame number is at most the last 9 digits of the file stem; any
 // digits before them belong to the prefix (AE 2026: f_99999999998.png and
 // f_99999999999.png import as `f_99[999999998-999999999].png`).
-// TODO(port): Python `\d` matches Unicode digits; this regex is ASCII-only
-// (stems ending in non-ASCII Nd digits; pyrt int() also rejects such digits).
-export const _FRAME_NUMBER_RE = /(\d{1,9})$/;
+export const _FRAME_NUMBER_RE = py_re(String.raw`(\d{1,9})$`);
 
 // AE reads the `sspc` width and height as signed 16-bit values: a py_aep file
 // holding a 65535-px-wide PNG opens -1 px wide in AE 2026, and 65536 does not
@@ -616,8 +563,8 @@ export function _join_sequence_frame(folder: string, frame_name: string): string
    * splits any embedded `/`, while `PurePosixPath` leaves a native POSIX path
    * intact (`PureWindowsPath` would rewrite its forward slashes to `\`).
    */
-  if (folder.includes("\\")) return _pure_join(folder, frame_name, true);
-  return _pure_join(folder, frame_name, false);
+  if (folder.includes("\\")) return String(new PureWindowsPath(folder).div(frame_name));
+  return String(new PurePosixPath(folder).div(frame_name));
 }
 
 export type NewSourceKw = {
@@ -1856,7 +1803,7 @@ export class FileSource extends FootageSource {
       if (!py_bool(item_name)) {
         // PureWindowsPath handles both / and \ separators,
         // unlike PurePosixPath which only splits on /.
-        const basename = _windows_name(this._file);
+        const basename = new PureWindowsPath(this._file).name;
         const layer = this.layer_name;
         if (py_bool(layer)) {
           item_name = `${layer}/${basename}`;
@@ -1879,7 +1826,7 @@ export class FileSource extends FootageSource {
    * its folder instead, as AE 2026 does.
    */
   _build_sequence_name(): string {
-    if (this._is_alphabetical) return _windows_parent_name(this._file);
+    if (this._is_alphabetical) return new PureWindowsPath(this._file).parent.name;
     const start_frame = this._start_frame;
     const end_frame = this._end_frame;
     if (start_frame === UNDEFINED_FRAME || end_frame === UNDEFINED_FRAME) return "";

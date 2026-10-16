@@ -16,13 +16,14 @@ import {
   getattr,
   int,
   len,
-  PyFloat,
   py_bool,
   py_eq,
   repr,
   sorted,
   str,
   tkey,
+  mapping_items,
+  type_name,
 } from "../../../pyrt/index.ts";
 import type { CompPreset } from "../../parsers/comp_presets.ts";
 import type { Preferences } from "../preferences.ts";
@@ -40,33 +41,6 @@ export const IntEnum = {
 // Python `member.label` property; the enum objects expose it as `E.label(member)`.
 export function enum_label(enum_class: any, member: any): string {
   return enum_class.label(member);
-}
-
-// TODO(pyrt): `type(x).__name__` has no pyrt shim. Covers the builtin types
-// this module can receive.
-export function py_type_name(value: any): string {
-  if (value == null) return "NoneType";
-  if (typeof value === "boolean") return "bool";
-  if (value instanceof PyFloat) return "float";
-  if (typeof value === "bigint") return "int";
-  if (typeof value === "number") return Number.isInteger(value) ? "int" : "float";
-  if (typeof value === "string") return "str";
-  if (value instanceof Uint8Array) return "bytes";
-  if (Array.isArray(value)) return "list";
-  if (value instanceof Map) return "dict";
-  return value.constructor?.name ?? "object";
-}
-
-// TODO(pyrt): `repr()` of a dict (Map) is not in pyrt. Formats `{k!r: v!r, ...}`.
-export function repr_map(m: Map<unknown, unknown>): string {
-  const r = (x: unknown): string => (x instanceof Map ? repr_map(x) : repr(x));
-  return "{" + [...m].map(([k, v]) => `${r(k)}: ${r(v)}`).join(", ") + "}";
-}
-
-// TODO(pyrt): Python's Mapping `.items()` protocol. dicts are Maps; SettingsView
-// provides its own `items()`.
-export function mapping_items(m: Map<string, any> | SettingsView): Array<[string, any]> {
-  return m instanceof Map ? [...m.entries()] : m.items();
 }
 
 /** Type alias for a settings spec: (attribute_name, optional_enum_class). */
@@ -220,7 +194,7 @@ export class SettingsView {
   }
 
   __repr__(): string {
-    return `SettingsView(${repr_map(new Map(this.items()))})`;
+    return `SettingsView(${repr(new Map(this.items()))})`;
   }
 
   __eq__(other: unknown): boolean {
@@ -276,7 +250,7 @@ export function _coerce_enum(enum_class: any, value: any): any {
     );
   }
   throw new TypeError_(
-    `Expected ${enum_class.__name__}, int, or str, got ${py_type_name(value)}`,
+    `Expected ${enum_class.__name__}, int, or str, got ${type_name(value)}`,
   );
 }
 

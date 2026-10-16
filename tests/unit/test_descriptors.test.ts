@@ -15,11 +15,12 @@ import {
   object_setattr,
   py_assert,
   py_bool,
+  instance_dict,
 } from "../../src/pyrt/index.ts";
 import type { EnumValue } from "../../src/pyrt/index.ts";
 import { raises } from "../../src/pyrt/pytest.ts";
 import { CosField } from "../../src/py_aep/cos/descriptors.ts";
-import { ChunkField, _materialization_allowed, _suppress_materialization, instance_dict } from "../../src/py_aep/models/descriptors.ts";
+import { ChunkField, _materialization_allowed, _suppress_materialization } from "../../src/py_aep/models/descriptors.ts";
 
 // ---------------------------------------------------------------------------
 // Helpers

@@ -23,6 +23,8 @@ import {
   radians,
   range,
   repr,
+  hypot,
+  pattern_match,
 } from "../../pyrt/index.ts";
 
 /** A cubic segment: start, control 1, control 2, end. */
@@ -48,8 +50,6 @@ export const _COMMANDS = new Set("MmLlHhVvCcSsQqTtAaZz");
 export const _CMD_RE = /^[MmLlHhVvCcSsQqTtAaZz]/;
 // Argument count per command (per coordinate-set repetition).
 export const _ARGC: Record<string, number> = { M: 2, L: 2, H: 1, V: 1, C: 6, S: 4, Q: 4, T: 2, A: 7 };
-// Sticky, un-anchored copy of NUMBER_RE (its source starts with `^`): Python's `NUMBER_RE.match(d, i)` anchors at `i`.
-export const _NUMBER_AT = new RegExp(NUMBER_RE.source.replace(/^\^/, ""), "y");
 
 export function _tokenize(d: string): string[] {
   /**
@@ -92,12 +92,11 @@ export function _tokenize(d: string): string[] {
       i += c.length;
       continue;
     }
-    _NUMBER_AT.lastIndex = i;
-    const m = _NUMBER_AT.exec(d);
+    const m = pattern_match(NUMBER_RE, d, i);
     if (m && m[0]) {
       tokens.push(m[0]);
       if (argc !== 0) arg += 1;
-      i = _NUMBER_AT.lastIndex;
+      i = m.index + m[0].length;
       continue;
     }
     // Unrecognized character: skip it, matching the prior findall scan
@@ -321,8 +320,7 @@ export class _PathParser {
     // Correct out-of-range radii. hypot of the ratios, not a sum of
     // squares over rx * rx: a tiny radius (1e-200) would underflow the
     // square to 0.
-    // TODO(port): CPython math.hypot is correctly rounded (3.10+); V8 Math.hypot (also used for ln below) can differ by 1 ulp; needs a pyrt math.hypot shim.
-    const s = Math.hypot(x1p / rx, y1p / ry);
+    const s = hypot(x1p / rx, y1p / ry);
     let co: number;
     if (s > 1) {
       // The scaled ellipse just reaches the end point, so its centre is
@@ -346,7 +344,7 @@ export class _PathParser {
 
     const angle = (ux: number, uy: number, vx: number, vy: number): number => {
       const dot = ux * vx + uy * vy;
-      const ln = Math.hypot(ux, uy) * Math.hypot(vx, vy);
+      const ln = hypot(ux, uy) * hypot(vx, vy);
       const ang = py_bool(ln) ? Math.acos(max([-1.0, min([1.0, dot / ln])])) : 0.0;
       return (ux * vy - uy * vx) < 0 ? -ang : ang;
     };

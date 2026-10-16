@@ -5,7 +5,7 @@ import type { U4Chunk, Utf8Chunk } from "../binary/scalar_chunks.ts";
 import type { Chunk, ListChunk } from "../binary/chunk.ts";
 import { _suppress_materialization } from "../models/descriptors.ts";
 import { EssentialGraphicsController, SourcePropertyRef } from "../models/essential_graphics.ts";
-import { at, int, py_bool, sorted } from "../../pyrt/index.ts";
+import { at, dict_get, getitem, int, json_loads, py_bool, py_eq, sorted } from "../../pyrt/index.ts";
 
 // AE stores 0xFFFFFFFF in a CPrp path node's `index` to mean "match by name".
 export const _BY_NAME_INDEX = 0xffffffff;
@@ -18,15 +18,15 @@ export const _BY_NAME_INDEX = 0xffffffff;
  * the source property the controller exposes.
  */
 export function _parse_source_property_path(raw: string): SourcePropertyRef[] {
-  const nodes = JSON.parse(raw);
+  const nodes: Map<string, any> = json_loads(raw);
   const path: SourcePropertyRef[] = [];
-  for (const key of sorted(Object.keys(nodes), int)) {
-    const node = nodes[key as string];
-    const index = node.index ?? null;
+  for (const key of sorted(nodes.keys(), int)) {
+    const node: Map<string, any> = getitem(nodes, key);
+    const index = dict_get(node, "index");
     path.push(
       new SourcePropertyRef(
-        "matchName" in node ? node.matchName : "",
-        index === _BY_NAME_INDEX ? null : index,
+        dict_get(node, "matchName", ""),
+        py_eq(index, _BY_NAME_INDEX) ? null : index,
       ),
     );
   }

@@ -7,7 +7,10 @@ import {
   dict_get,
   float,
   int,
-  num_str,
+  is_real,
+  json_dumps,
+  json_loads,
+  type_name,
   py_bool,
 } from "../../../../pyrt/index.ts";
 import { Hdr10ColorPrimaries, PngCompression } from "../../../enums/index.ts";
@@ -16,73 +19,6 @@ import { validate_enum, validate_one_of, validate_positive_number } from "../../
 import { FormatOptionsBase } from "./base.ts";
 import type { PngRoptChunk } from "../../../binary/render_chunks.ts";
 import type { Utf8Chunk } from "../../../binary/scalar_chunks.ts";
-
-// TODO(port): json.dumps / json.loads parity for the HDR10 Utf8 body. Python
-// keeps int and float apart (`1000` vs `1000.0`); JSON.parse does not, so an
-// integer-valued float read from the chunk re-serializes as an int. JSON.parse
-// also rejects NaN / Infinity (Python accepts them) and reorders integer-like
-// keys. Real HDR10 metadata uses identifier keys and non-integer nit values,
-// so the common case round-trips byte-identically.
-
-/** `json.dumps` string encoding with `ensure_ascii=True` (lowercase `\uXXXX`). */
-// json.dumps parity
-export function _json_string(s: string): string {
-  let out = '"';
-  for (let i = 0; i < s.length; i++) {
-    const c = s.charCodeAt(i);
-    if (c === 0x22) out += '\\"';
-    else if (c === 0x5c) out += "\\\\";
-    else if (c === 0x0a) out += "\\n";
-    else if (c === 0x0d) out += "\\r";
-    else if (c === 0x09) out += "\\t";
-    else if (c === 0x08) out += "\\b";
-    else if (c === 0x0c) out += "\\f";
-    else if (c >= 0x20 && c <= 0x7e) out += s[i];
-    else out += "\\u" + c.toString(16).padStart(4, "0");
-  }
-  return out + '"';
-}
-
-/**
- * `json.dumps(value, separators=(",", ":"))`. The Utf8 body is compared
- * byte-for-byte on save, so the spelling is reproduced here rather than
- * taken from `JSON.stringify` (which leaves non-ASCII unescaped).
- */
-// json.dumps parity
-export function _json_dumps_compact(value: any): string {
-  if (value == null) return "null";
-  if (value === true) return "true";
-  if (value === false) return "false";
-  if (typeof value === "number") {
-    // json.dumps spells non-finite floats as NaN / Infinity, not float repr.
-    if (Number.isNaN(value)) return "NaN";
-    if (!Number.isFinite(value)) return value > 0 ? "Infinity" : "-Infinity";
-    return num_str(value);
-  }
-  if (typeof value === "string") return _json_string(value);
-  if (Array.isArray(value)) return "[" + value.map(_json_dumps_compact).join(",") + "]";
-  if (value instanceof Map) {
-    const parts: string[] = [];
-    for (const [k, v] of value) parts.push(_json_string(String(k)) + ":" + _json_dumps_compact(v));
-    return "{" + parts.join(",") + "}";
-  }
-  const parts: string[] = [];
-  for (const [k, v] of Object.entries(value)) parts.push(_json_string(k) + ":" + _json_dumps_compact(v));
-  return "{" + parts.join(",") + "}";
-}
-
-/**
- * `json.loads` with every JSON object decoded as a `Map` (a Python `dict`),
- * so later `.get` / `.pop` / item assignment and re-serialization keep the
- * insertion order.
- */
-export function _json_loads(text: string): any {
-  return JSON.parse(text, (_key, value) =>
-    value !== null && typeof value === "object" && !Array.isArray(value)
-      ? new Map(Object.entries(value))
-      : value,
-  );
-}
 
 /**
  * PNG format-specific render options.
@@ -117,11 +53,11 @@ export class PngFormatOptions extends FormatOptionsBase {
     this._hdr10_meta = new Map();
     if (_hdr10_utf8 != null) {
       try {
-        const parsed = _json_loads(_hdr10_utf8.value);
+        const parsed = json_loads(_hdr10_utf8.value);
         if (parsed instanceof Map) this._hdr10_meta = parsed;
       } catch (e) {
         // Python: `except (json.JSONDecodeError, ValueError): pass`
-        if (!(e instanceof SyntaxError || e instanceof ValueError)) throw e;
+        if (!(e instanceof ValueError)) throw e;
       }
     }
   }
@@ -150,7 +86,7 @@ export class PngFormatOptions extends FormatOptionsBase {
   /** Serialize `_hdr10_meta` back to the Utf8 chunk body. */
   _sync_hdr10(): void {
     if (this._hdr10_utf8 != null) {
-      this._hdr10_utf8.value = _json_dumps_compact(this._hdr10_meta);
+      this._hdr10_utf8.value = json_dumps(this._hdr10_meta, { separators: [",", ":"] });
     }
   }
 
@@ -180,8 +116,8 @@ export class PngFormatOptions extends FormatOptionsBase {
     if (raw == null) return Hdr10ColorPrimaries.P3_D65;
     return enum_or_raw((v: any) => {
       // Python `int(v)` raises TypeError for a list / dict; pyrt `int` would not.
-      if (typeof v !== "number" && typeof v !== "string" && typeof v !== "boolean") {
-        throw new TypeError_(`int() argument must be a string, a bytes-like object or a real number, not '${Array.isArray(v) ? "list" : "dict"}'`);
+      if (!is_real(v) && typeof v !== "string" && typeof v !== "boolean") {
+        throw new TypeError_(`int() argument must be a string, a bytes-like object or a real number, not '${type_name(v)}'`);
       }
       return Hdr10ColorPrimaries.of(int(v));
     })(raw);

@@ -18,7 +18,7 @@ import type { Property } from "../models/properties/property.ts";
 import { parse_gradient_xml } from "./gradient.ts";
 import { parse_property } from "./property_value.ts";
 import { parse_btdk_cos } from "./text.ts";
-import { BytesIO, OverflowError, ValueError, py_bool, warn, zip } from "../../pyrt/index.ts";
+import { BytesIO, OverflowError, ValueError, py_bool, warn, zip, instance_dict } from "../../pyrt/index.ts";
 
 // `logging.getLogger(__name__)`: only the warning path is wired to pyrt `warn`.
 export const logger = {
@@ -26,14 +26,6 @@ export const logger = {
   info(..._args: any[]) {},
   warning: (m: string) => warn(m),
 };
-
-// NOTE(port): `obj.__dict__[name] = value` is emulated by the same non-enumerable Map per instance that `ChunkField.__get__` / `__set__` (models/descriptors.ts) read and pop overrides from.
-export function instance_dict_set(obj: any, name: string, value: any): void {
-  if (!Object.prototype.hasOwnProperty.call(obj, "__dict__")) {
-    Object.defineProperty(obj, "__dict__", { value: new Map<string, any>(), enumerable: false });
-  }
-  obj.__dict__.set(name, value);
-}
 
 export function parse_orientation(
   otst_chunk: ListChunk,
@@ -212,7 +204,7 @@ export function parse_shape(
   // Shape properties always carry a value (from omks), even though
   // tdb4 may report no_value=True (a static shape's cdat is the empty
   // 4-byte form).
-  instance_dict_set(prop, "_no_value", false);
+  instance_dict(prop).set("_no_value", false);
 
   // Collect shape values from omks > shap LISTs
   let shape_values: Shape[];

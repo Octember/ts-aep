@@ -3,13 +3,10 @@
 import { AI_COMP_EXTENSIONS, COMP_CONVERSION_EXTENSIONS, PSD_COMP_EXTENSIONS, get_file_format, get_import_as_types } from "../data/file_formats.ts";
 import { ImportAsType } from "../enums/index.ts";
 import { validate_bool, validate_enum, validate_one_of, validate_path, validate_positive_int, validate_u4 } from "./validators.ts";
-import { Path, ValueError, int, repr, type PathLike } from "../../pyrt/index.ts";
+import { Path, ValueError, int, repr, type PathLike, py_re } from "../../pyrt/index.ts";
 
 // Pattern to match trailing digits in a filename stem (e.g. "frame001").
-// Python's `\d` matches any Unicode decimal digit, which is what `\p{Nd}` matches.
-// Python's `$` also matches before a trailing "\n"; JS's `$` does not, hence the lookahead.
-// TODO(port): pyrt `int()` only parses ASCII digits, so a stem ending in non-ASCII Nd digits (e.g. "frame\u0663\u0664") raises ValueError in is_file_name_numbered where CPython returns (True, 34); no shim yet.
-export const _NUMBERED_RE = /(\p{Nd}+)(?=\n?$)/u;
+export const _NUMBERED_RE = py_re(String.raw`(\d+)$`);
 
 /** Type of the `CURRENT_VALUE` sentinel. */
 export class _CurrentValue {

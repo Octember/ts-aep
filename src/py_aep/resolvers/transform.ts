@@ -24,84 +24,7 @@ import type { Layer } from "../models/layers/layer.ts";
 import type { LightLayer } from "../models/layers/light_layer.ts";
 import type { Property } from "../models/properties/property.ts";
 import type { PropertyGroup } from "../models/properties/property_group.ts";
-import { NotImplementedError, ValueError, degrees, float, float_repr, hasattr, max, min, mod, py_bool, py_or, repr, sum } from "../../pyrt/index.ts";
-
-// NOTE(port): math.hypot - local port of CPython vector_norm (Veltkamp-split product error stands in
-// for fma); bit-identical to CPython math.hypot on 220k random 2-arg inputs. Proposed pyrt shim: math.hypot.
-export function _frexp_exp(x: number): number {
-  const dv = new DataView(new ArrayBuffer(8));
-  let ax = Math.abs(x);
-  let adj = 0;
-  if (ax < 2.2250738585072014e-308) {
-    ax *= 2 ** 54;
-    adj = -54;
-  }
-  dv.setFloat64(0, ax);
-  return ((dv.getUint32(0) >>> 20) & 0x7ff) - 1022 + adj;
-}
-
-export function _dl_mul(x: number, y: number): [number, number] {
-  const z = x * y;
-  const cx = 134217729.0 * x;
-  const hx = cx - (cx - x);
-  const lx = x - hx;
-  const cy = 134217729.0 * y;
-  const hy = cy - (cy - y);
-  const ly = y - hy;
-  const zz = hx * hy - z + hx * ly + lx * hy + lx * ly;
-  return [z, zz];
-}
-
-export function _dl_fast_sum(a: number, b: number): [number, number] {
-  const x = a + b;
-  const y = a - x + b;
-  return [x, y];
-}
-
-export function _vector_norm(vec: number[], max_: number, found_nan: boolean): number {
-  const n = vec.length;
-  if (max_ === Infinity) return max_;
-  if (found_nan) return NaN;
-  if (max_ === 0.0 || n <= 1) return max_;
-  const max_e = _frexp_exp(max_);
-  if (max_e < -1023) {
-    const DBL_MIN = 2.2250738585072014e-308;
-    return DBL_MIN * _vector_norm(vec.map((v) => v / DBL_MIN), max_ / DBL_MIN, found_nan);
-  }
-  const scale = 2 ** -max_e;
-  let csum = 1.0;
-  let frac1 = 0.0;
-  let frac2 = 0.0;
-  for (let i = 0; i < n; i++) {
-    const x = vec[i] * scale;
-    const pr = _dl_mul(x, x);
-    const sm = _dl_fast_sum(csum, pr[0]);
-    csum = sm[0];
-    frac1 += pr[1];
-    frac2 += sm[1];
-  }
-  let h = Math.sqrt(csum - 1.0 + (frac1 + frac2));
-  const pr = _dl_mul(-h, h);
-  const sm = _dl_fast_sum(csum, pr[0]);
-  csum = sm[0];
-  frac1 += pr[1];
-  frac2 += sm[1];
-  const x = csum - 1.0 + (frac1 + frac2);
-  h += x / (2.0 * h);
-  return h / scale;
-}
-
-// NOTE(port): verified bit-identical to CPython math.hypot (220k random 2-arg cases, mixed magnitudes).
-export function math_hypot(...args: number[]): number {
-  const vec = args.map((a) => Math.abs(a));
-  let max_ = 0.0;
-  let found_nan = false;
-  for (const x of vec) {
-    if (Number.isNaN(x)) found_nan = true;
-    else if (x > max_) max_ = x;
-  }
-  return _vector_norm(vec, max_, found_nan);
-}
+import { NotImplementedError, ValueError, degrees, float, float_repr, hasattr, max, min, mod, py_bool, py_or, repr, sum, hypot } from "../../pyrt/index.ts";
 
 export const _DEG2RAD = Math.PI / 180.0;
 export const _RAD2DEG = 180.0 / Math.PI;
@@ -712,7 +635,7 @@ export function _vec3_norm(v: number[]): number {
   // hypot, not sqrt(x*x + y*y + z*z): squaring overflows to inf above ~1.34e154
   // and the norm then poisons every value derived from it. Nested 2-argument
   // calls because hypot only takes 3 arguments from Python 3.8.
-  return math_hypot(math_hypot(v[0], v[1]), v[2]);
+  return hypot(hypot(v[0], v[1]), v[2]);
 }
 
 /** Determinant of the upper-left 3x3 of a 4x4 matrix. */
@@ -907,7 +830,7 @@ export function _euler_xyz(
   // loses most of its digits as r02 approaches 1, which matters because
   // an orientation slerping towards a 90-degree Y passes near the pole
   // on almost every frame without ever reaching it.
-  const cos_beta = math_hypot(r00, r01);
+  const cos_beta = hypot(r00, r01);
 
   let rx_deg: number;
   let ry_deg: number;

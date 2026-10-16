@@ -1,7 +1,6 @@
 /** Tests for py_aep.new() - creating an empty project from scratch. */
 
 import { describe, expect, test } from "bun:test";
-import * as os from "node:os";
 import {
   bytes_,
   bytes_eq,
@@ -311,7 +310,7 @@ describe("TestNewMutations", () => {
 
 /** Newest installed AE preferences directory, or None (for CI). */
 function _ae_prefs_dir(): Path | null {
-  const base = new Path(os.homedir(), "AppData", "Roaming", "Adobe", "After Effects");
+  const base = Path.home().div("AppData", "Roaming", "Adobe", "After Effects");
   if (!base.is_dir()) return null;
   // NOTE(port): sibling paths share a parent, so sorting by name matches Path ordering (only Windows case-folding differs; AE version dirs are digits).
   const dirs = sorted(

@@ -6,7 +6,7 @@
  * `transparent` and `currentColor`.
  */
 
-import { dict_get, float, int, len, mod, py_bool, rstrip, strip, ValueError } from "../../pyrt/index.ts";
+import { dict_get, float, int, len, mod, py_bool, rstrip, strip, ValueError, pattern_findall, pattern_match, py_re, re_flags } from "../../pyrt/index.ts";
 import { NUMBER_PCT_RE, clamp01 } from "./_util.ts";
 
 // Python: `if TYPE_CHECKING: Rgba = tuple[float, float, float, float]`.
@@ -167,18 +167,8 @@ export const _NAMED = new Map<string, readonly [number, number, number]>([
   ["yellowgreen", [154, 205, 50]],
 ]);
 
-// Python `re.match` anchors at the start of the string, hence the `^`.
-export const _RGB_RE = /^rgba?\(([^)]*)\)/i;
-export const _HSL_RE = /^hsla?\(([^)]*)\)/i;
-
-// NOTE(port): local `re.findall` stand-in; returns each full match, as Python does because NUMBER_PCT_RE has no groups.
-// TODO(port): Python `\d` also matches non-ASCII Unicode digits (e.g. "٥"), JS `\d` does not, so such tokens are skipped here (rgb()/hsl() with Arabic-Indic digits).
-export function findall(re: RegExp, s: string): string[] {
-  const flags = re.flags.includes("g") ? re.flags : re.flags + "g";
-  // _util.ts anchors its patterns with `^` (re.match emulation); findall scans, so drop the anchor.
-  const source = re.source.startsWith("^") ? re.source.slice(1) : re.source;
-  return Array.from(s.matchAll(new RegExp(source, flags)), (m) => m[0]);
-}
+export const _RGB_RE = py_re(String.raw`rgba?\(([^)]*)\)`, re_flags.IGNORECASE);
+export const _HSL_RE = py_re(String.raw`hsla?\(([^)]*)\)`, re_flags.IGNORECASE);
 
 export function _component(token: string, scale: number = 255.0): number {
   token = strip(token);
@@ -203,9 +193,9 @@ export function parse_color(value: string | null, current: Rgba = [0.0, 0.0, 0.0
   if (v === "currentcolor") return current;
   if (v.startsWith("#")) return _parse_hex(v.slice(1));
   if (v.startsWith("rgb")) {
-    const m = _RGB_RE.exec(v);
+    const m = pattern_match(_RGB_RE, v);
     if (m) {
-      const parts = findall(NUMBER_PCT_RE, m[1]);
+      const parts = pattern_findall(NUMBER_PCT_RE, m[1]);
       if (len(parts) >= 3) {
         const r = _component(parts[0]);
         const g = _component(parts[1]);
@@ -233,10 +223,6 @@ export function _parse_hex(h: string): Rgba | null {
   let b: number;
   let a: number;
   try {
-    // NOTE(port): pyrt int() strips every "_" but Python only allows it between digits; the guard below raises for a leading/trailing "_" in each 2-char pair, which is the only way it differs.
-    for (let i = 0; i < 8; i += 2) {
-      if (cps[i] === "_" || cps[i + 1] === "_") throw new ValueError("invalid literal for int() with base 16");
-    }
     r = int(cps.slice(0, 2).join(""), 16) / 255.0;
     g = int(cps.slice(2, 4).join(""), 16) / 255.0;
     b = int(cps.slice(4, 6).join(""), 16) / 255.0;
@@ -249,9 +235,9 @@ export function _parse_hex(h: string): Rgba | null {
 }
 
 export function _parse_hsl(v: string): Rgba | null {
-  const m = _HSL_RE.exec(v);
+  const m = pattern_match(_HSL_RE, v);
   if (!m) return null;
-  const parts = findall(NUMBER_PCT_RE, m[1]);
+  const parts = pattern_findall(NUMBER_PCT_RE, m[1]);
   if (len(parts) < 3) return null;
   const h = mod(float(rstrip(parts[0], "%")), 360.0) / 360.0;
   // CSS clamps saturation and lightness to [0, 100 %] before converting

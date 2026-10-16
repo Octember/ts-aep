@@ -11,7 +11,7 @@
  * module only produces the geometric/stop representation.
  */
 
-import { py_bool, py_or, dict_get, setdefault, max, degrees } from "../../pyrt/index.ts";
+import { py_bool, py_or, dict_get, setdefault, max, degrees, hypot } from "../../pyrt/index.ts";
 import { LengthContext, local_name, parse_length, parse_ratio } from "./_util.ts";
 import { parse_color } from "./colors.ts";
 import { _split_declarations } from "./style.ts";
@@ -201,11 +201,8 @@ export function resolve_gradient(
   // angle in Grad Rotation, as 360 minus the clockwise screen angle (AE
   // 2026 imports an axis at 0 / 30 / -60 degrees as 360 / 330 / 420).
   const edge_y = base.apply(cx, cy + r);
-  // TODO(port): V8 Math.hypot (scaled sqrt) can differ from CPython 3.10+
-  // math.hypot (extended-precision vector_norm) by 1 ulp for some inputs;
-  // affects Grad Scale/Rotation written to the AE project. Needs a pyrt hypot shim.
-  const x_radius = Math.hypot(end[0] - start[0], end[1] - start[1]);
-  const y_radius = Math.hypot(edge_y[0] - start[0], edge_y[1] - start[1]);
+  const x_radius = hypot(end[0] - start[0], end[1] - start[1]);
+  const y_radius = hypot(edge_y[0] - start[0], edge_y[1] - start[1]);
   // Python truthiness of a float: NaN is truthy, so use py_bool, not `?:`.
   const scale_y = py_bool(x_radius) ? (100.0 * y_radius) / x_radius : 100.0;
   const angle = degrees(Math.atan2(end[1] - start[1], end[0] - start[0]));

@@ -24,6 +24,8 @@ import {
   repr,
   split,
   str,
+  instance_dict,
+  type_name,
 } from "../../../pyrt/index.ts";
 import { BUILTIN_EFFECTS } from "../../data/builtin_effects.ts";
 import { EXPRESSION_CONTROLS } from "../../data/effect_controls.ts";
@@ -97,34 +99,6 @@ export const _TEXT_SELECTOR_NAMES = new Map<string, string>([
 // the atom AE loads the instance with the Legacy engine: Puppet Engine reads 1
 // and the Advanced-only parameters are hidden.
 export const _PUPPET_ENGINE_VERSION = bytes_.int_to_bytes(2, 4, "big");
-
-// TODO(pyrt): `type(x).__name__` has no shim; this covers the types the
-// error messages in this file can see.
-export function type_name(x: any): string {
-  if (x == null) return "NoneType";
-  if (typeof x === "boolean") return "bool";
-  if (typeof x === "number") return Number.isInteger(x) ? "int" : "float";
-  if (typeof x === "string") return "str";
-  if (x instanceof Uint8Array) return "bytes";
-  if (Array.isArray(x)) return "list";
-  if (x instanceof Map) return "dict";
-  return x?.constructor?.name ?? "object";
-}
-
-// TODO(pyrt): no shim for `obj.__dict__`; the same non-enumerable Map per
-// instance that `ChunkField` (descriptors.ts) reads its overrides from. Both
-// names this file writes (`enabled`, `_color`) are `ChunkField`s, whose
-// `__get__` consults this Map first and whose `__set__` pops from it.
-export function instance_dict(obj: any): Map<string, any> {
-  if (!Object.prototype.hasOwnProperty.call(obj, "__dict__")) {
-    Object.defineProperty(obj, "__dict__", { value: new Map<string, any>(), enumerable: false });
-  }
-  return obj.__dict__;
-}
-
-export function instance_dict_set(obj: any, name: string, value: any): void {
-  instance_dict(obj).set(name, value);
-}
 
 export function _baked_effect_def(name: string): [string, string, ListChunk] | null {
   /**
@@ -303,7 +277,7 @@ export function _reorder_and_fill(
       const child = existing.get(mn);
       child._auto_name = spec.auto_name;
       if (!(spec instanceof GroupSpec) && child instanceof Property) {
-        instance_dict_set(child, "_color", (spec as PropSpec).color);
+        instance_dict(child).set("_color", (spec as PropSpec).color);
         if ((spec as PropSpec).chunk_bounds_are_hints) {
           // tdum/tduM hold UI slider hints, not real bounds:
           // the spec is authoritative (None = unbounded).
@@ -401,14 +375,14 @@ export function _derive_layer_styles_enabled(
     if (child.match_name === "ADBE Blend Options Group") {
       blend_options = child;
     } else if (child._tdsb != null && child._tdsb.synthetic) {
-      instance_dict_set(child, "enabled", false);
+      instance_dict(child).set("enabled", false);
     } else if (child.enabled) {
       any_style_enabled = true;
     }
   }
   // Avoid mutating chunk fields (preserves round-trip)
-  instance_dict_set(group, "enabled", any_style_enabled);
-  if (blend_options != null) instance_dict_set(blend_options, "enabled", any_style_enabled);
+  instance_dict(group).set("enabled", any_style_enabled);
+  if (blend_options != null) instance_dict(blend_options).set("enabled", any_style_enabled);
 }
 
 /**
@@ -764,10 +738,6 @@ export class PropertyGroup extends PropertyBase {
     // (`_ldta`, `_chunk`, ...). Answering it without the child scan
     // keeps parent-chain probes like `hasattr(node, "_ldta")` O(1)
     // instead of deriving every sibling's display name.
-    // TODO(pyrt): Python's implicit dunder lookups (`__bool__`, `__eq__`, ...)
-    // bypass `__getattr__`; pyrt probes them as plain property reads on the
-    // `py_object` proxy, so a miss must be `undefined`, not an AttributeError.
-    if (name.startsWith("__") && name.endsWith("__")) return undefined as any;
     if (name.startsWith("_")) throw new AttributeError(name);
     // Avoid infinite recursion during __init__ (before
     // `properties` has been set on the instance).

@@ -45,15 +45,22 @@ translating** and use them; do not reimplement anything they provide. Never edit
 - Third-party: `attrs` → `pyrt/attrs.ts`; `fontTools` → `fontkit` (+ hand logic),
   `uharfbuzz` → `harfbuzzjs`, `yaml` → `yaml` (npm). Where parity with the Python library is not
   certain, translate faithfully anyway and add `// TODO(port): <specific parity risk>`.
-- Stdlib: `struct` → `pyrt struct`; `io.BytesIO` → `pyrt BytesIO`; `pathlib.Path` →
-  `pyrt Path` (`p / "x"` → `p.div("x")`); `os.path` → `node:path`; files → `node:fs`;
+- Stdlib: `struct` → `pyrt struct` (`pack_into` included); `io.BytesIO` / `io.StringIO` →
+  `pyrt BytesIO` / `StringIO`; `open(path, "rb")` → `pyrt open_rb`; `pathlib.Path` →
+  `pyrt Path` (`p / "x"` → `p.div("x")`, `Path.home()`); `PurePosixPath` / `PureWindowsPath` →
+  pyrt's (same `div`); `os.path` → `node:path`; files → `node:fs`;
   `os.environ` → `process.env`; `sys.platform` → `"darwin"|"win32"|"linux"` via
   `process.platform`; `math.*` → `Math.*` except helpers in `pyrt/num.ts`
-  (`isclose`, `copysign`, `fsum`, `radians`, `degrees`); `zlib` → `node:zlib`
+  (`isclose`, `copysign`, `fsum`, `radians`, `degrees`) and `math.hypot` → pyrt `hypot`
+  (CPython's rounding); `zlib` → `node:zlib`
   (`inflateSync`, `deflateSync`, `inflateRawSync`; `decompressobj().decompress(x, max)` →
   `inflateSync(x, { maxOutputLength: max })` with a TODO if semantics differ); `hashlib.md5` →
   `node:crypto` `createHash("md5")`; `base64` → `Buffer.from(...).toString("base64")` /
-  `new Uint8Array(Buffer.from(s, "base64"))`; `json` → `JSON` (see §7);
+  `new Uint8Array(Buffer.from(s, "base64"))`; `json.loads` / `json.dumps` → pyrt `json_loads` /
+  `json_dumps` (dicts are Maps, floats `PyFloat`, big ints `bigint`; see §7); `re` → pyrt
+  `py_re(pattern, flags)` (Python syntax and Unicode `\d`/`\w`/`\s`), `re_search` / `re_match` /
+  `re_fullmatch` / `re_escape`, and `pattern_match` / `pattern_search` / `pattern_findall` for a
+  compiled pattern's methods;
   `warnings.warn` → `pyrt warn`; `logging.getLogger(__name__)` → a module const
   `const logger = { debug() {}, info() {}, warning: (m: string) => warn(m) }` (keep call sites);
   `functools.lru_cache` → `pyrt lru_cache`; `copy.deepcopy`/`copy.copy` → `pyrt deepcopy`/`copy`;
@@ -162,6 +169,12 @@ translating** and use them; do not reimplement anything they provide. Never edit
 - **`hasattr` / `getattr` / `setattr`** with a literal name → direct property access
   (`"name" in obj`, `obj.name`); with a computed name or a default → pyrt `hasattr`/`getattr`
   and `obj[name] = v`.
+- **More builtins**: `type(x).__name__` → `type_name(x)`; `[x] * n` → `list_mul([x], n)`;
+  `dict(m)` → `dict(m)`; `m.items()` on a Mapping → `mapping_items(m)`; `obj.__dict__` →
+  `instance_dict(obj)`; `a / b` that must raise `ZeroDivisionError` → `truediv(a, b)` (pass
+  `"int"` for int operands); `int(s)` / `float(s)` already accept Unicode digits and `_`
+  separators like CPython; `FileExistsError`, `SystemExit` are in pyrt `errors.ts`;
+  `pytest.fail` / `pytest.importorskip` → pyrt `fail` / `importorskip`.
 - **Default arguments** are evaluated once in Python: a mutable default (`def f(x=[])`) that the
   body mutates → hoist a module-level constant; otherwise ordinary TS defaults.
 
@@ -243,10 +256,9 @@ translating** and use them; do not reimplement anything they provide. Never edit
   chunks).
 - `_NulTailStr` (a `str` subclass carrying `.raw`) → `class _NulTailStr extends String { raw }`;
   compare such values with `py_eq` / `String(x)`.
-- `json.dumps(obj, ...)` → `JSON.stringify` only when the output is not byte-compared; when it is
-  (written into a file, hashed, compared in tests), reproduce Python's separators
-  (`", "`/`": "` by default), `ensure_ascii` escaping and float spelling (`float_repr`) with a local
-  serializer marked `// json.dumps parity`.
+- `json.dumps(obj, ...)` → pyrt `json_dumps(obj, { separators, ensure_ascii, sort_keys, indent,
+  default_ })`: Python's separators, escaping and float spelling. A float that must print as
+  `1.0` is a `PyFloat` (`json_loads` produces them).
 - Dict iteration order = insertion order (Map). Never iterate a plain object whose keys could be
   numeric strings.
 

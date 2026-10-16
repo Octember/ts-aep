@@ -58,7 +58,7 @@ import {
   round,
   py_bool,
   is_real,
-
+  hypot,
 } from "../../pyrt/index.ts";
 
 export type Box = [number, number, number, number];
@@ -601,7 +601,7 @@ export function _read_literal_string(data: Uint8Array, pos: number): [Uint8Array
           digits += String.fromCharCode(data[pos]);
           pos += 1;
         }
-        // CPython's int(b"89", 8) raises; the pyrt int() base-8 check does not.
+        // CPython's int(b"89", 8) raises with the bytes repr (b'89'); pyrt int() takes the str.
         if (/[89]/.test(digits)) {
           throw new ValueError(`invalid literal for int() with base 8: b'${digits}'`);
         }
@@ -766,10 +766,9 @@ export class _GState {
    */
   stroke_half_width(): [number, number] {
     const half = this.line_width / 2.0;
-    // TODO(port): CPython 3.12 math.hypot is correctly rounded; V8 Math.hypot can differ by 1 ulp for some ctm inputs.
     return [
-      half * Math.hypot(this.ctm[0], this.ctm[1]),
-      half * Math.hypot(this.ctm[2], this.ctm[3]),
+      half * hypot(this.ctm[0], this.ctm[1]),
+      half * hypot(this.ctm[2], this.ctm[3]),
     ];
   }
 }

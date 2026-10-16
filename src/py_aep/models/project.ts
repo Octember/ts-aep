@@ -93,9 +93,11 @@ import {
   bytes_eq,
   descriptor,
   format,
-  float_repr,
-  PyFloat,
   deferred,
+  instance_dict,
+  json_dumps,
+  json_loads,
+  type_name,
 } from "../../pyrt/index.ts";
 import type { PathLike } from "../../pyrt/index.ts";
 
@@ -118,49 +120,6 @@ export function* count(start = 0): Generator<number> {
   for (let i = start; ; i++) yield i;
 }
 
-/** `json.loads` for an object: a dict is a Map, insertion order kept. */
-// json.dumps parity: `json_loads` / `json_dumps` below reproduce Python's
-// separators and ensure_ascii escaping for the cms and alas records.
-export function json_loads(text: string): Map<string, any> {
-  return new Map(Object.entries(JSON.parse(text)));
-}
-
-// json.dumps parity: ensure_ascii escapes every char outside space..~ as \uXXXX
-// (per UTF-16 unit, which is how Python spells astral characters too).
-export function json_str(s: string): string {
-  let out = '"';
-  for (let i = 0; i < s.length; i++) {
-    const ch = s[i];
-    const c = s.charCodeAt(i);
-    if (ch === '"') out += '\\"';
-    else if (ch === "\\") out += "\\\\";
-    else if (ch === "\n") out += "\\n";
-    else if (ch === "\r") out += "\\r";
-    else if (ch === "\t") out += "\\t";
-    else if (ch === "\b") out += "\\b";
-    else if (ch === "\f") out += "\\f";
-    else if (c < 0x20 || c > 0x7e) out += "\\u" + c.toString(16).padStart(4, "0");
-    else out += ch;
-  }
-  return out + '"';
-}
-
-/**
- * `json.dumps(obj)` with Python's default separators (`", "` and `": "`).
- */
-// NOTE(port): the only caller dumps the cms record, annotated `dict[str, int | str]`
-// in Python, so no float occurs; a boxed `PyFloat` is written as Python would (`1.0`).
-export function json_dumps(value: any): string {
-  if (value == null) return "null";
-  if (typeof value === "boolean") return value ? "true" : "false";
-  if (value instanceof PyFloat) return float_repr(value);
-  if (typeof value === "number") return Number.isInteger(value) ? String(value) : float_repr(value);
-  if (typeof value === "string") return json_str(value);
-  if (Array.isArray(value)) return "[" + value.map((v) => json_dumps(v)).join(", ") + "]";
-  const entries: [string, any][] = value instanceof Map ? [...value] : Object.entries(value);
-  return "{" + entries.map(([k, v]) => `${json_str(k)}: ${json_dumps(v)}`).join(", ") + "}";
-}
-
 export function ET_fromstring(text: string): any {
   return fromstring(text);
 }
@@ -169,33 +128,6 @@ export function ET_tostring(el: any): string {
   return tostring(el, "unicode");
 }
 
-/** Python `type(x).__name__` for an error message. */
-// NOTE(port): `type(x).__name__` from JS types; floats are boxed `PyFloat` by pyrt convention,
-// and class names equal the Python class names.
-export function py_type_name(x: any): string {
-  if (x == null) return "NoneType";
-  if (x instanceof PyFloat) return "float";
-  if (typeof x === "boolean") return "bool";
-  if (typeof x === "number") return Number.isInteger(x) ? "int" : "float";
-  if (typeof x === "bigint") return "int";
-  if (typeof x === "string") return "str";
-  if (Array.isArray(x)) return "list";
-  if (x instanceof Map) return "dict";
-  if (x instanceof Uint8Array) return "bytes";
-  return x.constructor?.name ?? "object";
-}
-
-/**
- * `obj.__dict__`: the per-instance attribute dict the `ChunkField` descriptors
- * read their overrides from (same non-enumerable Map as `descriptors.ts`).
- */
-// NOTE(port): same per-instance non-enumerable Map as cos/descriptors.ts and descriptors.ts; it is the instance `__dict__` for the descriptor overrides.
-export function instance_dict(obj: any): Map<string, any> {
-  if (!Object.prototype.hasOwnProperty.call(obj, "__dict__")) {
-    Object.defineProperty(obj, "__dict__", { value: new Map<string, any>(), enumerable: false });
-  }
-  return obj.__dict__;
-}
 
 /** `isinstance(x, (list, tuple))` as used by the port. */
 export function is_list_or_tuple(x: any): boolean {
@@ -1014,7 +946,7 @@ export class Project {
       if (!is_list_or_tuple(value)) {
         throw new TypeError_(
           "icc_profile_dirs must be a list of directories or None, " +
-            `got ${py_type_name(value)}`,
+            `got ${type_name(value)}`,
         );
       }
       for (const p of value) validate_path_exists(p);
@@ -1078,7 +1010,7 @@ export class Project {
     } else {
       throw new TypeError_(
         "display_color_space expects a 'display/view' string or a " +
-          `(display, view) tuple, got ${py_type_name(value)}`,
+          `(display, view) tuple, got ${type_name(value)}`,
       );
     }
     validate_string(display);
@@ -1314,7 +1246,7 @@ export class Project {
    */
   import_file(options: ImportOptions): FootageItem | CompItem {
     if (!(options instanceof ImportOptions)) {
-      throw new ValueError(`Expected ImportOptions, got ${py_type_name(options)}`);
+      throw new ValueError(`Expected ImportOptions, got ${type_name(options)}`);
     }
 
     if (options.layer_index != null) {

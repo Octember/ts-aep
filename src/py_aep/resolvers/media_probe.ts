@@ -9,16 +9,13 @@
  * This reads external media files (not `.aep` chunks), so `struct` is used here.
  */
 
-import * as fs from "node:fs";
 import { inflateSync } from "node:zlib";
 import {
   AttributeError,
   BytesIO,
   Fraction,
-  FileNotFoundError,
   IndexError,
   NotImplementedError,
-  OSError,
   StructError,
   TypeError_,
   ValueError,
@@ -48,6 +45,10 @@ import {
   struct,
   tkey,
   type IO,
+  type FileReader,
+  json_loads,
+  open_rb,
+  type_name,
 } from "../../pyrt/index.ts";
 import type { Path } from "../../pyrt/index.ts";
 
@@ -222,82 +223,8 @@ export function _image_depth(has_alpha: boolean, bits: number, kw: { gray?: bool
   return bits === 1 ? 0 : dict_get(_GRAY_DEPTHS, bits, 0);
 }
 
-/**
- * A read-only binary file over `node:fs`, the `open(path, "rb")` the probe
- * reads through.
- */
-// TODO(pyrt): file-object shim (`open(path, "rb")`); pyrt only has BytesIO.
-export class _OsFile {
-  private readonly fd: number;
-  private pos = 0;
-
-  constructor(readonly path: string) {
-    try {
-      this.fd = fs.openSync(path, "r");
-    } catch (e: any) {
-      if (e?.code === "ENOENT") throw new FileNotFoundError(`[Errno 2] No such file or directory: '${path}'`);
-      if (typeof e?.code === "string") throw new OSError(`${e.message}`);
-      throw e;
-    }
-    this._size = fs.fstatSync(this.fd).size;
-  }
-
-  private readonly _size: number;
-
-  private size(): number {
-    return this._size;
-  }
-
-  read(size = -1): Uint8Array {
-    const remaining = Math.max(this.size() - this.pos, 0);
-    const n = size < 0 ? remaining : Math.min(size, remaining);
-    const out = new Uint8Array(n);
-    let got = 0;
-    while (got < n) {
-      const r = fs.readSync(this.fd, out, got, n - got, this.pos + got);
-      if (r === 0) break;
-      got += r;
-    }
-    this.pos += got;
-    return got === n ? out : out.slice(0, got);
-  }
-
-  readline(size = -1): Uint8Array {
-    const out: number[] = [];
-    while (size < 0 || out.length < size) {
-      const c = this.read(1);
-      if (c.length === 0) break;
-      out.push(c[0]);
-      if (c[0] === 0x0a) break;
-    }
-    return Uint8Array.from(out);
-  }
-
-  *[Symbol.iterator](): Generator<Uint8Array> {
-    for (;;) {
-      const line = this.readline();
-      if (line.length === 0) return;
-      yield line;
-    }
-  }
-
-  seek(offset: number, whence = SEEK_SET): number {
-    const base = whence === SEEK_SET ? 0 : whence === SEEK_CUR ? this.pos : this.size();
-    this.pos = base + offset;
-    return this.pos;
-  }
-
-  tell(): number {
-    return this.pos;
-  }
-
-  close(): void {
-    fs.closeSync(this.fd);
-  }
-}
-
 export class _BoundedReader {
-  private readonly _fp: _OsFile;
+  private readonly _fp: FileReader;
   private readonly _size: number;
 
   /**
@@ -309,7 +236,7 @@ export class _BoundedReader {
    * allocate 4 GB. Clamped, every probe's memory stays proportional to the
    * file. A seek before the start raises `ValueError`, as `io.BytesIO` does.
    */
-  constructor(fp: _OsFile) {
+  constructor(fp: FileReader) {
     this._fp = fp;
     this._size = fp.seek(0, SEEK_END);
     fp.seek(0);
@@ -377,7 +304,7 @@ export function probe_media(file: Path, data: Uint8Array | null = null): MediaIn
   // one of them.
   try {
     if (data != null) return parser(new BytesIO(data) as unknown as IO);
-    const fp = new _OsFile(file.path);
+    const fp = open_rb(file.path);
     try {
       return parser(new _BoundedReader(fp) as unknown as IO);
     } finally {
@@ -1854,7 +1781,7 @@ export function _naive_datetime_us(y: number, mo: number, d: number, h: number, 
  * 3- or 6-digit fraction); CPython 3.12 accepts a few more.
  */
 export function _parse_mgjson_time(t: string): number | null {
-  if (typeof t !== "string") throw new AttributeError(`'${_json_type(t)}' object has no attribute 'strip'`);
+  if (typeof t !== "string") throw new AttributeError(`'${type_name(t)}' object has no attribute 'strip'`);
   let s = strip(t);
   // Drop a trailing 'Z' or numeric UTC offset (+HH:MM / +HHMM); the span
   // between samples is offset-independent.
@@ -1894,73 +1821,26 @@ export function _parse_mgjson_time(t: string): number | null {
   return null;
 }
 
-/** CPython type name of a parsed JSON value (for error messages). */
-export function _json_type(x: any): string {
-  if (x === null) return "NoneType";
-  if (typeof x === "boolean") return "bool";
-  if (typeof x === "number") return Number.isInteger(x) ? "int" : "float";
-  if (typeof x === "string") return "str";
-  return Array.isArray(x) ? "list" : "dict";
-}
-
-/** `d.get(key, default)` on a parsed JSON value; a non-dict has no `.get`. */
 export function _json_get(d: any, key: string, default_: any = null): any {
-  if (d === null || typeof d !== "object" || Array.isArray(d)) {
-    throw new AttributeError(`'${_json_type(d)}' object has no attribute 'get'`);
-  }
-  return Object.hasOwn(d, key) ? d[key] : default_;
+  if (!(d instanceof Map)) throw new AttributeError(`'${type_name(d)}' object has no attribute 'get'`);
+  return dict_get(d, key, default_);
 }
 
 /** `iter(x)` on a parsed JSON value: list items, str characters, dict keys. */
 export function _json_iter(x: any): any[] {
   if (Array.isArray(x)) return x;
   if (typeof x === "string") return Array.from(x);
-  if (x !== null && typeof x === "object") return Object.keys(x);
-  throw new TypeError_(`'${_json_type(x)}' object is not iterable`);
-}
-
-/** Python truthiness of a parsed JSON value (an empty dict is falsy). */
-export function _json_truthy(x: any): boolean {
-  if (x !== null && typeof x === "object" && !Array.isArray(x)) return Object.keys(x).length > 0;
-  return py_bool(x);
-}
-
-/**
- * `json.loads(bytes)`'s decoding step (`json.detect_encoding`): a UTF-8 BOM is
- * dropped, a UTF-16 BOM or an ASCII-first NUL pattern selects UTF-16.
- */
-// TODO(port): UTF-32 JSON documents (BOM or NUL pattern) fall through to UTF-8 and fail to parse; pyrt has no UTF-32 codec.
-export function _json_text(raw: Uint8Array): string {
-  const n = raw.length;
-  if (n >= 2 && ((raw[0] === 0xff && raw[1] === 0xfe) || (raw[0] === 0xfe && raw[1] === 0xff))) {
-    return decode(raw, "utf-16", "strict");
-  }
-  if (n >= 3 && raw[0] === 0xef && raw[1] === 0xbb && raw[2] === 0xbf) return decode(raw.slice(3), "utf-8", "strict");
-  if (n >= 4) {
-    if (!raw[0] && raw[1]) return decode(raw, "utf-16-be", "strict");
-    if (!raw[1] && (raw[2] || raw[3])) return decode(raw, "utf-16-le", "strict");
-  } else if (n === 2) {
-    if (!raw[0]) return decode(raw, "utf-16-be", "strict");
-    if (!raw[1]) return decode(raw, "utf-16-le", "strict");
-  }
-  return decode(raw, "utf-8", "strict");
+  if (x instanceof Map) return [...x.keys()];
+  throw new TypeError_(`'${type_name(x)}' object is not iterable`);
 }
 
 export function _probe_mgjson(fp: IO): MediaInfo {
-  // json.load(fp). JSONDecodeError and UnicodeDecodeError are ValueErrors.
-  // TODO(port): Python's json also accepts NaN / Infinity / -Infinity literals, which JSON.parse rejects.
-  let doc: any;
-  try {
-    doc = JSON.parse(_json_text(fp.read()));
-  } catch (e: any) {
-    if (e instanceof ValueError) throw e;
-    throw new ValueError(e.message);
-  }
+  const doc = json_loads(fp.read());
   const times: number[] = [];
   for (const stream of _json_iter(_json_get(doc, "dataDynamicSamples", []))) {
     for (const sample of _json_iter(_json_get(stream, "samples", []))) {
       const t = _json_get(sample, "time");
-      if (_json_truthy(t)) {
+      if (py_bool(t)) {
         const parsed = _parse_mgjson_time(t);
         if (parsed !== null) times.push(parsed);
       }
@@ -2382,47 +2262,13 @@ export function _probe_mpeg(fp: IO): MediaInfo {
 // Line and byte-split helpers shared by the text formats
 // ---------------------------------------------------------------------------
 
-/**
- * `fp.readline()`. `BytesIO` has no `readline`, so a stream without one is
- * read a byte at a time up to the newline (the same bytes `io` returns).
- */
-// TODO(pyrt): BytesIO.readline is missing; the fallback below reads byte by byte.
-export function _readline(fp: IO): Uint8Array {
-  const native = (fp as any).readline;
-  if (typeof native === "function") return native.call(fp, -1);
-  const out: number[] = [];
-  for (;;) {
-    const c = fp.read(1);
-    if (c.length === 0) break;
-    out.push(c[0]);
-    if (c[0] === 0x0a) break;
-  }
-  return Uint8Array.from(out);
-}
-
 /** `for raw in fp:` - each line of the stream, newline included. */
 export function* _iter_lines(fp: IO): Generator<Uint8Array> {
   for (;;) {
-    const line = _readline(fp);
+    const line = fp.readline();
     if (line.length === 0) return;
     yield line;
   }
-}
-
-/** `bytes.split()` with no separator: runs of ASCII whitespace (space, \t, \n, \r, \v, \f). */
-// TODO(pyrt): bytes split-on-whitespace is missing from pyrt bytes_ (only split(sep) exists).
-export function _split_ws(data: Uint8Array): Uint8Array[] {
-  const is_ws = (c: number): boolean => c === 0x20 || (c >= 0x09 && c <= 0x0d);
-  const out: Uint8Array[] = [];
-  let i = 0;
-  while (i < data.length) {
-    while (i < data.length && is_ws(data[i])) i++;
-    if (i >= data.length) break;
-    const start = i;
-    while (i < data.length && !is_ws(data[i])) i++;
-    out.push(data.slice(start, i));
-  }
-  return out;
 }
 
 /** Latin-1 view of bytes, so a byte regex runs as a string regex. */
@@ -2432,18 +2278,18 @@ export function _latin1(data: Uint8Array): string {
 
 /** Radiance HDR (RGBE) - text header with a resolution line (still image). */
 export function _probe_hdr(fp: IO): MediaInfo {
-  if (!bytes_.startswith(_readline(fp), b("#?"))) {
+  if (!bytes_.startswith(fp.readline(), b("#?"))) {
     throw new ValueError("Not a Radiance HDR file (missing '#?' identifier)");
   }
   for (;;) {
-    const line = _readline(fp);
+    const line = fp.readline();
     if (line.length === 0) throw new ValueError("Unexpected EOF in Radiance HDR header");
     if (bytes_.strip(line).length === 0) break; // blank line separates header from resolution
   }
   // Resolution line is two axis specifiers, e.g. "-Y 426 +X 640"; the X
   // specifier gives width and the Y specifier gives height. Radiance allows
   // either order (and either sign), so key off the axis letter, not position.
-  const parts = _split_ws(_readline(fp));
+  const parts = bytes_.split(fp.readline());
   if (parts.length < 4) throw new ValueError("Cannot parse HDR resolution line");
   const dims = new Map<string, number>();
   dims.set(bytes_.hex(parts[0].slice(-1)), int(decode(parts[1], "ascii")));
@@ -2539,7 +2385,7 @@ export function _probe_eps(fp: IO): MediaInfo {
   for (const raw of _iter_lines(fp)) {
     const line = bytes_.strip(raw);
     if (bytes_.startswith(line, b("%%HiResBoundingBox:"))) {
-      const nums = _split_ws(bytes_.split(line, b(":"), 1)[1]);
+      const nums = bytes_.split(bytes_.split(line, b(":"), 1)[1]);
       if (nums.length >= 4) {
         const [llx, lly, urx, ury] = nums.slice(0, 4).map((n) => float(decode(n, "ascii")));
         width = round(urx - llx);
@@ -2549,7 +2395,7 @@ export function _probe_eps(fp: IO): MediaInfo {
     } else if (!hires && bytes_.startswith(line, b("%%BoundingBox:"))) {
       const rest = bytes_.strip(bytes_.split(line, b(":"), 1)[1]);
       if (!bytes_eq(rest, b("(atend)"))) {
-        const nums = _split_ws(rest);
+        const nums = bytes_.split(rest);
         if (nums.length >= 4) {
           const [llx, lly, urx, ury] = nums.slice(0, 4).map((n) => float(decode(n, "ascii")));
           width = round(urx - llx);

@@ -27,6 +27,7 @@ import {
   range,
   sum,
   zip,
+  hypot,
 } from "../../pyrt/index.ts";
 
 /** Parsed-font cache keyed by file path (one parse per font per process). */
@@ -344,9 +345,8 @@ export function _polyline(raw: RawSubpath): [number, number][] {
 export function _arc_lengths(pts: [number, number][]): number[] {
   const cum = [0.0];
   for (let i = 1; i < pts.length; i++) {
-    // TODO(port): CPython math.hypot is correctly rounded; V8 Math.hypot may differ in the last bit.
     cum.push(
-      cum.at(-1)! + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]),
+      cum.at(-1)! + hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]),
     );
   }
   return cum;

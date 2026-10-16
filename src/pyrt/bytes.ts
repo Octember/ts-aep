@@ -163,7 +163,8 @@ export function rjust(data: Uint8Array, width: number, fill = 0): Uint8Array {
 }
 
 /** `data.split(sep)` */
-export function split(data: Uint8Array, sep: Uint8Array, maxsplit = -1): Uint8Array[] {
+export function split(data: Uint8Array, sep?: Uint8Array | null, maxsplit = -1): Uint8Array[] {
+  if (sep == null) return split_whitespace(data, maxsplit);
   const out: Uint8Array[] = [];
   let s = 0;
   let i = find(data, sep);
@@ -244,4 +245,28 @@ export function bytes_repr(data: Uint8Array): string {
     else s += "\\x" + c.toString(16).padStart(2, "0");
   }
   return `b'${s}'`;
+}
+
+/** `bytes.isspace()` bytes: space, \t, \n, \v, \f, \r. */
+const is_ws = (c: number): boolean => c === 0x20 || (c >= 0x09 && c <= 0x0d);
+
+/** `data.split()` / `data.split(None, maxsplit)`: runs of ASCII whitespace separate fields. */
+function split_whitespace(data: Uint8Array, maxsplit: number): Uint8Array[] {
+  const out: Uint8Array[] = [];
+  const n = data.length;
+  let i = 0;
+  while (i < n) {
+    while (i < n && is_ws(data[i])) i++;
+    if (i === n) break;
+    if (maxsplit >= 0 && out.length === maxsplit) {
+      // The remainder keeps its trailing whitespace, as in CPython.
+      out.push(data.slice(i));
+      break;
+    }
+    let j = i;
+    while (j < n && !is_ws(data[j])) j++;
+    out.push(data.slice(i, j));
+    i = j;
+  }
+  return out;
 }

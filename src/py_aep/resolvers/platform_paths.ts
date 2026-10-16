@@ -9,31 +9,10 @@
  * to the project file, and `ascendcount_target`, the same down to the target.
  */
 
-import { py_eq } from "../../pyrt/index.ts";
+import { py_eq, PurePath, PurePosixPath, PureWindowsPath } from "../../pyrt/index.ts";
 
 export const _DRIVE = /^([A-Za-z]):[\\\/]?(.*)$/s;
 export const _UNC = /^(?:\\\\|\/\/)[^\\\/]+[\\\/]([^\\\/]+)[\\\/]?(.*)$/s;
-
-// NOTE(port): pyrt/pathlib.ts only has the host-flavour Path, so these are local stand-ins for
-// pathlib.PurePath / PurePosixPath / PureWindowsPath covering what this module uses (`.parts`,
-// `/ "_"`, isinstance, type identity). `_posix_parts` / `_windows_parts` below follow CPython's
-// posixpath / ntpath.splitroot for every input `_pure_path` admits; tests/ cover both flavours.
-export class PurePath {
-  parts: string[];
-
-  constructor(parts: string[]) {
-    this.parts = parts;
-  }
-
-  /** `p / "child"` keeps the same class, as in pathlib. */
-  div(name: string): PurePath {
-    return new (this.constructor as any)([...this.parts, name]);
-  }
-}
-
-export class PurePosixPath extends PurePath {}
-
-export class PureWindowsPath extends PurePath {}
 
 export function _is_posix(path: string): boolean {
   return path.startsWith("/") && !path.startsWith("//");
@@ -84,52 +63,12 @@ export function platform_path(path: string, kw: { windows: boolean }): string {
   return rest !== "" || root === "" ? `${root}/${rest}` : root;
 }
 
-export function _posix_parts(path: string): string[] {
-  // CPython's PurePosixPath: a single leading root, then components with
-  // empty and "." segments dropped.
-  return ["/", ...path.split("/").filter((c) => c !== "" && c !== ".")];
-}
-
-export function _windows_parts(path: string): string[] {
-  // CPython 3.12 ntpath.splitroot + pathlib: separators normalised to `\`, the
-  // drive and root form one leading part, empty and "." components dropped.
-  const normp = path.replace(/\//g, "\\");
-  let drv_root: string;
-  let tail: string;
-  if (normp.slice(0, 2) === "\\\\") {
-    // UNC drives, e.g. \\server\share or \\?\UNC\server\share; device drives
-    const start = normp.slice(0, 8).toUpperCase() === "\\\\?\\UNC\\" ? 8 : 2;
-    const index = normp.indexOf("\\", start);
-    const index2 = index === -1 ? -1 : normp.indexOf("\\", index + 1);
-    if (index2 === -1) {
-      drv_root = normp;
-      tail = "";
-    } else {
-      drv_root = normp.slice(0, index2 + 1);
-      tail = normp.slice(index2 + 1);
-    }
-  } else if (normp.slice(1, 2) === ":") {
-    if (normp.slice(2, 3) === "\\") {
-      drv_root = normp.slice(0, 3);
-      tail = normp.slice(3);
-    } else {
-      drv_root = normp.slice(0, 2);
-      tail = normp.slice(2);
-    }
-  } else {
-    drv_root = "";
-    tail = normp;
-  }
-  const comps = tail.split("\\").filter((c) => c !== "" && c !== ".");
-  return drv_root !== "" ? [drv_root, ...comps] : comps;
-}
-
 export function _pure_path(path: string): PurePath | null {
   if (_is_posix(path)) {
-    return new PurePosixPath(_posix_parts(path));
+    return new PurePosixPath(path);
   }
   if (_DRIVE.test(path) || _UNC.test(path)) {
-    return new PureWindowsPath(_windows_parts(path));
+    return new PureWindowsPath(path);
   }
   return null;
 }

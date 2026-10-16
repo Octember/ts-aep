@@ -16,6 +16,9 @@ function norm(encoding: string): string {
   if (e === "utf-16-le" || e === "utf-16le") return "utf-16-le";
   if (e === "utf-16-be" || e === "utf-16be") return "utf-16-be";
   if (e === "utf-16") return "utf-16";
+  if (e === "utf-32" || e === "utf32" || e === "u32") return "utf-32";
+  if (e === "utf-32-le" || e === "utf-32le") return "utf-32-le";
+  if (e === "utf-32-be" || e === "utf-32be") return "utf-32-be";
   if (e === "mac-roman" || e === "macroman" || e === "mac") return "mac-roman";
   if (e === "cp1252" || e === "windows-1252") return "cp1252";
   return e;
@@ -194,6 +197,80 @@ function encode_utf16(text: string, le: boolean): Uint8Array {
   return out;
 }
 
+/**
+ * UTF-32 decoding, CPython's error reporting included: a unit outside
+ * range(0x110000) or in the surrogate range, and a truncated tail, go to the
+ * error handler (`surrogateescape` escapes the leading bytes >= 0x80 of the
+ * bad span and resumes after them, raising when there are none).
+ */
+function decode_utf32(data: Uint8Array, errors: Errors, le: boolean, offset = 0): string {
+  const enc = le ? "utf-32-le" : "utf-32-be";
+  const out: string[] = [];
+  const n = data.length;
+  let i = 0;
+  const fail = (start: number, end: number, reason: string): number => {
+    if (errors === "replace") {
+      out.push("\ufffd");
+      return end;
+    }
+    if (errors === "ignore") return end;
+    if (errors === "surrogateescape") {
+      let k = start;
+      while (k < end && k - start < 4 && data[k] >= 0x80) out.push(String.fromCharCode(0xdc00 + data[k++]));
+      if (k > start) return k;
+    }
+    const where =
+      end - start === 1
+        ? `byte 0x${data[start].toString(16).padStart(2, "0")} in position ${start + offset}`
+        : `bytes in position ${start + offset}-${end - 1 + offset}`;
+    throw new UnicodeDecodeError(`'${enc}' codec can't decode ${where}: ${reason}`);
+  };
+  while (i < n) {
+    if (n - i < 4) {
+      i = fail(i, n, "truncated data");
+      continue;
+    }
+    const cp = le
+      ? (data[i] | (data[i + 1] << 8) | (data[i + 2] << 16) | (data[i + 3] << 24)) >>> 0
+      : ((data[i] << 24) | (data[i + 1] << 16) | (data[i + 2] << 8) | data[i + 3]) >>> 0;
+    if (cp > 0x10ffff) i = fail(i, i + 4, "code point not in range(0x110000)");
+    else if (cp >= 0xd800 && cp < 0xe000) i = fail(i, i + 4, "code point in surrogate code point range(0xd800, 0xe000)");
+    else {
+      out.push(String.fromCodePoint(cp));
+      i += 4;
+    }
+  }
+  return out.join("");
+}
+
+function encode_utf32(text: string, errors: Errors, le: boolean, name: string): Uint8Array {
+  const cps: number[] = [];
+  let pos = 0;
+  for (const ch of text) {
+    const cp = ch.codePointAt(0)!;
+    if (cp >= 0xd800 && cp < 0xe000) {
+      if (errors === "ignore") {
+        pos++;
+        continue;
+      }
+      if (errors === "replace") {
+        cps.push(0x3f);
+        pos++;
+        continue;
+      }
+      throw new UnicodeEncodeError(
+        `'${name}' codec can't encode character '\\u${cp.toString(16)}' in position ${pos}: surrogates not allowed`,
+      );
+    }
+    cps.push(cp);
+    pos++;
+  }
+  const out = new Uint8Array(cps.length * 4);
+  const dv = new DataView(out.buffer);
+  cps.forEach((cp, k) => dv.setUint32(4 * k, cp, le));
+  return out;
+}
+
 /** Python `data.decode(encoding, errors)`. */
 export function decode(data: Uint8Array, encoding = "utf-8", errors: Errors = "strict"): string {
   switch (norm(encoding)) {
@@ -215,6 +292,16 @@ export function decode(data: Uint8Array, encoding = "utf-8", errors: Errors = "s
       if (data[0] === 0xff && data[1] === 0xfe) return decode_utf16(data.subarray(2), errors, true);
       if (data[0] === 0xfe && data[1] === 0xff) return decode_utf16(data.subarray(2), errors, false);
       return decode_utf16(data, errors, true);
+    }
+    case "utf-32-le":
+      return decode_utf32(data, errors, true);
+    case "utf-32-be":
+      return decode_utf32(data, errors, false);
+    case "utf-32": {
+      // A BOM picks the byte order and is dropped; without one, little-endian (the native order).
+      if (data[0] === 0xff && data[1] === 0xfe && data[2] === 0 && data[3] === 0) return decode_utf32(data.subarray(4), errors, true, 4);
+      if (data[0] === 0 && data[1] === 0 && data[2] === 0xfe && data[3] === 0xff) return decode_utf32(data.subarray(4), errors, false, 4);
+      return decode_utf32(data, errors, true);
     }
     default:
       throw new LookupError(`unknown encoding: ${encoding}`);
@@ -243,6 +330,17 @@ export function encode(text: string, encoding = "utf-8", errors: Errors = "stric
       const out = new Uint8Array(body.length + 2);
       out.set([0xff, 0xfe]);
       out.set(body, 2);
+      return out;
+    }
+    case "utf-32-le":
+      return encode_utf32(text, errors, true, "utf-32-le");
+    case "utf-32-be":
+      return encode_utf32(text, errors, false, "utf-32-be");
+    case "utf-32": {
+      const body = encode_utf32(text, errors, true, "utf-32");
+      const out = new Uint8Array(body.length + 4);
+      out.set([0xff, 0xfe, 0, 0]);
+      out.set(body, 4);
       return out;
     }
     default:

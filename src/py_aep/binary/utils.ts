@@ -5,15 +5,14 @@ import { DeferredListChunk, ListChunk } from "./chunk.ts";
 import { U4LeChunk, Utf8Chunk } from "./scalar_chunks.ts";
 import {
   PyException,
-  TypeError_,
   ValueError,
   b,
   deferred,
-  float_repr,
   getattr,
+  json_dumps,
+  json_loads,
   len,
   py_bool,
-  sorted,
 } from "../../pyrt/index.ts";
 
 const _chunk = deferred<typeof import("./chunk.ts")>(import.meta.url, "./chunk.ts");
@@ -289,7 +288,7 @@ export function alas_platform(fullpath: string): number {
  * keys, no whitespace.
  */
 export function dump_alas(data: Map<string, any>): string {
-  return json_dumps_sorted(data);
+  return json_dumps(data, { sort_keys: true, separators: [",", ":"] });
 }
 
 /**
@@ -441,162 +440,4 @@ export function recursive_find(
     }
   }
   return results;
-}
-
-// json.loads parity: Python `dict` -> Map at every depth, keys kept in source
-// order (JSON.parse reorders integer-like keys), duplicate keys keep the first
-// position with the last value, and NaN / Infinity / -Infinity are accepted.
-// TODO(port): int/float distinction (`1.0` reads as `1`) and ints beyond 2^53
-// lose precision, so such alas records can differ from Python.
-export function json_loads(text: string): any {
-  const ws = " \t\n\r";
-  let pos = 0;
-  const skip = (): void => {
-    while (pos < text.length && ws.includes(text[pos])) pos++;
-  };
-  const fail = (msg: string): never => {
-    throw new ValueError(`${msg}: char ${pos}`);
-  };
-  const parse_value = (): any => {
-    skip();
-    const ch = text[pos];
-    if (ch === "{") {
-      pos++;
-      const out = new Map<string, any>();
-      skip();
-      if (text[pos] === "}") {
-        pos++;
-        return out;
-      }
-      for (;;) {
-        skip();
-        if (text[pos] !== '"') fail("Expecting property name enclosed in double quotes");
-        const key = parse_string();
-        skip();
-        if (text[pos] !== ":") fail("Expecting ':' delimiter");
-        pos++;
-        out.set(key, parse_value());
-        skip();
-        if (text[pos] === ",") {
-          pos++;
-          continue;
-        }
-        if (text[pos] === "}") {
-          pos++;
-          return out;
-        }
-        fail("Expecting ',' delimiter");
-      }
-    }
-    if (ch === "[") {
-      pos++;
-      const out: any[] = [];
-      skip();
-      if (text[pos] === "]") {
-        pos++;
-        return out;
-      }
-      for (;;) {
-        out.push(parse_value());
-        skip();
-        if (text[pos] === ",") {
-          pos++;
-          continue;
-        }
-        if (text[pos] === "]") {
-          pos++;
-          return out;
-        }
-        fail("Expecting ',' delimiter");
-      }
-    }
-    if (ch === '"') return parse_string();
-    for (const [lit, val] of [
-      ["null", null],
-      ["true", true],
-      ["false", false],
-      ["NaN", NaN],
-      ["Infinity", Infinity],
-      ["-Infinity", -Infinity],
-    ] as [string, any][]) {
-      if (text.startsWith(lit, pos)) {
-        pos += lit.length;
-        return val;
-      }
-    }
-    const m = /-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][-+]?\d+)?/y;
-    m.lastIndex = pos;
-    const r = m.exec(text);
-    if (r === null) return fail("Expecting value");
-    pos = m.lastIndex;
-    return Number(r[0]);
-  };
-  const parse_string = (): string => {
-    const start = pos;
-    pos++;
-    while (pos < text.length && text[pos] !== '"') pos += text[pos] === "\\" ? 2 : 1;
-    if (pos >= text.length) {
-      pos = start;
-      fail("Unterminated string starting at");
-    }
-    pos++;
-    try {
-      return JSON.parse(text.slice(start, pos));
-    } catch {
-      pos = start;
-      return fail("Invalid string");
-    }
-  };
-  const result = parse_value();
-  skip();
-  if (pos !== text.length) fail("Extra data");
-  return result;
-}
-
-// json.dumps parity: `json.dumps(obj, sort_keys=True, separators=(",", ":"))`
-// with the default `ensure_ascii=True`. The output is written into the AEP
-// file and compared byte-for-byte, so it reproduces Python's spelling exactly.
-export function json_dumps_sorted(obj: any): string {
-  if (obj == null) return "null";
-  if (typeof obj === "boolean") return obj ? "true" : "false";
-  if (typeof obj === "number") {
-    if (Number.isNaN(obj)) return "NaN";
-    if (obj === Infinity) return "Infinity";
-    if (obj === -Infinity) return "-Infinity";
-    // TODO(port): int/float distinction. An integer-valued float prints as an int here.
-    return Number.isInteger(obj) ? String(obj) : float_repr(obj);
-  }
-  if (typeof obj === "string") return json_string(obj);
-  if (Array.isArray(obj)) return `[${obj.map(json_dumps_sorted).join(",")}]`;
-  if (obj instanceof Map) {
-    const parts = sorted([...obj.keys()]).map(
-      (k) => `${json_string(k)}:${json_dumps_sorted(obj.get(k))}`,
-    );
-    return `{${parts.join(",")}}`;
-  }
-  throw new TypeError_(`Object of type ${obj?.constructor?.name} is not JSON serializable`);
-}
-
-// json.dumps parity: string escaping under `ensure_ascii=True`. Escapes are
-// lowercase hex and non-BMP code points become surrogate pairs, as in CPython.
-export function json_string(s: string): string {
-  let out = '"';
-  for (const ch of s) {
-    const c = ch.codePointAt(0)!;
-    if (ch === '"') out += '\\"';
-    else if (ch === "\\") out += "\\\\";
-    else if (c === 0x0a) out += "\\n";
-    else if (c === 0x0d) out += "\\r";
-    else if (c === 0x09) out += "\\t";
-    else if (c === 0x08) out += "\\b";
-    else if (c === 0x0c) out += "\\f";
-    else if (c >= 0x20 && c < 0x7f) out += ch;
-    else if (c < 0x10000) out += "\\u" + c.toString(16).padStart(4, "0");
-    else {
-      const v = c - 0x10000;
-      out +=
-        "\\u" + (0xd800 | (v >> 10)).toString(16) + "\\u" + (0xdc00 | (v & 0x3ff)).toString(16);
-    }
-  }
-  return out + '"';
 }

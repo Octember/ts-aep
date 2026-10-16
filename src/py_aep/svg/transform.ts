@@ -6,7 +6,7 @@
  * `matrix(a b c d e f)` ordering.
  */
 
-import { float, py_bool, radians, repr } from "../../pyrt/index.ts";
+import { float, py_bool, radians, repr, pattern_findall } from "../../pyrt/index.ts";
 import { NUMBER_RE } from "./_util.ts";
 import { UnsupportedSVGError } from "./errors.ts";
 
@@ -78,8 +78,7 @@ export const _FUNC_RE = /([a-zA-Z]+)\s*\(([^)]*)\)/g;
 export const _FUNCTIONS: ReadonlySet<string> = new Set(["matrix", "translate", "scale", "rotate", "skewX", "skewY"]);
 
 export function _numbers(text: string): number[] {
-  // NUMBER_RE.findall is unanchored in Python; the TS NUMBER_RE carries a leading ^, stripped here.
-  return Array.from(text.matchAll(new RegExp(NUMBER_RE.source.replace(/^\^/, ""), "g")), (m) => float(m[0]));
+  return pattern_findall(NUMBER_RE, text).map((m) => float(m));
 }
 
 /**

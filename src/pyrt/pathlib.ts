@@ -2,6 +2,7 @@
 
 import * as fs from "node:fs";
 import * as nodepath from "node:path";
+import * as os from "node:os";
 import { FileNotFoundError } from "./errors.ts";
 
 export class Path {
@@ -9,6 +10,11 @@ export class Path {
 
   constructor(...parts: (string | Path)[]) {
     this.path = parts.length ? nodepath.join(...parts.map(String)) : ".";
+  }
+
+  /** `Path.home()`: `os.path.expanduser("~")`, i.e. `$HOME` first, then the password database. */
+  static home(): Path {
+    return new Path(os.homedir());
   }
 
   toString(): string {
@@ -150,4 +156,211 @@ export type PathLike = string | Path;
 
 export function fspath(p: PathLike): string {
   return String(p);
+}
+
+/** `ntpath.splitroot` (CPython 3.12). */
+function nt_splitroot(p: string): [string, string, string] {
+  const normp = p.replace(/\//g, "\\");
+  if (normp.slice(0, 1) === "\\") {
+    if (normp.slice(1, 2) === "\\") {
+      // UNC drives (\\server\share, \\?\UNC\server\share) and device drives.
+      const start = normp.slice(0, 8).toUpperCase() === "\\\\?\\UNC\\" ? 8 : 2;
+      const index = normp.indexOf("\\", start);
+      if (index === -1) return [p, "", ""];
+      const index2 = normp.indexOf("\\", index + 1);
+      if (index2 === -1) return [p, "", ""];
+      return [p.slice(0, index2), p.slice(index2, index2 + 1), p.slice(index2 + 1)];
+    }
+    return ["", p.slice(0, 1), p.slice(1)];
+  }
+  if (normp.slice(1, 2) === ":") {
+    if (normp.slice(2, 3) === "\\") return [p.slice(0, 2), p.slice(2, 3), p.slice(3)];
+    return [p.slice(0, 2), "", p.slice(2)];
+  }
+  return ["", "", p];
+}
+
+/** `posixpath.splitroot` (CPython 3.12). */
+function posix_splitroot(p: string): [string, string, string] {
+  if (p.slice(0, 1) !== "/") return ["", "", p];
+  if (p.slice(1, 2) !== "/" || p.slice(2, 3) === "/") return ["", "/", p.slice(1)];
+  return ["", p.slice(0, 2), p.slice(2)];
+}
+
+/** `ntpath.join` (CPython 3.12). */
+function nt_join(path: string, ...paths: string[]): string {
+  let [result_drive, result_root, result_path] = nt_splitroot(path);
+  for (const p of paths) {
+    const [p_drive, p_root, p_path] = nt_splitroot(p);
+    if (p_root) {
+      if (p_drive || !result_drive) result_drive = p_drive;
+      result_root = p_root;
+      result_path = p_path;
+      continue;
+    } else if (p_drive && p_drive !== result_drive) {
+      if (p_drive.toLowerCase() !== result_drive.toLowerCase()) {
+        result_drive = p_drive;
+        result_root = p_root;
+        result_path = p_path;
+        continue;
+      }
+      result_drive = p_drive;
+    }
+    if (result_path && !"\\/".includes(result_path.at(-1)!)) result_path += "\\";
+    result_path += p_path;
+  }
+  if (result_path && !result_root && result_drive && !":\\/".includes(result_drive.at(-1)!)) {
+    return result_drive + "\\" + result_path;
+  }
+  return result_drive + result_root + result_path;
+}
+
+/** `posixpath.join` */
+function posix_join(a: string, ...p: string[]): string {
+  let path = a;
+  for (const b of p) {
+    if (b.startsWith("/")) path = b;
+    else if (!path || path.endsWith("/")) path += b;
+    else path += "/" + b;
+  }
+  return path;
+}
+
+type Flavour = {
+  sep: string;
+  altsep: string | null;
+  splitroot: (p: string) => [string, string, string];
+  join: (a: string, ...p: string[]) => string;
+  casefold: boolean;
+};
+
+const POSIX: Flavour = { sep: "/", altsep: null, splitroot: posix_splitroot, join: posix_join, casefold: false };
+const WINDOWS: Flavour = { sep: "\\", altsep: "/", splitroot: nt_splitroot, join: nt_join, casefold: true };
+
+/**
+ * `pathlib.PurePath` (CPython 3.12) for the flavours `PurePosixPath` and
+ * `PureWindowsPath`: pure string manipulation, the same on every host.
+ */
+export class PurePath {
+  declare readonly _raw_paths: string[];
+  declare readonly drive: string;
+  declare readonly root: string;
+  declare readonly _tail: string[];
+  protected get _flavour(): Flavour {
+    throw new TypeError("PurePath is abstract; use PurePosixPath or PureWindowsPath");
+  }
+
+  constructor(...args: (string | PurePath)[]) {
+    const paths: string[] = [];
+    for (const a of args) {
+      if (a instanceof PurePath) {
+        if (a._flavour === WINDOWS && this._flavour === POSIX) paths.push(...a._raw_paths.map((p) => p.replace(/\\/g, "/")));
+        else paths.push(...a._raw_paths);
+      } else {
+        paths.push(String(a));
+      }
+    }
+    (this as any)._raw_paths = paths;
+    const f = this._flavour;
+    let path = paths.length === 0 ? "" : paths.length === 1 ? paths[0] : f.join(paths[0], ...paths.slice(1));
+    let drv = "";
+    let root = "";
+    let tail: string[] = [];
+    if (path) {
+      if (f.altsep) path = path.split(f.altsep).join(f.sep);
+      let rel: string;
+      [drv, root, rel] = f.splitroot(path);
+      if (!root && drv.startsWith(f.sep) && !drv.endsWith(f.sep)) {
+        const drv_parts = drv.split(f.sep);
+        if ((drv_parts.length === 4 && !"?.".includes(drv_parts[2])) || drv_parts.length === 6) root = f.sep;
+      }
+      tail = rel.split(f.sep).filter((x) => x && x !== ".");
+    }
+    (this as any).drive = drv;
+    (this as any).root = root;
+    (this as any)._tail = tail;
+  }
+
+  /** A new path of the same flavour from the given segments (`with_segments`). */
+  protected _with(...args: (string | PurePath)[]): this {
+    return new (this.constructor as any)(...args);
+  }
+
+  get anchor(): string {
+    return this.drive + this.root;
+  }
+
+  get parts(): string[] {
+    return this.drive || this.root ? [this.drive + this.root, ...this._tail] : [...this._tail];
+  }
+
+  get name(): string {
+    return this._tail.length ? this._tail[this._tail.length - 1] : "";
+  }
+
+  get suffix(): string {
+    const name = this.name;
+    const i = name.lastIndexOf(".");
+    return 0 < i && i < name.length - 1 ? name.slice(i) : "";
+  }
+
+  get stem(): string {
+    const name = this.name;
+    const i = name.lastIndexOf(".");
+    return 0 < i && i < name.length - 1 ? name.slice(0, i) : name;
+  }
+
+  get parent(): this {
+    if (!this._tail.length) return this;
+    const f = this._flavour;
+    return this._with(this.anchor + this._tail.slice(0, -1).join(f.sep));
+  }
+
+  /** `p / "child"` */
+  div(...parts: (string | PurePath)[]): this {
+    return this._with(this, ...parts);
+  }
+
+  joinpath(...parts: (string | PurePath)[]): this {
+    return this._with(this, ...parts);
+  }
+
+  is_absolute(): boolean {
+    if (this._flavour === POSIX) return Boolean(this.root);
+    return Boolean(this.drive && this.root);
+  }
+
+  toString(): string {
+    const f = this._flavour;
+    if (this.drive || this.root) return this.drive + this.root + this._tail.join(f.sep);
+    if (this._tail.length && f.splitroot(this._tail[0])[0]) return ["." , ...this._tail].join(f.sep);
+    return this._tail.join(f.sep) || ".";
+  }
+
+  __str__(): string {
+    return this.toString();
+  }
+
+  __eq__(other: unknown): boolean {
+    if (!(other instanceof PurePath) || other._flavour !== this._flavour) return false;
+    const a = String(this);
+    const b = String(other);
+    return this._flavour.casefold ? a.toLowerCase() === b.toLowerCase() : a === b;
+  }
+
+  __repr__(): string {
+    return `${this.constructor.name}('${this.toString()}')`;
+  }
+}
+
+export class PurePosixPath extends PurePath {
+  protected get _flavour(): Flavour {
+    return POSIX;
+  }
+}
+
+export class PureWindowsPath extends PurePath {
+  protected get _flavour(): Flavour {
+    return WINDOWS;
+  }
 }

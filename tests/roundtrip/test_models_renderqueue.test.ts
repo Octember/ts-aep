@@ -26,6 +26,7 @@ import {
   py_or,
   repr,
   sorted,
+  PureWindowsPath,
 } from "../../src/pyrt/index.ts";
 import { approx, make_tmp_path, raises } from "../../src/pyrt/pytest.ts";
 import { parse as parse_aep } from "../../src/py_aep/index.ts";
@@ -53,14 +54,6 @@ const OCS_SAMPLES_DIR = TEST_FILE.parent.parent.parent.div(
   "output_module",
   "output_color_space",
 );
-
-/** `PureWindowsPath(s).stem` - last path component (either separator), without its suffix. */
-// NOTE(port): no pyrt PureWindowsPath; this matches Python's .stem (suffix = last '.', not leading/trailing) for the backslash paths the tests feed it.
-function PureWindowsPath(s: string): { stem: string } {
-  const name = s.split(/[\\/]/).pop()!;
-  const i = name.lastIndexOf(".");
-  return { stem: 0 < i && i < name.length - 1 ? name.slice(0, i) : name };
-}
 
 /** `attrs.asdict(inst)` - field name to value, in field order. */
 // NOTE(port): no pyrt attrs.asdict; OutputModuleSettingsItem fields are flat (ints, bools, bytes), so Python's recursive asdict equals this shallow copy.
@@ -2129,7 +2122,7 @@ const _AUDIO_CHAINS = new Map<string, [string, Map<string, any>[]]>([
 function _om_by_file_stem(project: Project, stem: string): OutputModule {
   for (const rqi of project.render_queue.items) {
     const om = rqi.output_modules[0];
-    if (PureWindowsPath(om.file).stem === stem) return om;
+    if (new PureWindowsPath(om.file).stem === stem) return om;
   }
   throw new KeyError(repr(stem));
 }

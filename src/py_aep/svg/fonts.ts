@@ -9,7 +9,6 @@
  */
 
 import * as fontkit from "fontkit";
-import { homedir } from "node:os";
 import {
   Path,
   dict_get,
@@ -21,12 +20,6 @@ import {
   str,
   strip,
 } from "../../pyrt/index.ts";
-
-/** `Path.home()` */
-// TODO(pyrt): Path.home() is missing from pyrt/pathlib.ts; local helper until it lands.
-export function home(): Path {
-  return new Path(homedir());
-}
 
 export const _FONT_SUFFIXES: readonly string[] = [".ttf", ".otf", ".ttc"];
 
@@ -114,14 +107,14 @@ export function _font_dirs(): Path[] {
     dirs.push(
       new Path("/System/Library/Fonts"),
       new Path("/Library/Fonts"),
-      home().div("Library", "Fonts"),
+      Path.home().div("Library", "Fonts"),
     );
   } else {
     dirs.push(
       new Path("/usr/share/fonts"),
       new Path("/usr/local/share/fonts"),
-      home().div(".fonts"),
-      home().div(".local", "share", "fonts"),
+      Path.home().div(".fonts"),
+      Path.home().div(".local", "share", "fonts"),
     );
   }
   return dirs.filter((d) => d.is_dir());
@@ -178,7 +171,7 @@ export function _adobe_font_dirs(): Path[] {
     }
   } else if (process.platform === "darwin") {
     dirs.push(
-      home().div(
+      Path.home().div(
         "Library",
         "Application Support",
         "Adobe",

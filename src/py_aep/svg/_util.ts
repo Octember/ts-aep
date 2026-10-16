@@ -2,21 +2,14 @@
  * Shared low-level helpers for the SVG reader package.
  */
 
-import { dict_get, float, py_bool, strip } from "../../pyrt/index.ts";
+import { dict_get, float, py_bool, strip, hypot, pattern_match, py_re } from "../../pyrt/index.ts";
 
-// TODO(port): Python `re` `\d` matches every Unicode decimal digit; JS `\d` is
-// ASCII-only. Python's `float()` accepts the non-ASCII digits too, so inputs
-// with them would parse in Python and fail here. Real SVG input is ASCII.
-
-/**
- * An SVG/CSS number token: optional sign, decimal or integer, optional exponent.
- * Python `re.match` anchors at the start of the string; `^` is the JS equivalent.
- */
-export const NUMBER_RE = /^[-+]?(?:\d*\.\d+|\d+\.?)(?:[eE][-+]?\d+)?/;
+/** An SVG/CSS number token: optional sign, decimal or integer, optional exponent. */
+export const NUMBER_RE = py_re(String.raw`[-+]?(?:\d*\.\d+|\d+\.?)(?:[eE][-+]?\d+)?`);
 /** The same token allowing a trailing `%` (CSS color / ratio values). */
-export const NUMBER_PCT_RE = /^[-+]?(?:\d*\.\d+|\d+\.?)(?:[eE][-+]?\d+)?%?/;
+export const NUMBER_PCT_RE = py_re(String.raw`[-+]?(?:\d*\.\d+|\d+\.?)(?:[eE][-+]?\d+)?%?`);
 /** A length: a number and an optional unit or `%`. */
-export const _LENGTH_RE = /^([-+]?(?:\d*\.\d+|\d+\.?)(?:[eE][-+]?\d+)?)\s*(%|[A-Za-z]+)?/;
+export const _LENGTH_RE = py_re(String.raw`([-+]?(?:\d*\.\d+|\d+\.?)(?:[eE][-+]?\d+)?)\s*(%|[A-Za-z]+)?`);
 /** CSS absolute units in user units (px): CSS Values 3 fixes 1in = 96px. */
 export const _ABSOLUTE_UNITS = new Map<string, number>([
   ["px", 1.0],
@@ -58,9 +51,7 @@ export class LengthContext {
    * radius, a stroke width) refers to: `sqrt((w^2 + h^2) / 2)`.
    */
   get diagonal(): number {
-    // TODO(port): CPython 3.12 math.hypot uses its own correctly-rounded
-    // accumulation; V8 Math.hypot may differ in the last ulp.
-    return Math.hypot(this.width, this.height) / Math.sqrt(2.0);
+    return hypot(this.width, this.height) / Math.sqrt(2.0);
   }
 }
 
@@ -84,7 +75,7 @@ export function clamp01(value: number): number {
  */
 export function parse_number(text: string | null, default_: number = 0.0): number {
   if (!py_bool(text)) return default_;
-  const m = NUMBER_RE.exec(strip(text!));
+  const m = pattern_match(NUMBER_RE, strip(text!));
   return m ? float(m[0]) : default_;
 }
 
@@ -101,7 +92,7 @@ export function parse_length(
   font_size: number = DEFAULT_FONT_SIZE,
 ): number {
   if (!py_bool(text)) return default_;
-  const m = _LENGTH_RE.exec(strip(text!));
+  const m = pattern_match(_LENGTH_RE, strip(text!));
   if (m == null) return default_;
   const value = float(m[1]);
   const unit = (m[2] ?? "").toLowerCase();
@@ -124,7 +115,7 @@ export function parse_length(
 export function parse_ratio(text: string | null, default_: number): number {
   if (text == null) return default_;
   text = strip(text);
-  const m = NUMBER_RE.exec(text);
+  const m = pattern_match(NUMBER_RE, text);
   if (m == null) return default_;
   const val = float(m[0]);
   return clamp01(text.endsWith("%") ? val / 100.0 : val);

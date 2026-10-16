@@ -1,15 +1,11 @@
 /** SVG root parsing: canvas size and the viewBox origin transform. */
 
-import { dict_get, float, min, max, py_bool, py_eq, py_or, split } from "../../pyrt/index.ts";
+import { dict_get, float, min, max, py_bool, py_eq, py_or, split, pattern_findall } from "../../pyrt/index.ts";
 import { NUMBER_RE, parse_length } from "./_util.ts";
 import { Affine } from "./transform.ts";
 
 import type { Element } from "../../pyrt/etree.ts";
 export type { Element };
-
-// Python `NUMBER_RE.findall(value)`: the unanchored, global form of the (`^`-anchored) `NUMBER_RE` in _util.ts.
-// TODO(port): CPython `\d` matches non-ASCII decimal digits (viewBox="١ ٢ ٣ ٤"); this uses ASCII `\d` (as does NUMBER_RE in _util.ts) and pyrt float() rejects such digits (needs shim).
-export const NUMBER_FINDALL_RE = new RegExp(NUMBER_RE.source.slice(1), "g");
 
 // TYPE_CHECKING-only alias in Python.
 export type ViewBox = readonly [number, number, number, number];
@@ -21,7 +17,7 @@ export type ViewBox = readonly [number, number, number, number];
  */
 export function _view_box(value: string | null): ViewBox | null {
   if (!py_bool(value)) return null;
-  const nums = [...value!.matchAll(NUMBER_FINDALL_RE)].map((m) => float(m[0]));
+  const nums = pattern_findall(NUMBER_RE, value!).map((n) => float(n));
   if (nums.length !== 4 || !nums.every((n) => Number.isFinite(n))) return null;
   if (nums[2] <= 0 || nums[3] <= 0) return null;
   return [nums[0], nums[1], nums[2], nums[3]];

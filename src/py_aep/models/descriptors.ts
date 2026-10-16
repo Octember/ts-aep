@@ -16,6 +16,7 @@ import {
   int,
   py_bool,
   repr,
+  instance_dict,
 } from "../../pyrt/index.ts";
 import { get_ae_version_major } from "../ae_version.ts";
 import { validate_bool, validate_enum } from "./validators.ts";
@@ -154,18 +155,6 @@ export function _validate_enum_member(enum_cls: any, value: any, public_name: st
   } else {
     throw new ValueError(`${repr(value)} is not a valid ${enum_cls.__name__}`);
   }
-}
-
-/**
- * `obj.__dict__`: the per-instance attribute dict that parse-time overrides
- * live in. It is created on first use and is not enumerable.
- */
-// NOTE(port): a non-enumerable per-instance Map behaves as the `__dict__` Python code uses here (get/set/pop/in by public name).
-export function instance_dict(obj: any): Map<string, any> {
-  if (!Object.prototype.hasOwnProperty.call(obj, "__dict__")) {
-    Object.defineProperty(obj, "__dict__", { value: new Map<string, any>(), enumerable: false });
-  }
-  return obj.__dict__;
 }
 
 /**

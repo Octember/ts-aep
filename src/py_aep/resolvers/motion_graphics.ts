@@ -41,7 +41,7 @@ import type { AVLayer } from "../models/layers/av_layer.ts";
 import type { Layer } from "../models/layers/layer.ts";
 import type { Property } from "../models/properties/property.ts";
 import type { PropertyGroup } from "../models/properties/property_group.ts";
-import { deferred, dict_get, float_repr, py_bool, py_eq, py_or } from "../../pyrt/index.ts";
+import { deferred, dict_get, py_bool, py_eq, py_or, float, int, json_dumps } from "../../pyrt/index.ts";
 
 const _composition = deferred<typeof import("../models/items/composition.ts")>(import.meta.url, "../models/items/composition.ts");
 const _footage = deferred<typeof import("../models/items/footage.ts")>(import.meta.url, "../models/items/footage.ts");
@@ -59,37 +59,6 @@ export const CONTROLLER_CHECKBOX = 1;
 export const CONTROLLER_SLIDER = 2;
 export const CONTROLLER_COLOR = 4;
 export const CONTROLLER_TEXT = 6;
-
-// json.dumps parity: CPython's ensure_ascii string encoder (lowercase \uXXXX,
-// every char outside printable ASCII escaped, UTF-16 units match CPython's
-// surrogate pairs).
-export function _json_str(s: string): string {
-  let out = '"';
-  for (let i = 0; i < s.length; i++) {
-    const ch = s[i];
-    const c = s.charCodeAt(i);
-    if (ch === '"') out += '\\"';
-    else if (ch === "\\") out += "\\\\";
-    else if (c === 0x0a) out += "\\n";
-    else if (c === 0x0d) out += "\\r";
-    else if (c === 0x09) out += "\\t";
-    else if (c === 0x08) out += "\\b";
-    else if (c === 0x0c) out += "\\f";
-    else if (c < 0x20 || c > 0x7e) out += "\\u" + c.toString(16).padStart(4, "0");
-    else out += ch;
-  }
-  return out + '"';
-}
-
-// json.dumps parity: an integer-valued number is an int (exact decimal), any
-// other finite number is float.__repr__, and non-finite floats use the
-// NaN/Infinity spellings.
-export function _json_num(x: number): string {
-  if (Number.isNaN(x)) return "NaN";
-  if (x === Infinity) return "Infinity";
-  if (x === -Infinity) return "-Infinity";
-  return Number.isInteger(x) ? BigInt(x).toString() : float_repr(x);
-}
 
 /** The `Layer` that owns `prop`, or `null` if not layer-owned. */
 export function _owning_layer(prop: Property): Layer | null {
@@ -226,12 +195,16 @@ export function _source_property_path(prop: Property): [PathNode[], Layer] | nul
 
 /** Serialize a CPrp path into AE's JSON (by-name nodes as `0xFFFFFFFF`). */
 export function _path_json(nodes: PathNode[]): string {
-  // json.dumps parity: separators (",", ":"), keys "0".."n" in insertion order.
-  const entries = nodes.map((node, i) => {
-    const index = node.prop_index != null ? node.prop_index : _BY_NAME_INDEX;
-    return `${_json_str(String(i))}:{"index":${_json_num(index)},"matchName":${_json_str(node.match_name)}}`;
-  });
-  return `{${entries.join(",")}}`;
+  const body = new Map(
+    nodes.map((node, i): [string, any] => [
+      String(i),
+      {
+        index: node.prop_index != null ? node.prop_index : _BY_NAME_INDEX,
+        matchName: node.match_name,
+      },
+    ]),
+  );
+  return json_dumps(body, { separators: [",", ":"] });
 }
 
 /**
@@ -332,15 +305,26 @@ export function can_add_property(prop: Property, comp: CompItem): boolean {
 export function font_caps_json(prop: Property): string {
   const value: any = prop.value;
   let font: any = "";
-  // Python keeps an int for integer-valued sizes and a float otherwise;
-  // `_json_num` renders both with the same spelling Python's encoder uses.
   let size: number = 0;
   if (value instanceof _text_document().TextDocument) {
     font = py_or(value.font, "");
     const fs = value.font_size;
-    if (fs != null) size = fs;
+    if (fs != null) size = Number.isInteger(float(fs)) ? int(fs) : fs;
   }
-  return `{"capPropFontEdit":false,"capPropFontFauxStyleEdit":false,"capPropFontSizeEdit":false,"fontEditValue":${_json_str(String(font))},"fontFSAllCapsValue":false,"fontFSBoldValue":false,"fontFSItalicValue":false,"fontFSSmallCapsValue":false,"fontSizeEditValue":${_json_num(size)}}`;
+  return json_dumps(
+    {
+      capPropFontEdit: false,
+      capPropFontFauxStyleEdit: false,
+      capPropFontSizeEdit: false,
+      fontEditValue: font,
+      fontFSAllCapsValue: false,
+      fontFSBoldValue: false,
+      fontFSItalicValue: false,
+      fontFSSmallCapsValue: false,
+      fontSizeEditValue: size,
+    },
+    { separators: [",", ":"] },
+  );
 }
 
 /**

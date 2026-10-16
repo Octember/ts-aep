@@ -264,6 +264,22 @@ export function unpack_from(format: string, data: Uint8Array, offset = 0): any[]
   return get(format).unpack_from(data, offset);
 }
 
+/** `struct.pack_into(fmt, buffer, offset, *values)` (negative offsets count from the end). */
+export function pack_into(format: string, buffer: Uint8Array, offset: number, ...values: any[]): void {
+  const s = get(format);
+  if (offset < 0) {
+    if (offset + s.size > 0) throw new StructError(`no space to pack ${s.size} bytes at offset ${offset}`);
+    if (offset + buffer.length < 0) throw new StructError(`offset ${offset} out of range for ${buffer.length}-byte buffer`);
+    offset += buffer.length;
+  }
+  if (buffer.length - offset < s.size) {
+    throw new StructError(
+      `pack_into requires a buffer of at least ${s.size + offset} bytes for packing ${s.size} bytes at offset ${offset} (actual buffer size is ${buffer.length})`,
+    );
+  }
+  buffer.set(s.pack(...values), offset);
+}
+
 /** `struct.calcsize(fmt)` */
 export function calcsize(format: string): number {
   return get(format).size;
