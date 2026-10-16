@@ -9,6 +9,7 @@
  */
 
 import * as fontkit from "fontkit";
+import * as host from "../../pyrt/host.ts";
 import {
   Path,
   dict_get,
@@ -96,14 +97,14 @@ export function _font_dirs(): Path[] {
     return _font_dirs_override();
   }
   const dirs: Path[] = [];
-  if (process.platform === "win32") {
-    const windir = process.env.WINDIR ?? "C:\\Windows";
+  if (host.platform === "win32") {
+    const windir = host.env.WINDIR ?? "C:\\Windows";
     dirs.push(new Path(windir).div("Fonts"));
-    const local = process.env.LOCALAPPDATA;
+    const local = host.env.LOCALAPPDATA;
     if (py_bool(local)) {
       dirs.push(new Path(local).div("Microsoft", "Windows", "Fonts"));
     }
-  } else if (process.platform === "darwin") {
+  } else if (host.platform === "darwin") {
     dirs.push(
       new Path("/System/Library/Fonts"),
       new Path("/Library/Fonts"),
@@ -165,14 +166,14 @@ export function _name(font: any, ...ids: number[]): string | null {
  */
 export function _adobe_font_dirs(): Path[] {
   const dirs: Path[] = [];
-  if (process.platform === "win32") {
-    const appdata = process.env.APPDATA;
+  if (host.platform === "win32") {
+    const appdata = host.env.APPDATA;
     if (py_bool(appdata)) {
       dirs.push(
         new Path(appdata).div("Adobe", "CoreSync", "plugins", "livetype", "r"),
       );
     }
-  } else if (process.platform === "darwin") {
+  } else if (host.platform === "darwin") {
     dirs.push(
       Path.home().div(
         "Library",
@@ -203,7 +204,7 @@ export let _ps_index: Map<string, [Path, number, string | null]> | null = null;
 export function* _iter_faces(path: Path): Generator<[number, any]> {
   let fonts: any[];
   try {
-    const opened: any = fontkit.openSync(path.toString());
+    const opened: any = fontkit.create(host.fs.readFileSync(path.toString()) as any);
     if (path.suffix.toLowerCase() === ".ttc") {
       fonts = [...opened.fonts];
     } else {

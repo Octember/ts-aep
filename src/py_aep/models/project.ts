@@ -1,8 +1,7 @@
 // Port of py_aep/models/project.py.
 
-import * as fs from "node:fs";
-import * as nodepath from "node:path";
-import { randomUUID } from "node:crypto";
+import * as host from "../../pyrt/host.ts";
+import { uuid4 } from "../../pyrt/uuid.ts";
 
 import { fromstring, tostring } from "../../pyrt/etree.ts";
 import { ae_writes, requires_version } from "../ae_version.ts";
@@ -108,11 +107,11 @@ import type { PathLike } from "../../pyrt/index.ts";
  */
 export const module_globals: { write_aep: typeof _write_aep } = { write_aep: _write_aep };
 
-const _effect = deferred<typeof import("../parsers/effect.ts")>(import.meta.url, "../parsers/effect.ts");
-const _templates = deferred<typeof import("../parsers/templates.ts")>(import.meta.url, "../parsers/templates.ts");
-const _placeholder = deferred<typeof import("./sources/placeholder.ts")>(import.meta.url, "./sources/placeholder.ts");
-const _svg = deferred<typeof import("../svg/index.ts")>(import.meta.url, "../svg/index.ts");
-const _build = deferred<typeof import("../svg/build.ts")>(import.meta.url, "../svg/build.ts");
+const _effect = deferred<typeof import("../parsers/effect.ts")>("py_aep/parsers/effect");
+const _templates = deferred<typeof import("../parsers/templates.ts")>("py_aep/parsers/templates");
+const _placeholder = deferred<typeof import("./sources/placeholder.ts")>("py_aep/models/sources/placeholder");
+const _svg = deferred<typeof import("../svg/index.ts")>("py_aep/svg/index");
+const _build = deferred<typeof import("../svg/build.ts")>("py_aep/svg/build");
 
 /** `itertools.count(start)` (the clip-run counter). */
 // NOTE(port): matches `itertools.count(start)`: an unbounded counter yielding start, start+1, ...
@@ -243,7 +242,7 @@ export class Project {
    * `"macos"`, which picks a BMP/GIF sequence's importer code (see
    * `py_aep.parse`). The host's by default.
    */
-  static _platform: string = process.platform === "win32" ? "windows" : "macos";
+  static _platform: string = host.platform === "win32" ? "windows" : "macos";
 
   /**
    * The color depth of the current project, either 8, 16, or 32 bits.
@@ -2152,22 +2151,22 @@ export class Project {
     const path_obj = new Path(path);
     path_obj.parent.mkdir({ parents: true, exist_ok: true });
     const filled = this._fill_relative_path_counts(
-      platform_path(nodepath.resolve(String(path_obj)), { windows: this._windows }),
+      platform_path(host.path.resolve(String(path_obj)), { windows: this._windows }),
     );
     // Write to a sibling temp file then rename, so a serialization
     // error can never leave a truncated .aep at the target path. The
     // temp name is unique and created exclusively: a fixed one would
     // overwrite, then move away, any file of the user's carrying it.
-    const tmp_path = path_obj.with_name(`${path_obj.name}.${randomUUID().replace(/-/g, "")}.tmp`);
+    const tmp_path = path_obj.with_name(`${path_obj.name}.${uuid4().replace(/-/g, "")}.tmp`);
     try {
       // `tmp_path.open("xb")`: created exclusively before anything is written.
-      const fd = fs.openSync(tmp_path.path, "wx");
+      const fd = host.fs.openSync(tmp_path.path, "wx");
       try {
         const buf = new BytesIO();
         module_globals.write_aep(buf, this._rifx, this._xmp);
-        fs.writeSync(fd, buf.getvalue());
+        host.fs.writeSync(fd, buf.getvalue());
       } finally {
-        fs.closeSync(fd);
+        host.fs.closeSync(fd);
       }
     } catch (e) {
       if (tmp_path.exists()) tmp_path.unlink(); // missing_ok needs Python 3.8

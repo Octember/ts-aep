@@ -1,15 +1,30 @@
 // Python's function-level import (`from .x import Y` inside a function, the
 // usual cycle breaker). A top-level ESM import of a module that `extends`
 // a class from this one would evaluate before this module's class exists;
-// `deferred` loads the module on first use instead.
+// `deferred` looks the module up on first use instead.
 //
-//   const _mask_property_group = deferred<typeof import("./mask_property_group.ts")>(import.meta.url, "./mask_property_group.ts");
+//   const _mask_property_group = deferred<typeof import("./mask_property_group.ts")>("py_aep/models/properties/mask_property_group");
 //   ... _mask_property_group().MaskPropertyGroup ...
+//
+// The key is the target's path relative to src, without `.ts`. The generated
+// hub src/py_aep/_modules.ts (tools/gen_deferred_modules.ts) statically imports
+// every target and registers it here; py_aep/index.ts imports the hub last.
 
-import { createRequire } from "node:module";
+const _modules = new Map<string, unknown>();
 
-export function deferred<M>(url: string, specifier: string): () => M {
-  const req = createRequire(url);
+export function register(key: string, mod: unknown): void {
+  _modules.set(key, mod);
+}
+
+export function deferred<M>(key: string): () => M {
   let mod: M | undefined;
-  return () => (mod ??= req(specifier) as M);
+  return () => {
+    if (mod === undefined) {
+      mod = _modules.get(key) as M | undefined;
+      if (mod === undefined) {
+        throw new Error(`deferred module "${key}" is not registered: import py_aep/index.ts, which loads py_aep/_modules.ts`);
+      }
+    }
+    return mod;
+  };
 }

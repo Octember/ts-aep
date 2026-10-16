@@ -42,10 +42,10 @@ import {
   deferred,
 } from "../../../pyrt/index.ts";
 
-const _synthesis_core = deferred<typeof import("../../synthesis/core.ts")>(import.meta.url, "../../synthesis/core.ts");
-const _av_layer = deferred<typeof import("./av_layer.ts")>(import.meta.url, "./av_layer.ts");
-const _composition = deferred<typeof import("../items/composition.ts")>(import.meta.url, "../items/composition.ts");
-const _layer = deferred<typeof import("../../parsers/layer.ts")>(import.meta.url, "../../parsers/layer.ts");
+const _synthesis_core = deferred<typeof import("../../synthesis/core.ts")>("py_aep/synthesis/core");
+const _av_layer = deferred<typeof import("./av_layer.ts")>("py_aep/models/layers/av_layer");
+const _composition = deferred<typeof import("../items/composition.ts")>("py_aep/models/items/composition");
+const _layer = deferred<typeof import("../../parsers/layer.ts")>("py_aep/parsers/layer");
 
 // logging.getLogger(__name__)
 export const logger = {

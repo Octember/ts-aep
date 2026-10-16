@@ -13,7 +13,7 @@ import type { Project } from "../project.ts";
 import type { Viewer } from "../viewer/viewer.ts";
 import { ValueError, StopIteration, dict_get, py_bool, py_cmp, repr, sorted, deferred } from "../../../pyrt/index.ts";
 
-const _composition = deferred<typeof import("./composition.ts")>(import.meta.url, "./composition.ts");
+const _composition = deferred<typeof import("./composition.ts")>("py_aep/models/items/composition");
 
 /**
  * The `FolderItem` object corresponds to a folder in your Project panel. It

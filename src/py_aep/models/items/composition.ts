@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { uuid4 } from "../../../pyrt/uuid.ts";
 
 import { ae_writes, get_ae_version_major, requires_version } from "../../ae_version.ts";
 import { DeferredListChunk, ListChunk, type Chunk } from "../../binary/chunk.ts";
@@ -67,10 +67,10 @@ import type { RendererOptions } from "./renderer_options/index.ts";
 import type { Project } from "../project.ts";
 import type { MarkerValue } from "../properties/marker.ts";
 
-const _item = deferred<typeof import("../../parsers/item.ts")>(import.meta.url, "../../parsers/item.ts");
-const _layer = deferred<typeof import("../../parsers/layer.ts")>(import.meta.url, "../../parsers/layer.ts");
-const _composition = deferred<typeof import("../../parsers/composition.ts")>(import.meta.url, "../../parsers/composition.ts");
-const _renderer_options = deferred<typeof import("./renderer_options/index.ts")>(import.meta.url, "./renderer_options/index.ts");
+const _item = deferred<typeof import("../../parsers/item.ts")>("py_aep/parsers/item");
+const _layer = deferred<typeof import("../../parsers/layer.ts")>("py_aep/parsers/layer");
+const _composition = deferred<typeof import("../../parsers/composition.ts")>("py_aep/parsers/composition");
+const _renderer_options = deferred<typeof import("./renderer_options/index.ts")>("py_aep/models/items/renderer_options/index");
 
 // The binary prin chunk stores internal plugin match_names (e.g. ADBE Escher)
 // but ExtendScript exposes different module names (e.g. ADBE Advanced 3d).
@@ -422,7 +422,7 @@ export function _rewrite_eg_identity(
       if (py_bool(utf8s)) {
         const uuid_utf8 = utf8s[0] as Utf8Chunk;
         if (!uuid_map.has(uuid_utf8.value)) {
-          uuid_map.set(uuid_utf8.value, randomUUID());
+          uuid_map.set(uuid_utf8.value, uuid4());
         }
         uuid_utf8.value = getitem(uuid_map, uuid_utf8.value);
       }
@@ -1652,7 +1652,7 @@ export class CompItem extends AVItem {
     }
     const display = name != null ? name : prop.name;
     validate_name(display);
-    const uuid_str = randomUUID();
+    const uuid_str = uuid4();
     const bound = this._append_controller(() =>
       this._build_property_cctl(plan, prop, display, uuid_str),
     );
@@ -1679,12 +1679,12 @@ export class CompItem extends AVItem {
     py_assert(source != null); // guaranteed by can_add_layer
     const display = name != null ? name : layer.name;
     validate_name(display);
-    const uuid_str = randomUUID();
+    const uuid_str = uuid4();
     const timebase = this._cdta.internal_timebase;
     const [nodes, path_json] = media_controller_path();
     // AE names a per-controller thumbnail cache file it regenerates on
     // open; only the uuid-shaped name is stored in the project.
-    const thumbnail = `${randomUUID()}.png`;
+    const thumbnail = `${uuid4()}.png`;
     const bound = this._append_controller(() =>
       build_media_cctl(
         display,

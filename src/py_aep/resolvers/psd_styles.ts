@@ -20,7 +20,7 @@
  *   is dropped and the descriptor's color imported.
  */
 
-import { readFileSync } from "node:fs";
+import * as host from "../../pyrt/host.ts";
 
 import { Gradient, GradientAlphaStop, GradientColorStop } from "../models/properties/gradient.ts";
 import { iter_image_resources } from "./media_probe.ts";
@@ -693,7 +693,7 @@ export function read_global_light(file: PathLike): [number, number] {
   const fp = new BytesIO(
     (() => {
       try {
-        return readFileSync(fspath(file));
+        return host.fs.readFileSync(fspath(file));
       } catch (e: any) {
         const path = fspath(file);
         if (e?.code === "ENOENT") throw new FileNotFoundError(`[Errno 2] No such file or directory: '${path}'`);

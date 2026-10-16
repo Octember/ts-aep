@@ -270,3 +270,18 @@ function split_whitespace(data: Uint8Array, maxsplit: number): Uint8Array[] {
   }
   return out;
 }
+/** Latin-1 view of bytes (one char per byte), e.g. to run a byte regex as a string regex. */
+export function latin1_str(data: Uint8Array): string {
+  let out = "";
+  for (let i = 0; i < data.length; i += 0x8000) {
+    out += String.fromCharCode.apply(null, data.subarray(i, i + 0x8000) as unknown as number[]);
+  }
+  return out;
+}
+
+/** Inverse of `latin1_str`; code units above 0xFF keep their low byte. */
+export function latin1_bytes(text: string): Uint8Array {
+  const out = new Uint8Array(text.length);
+  for (let i = 0; i < text.length; i++) out[i] = text.charCodeAt(i) & 0xff;
+  return out;
+}

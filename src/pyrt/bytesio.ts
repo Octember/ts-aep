@@ -1,7 +1,7 @@
 // `io.BytesIO`, the `IO[bytes]` every chunk reader/writer takes, plus
 // `io.StringIO` and a read-only `open(path, "rb")`.
 
-import * as fs from "node:fs";
+import { fs } from "./host.ts";
 import { FileNotFoundError, OSError } from "./errors.ts";
 
 export class BytesIO {

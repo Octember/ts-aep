@@ -15,7 +15,7 @@ import {
   py_bool,
 } from "../../pyrt/index.ts";
 
-const _chunk = deferred<typeof import("./chunk.ts")>(import.meta.url, "./chunk.ts");
+const _chunk = deferred<typeof import("./chunk.ts")>("py_aep/binary/chunk");
 
 export class ChunkNotFoundError extends PyException {
   /** Raised when a required chunk is not found in the AEP chunk tree. */

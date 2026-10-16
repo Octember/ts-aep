@@ -26,9 +26,9 @@ import { Shape } from "./shape.ts";
 import type { Keyframe } from "./keyframe.ts";
 import type { Property } from "./property.ts";
 
-const _marker = deferred<typeof import("../../parsers/marker.ts")>(import.meta.url, "../../parsers/marker.ts");
-const _specialized_properties = deferred<typeof import("../../parsers/specialized_properties.ts")>(import.meta.url, "../../parsers/specialized_properties.ts");
-const _gradient = deferred<typeof import("../../parsers/gradient.ts")>(import.meta.url, "../../parsers/gradient.ts");
+const _marker = deferred<typeof import("../../parsers/marker.ts")>("py_aep/parsers/marker");
+const _specialized_properties = deferred<typeof import("../../parsers/specialized_properties.ts")>("py_aep/parsers/specialized_properties");
+const _gradient = deferred<typeof import("../../parsers/gradient.ts")>("py_aep/parsers/gradient");
 
 export const _EMPTY_CDAT_PAD = b("\x00\x00\x00\x00");
 

@@ -8,8 +8,8 @@ import type { CompItem } from "../items/composition.ts";
 import type { Project } from "../project.ts";
 import type { RenderQueueItem } from "./render_queue_item.ts";
 
-const _composition = deferred<typeof import("../items/composition.ts")>(import.meta.url, "../items/composition.ts");
-const _render_queue_item = deferred<typeof import("./render_queue_item.ts")>(import.meta.url, "./render_queue_item.ts");
+const _composition = deferred<typeof import("../items/composition.ts")>("py_aep/models/items/composition");
+const _render_queue_item = deferred<typeof import("./render_queue_item.ts")>("py_aep/models/renderqueue/render_queue_item");
 
 /**
  * Clear the `synthetic` flag on a chunk and its container subtree.

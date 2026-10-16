@@ -1,6 +1,7 @@
 /** Variable-font design-axis reading via fontTools. */
 
 import * as fontkit from "fontkit";
+import * as host from "../../pyrt/host.ts";
 
 import { ValueError, float, py_or, str } from "../../pyrt/index.ts";
 import type { PathLike } from "../../pyrt/index.ts";
@@ -47,7 +48,9 @@ export class FontDesignAxis {
  */
 export function read_design_axes(font_file: _PathLike, font_number: number = 0): FontDesignAxis[] {
   // NOTE(port): fontTools lazy=True defers table reads; fontkit reads eagerly. Results are identical, only I/O cost differs.
-  const opened: any = fontkit.openSync(str(font_file));
+  const opened: any = fontkit.create(host.fs.readFileSync(str(font_file)) as any);
+  // TODO(port): fontTools raises on an out-of-range fontNumber; here an
+  // out-of-range index yields undefined and fails later on property access.
   const font: any = opened.fonts != null ? opened.fonts[font_number] : opened;
   if (font == null) {
     throw new Error(

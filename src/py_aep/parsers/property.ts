@@ -20,7 +20,7 @@ import { parse_gradient, parse_orientation, parse_shape, parse_text_document } f
 import { get_chunks_by_match_name, get_match_name_runs } from "./utils.ts";
 import { deferred, dict_get, enumerate, py_bool, warn, zip } from "../../pyrt/index.ts";
 
-const _property = deferred<typeof import("../models/properties/property.ts")>(import.meta.url, "../models/properties/property.ts");
+const _property = deferred<typeof import("../models/properties/property.ts")>("py_aep/models/properties/property");
 
 // `logging.getLogger(__name__)`: this module logs nothing today, so only the
 // warning path is wired to pyrt `warn`.

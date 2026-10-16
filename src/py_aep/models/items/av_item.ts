@@ -28,9 +28,9 @@ import type { Viewer } from "../viewer/viewer.ts";
 import type { CompItem } from "./composition.ts";
 import type { FolderItem } from "./folder.ts";
 
-const _file = deferred<typeof import("../sources/file.ts")>(import.meta.url, "../sources/file.ts");
-const _placeholder = deferred<typeof import("../sources/placeholder.ts")>(import.meta.url, "../sources/placeholder.ts");
-const _solid = deferred<typeof import("../sources/solid.ts")>(import.meta.url, "../sources/solid.ts");
+const _file = deferred<typeof import("../sources/file.ts")>("py_aep/models/sources/file");
+const _placeholder = deferred<typeof import("../sources/placeholder.ts")>("py_aep/models/sources/placeholder");
+const _solid = deferred<typeof import("../sources/solid.ts")>("py_aep/models/sources/solid");
 
 // NOTE(port): CPython `set` iteration order. `Item.__hash__` is `hash(self.id)`, so
 // `set[CompItem]` iterates in open-addressing table order (deterministic, not insertion

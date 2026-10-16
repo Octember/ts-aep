@@ -9,7 +9,8 @@
  * This reads external media files (not `.aep` chunks), so `struct` is used here.
  */
 
-import { inflateSync } from "node:zlib";
+import * as host from "../../pyrt/host.ts";
+import * as zlib from "../../pyrt/zlib.ts";
 import {
   AttributeError,
   BytesIO,
@@ -391,10 +392,11 @@ export function _png_iccp(body: Uint8Array): Uint8Array | null {
   const split = bytes_.find(body, 0); // body.find(b"\x00")
   if (split < 0 || !bytes_eq(bytes_.slice(body, split + 1, split + 2), b("\x00"))) return null; // 0 = deflate
   try {
-    return new Uint8Array(inflateSync(body.slice(split + 2)));
-  } catch {
+    return zlib.decompress(body.slice(split + 2));
+  } catch (e) {
     // zlib.error: an unreadable profile counts as absent.
-    return null;
+    if (e instanceof zlib.error) return null;
+    throw e;
   }
 }
 
@@ -2087,7 +2089,7 @@ export function _probe_swf(fp: IO): MediaInfo {
   if (bytes_eq(sig, b("FWS"))) {
     body = fp.read(21);
   } else if (bytes_eq(sig, b("CWS"))) {
-    body = new Uint8Array(inflateSync(fp.read())).slice(0, 21);
+    body = zlib.decompress(fp.read()).slice(0, 21);
   } else if (bytes_eq(sig, b("ZWS"))) {
     fp.read(4); // uncompressed length precedes the LZMA stream
     const stream = fp.read();
@@ -2274,7 +2276,7 @@ export function* _iter_lines(fp: IO): Generator<Uint8Array> {
 
 /** Latin-1 view of bytes, so a byte regex runs as a string regex. */
 export function _latin1(data: Uint8Array): string {
-  return Buffer.from(data.buffer, data.byteOffset, data.length).toString("latin1");
+  return bytes_.latin1_str(data);
 }
 
 /** Radiance HDR (RGBE) - text header with a resolution line (still image). */

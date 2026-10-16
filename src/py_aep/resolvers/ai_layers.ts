@@ -11,7 +11,7 @@
  * compressed PGF block and are not supported.
  */
 
-import { inflateSync } from "node:zlib";
+import * as zlib from "../../pyrt/zlib.ts";
 import {
   BytesIO,
   Path,
@@ -68,7 +68,7 @@ export const _OBJ_HEADER_WINDOW = 64;
  * byte offsets of the Python `bytes` patterns (`rb"..."`).
  */
 export function latin1(data: Uint8Array): string {
-  return Buffer.from(data).toString("latin1");
+  return bytes_.latin1_str(data);
 }
 
 // TODO(port): Python's RecursionError (CPython limit 1000 frames) maps to V8's stack-overflow RangeError, which fires at an engine/stack-size dependent depth; PDF objects nested between the two limits parse in one runtime and are reported malformed (or not) in the other. No pyrt RecursionError exists and V8 gives no fixed depth to emulate.
@@ -266,12 +266,12 @@ export function read_ai_layers(
 
 export const _STREAM_RE = /stream\r?\n([\s\S]*?)\r?\nendstream/g;
 
-// NOTE(port): zlib.decompress raises zlib.error only for corrupt/truncated streams; inflateSync throws in the same cases, and both ignore trailing bytes.
 export function inflate_or_null(body: string): Uint8Array | null {
   try {
-    return inflateSync(Buffer.from(body, "latin1"));
-  } catch {
-    return null;
+    return zlib.decompress(bytes_.latin1_bytes(body));
+  } catch (e) {
+    if (e instanceof zlib.error) return null;
+    throw e;
   }
 }
 

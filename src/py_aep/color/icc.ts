@@ -16,7 +16,8 @@
  * `scripts/dev/generate_color_space_mapping.py`, which imports them from here.
  */
 
-import { createHash } from "node:crypto";
+import { md5 } from "../../pyrt/md5.ts";
+import * as host from "../../pyrt/host.ts";
 import {
   LookupError,
   OSError,
@@ -60,7 +61,7 @@ export function icc_profile_id(data: Uint8Array): Uint8Array {
   zero_slice(44, 48);
   zero_slice(64, 68);
   zero_slice(84, 100);
-  return new Uint8Array(createHash("md5").update(buf).digest());
+  return md5(buf);
 }
 
 /**
@@ -127,14 +128,14 @@ export function icc_profile_description(data: Uint8Array): string | null {
  * nowhere else on disk.
  */
 export function default_icc_directories(): Path[] {
-  if (process.platform === "win32") {
+  if (host.platform === "win32") {
     const base = new Path("C:\\Program Files (x86)\\Common Files\\Adobe\\Color");
     const dirs = [base.div("MPProfiles"), base.div("Profiles"), base.div("Profiles", "Recommended")];
-    const local_appdata = process.env.LOCALAPPDATA;
+    const local_appdata = host.env.LOCALAPPDATA;
     if (py_bool(local_appdata)) {
       dirs.push(new Path(local_appdata).div("Adobe", "Color", "Profiles"));
     }
-    const system_root = process.env.SystemRoot ?? "C:\\Windows";
+    const system_root = host.env.SystemRoot ?? "C:\\Windows";
     dirs.push(new Path(system_root).div("System32", "spool", "drivers", "color"));
     return dirs;
   }

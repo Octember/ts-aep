@@ -1,8 +1,6 @@
-// The `pathlib.Path` subset py_aep uses, over node:fs / node:path.
+// The `pathlib.Path` subset py_aep uses, over the host fs / path (pyrt/host).
 
-import * as fs from "node:fs";
-import * as nodepath from "node:path";
-import * as os from "node:os";
+import { fs, homedir, path as nodepath, type HostStats } from "./host.ts";
 import { FileNotFoundError } from "./errors.ts";
 
 export class Path {
@@ -14,7 +12,7 @@ export class Path {
 
   /** `Path.home()`: `os.path.expanduser("~")`, i.e. `$HOME` first, then the password database. */
   static home(): Path {
-    return new Path(os.homedir());
+    return new Path(homedir());
   }
 
   toString(): string {
@@ -146,7 +144,7 @@ export class Path {
     return this.glob("**/" + pattern);
   }
 
-  stat(): fs.Stats {
+  stat(): HostStats {
     return fs.statSync(this.path);
   }
 }

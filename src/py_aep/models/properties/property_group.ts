@@ -48,9 +48,9 @@ import { Property, _values_equal, _vf_tag_from_str } from "./property.ts";
 import { _INDEXED_GROUP_MATCH_NAMES, PropertyBase } from "./property_base.ts";
 import type { MaskPropertyGroup } from "./mask_property_group.ts";
 
-const _mask_property_group = deferred<typeof import("./mask_property_group.ts")>(import.meta.url, "./mask_property_group.ts");
-const _effect = deferred<typeof import("../../parsers/effect.ts")>(import.meta.url, "../../parsers/effect.ts");
-const _property = deferred<typeof import("../../parsers/property.ts")>(import.meta.url, "../../parsers/property.ts");
+const _mask_property_group = deferred<typeof import("./mask_property_group.ts")>("py_aep/models/properties/mask_property_group");
+const _effect = deferred<typeof import("../../parsers/effect.ts")>("py_aep/parsers/effect");
+const _property = deferred<typeof import("../../parsers/property.ts")>("py_aep/parsers/property");
 
 // Mandatory empty subgroups AE writes inside some freshly added shape
 // elements, as (match name, tdsb lock flags, tdsb enable flags) triples. A

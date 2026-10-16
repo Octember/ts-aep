@@ -15,7 +15,7 @@
  *     aep-visualize project.aep --no-properties
  */
 
-import * as fs from "node:fs";
+import * as host from "../../pyrt/host.ts";
 
 import { parse } from "../index.ts";
 
@@ -671,8 +671,8 @@ export function main(): number {
   // @contextlib.contextmanager: returns [output, close] (the `with` enter/exit pair).
   function get_output(): [TextIO, () => void] {
     if (output_path) {
-      const fd = fs.openSync(output_path.path, "w");
-      return [{ write: (s: string) => fs.writeSync(fd, s) }, () => fs.closeSync(fd)];
+      const fd = host.fs.openSync(output_path.path, "w");
+      return [{ write: (s: string) => host.fs.writeSync(fd, s) }, () => host.fs.closeSync(fd)];
     }
     return [{ write: (s: string) => process.stdout.write(s) }, () => {}];
   }

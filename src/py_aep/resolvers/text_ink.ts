@@ -32,6 +32,7 @@
 // two agree on every text that reaches these helpers.
 
 import * as fontkit from "fontkit";
+import * as host from "../../pyrt/host.ts";
 import {
   NotImplementedError,
   at,
@@ -73,7 +74,7 @@ export function _is_os_error(exc: unknown): boolean {
 export function _open_face(path: string, face_index: number): any {
   // NOTE(port): fontTools `TTFont(fontNumber=...)` picks a face of a .ttc;
   // fontkit exposes collection faces through `.fonts`; a plain font is its own face.
-  const opened: any = fontkit.openSync(path);
+  const opened: any = fontkit.create(host.fs.readFileSync(path) as any);
   return opened.fonts ? opened.fonts[face_index] : opened;
 }
 

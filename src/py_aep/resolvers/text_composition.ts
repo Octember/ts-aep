@@ -33,7 +33,7 @@
  * Python 3.7 (no wheels), where the resolver reports unsupported.
  */
 
-import { readFileSync } from "node:fs";
+import * as host from "../../pyrt/host.ts";
 import * as fontkit from "fontkit";
 import type { Path } from "../../pyrt/index.ts";
 import {
@@ -70,7 +70,30 @@ import type { TextDocument } from "../models/text/text_document.ts";
 // NOTE(port): harfbuzzjs indexes clusters in UTF-16 units; uharfbuzz in code
 // points. Composition refuses astral text first (`_check_envelope`), so the
 // two agree on every text that is shaped.
-const _hbjs: any = await (await import("harfbuzzjs")).default;
+// Off Node/Bun the wasm is fetched from `hb.wasm` next to the bundle. Where
+// it cannot load (not served there; Cloudflare Workers, which refuse to
+// compile wasm from bytes) the module still loads and shaping raises instead.
+const _hbjs: any = await (async () => {
+  try {
+    if (host.platform !== "browser") return await (await import("harfbuzzjs")).default;
+    const [{ default: hb_wasm }, { default: hbjs }] = await Promise.all([
+      import("harfbuzzjs/hb.js"),
+      import("harfbuzzjs/hbjs.js"),
+    ]);
+    return hbjs(await hb_wasm({ locateFile: (file: string) => new URL(file, import.meta.url).href }));
+  } catch (e) {
+    return { _load_error: e };
+  }
+})();
+
+function _hb(): any {
+  if (_hbjs._load_error) {
+    throw Object.assign(new Error(`harfbuzzjs is unavailable on this host: ${_hbjs._load_error}`), {
+      cause: _hbjs._load_error,
+    });
+  }
+  return _hbjs;
+}
 
 class _HbBlob {
   declare data: Uint8Array;
@@ -78,7 +101,7 @@ class _HbBlob {
     this.data = data;
   }
   static from_file_path(path: string): _HbBlob {
-    return new _HbBlob(new Uint8Array(readFileSync(path)));
+    return new _HbBlob(new Uint8Array(host.fs.readFileSync(path)));
   }
 }
 
@@ -86,8 +109,8 @@ class _HbFace {
   declare _face: any;
   declare upem: number;
   constructor(blob: _HbBlob, index: number = 0) {
-    const b = _hbjs.createBlob(blob.data);
-    this._face = _hbjs.createFace(b, index);
+    const b = _hb().createBlob(blob.data);
+    this._face = _hb().createFace(b, index);
     this.upem = this._face.upem;
   }
 }
@@ -95,14 +118,14 @@ class _HbFace {
 class _HbFont {
   declare _font: any;
   constructor(face: _HbFace) {
-    this._font = _hbjs.createFont(face._face);
+    this._font = _hb().createFont(face._face);
   }
 }
 
 class _HbBuffer {
   declare _buf: any;
   constructor() {
-    this._buf = _hbjs.createBuffer();
+    this._buf = _hb().createBuffer();
   }
   add_str(text: string): void {
     this._buf.addText(text);
@@ -129,7 +152,7 @@ export let hb: any = {
     const spec = Object.entries(features)
       .map(([tag, on]) => `${on ? "" : "-"}${tag}`)
       .join(",");
-    _hbjs.shape(font._font, buf._buf, spec);
+    _hb().shape(font._font, buf._buf, spec);
   },
 };
 
@@ -236,7 +259,7 @@ export function _ascender_ratio(ps_name: string): number {
       // NOTE(port): fontTools TTFont(path, fontNumber=face_index, lazy=True) ->
       // fontkit. fontkit's openSync returns a FontCollection for .ttc files, so the
       // face is picked with `.fonts[face_index]`.
-      font = fontkit.openSync(str(path));
+      font = fontkit.create(host.fs.readFileSync(str(path)) as any);
       if (font.fonts) font = font.fonts[face_index];
     } catch (exc) {
       if (!_is_font_open_error(exc)) throw exc;

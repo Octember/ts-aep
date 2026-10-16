@@ -13,5 +13,7 @@
     "types": ["bun"],
     "lib": ["ES2023"]
   },
-  "include": ["src", "tests", "tools"]
+  "include": ["src", "tests", "tools"],
+  // The workerd smoke imports the built browser bundle (dist/), which exists only after `bun build`.
+  "exclude": ["tools/browser-smoke/worker.ts"]
 }

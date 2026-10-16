@@ -23,7 +23,8 @@
  * order; reproducing it exactly is required for byte-identical output.
  */
 
-import { encode, dict_get, getitem, json_dumps, json_loads, str } from "../../pyrt/index.ts";
+import { decode, encode, dict_get, getitem, json_dumps, json_loads, num_str, str } from "../../pyrt/index.ts";
+import { b64decode, b64encode } from "../../pyrt/base64.ts";
 
 // baseProfileType values.
 
@@ -53,7 +54,7 @@ export function _compact(obj: object): string {
 }
 
 export function _b64(text: string): string {
-  return Buffer.from(encode(text, "utf-8")).toString("base64");
+  return b64encode(encode(text, "utf-8"));
 }
 
 export function _envelope(color_profile_data_b64: string, name: string, profile_type: number): string {
@@ -136,7 +137,7 @@ export function build_ocio_display_envelope(display: string, view: string): stri
  * @param icc_bytes The raw ICC profile bytes to embed.
  */
 export function build_icc_envelope(name: string, icc_bytes: Uint8Array): string {
-  return _envelope(Buffer.from(icc_bytes).toString("base64"), name, PROFILE_TYPE_ICC);
+  return _envelope(b64encode(icc_bytes), name, PROFILE_TYPE_ICC);
 }
 
 /** A decoded color-profile envelope. */
@@ -197,51 +198,6 @@ export function parse_envelope(envelope_json: string): ColorProfile {
   );
 }
 
-const B64_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-
-/** `base64.b64decode(s)` (validate=False): skips non-alphabet characters, raises on bad padding. */
-function b64decode(s: string): Uint8Array {
-  if (/[^\x00-\x7f]/.test(s)) {
-    throw new Error("string argument should contain only ASCII characters");
-  }
-  const out: number[] = [];
-  let quad_pos = 0;
-  let leftchar = 0;
-  let pads = 0;
-  for (const ch of s) {
-    if (ch === "=") {
-      pads += 1;
-      if (quad_pos >= 2 && quad_pos + pads >= 4) {
-        return Uint8Array.from(out);
-      }
-      continue;
-    }
-    const val = B64_ALPHABET.indexOf(ch);
-    if (val === -1) continue;
-    pads = 0;
-    quad_pos += 1;
-    if (quad_pos === 1) {
-      leftchar = val;
-    } else if (quad_pos === 2) {
-      out.push((leftchar << 2) | (val >> 4));
-      leftchar = val & 0x0f;
-    } else if (quad_pos === 3) {
-      out.push((leftchar << 4) | (val >> 2));
-      leftchar = val & 0x03;
-    } else {
-      out.push((leftchar << 6) | val);
-      quad_pos = 0;
-    }
-  }
-  if (quad_pos !== 0) {
-    throw new Error(
-      quad_pos === 1
-        ? "Invalid base64-encoded string: number of data characters cannot be 1 more than a multiple of 4"
-        : "Incorrect padding",
-    );
-  }
-  return Uint8Array.from(out);
-}
 
 /**
  * The envelope's `colorProfileName`, or `"None"` when the envelope is

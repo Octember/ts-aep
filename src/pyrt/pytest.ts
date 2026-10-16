@@ -14,10 +14,7 @@
 //   tmp_path fixture                        const tmp_path = make_tmp_path()
 //   assert a == b                           expect(py_eq(a, b)).toBe(true)  or  expect(a).toBe(b) for primitives
 
-import * as fs from "node:fs";
-import * as os from "node:os";
-import * as nodepath from "node:path";
-import { createRequire } from "node:module";
+import { fs, path as nodepath, tmpdir } from "./host.ts";
 import { py_eq } from "./builtins.ts";
 import { warnings } from "./errors.ts";
 import { Path } from "./pathlib.ts";
@@ -81,15 +78,14 @@ export function fail(reason = ""): never {
   throw new Failed(reason);
 }
 
-const _require = createRequire(import.meta.url);
-
 /**
  * `pytest.importorskip(name)`: whether the (npm) module resolves; when it
  * does not, reports the skip like `skip()` and the caller returns early.
  */
 export function importorskip(name: string): boolean {
   try {
-    _require.resolve(name);
+    // `import.meta.resolve` is the host-neutral resolver (Bun, Node 20+, browsers with import maps).
+    import.meta.resolve(name);
     return true;
   } catch {
     skip(`could not import '${name}'`);
@@ -98,5 +94,5 @@ export function importorskip(name: string): boolean {
 }
 
 export function make_tmp_path(): Path {
-  return new Path(fs.mkdtempSync(nodepath.join(os.tmpdir(), "py_aep-")));
+  return new Path(fs.mkdtempSync(nodepath.join(tmpdir(), "py_aep-")));
 }

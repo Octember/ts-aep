@@ -33,7 +33,7 @@ import { BitField } from "./bitfield.ts";
 import { Chunk } from "./chunk.ts";
 import { ascii_field, bool_field, bytes_field, f4_field, f8_field, s2_field, s4_field, str_field, u1_field, u2_field, u4_field, u8_field } from "./fmt_field.ts";
 import { register } from "./registry.ts";
-const _render_chunks = deferred<typeof import("./render_chunks.ts")>(import.meta.url, "./render_chunks.ts");
+const _render_chunks = deferred<typeof import("./render_chunks.ts")>("py_aep/binary/render_chunks");
 
 // ---------------------------------------------------------------------------
 // sspc - source footage settings (184+ bytes)
