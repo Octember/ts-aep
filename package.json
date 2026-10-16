@@ -1,0 +1,19 @@
+{
+  "name": "ts-aep",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit -p .",
+    "test": "bun test"
+  },
+  "devDependencies": {
+    "@types/bun": "1.2.21",
+    "typescript": "5.9.2"
+  },
+  "dependencies": {
+    "fontkit": "2.0.4",
+    "harfbuzzjs": "0.4.7",
+    "yaml": "2.6.0"
+  }
+}
