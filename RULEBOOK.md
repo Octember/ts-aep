@@ -85,7 +85,8 @@ translating** and use them; do not reimplement anything they provide. Never edit
 | `bytes` | `Uint8Array` (treat as immutable — never write into one you did not just allocate) |
 | `bytearray` | `Uint8Array` you own (mutable) |
 | `list`, `tuple` | arrays (`readonly` for tuples where natural) |
-| `dict` | `Map` — always, unless it is a fixed literal record of identifier keys only read by name (then a plain object `as const`). JS objects reorder integer-like keys and stringify numbers; Maps don't. |
+| `dict` built only to be splatted as `**kwargs` (`cls(**kw)`, `f(**kw)`) | plain object `Record<string, any>` (keys are identifiers; it becomes a TS options object) |
+| `dict` | `Map` — always (except the `**kwargs` case above), unless it is a fixed literal record of identifier keys only read by name (then a plain object `as const`). JS objects reorder integer-like keys and stringify numbers; Maps don't. |
 | `set` / `frozenset` | `Set` (`ReadonlySet` for frozenset); tuple members → `tkey(...)` strings |
 | tuple as dict key / set member | `tkey(a, b)` from pyrt (`Map<string, V>`) |
 | `b"\x00ab"` literal | `b("\x00ab")` from pyrt |

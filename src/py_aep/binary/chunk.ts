@@ -156,9 +156,7 @@ export class Chunk extends AttrsBase {
     }
 
     const kw2: Record<string, any> = { chunk_type };
-    for (const [k, v] of _decode_fields(data_fields, values, encodings, coerces, init_names)) {
-      kw2[k] = v;
-    }
+    Object.assign(kw2, _decode_fields(data_fields, values, encodings, coerces, init_names));
     let extra_trailing: Uint8Array | null = null;
     if (items_info != null) {
       const [items_name, item_cls, item_size] = items_info;
