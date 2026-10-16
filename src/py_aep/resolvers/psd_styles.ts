@@ -27,8 +27,10 @@ import { iter_image_resources } from "./media_probe.ts";
 import type { PsdGroup, PsdLayer, PsdStyleBlocks } from "./psd_layers.ts";
 import {
   BytesIO,
+  FileNotFoundError,
   KeyError,
   NotImplementedError,
+  OSError,
   TypeError_,
   ValueError,
   b,
@@ -323,7 +325,7 @@ export const _STROKE_POSITION = new Map<string, number>([
 ]);
 
 /** Python `repr()` of a parsed descriptor value (dicts print as `{'k': v}`). */
-// TODO(pyrt): pyrt repr() has no dict support; also cannot tell int 5 from float 5.0 (prints "5")
+// TODO(port): dicts/lists handled here, but pyrt repr() prints float 5.0 as "5" (JS number has no int/float split); only error-message text for whole-valued doubles in unsupported-style errors differs
 export function _repr(value: any): string {
   if (value instanceof Map) {
     return `{${[...value].map(([k, v]) => `${repr(k)}: ${_repr(v)}`).join(", ")}}`;
@@ -354,7 +356,7 @@ export function _bool01(value: any): number {
 }
 
 /** Python int/float/bool operand for `/`: bool counts as 0/1, anything else raises. */
-// TODO(pyrt): generic numeric operand coercion for `/` (str/None/containers raise TypeError in Python)
+// NOTE(port): bool->int, number passthrough, everything else TypeError, exactly Python's `/` operand rules for descriptor values
 export function _arith(value: any): number {
   if (typeof value === "number") return value;
   if (typeof value === "boolean") return value ? 1 : 0;
@@ -368,7 +370,7 @@ export function _subscript(obj: any, key: string): any {
 }
 
 /** Python `for x in value` over a parsed descriptor value. */
-// TODO(pyrt): generic iter() for parsed descriptor values (Python iterates dict keys and str chars)
+// NOTE(port): list, dict keys, str chars (by code point) cover every type the descriptor parser yields; others raise TypeError like Python
 export function _py_iter(value: any): any[] {
   if (Array.isArray(value)) return value;
   if (value instanceof Map) return [...value.keys()];
@@ -688,8 +690,17 @@ export function read_global_light(file: PathLike): [number, number] {
    */
   let angle = 120.0,
     altitude = 30.0;
-  // TODO(port): Python open() raises OSError/FileNotFoundError; readFileSync raises a Node error instead.
-  const fp = new BytesIO(readFileSync(fspath(file)));
+  const fp = new BytesIO(
+    (() => {
+      try {
+        return readFileSync(fspath(file));
+      } catch (e: any) {
+        const path = fspath(file);
+        if (e?.code === "ENOENT") throw new FileNotFoundError(`[Errno 2] No such file or directory: '${path}'`);
+        throw new OSError(String(e?.message ?? e));
+      }
+    })(),
+  );
   if (!bytes_eq(fp.read(4), b("8BPS"))) return [angle, altitude];
   fp.seek(26);
   for (const [resource_id, body] of iter_image_resources(fp)) {

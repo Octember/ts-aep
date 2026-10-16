@@ -166,16 +166,13 @@ describe("TestDecimalRates", () => {
     const tmp_path = make_tmp_path();
     const [project, comp] = _new_comp();
     const layer = comp.add_solid([1.0, 0.0, 0.0], "s", 64, 64);
-    const opacity = layer.property("ADBE Transform Group").property("ADBE Opacity");
+    const opacity = (layer.property("ADBE Transform Group") as any).property("ADBE Opacity");
     opacity.set_value_at_time(1.0, 0.0);
     opacity.set_value_at_time(5.5, 100.0);
     comp.frame_rate = 7.3;
     const again = _reparse(project, tmp_path).compositions.at(0)!;
-    const times = again.layers
-      .at(0)!
-      .property("ADBE Transform Group")
-      .property("ADBE Opacity")
-      .keyframes.map((k) => k.time);
+    const times = ((again.layers.at(0)!.property("ADBE Transform Group") as any).property("ADBE Opacity") as any)
+      .keyframes.map((k: any) => k.time);
     expect(approx(times, [1.0, 5.5], { abs: 1e-9 })).toBe(true);
     expect(approx(again.duration, 10.0)).toBe(true);
   });
@@ -392,8 +389,8 @@ describe("TestTinySvgCanvas", () => {
     const opts = new py_aep.ImportOptions(svg);
     opts.import_as = py_aep.ImportAsType.COMP_CROPPED_LAYERS;
     const comp = project.import_file(opts);
-    const again = _reparse(project, tmp_path).compositions.find((c) => c.name === "tiny.svg")!;
-    for (const c of [comp, again]) {
+    const again = _reparse(project, tmp_path).compositions.find((c) => c.name === "tiny.svg")! as CompItem;
+    for (const c of [comp as CompItem, again]) {
       expect(py_eq([c.width, c.height], size)).toBe(true);
       expect(len(c.layers)).toBe(1);
       expect(c.frame_rate).toBe(30.0);

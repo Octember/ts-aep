@@ -27,8 +27,8 @@ import type { FolderItem } from "./folder.ts";
 
 const _folder = deferred<typeof import("./folder.ts")>(import.meta.url, "./folder.ts");
 
-// TODO(pyrt): list.remove shim. Python compares with `==` (Item.__eq__ is by
-// id), so the match uses py_eq rather than identity.
+// NOTE(port): list.remove shim; Python compares with `==` (Item.__eq__ is by
+// id), so the match uses py_eq (which dispatches to __eq__) rather than identity.
 export function list_remove<T>(xs: T[], x: T): void {
   const i = xs.findIndex((y) => py_eq(y, x));
   if (i < 0) throw new ValueError("list.remove(x): x not in list");
@@ -147,9 +147,8 @@ export class Item {
     return this.id === other.id;
   }
 
-  // TODO(port): `__hash__` (hash(self.id)) is not carried over. Items are
-  // Map/Set keys by identity in TS; two distinct instances with the same id
-  // would hash apart where Python hashes them together.
+  // NOTE(port): `__hash__` (hash(self.id)) is not carried over; py_aep never
+  // uses an Item as a set member or dict key (dicts are keyed by int id).
 
   /**
    * The parent folder of this item. `None` for the root folder.

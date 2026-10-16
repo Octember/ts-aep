@@ -52,9 +52,9 @@ export const _PERCENT_AXIS: Record<string, string> = {
   r: "diagonal",
 };
 
-// TODO(pyrt): re.findall shim missing; local helper for NUMBER_RE (no groups,
-// so findall returns whole matches). Fresh "g" regex so a non-global NUMBER_RE
-// still scans every match.
+// NOTE(port): matches NUMBER_RE.findall: the pattern has no groups and cannot match empty, so
+// global whole-match scanning equals CPython's non-overlapping findall. A fresh "g" regex keeps
+// the non-global NUMBER_RE stateless.
 export function findall(re: RegExp, s: string): string[] {
   // NUMBER_RE is anchored with a leading ^ (for .match); findall scans, so drop it.
   const src = re.source.startsWith("^") ? re.source.slice(1) : re.source;

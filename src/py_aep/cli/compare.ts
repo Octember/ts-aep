@@ -47,22 +47,22 @@ import {
   zip,
 } from "../../pyrt/index.ts";
 
-// TODO(pyrt): builtin print(). console.log matches print's trailing newline.
+// NOTE(port): print(*args) with default sep=" " and end="\n"; console.log of one pre-joined string appends the same newline.
 export function print(...args: unknown[]): void {
   console.log(args.map((a) => str(a)).join(" "));
 }
 
-// TODO(pyrt): print(..., file=sys.stderr).
+// NOTE(port): print(..., file=sys.stderr); console.error of one string appends the same newline.
 export function eprint(message: string): void {
   console.error(message);
 }
 
-// TODO(pyrt): int.bit_length(). Only reached with a positive power-of-two xor of two bytes.
+// NOTE(port): int.bit_length(); exact for the integer inputs (xor of two bytes) used here.
 export function bit_length(n: number): number {
   return n === 0 ? 0 : Math.abs(n).toString(2).length;
 }
 
-// TODO(pyrt): format spec `b` (binary) is not supported by pyrt format(). This is the `08b` case.
+// NOTE(port): f"{x:08b}" including Python's sign-inside-width rule for negatives; pyrt format() lacks `b`.
 export function bin8(x: number): string {
   const sign = x < 0 ? "-" : "";
   return sign + Math.abs(x).toString(2).padStart(8 - sign.length, "0");
@@ -249,7 +249,7 @@ export function _with_floats(chunk: any, floats: number[]): any {
   } else if (ct === "shph") {
     [clone.top_left_x, clone.top_left_y, clone.bottom_right_x, clone.bottom_right_y] = floats;
   } else if (ct === "ldat") {
-    for (const [idx, item] of enumerate(clone.items)) {
+    for (const [idx, item] of enumerate(clone.items as any[])) {
       item.x = floats[2 * idx];
       item.y = floats[2 * idx + 1];
     }
@@ -788,7 +788,7 @@ export function print_multi_results(
  * json.dumps(obj, indent=2) parity: Python's separators and indent layout,
  * `ensure_ascii` escaping, and `float_repr` float spelling.
  */
-// TODO(port): int-valued floats print as `1` here but `1.0` in Python. Output has none today.
+// NOTE(port): json.dumps emits ints plainly; the output dict (to_json_output) holds only ints, strings, bools and null, so no float `1.0` spelling arises.
 export function json_str(s: string): string {
   return JSON.stringify(s).replace(/[\u007f-￿]/g, (c) => "\\u" + c.charCodeAt(0).toString(16).padStart(4, "0"));
 }
@@ -923,7 +923,7 @@ Output shows for each different byte:
     - Bit position (7-0) if only one bit differs
         `;
 
-// TODO(pyrt): SystemExit. Raised by parser errors and --help; the entry point turns it into a process exit code.
+// NOTE(port): SystemExit. Raised by parser errors and --help; the entry point turns it into a process exit code.
 export class SystemExit extends Error {
   code: number;
 

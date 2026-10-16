@@ -15,7 +15,7 @@ import { IDENTITY, parse_transform } from "../../src/py_aep/svg/transform.ts";
 const SAMPLE = new Path(import.meta.path).parent.parent.parent.div("samples", "assets", "svg.svg");
 
 function _approx(a: any, b: any, tol = 1e-6): boolean {
-  return zip(a, b).every(([x, y]) => Math.abs(x - y) <= tol);
+  return zip(a, b).every(([x, y]: any) => Math.abs(x - y) <= tol);
 }
 
 describe("TestTransform", () => {
@@ -336,9 +336,9 @@ describe("TestReadSvgSample", () => {
       'stroke-opacity="25%"/></svg>';
     const drawable = read_svg(svg).drawables[0];
     expect(drawable.fill instanceof SolidPaint).toBe(true);
-    expect(approx(drawable.fill.color[3], 0.4)).toBe(true);
+    expect(approx((drawable.fill as any).color[3], 0.4)).toBe(true);
     expect(drawable.stroke.paint instanceof SolidPaint).toBe(true);
-    expect(approx(drawable.stroke.paint.color[3], 0.25)).toBe(true);
+    expect(approx((drawable.stroke.paint as any).color[3], 0.25)).toBe(true);
     expect(drawable.opacity).toBe(1.0);
   });
 
@@ -349,7 +349,7 @@ describe("TestReadSvgSample", () => {
       '<g fill-opacity="0.5"><rect width="4" height="4" fill="#f00"/></g>' +
       "</svg>";
     const drawable = read_svg(svg).drawables[0];
-    expect(approx(drawable.fill.color[3], 0.5)).toBe(true);
+    expect(approx((drawable.fill as any).color[3], 0.5)).toBe(true);
     expect(drawable.opacity).toBe(1.0);
   });
 
@@ -360,7 +360,7 @@ describe("TestReadSvgSample", () => {
       '<stop offset="1" stop-color="#00f" stop-opacity="0.5"/>' +
       "</linearGradient>" +
       '<rect width="4" height="4" fill="url(#g)" fill-opacity="0.5"/></svg>';
-    const fill = read_svg(svg).drawables[0].fill;
+    const fill = read_svg(svg).drawables[0].fill as any;
     expect(fill instanceof GradientPaint).toBe(true);
     expect(approx(fill.stops.map((s) => s.color[3]), [0.5, 0.25])).toBe(true);
   });
@@ -409,7 +409,7 @@ describe("TestReadSvgFeatures", () => {
           <rect width="100" height="100" fill="url(#g)"/>
         </svg>`;
     const doc = read_svg(svg);
-    const paint = doc.drawables[0].fill;
+    const paint = doc.drawables[0].fill as any;
     expect(paint instanceof GradientPaint).toBe(true);
     expect(paint.kind).toBe("linear");
     expect(paint.stops.length).toBe(2);
@@ -427,7 +427,7 @@ describe("TestReadSvgFeatures", () => {
           </linearGradient></defs>
           <rect width="100" height="100" fill="url(#g)"/>
         </svg>`;
-    const paint = read_svg(svg).drawables[0].fill;
+    const paint = read_svg(svg).drawables[0].fill as any;
     expect(paint instanceof GradientPaint).toBe(true);
     expect(paint.stops.at(-1)!.offset).toBe(1.0);
   });
@@ -443,7 +443,7 @@ describe("TestReadSvgFeatures", () => {
           </radialGradient></defs>
           <circle cx="50" cy="50" r="40" fill="url(#g)"/>
         </svg>`;
-    const paint = read_svg(svg).drawables[0].fill;
+    const paint = read_svg(svg).drawables[0].fill as any;
     expect(paint instanceof GradientPaint).toBe(true);
     expect(_approx(paint.start, [50.0, 50.0])).toBe(true);
     expect(_approx(paint.end, [90.0, 50.0])).toBe(true);
@@ -463,7 +463,7 @@ describe("TestReadSvgFeatures", () => {
           </radialGradient></defs>
           <circle cx="50" cy="50" r="20" fill="url(#g)"/>
         </svg>`;
-    const paint = read_svg(svg).drawables[0].fill;
+    const paint = read_svg(svg).drawables[0].fill as any;
     expect(paint instanceof GradientPaint).toBe(true);
     // Centre stays put and the x-radius (start/end) is unchanged...
     expect(_approx(paint.start, [50.0, 50.0])).toBe(true);
@@ -484,7 +484,7 @@ describe("TestReadSvgFeatures", () => {
           </radialGradient></defs>
           <circle cx="50" cy="50" r="20" fill="url(#g)"/>
         </svg>`;
-    const paint = read_svg(svg).drawables[0].fill;
+    const paint = read_svg(svg).drawables[0].fill as any;
     expect(paint instanceof GradientPaint).toBe(true);
     expect(_approx(paint.scale, [100.0, 100.0], 1e-4)).toBe(true);
     expect(approx(paint.rotation, 360.0)).toBe(true);
@@ -499,7 +499,7 @@ describe("TestReadSvgFeatures", () => {
           </linearGradient></defs>
           <rect width="100" height="100" fill="url(#g)"/>
         </svg>`;
-    const paint = read_svg(svg).drawables[0].fill;
+    const paint = read_svg(svg).drawables[0].fill as any;
     expect(paint instanceof GradientPaint).toBe(true);
     expect(py_eq(paint.scale, [100.0, 100.0])).toBe(true);
     expect(paint.rotation === 0.0).toBe(true);

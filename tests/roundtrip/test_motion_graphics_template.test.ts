@@ -33,8 +33,8 @@ import { _walk_source_property } from "../../src/py_aep/resolvers/essential_prop
 const EG_DIR = new Path(import.meta.path).parent.parent.parent.div("samples", "models", "essential_graphics");
 const BASE = EG_DIR.div("base.aep");
 
-// TODO(pyrt): no `next()` shim. Returns the first element matching `pred`
-// and raises StopIteration when none matches, as Python's `next(gen)` does.
+// NOTE(port): no pyrt `next()` shim; local helper matches Python's `next(gen)`.
+// Returns the first element matching `pred`, raising StopIteration when none does.
 function next<T>(xs: Iterable<T>, pred: (x: T) => boolean): T {
   for (const x of xs) if (pred(x)) return x;
   throw new StopIteration("");
@@ -119,7 +119,7 @@ describe("TestCanAddProperty", () => {
     const project = parse_project_fresh(EG_DIR.parent.div("property", "mask_add.aep"));
     const comp = project.compositions[0];
     const mask = comp.layers[0].masks.__getitem__(0);
-    const mask_opacity = next(mask.properties, (p: any) => p.match_name === "ADBE Mask Opacity");
+    const mask_opacity = next((mask as any).properties, (p: any) => p.match_name === "ADBE Mask Opacity");
     expect(mask_opacity.property_value_type).toBe(PropertyValueType.OneD);
     expect(mask_opacity.can_add_to_motion_graphics_template(comp)).toBe(true);
   });
@@ -315,7 +315,7 @@ describe("TestIndexAwareResolution", () => {
     const comp = get_comp(project, "primary");
     const layer = comp.layers[0];
     const ctrl = next(comp.motion_graphics_controllers, (c: any) => c.name === "Background Color");
-    const resolved = _walk_source_property(layer, ctrl.source_property_path);
+    const resolved = _walk_source_property(layer as any, ctrl.source_property_path);
     const expected = _effect_param(comp, "ADBE Fill", "ADBE Fill-0002");
     expect(resolved).toBe(expected);
   });
@@ -350,9 +350,9 @@ describe("TestIndexedGroupControllers", () => {
     expect(len(comp.motion_graphics_controllers)).toBe(8);
     for (const ctrl of comp.motion_graphics_controllers) {
       const layer = getitem(comp.layers_by_id, ctrl.source_layer_id);
-      const resolved = _walk_source_property(layer, ctrl.source_property_path);
+      const resolved = _walk_source_property(layer as any, ctrl.source_property_path);
       py_assert(resolved != null, ctrl.name);
-      const rebuilt = _source_property_path(resolved);
+      const rebuilt = _source_property_path(resolved as any);
       py_assert(rebuilt != null, ctrl.name);
       py_assert(
         py_eq(
@@ -379,8 +379,8 @@ describe("TestIndexedGroupControllers", () => {
       const a_ctrl = getitem(by_name, a_name);
       const b_ctrl = getitem(by_name, b_name);
       const layer = getitem(comp.layers_by_id, a_ctrl.source_layer_id);
-      const a = _walk_source_property(layer, a_ctrl.source_property_path);
-      const b = _walk_source_property(layer, b_ctrl.source_property_path);
+      const a = _walk_source_property(layer as any, a_ctrl.source_property_path);
+      const b = _walk_source_property(layer as any, b_ctrl.source_property_path);
       expect(a != null && b != null).toBe(true);
       expect(a.match_name).toBe(b.match_name);
       expect(a).not.toBe(b);
@@ -499,8 +499,8 @@ describe("TestAddLayerMediaReplacement", () => {
     const fixture_cctl = _cif3_cctls(comp)[0];
     const by_type = new Map<string, any>(fixture_cctl.chunks.map((c: any): [string, any] => [c.chunk_type, c]));
     const utf8s = fixture_cctl.chunks.filter((c: any) => c.chunk_type === "Utf8");
-    const uuid_str = utf8s[0].value;
-    const thumbnail = utf8s[3].value;
+    const uuid_str = (utf8s[0] as any).value;
+    const thumbnail = (utf8s[3] as any).value;
     const cprp = next(fixture_cctl.chunks, (c: any) => getattr(c, "list_type", "") === "CPrp");
     const path_json = next(cprp.chunks, (c: any) => c.chunk_type === "Utf8").value;
 

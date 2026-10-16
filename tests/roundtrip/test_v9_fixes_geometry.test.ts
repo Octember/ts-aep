@@ -78,7 +78,7 @@ function _layer(project: any, comp_name: string, layer_name: string): [any, any]
 
 function _close(a: any, b: any, tol: number): boolean {
   if (typeof a === "number") return Math.abs(a - b) <= tol;
-  return zip(a, b).every(([x, y]) => Math.abs(x - y) <= tol);
+  return zip(a as number[], b as number[]).every(([x, y]) => Math.abs(x - y) <= tol);
 }
 
 function _rect(layer: any, time: number): number[] {
@@ -421,7 +421,7 @@ function _assert_transform(child: any, comp: any, truth: any): void {
       }
     }
     if (py_bool(expected.k)) {
-      for (const [kf, [time, value]] of zip(prop.keyframes, expected.k)) {
+      for (const [kf, [time, value]] of zip(prop.keyframes as any[], expected.k as any[][])) {
         py_assert(Math.abs(kf.time - time) < 1e-4);
         expect(
           _close(
@@ -523,7 +523,7 @@ describe("TestPointConversions", () => {
       for (const [point, expected] of zip(PTS, row.s2c)) {
         const got = layer.source_point_to_comp(point, time);
         py_assert(
-          _close(got, expected, 1e-2 * Math.max(1.0, Math.max(...expected.map((v: number) => Math.abs(v)))) * 1e-1),
+          _close(got, expected, 1e-2 * Math.max(1.0, Math.max(...(expected as number[]).map((v: number) => Math.abs(v)))) * 1e-1),
           `${time} ${repr(point)} ${repr(got)} ${repr(expected)}`,
         );
       }

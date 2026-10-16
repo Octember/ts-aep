@@ -52,9 +52,7 @@ export function _type_of(x: any): any {
  * See: https://ae-scripting.docsforadobe.dev/layer/parametricmeshlayer/
  */
 export class ParametricMeshLayer extends AVLayer {
-  // TODO(port): Python reads this class attribute through `self`; AVLayer
-  // reads `this._auto_name` on instances (av_layer.ts), which will not see a
-  // static. That reader needs `(this.constructor as any)._auto_name`.
+  // NOTE(port): Layer.__init__ -> PropertyBase.__init__ assigns instance `_auto_name = None`, shadowing this class attribute in Python too; AVLayer.name's `self._auto_name` therefore sees None in both.
   static _auto_name: string = "Mesh Layer";
 
   /** For a parametric mesh layer, its mesh type. Read / write. */
@@ -240,9 +238,7 @@ export class ParametricMeshOptions {
 
   __repr__(): string {
     const result = new Map<string, any>();
-    // TODO(port): descriptors_of walks the MRO; Python's vars(cls) is the
-    // class's own dict. Same result here because no base class declares
-    // descriptors.
+    // NOTE(port): descriptors_of walks the MRO but vars(cls) is the class's own dict; same result because no base class declares descriptors.
     for (const [name] of descriptors_of(this.constructor)) {
       result.set(name, getattr(this, name));
     }

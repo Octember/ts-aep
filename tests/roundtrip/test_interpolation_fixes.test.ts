@@ -348,8 +348,8 @@ describe("TestAddKeyPreservesTheCurve", () => {
     const k1 = pos.keyframes[1];
     const curve = [
       k0.value,
-      zip(k0.value, k0.out_spatial_tangent).map(([v, t]) => v + t),
-      zip(k1.value, k1.in_spatial_tangent).map(([v, t]) => v + t),
+      zip(k0.value, k0.out_spatial_tangent).map(([v, t]) => (v as number) + (t as number)),
+      zip(k1.value, k1.in_spatial_tangent).map(([v, t]) => (v as number) + (t as number)),
       k1.value,
     ];
     const path = Array.from({ length: 2001 }, (_, i) => point(curve, i / 2000));

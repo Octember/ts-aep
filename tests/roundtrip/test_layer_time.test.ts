@@ -70,7 +70,7 @@ describe("TestStretchedLayerTimebase", () => {
     app.project.save(out);
 
     const app2 = parse_app_fresh(out);
-    const op2 = app2.project.compositions[0].layers[0].property("Transform").property("Opacity");
+    const op2 = (app2.project.compositions[0].layers[0].property("Transform") as py_aep.PropertyGroup).property("Opacity");
     expect(approx(op2.keyframes.map((kf: any) => kf.time), [1.0, 4.0, 7.0])).toBe(true);
   });
 
@@ -118,7 +118,7 @@ describe("TestStretchRetimesKeyframes", () => {
     const app = py_aep.new();
     const comp = app.project.root_folder.add_comp("C", 320, 240, 1.0, 40.0, fps);
     const layer = comp.add_solid([1, 1, 1], "L", 320, 240, 1.0);
-    const op = layer.property("Transform").property("Opacity");
+    const op = (layer.property("Transform") as py_aep.PropertyGroup).property("Opacity");
     op.set_value_at_time(1.0, 0.0);
     op.set_value_at_time(5.0, 100.0);
     return [app, layer, op];
@@ -151,7 +151,7 @@ describe("TestStretchRetimesKeyframes", () => {
     const out = tmp_path.div("stretched.aep");
     app.project.save(out);
 
-    const op2 = parse_app_fresh(out).project.compositions[0].layers[0].property("Transform").property("Opacity");
+    const op2 = (parse_app_fresh(out).project.compositions[0].layers[0].property("Transform") as py_aep.PropertyGroup).property("Opacity");
     expect(approx(op2.keyframes.map((kf: any) => kf.time), [2.0, 10.0])).toBe(true);
     expect(py_eq(op2.keyframes.map((kf: any) => kf._ldat_item.time_units), [49152, 245760])).toBe(true);
   });
@@ -185,7 +185,7 @@ describe("TestNegativeStretchOffset", () => {
     const app = py_aep.new();
     const comp = app.project.root_folder.add_comp("C", 320, 240, 1.0, 60.0, fps);
     const layer = comp.add_solid([1, 1, 1], "L", 320, 240, 1.0);
-    const op = layer.property("Transform").property("Opacity");
+    const op = (layer.property("Transform") as py_aep.PropertyGroup).property("Opacity");
     // Author while unstretched so the ticks land on layer-seconds 1 and 4,
     // then reverse - the order AE's probe used.
     op.set_value_at_time(1.0, 10.0);
@@ -200,7 +200,7 @@ describe("TestNegativeStretchOffset", () => {
     const app = py_aep.new();
     const comp = app.project.root_folder.add_comp("C", 320, 240, 1.0, 60.0, 24.0);
     const layer = comp.add_solid([1, 1, 1], "L", 320, 240, 1.0);
-    const op = layer.property("Transform").property("Opacity");
+    const op = (layer.property("Transform") as py_aep.PropertyGroup).property("Opacity");
     op.set_value_at_time(1.0, 10.0);
     op.set_value_at_time(4.0, 90.0);
     layer.stretch = 150.0;
@@ -219,7 +219,7 @@ describe("TestValueAtTimeRejectsNaN", () => {
     const app = py_aep.new();
     const comp = app.project.root_folder.add_comp("C", 200, 200, 1.0, 10.0, 24.0);
     const layer = comp.add_solid([1, 0, 0], "L", 100, 100, 1.0);
-    const op = layer.property("Transform").property("Opacity");
+    const op = (layer.property("Transform") as py_aep.PropertyGroup).property("Opacity");
     op.set_value_at_time(0.0, 0.0);
     op.set_value_at_time(2.0, 100.0);
     return op;

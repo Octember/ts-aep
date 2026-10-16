@@ -9,7 +9,7 @@ import { SyntaxError_ } from "../../src/py_aep/cos/cos.ts";
 
 const SAMPLES_DIR = new Path(import.meta.path).parent.parent.parent.div("samples", "models", "layer");
 
-// TODO(port): `monkeypatch.setattr(specialized_properties, name, value)` - ESM namespace
+// NOTE(port): `monkeypatch.setattr(specialized_properties, name, value)` - ESM namespace
 // bindings are read-only, so the name is patched in the module that defines it via bun's
 // `mock.module` (live bindings update in already-imported modules) and restored by `undo`.
 const PATCH_MODULES: Record<string, string> = {
@@ -59,7 +59,7 @@ describe("TestParseTextDocument", () => {
     const btdk_chunk: any = { data: b("bad") };
     const root_chunk: any = { chunks: [] };
 
-    // TODO(port): Python fake is keyword-only; the TS port calls find_by_list_type positionally.
+    // NOTE(port): Python fake is keyword-only because the caller passes chunks=/list_type= by keyword; RULEBOOK maps positional-or-keyword params to positional, so the TS call and fake are positional.
     const fake_find_by_list_type = (chunks: any, list_type: string): any => {
       if (list_type === "tdbs") return tdbs_chunk;
       if (list_type === "btdk") return btdk_chunk;
@@ -102,7 +102,7 @@ describe("TestParseTextDocument", () => {
     const btdk_chunk: any = { data: b("ok") };
     const root_chunk: any = { chunks: [] };
 
-    // TODO(port): Python fake is keyword-only; the TS port calls find_by_list_type positionally.
+    // NOTE(port): Python fake is keyword-only because the caller passes chunks=/list_type= by keyword; RULEBOOK maps positional-or-keyword params to positional, so the TS call and fake are positional.
     const fake_find_by_list_type = (chunks: any, list_type: string): any => {
       if (list_type === "tdbs") return tdbs_chunk;
       if (list_type === "btdk") return btdk_chunk;

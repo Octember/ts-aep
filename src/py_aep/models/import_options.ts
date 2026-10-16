@@ -8,7 +8,7 @@ import { Path, ValueError, int, repr, type PathLike } from "../../pyrt/index.ts"
 // Pattern to match trailing digits in a filename stem (e.g. "frame001").
 // Python's `\d` matches any Unicode decimal digit, which is what `\p{Nd}` matches.
 // Python's `$` also matches before a trailing "\n"; JS's `$` does not, hence the lookahead.
-// TODO(port): pyrt `int()` only parses ASCII digits, Python's `int()` accepts any Unicode Nd.
+// TODO(port): pyrt `int()` only parses ASCII digits, so a stem ending in non-ASCII Nd digits (e.g. "frame\u0663\u0664") raises ValueError in is_file_name_numbered where CPython returns (True, 34); no shim yet.
 export const _NUMBERED_RE = /(\p{Nd}+)(?=\n?$)/u;
 
 /** Type of the `CURRENT_VALUE` sentinel. */
@@ -330,7 +330,7 @@ export class ImportOptions {
     if (COMP_CONVERSION_EXTENSIONS.has(suffix)) {
       // Comp-conversion formats (e.g. SVG) have no media-format entry;
       // gate on the import-type table alone.
-      return get_import_as_types(suffix).has(type);
+      return get_import_as_types(suffix).has(type as any);
     }
     let fmt: any;
     try {
@@ -350,7 +350,7 @@ export class ImportOptions {
       // Photoshop only.
       return false;
     }
-    return get_import_as_types(suffix).has(type);
+    return get_import_as_types(suffix).has(type as any);
   }
 
   /**
@@ -370,8 +370,7 @@ export class ImportOptions {
   }
 
   __repr__(): string {
-    // TODO(port): pyrt `Path` has no `__repr__`; Python's `{self._file!r}` prints
-    // `PosixPath('...')` (POSIX), spelled out here.
+    // NOTE(port): CPython prints `PosixPath('...')` for `{self._file!r}` on POSIX; spelled out here.
     return (
       `ImportOptions(file=PosixPath(${repr(this._file.toString())}), ` +
       `import_as=${ImportAsType.name_of(this._import_as)}, ` +

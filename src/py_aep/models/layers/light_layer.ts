@@ -8,6 +8,7 @@ import { AVLayer } from "./av_layer.ts";
 import { _UNDEFINED_ID, Layer, _no_source_id } from "./layer.ts";
 import { AttributeError, ValueError, descriptor, dict_get, py_cmp } from "../../../pyrt/index.ts";
 import type { CompItem } from "../items/composition.ts";
+import type { PropertyGroup } from "../properties/property_group.ts";
 
 export function _require_environment_lights(comp: CompItem, what: string): void {
   /** Environment lights and their light source arrived in AE 24.3. */
@@ -80,6 +81,12 @@ export class LightLayer extends Layer {
   /** The ID of the layer used as a light source. `0` if none. */
   declare _light_source_id: number;
 
+  static _new(
+    match_name: string,
+    auto_name: string,
+    property_depth: number,
+    kw?: any,
+  ): PropertyGroup;
   static _new(kw: {
     name: string;
     layer_id: number;
@@ -87,8 +94,10 @@ export class LightLayer extends Layer {
     containing_comp: CompItem;
     light_type?: number;
     effect_param_defs?: Map<string, Map<string, Map<string, any>>> | null;
-  }): LightLayer {
-    // TODO(port): Python `# type: ignore[override]` — this keyword shape differs from Layer._new's
+  }): LightLayer;
+  static _new(kw: any): LightLayer;
+  static _new(kw: any): any {
+    // NOTE(port): Python `# type: ignore[override]` is type-only; overloads above mirror Layer._new's signature set.
     const {
       name,
       layer_id,
@@ -160,7 +169,7 @@ export class LightLayer extends Layer {
     if (value.containing_comp !== comp) {
       throw new ValueError("light_source must be a layer in the same composition");
     }
-    if ([LightType.SPOT, LightType.POINT].includes(this.light_type)) {
+    if (([LightType.SPOT, LightType.POINT] as number[]).includes(this.light_type)) {
       // AE 2026 refuses these two ("Invalid light source specified")
       // and stores a source on a parallel light.
       throw new ValueError(

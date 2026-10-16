@@ -108,7 +108,7 @@ describe("TestWriteEnginePrimitives", () => {
     raises(ValueError, () => {
       new CharacterRange(doc, 0, 5).font_size = 0;
     });
-    // TODO(port): pytest.raises((TypeError, ValueError)) tuple form has no pyrt helper; checked inline.
+    // NOTE(port): pytest.raises((TypeError, ValueError)) tuple form checked inline; same accepted exception set.
     let caught: unknown;
     try {
       (new CharacterRange(doc, 0, 5) as any).auto_kern_type = 5;
@@ -362,7 +362,7 @@ describe("TestSpecConsistency", () => {
     // vars(CharacterRange).items(): descriptors declared on the class.
     for (const [name, field] of descriptors_of(CharacterRange)) {
       if (!(field instanceof RangeField)) continue;
-      // TODO(port): TextDocument.__dict__ is own-class only; get_descriptor walks the prototype chain.
+      // NOTE(port): TextDocument has no base class, so the MRO walk in get_descriptor equals TextDocument.__dict__.get(name).
       const cos_field = get_descriptor(TextDocument, name);
       if (!(cos_field instanceof CosField)) continue;
       if (field.key !== cos_field.key) {

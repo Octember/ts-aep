@@ -386,7 +386,7 @@ export function copy<T>(x: T): T {
   if (x instanceof String) {
     const out = Reflect.construct(String, [x.valueOf()], (x as any).constructor);
     for (const k of Object.keys(x)) if (!/^\d+$/.test(k)) out[k] = (x as any)[k];
-    return out;
+    return out as any;
   }
   if (x instanceof String) return Object.assign(Object.setPrototypeOf(new String(x.valueOf()), Object.getPrototypeOf(x)), x);
   return Object.assign(Object.create(Object.getPrototypeOf(x)), x);

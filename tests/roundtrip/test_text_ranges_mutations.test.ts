@@ -43,8 +43,7 @@ function _fresh_doc(name: string, app: any = null): [any, any] {
  * `skip` is throw-free, so callers do `if (reason != null) return skip(reason);`.
  */
 function _require_composer(doc: any): string | null {
-  // TODO(port): pytest.importorskip("uharfbuzz") has no TS twin; the TS
-  // composer does not load harfbuzz, so only the font check below can skip.
+  // NOTE(port): importorskip("uharfbuzz") never skips here: text_composition.ts loads harfbuzzjs unconditionally at module load.
   const fonts = doc._fonts.map((font: any) => font.post_script_name);
   const used = new Set<string>();
   for (const run of py_or(cos_get(doc._doc, "0", "6", "0"), [])) {
@@ -176,8 +175,7 @@ describe("TestRecomposition", () => {
     // spans stay contiguous over the raw text (gate_compose M_W300).
     expect(doc.composition_stale).toBe(false);
     expect(doc.composed_line_count).toBe(3);
-    // TODO(port): py_eq does not deep-compare plain-object records, so the
-    // list of {"start", "end"} dicts is checked with toEqual.
+    // NOTE(port): the list of {"start", "end"} dicts is deep-compared with toEqual (py_eq does not walk plain objects).
     expect(doc.composed_line_ranges).toEqual([
       { start: 0, end: 2 },
       { start: 2, end: 3 },
@@ -195,7 +193,7 @@ describe("TestRecomposition", () => {
     // (gate_compose M_H40: ranges [0, 6] and [6, 6]).
     expect(doc.composition_stale).toBe(false);
     expect(doc.composed_line_count).toBe(2);
-    // TODO(port): see test_empty_paragraph_recomposes (py_eq on plain-object records).
+    // NOTE(port): toEqual deep-compare, see test_empty_paragraph_recomposes.
     expect(doc.composed_line_ranges).toEqual([
       { start: 0, end: 6 },
       { start: 6, end: 6 },

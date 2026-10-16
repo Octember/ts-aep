@@ -1547,7 +1547,7 @@ export function _probe_mov(fp: IO, undecodable: ReadonlySet<string> = new Set())
       const dur = v === 1 ? _u(data, b2 + 24, 8) : _u(data, b2 + 16, 4);
       duration = ts ? dur / ts : 0.0;
     } else if (bytes_eq(a2, b("trak"))) {
-      let handler = new Uint8Array(0);
+      let handler: Uint8Array = new Uint8Array(0);
       let tw = 0;
       let th = 0;
       let track_id = 0;

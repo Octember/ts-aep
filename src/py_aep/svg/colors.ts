@@ -171,10 +171,8 @@ export const _NAMED = new Map<string, readonly [number, number, number]>([
 export const _RGB_RE = /^rgba?\(([^)]*)\)/i;
 export const _HSL_RE = /^hsla?\(([^)]*)\)/i;
 
-// TODO(pyrt): `re.findall` has no shim yet. This local stand-in returns each
-// full match, which is what Python does because NUMBER_PCT_RE has no groups.
-// TODO(port): Python `\d` also matches non-ASCII Unicode digits, which JS `\d`
-// does not, so a token like "٥" is skipped here. Only matters if _util's regex is ASCII.
+// NOTE(port): local `re.findall` stand-in; returns each full match, as Python does because NUMBER_PCT_RE has no groups.
+// TODO(port): Python `\d` also matches non-ASCII Unicode digits (e.g. "٥"), JS `\d` does not, so such tokens are skipped here (rgb()/hsl() with Arabic-Indic digits).
 export function findall(re: RegExp, s: string): string[] {
   const flags = re.flags.includes("g") ? re.flags : re.flags + "g";
   // _util.ts anchors its patterns with `^` (re.match emulation); findall scans, so drop the anchor.
@@ -235,7 +233,7 @@ export function _parse_hex(h: string): Rgba | null {
   let b: number;
   let a: number;
   try {
-    // TODO(pyrt): pyrt int() strips every "_"; Python only allows "_" between digits, so "_1"/"1_" must raise.
+    // NOTE(port): pyrt int() strips every "_" but Python only allows it between digits; the guard below raises for a leading/trailing "_" in each 2-char pair, which is the only way it differs.
     for (let i = 0; i < 8; i += 2) {
       if (cps[i] === "_" || cps[i + 1] === "_") throw new ValueError("invalid literal for int() with base 16");
     }

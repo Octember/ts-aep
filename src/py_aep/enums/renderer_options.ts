@@ -29,7 +29,7 @@ export const ShadowMapResolution = int_enum(
     RES_4000: 8,
   },
   {
-    // TODO(port): Python `member.label` is a property on the member; members are plain numbers here, so this is a method that takes the member.
+    // NOTE(port): Python `@property label` is `ShadowMapResolution.label(member)` per RULEBOOK enum mapping (members are plain numbers); same labels-table lookup.
     /** The entry as the Options dialog spells it. */
     label(value: number): string {
       return getitem(_SHADOW_MAP_RESOLUTION_LABELS, value);
@@ -65,7 +65,7 @@ export const EnvironmentLightShadowResolution = int_enum(
     DOUBLE: 2,
   },
   {
-    // TODO(port): Python `member.label` is a property on the member; members are plain numbers here, so this is a method that takes the member.
+    // NOTE(port): Python `@property label` is `EnvironmentLightShadowResolution.label(member)` per RULEBOOK enum mapping (members are plain numbers); same labels-table lookup.
     /** The entry as the Options dialog spells it. */
     label(value: number): string {
       return getitem(_ENV_LIGHT_SHADOW_RESOLUTION_LABELS, value);

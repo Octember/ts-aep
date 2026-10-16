@@ -36,8 +36,7 @@ export function _hue_name(h_deg: number): string {
   return "Red";
 }
 
-// TODO(pyrt): colorsys.rgb_to_hsv has no pyrt shim; local translation of CPython's
-// colorsys.rgb_to_hsv (same operation order so float results match).
+// NOTE(port): line-for-line copy of CPython 3.12 colorsys.rgb_to_hsv (same operation order, Python-sign mod), so floats match.
 export function _rgb_to_hsv(r: number, g: number, b: number): [number, number, number] {
   const maxc = Math.max(r, g, b);
   const minc = Math.min(r, g, b);

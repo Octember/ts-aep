@@ -1,7 +1,7 @@
 /** Font object model for After Effects text layers. */
 
 import { TypeError_, descriptor, is_real, split, str } from "../../../pyrt/index.ts";
-import { CosField } from "../../cos/descriptors.ts";
+import { CosField, instance_dict } from "../../cos/descriptors.ts";
 
 /** Decode the COS design vector (16.16 fixed-point ints) to floats. */
 export function _design_vector_from_cos(raw: number[]): number[] {
@@ -83,23 +83,13 @@ export class FontObject {
     const { _font_data, _font_entry = null, post_script_name = null, version = null } = kw;
     this._font_data = _font_data;
     this._font_entry = _font_entry;
-    // TODO(port): Python writes `self.__dict__[name]` to set an instance override that
-    // CosField.__get__ consults. The override table in cos/descriptors.ts is module-private,
-    // so an own data property stands in: reads match, but a later assignment bypasses
-    // CosField.__set__ and does not clear the override.
     if (post_script_name != null) {
-      instance_dict_set(this, "post_script_name", post_script_name);
+      instance_dict(this).set("post_script_name", post_script_name);
     }
     if (version != null) {
-      instance_dict_set(this, "version", version);
+      instance_dict(this).set("version", version);
     }
   }
-}
-
-// TODO(pyrt): `obj.__dict__[name] = value` has no shim. An own data property
-// shadows the prototype accessor, which is what the Python write does.
-export function instance_dict_set(obj: any, name: string, value: any): void {
-  Object.defineProperty(obj, name, { value, writable: true, enumerable: true, configurable: true });
 }
 
 descriptor(

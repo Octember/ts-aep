@@ -191,7 +191,7 @@ describe("TestExpressionEnabledGuard", () => {
     const tmp_path = make_tmp_path();
     const app = parse_aep(SAMPLES_DIR.div("property", "all_animated.aep"));
     const comp = app.project.compositions[0];
-    // TODO(port): next(gen) StopIteration → Array.find (undefined on miss; the assert below still fails)
+    // NOTE(port): next(gen) → Array.find; on a miss Python raises StopIteration, TS fails at the next line - the test errors either way
     const rot = Array.from(comp.av_layers[0].transform).find((p: any) => p.match_name === "ADBE Rotate Z");
     expect(rot.can_set_expression).toBe(true);
     rot.expression = "time * 2";

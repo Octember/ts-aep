@@ -37,7 +37,7 @@ const SAMPLES_DIR = new Path(import.meta.path).parent.parent.parent.div("samples
 function _curves_property(layer_name: string): Property {
   const project = parse_project(SAMPLES_DIR.div("curves.aep"));
   const layer = project.compositions[0].layers.find((ly: any) => ly.name === layer_name)!;
-  const prop = layer.__getitem__("ADBE Effect Parade").__getitem__(0).__getitem__("ADBE CurvesCustom-0001");
+  const prop = (layer.__getitem__("ADBE Effect Parade") as any).__getitem__(0).__getitem__("ADBE CurvesCustom-0001");
   py_assert(prop instanceof Property);
   return prop;
 }
@@ -64,7 +64,7 @@ test("test_untouched_curves_are_identity", () => {
 });
 
 test("test_pencil_curve_decodes_its_map", () => {
-  const curves = _curves_property("pencil").value;
+  const curves: Curves = _curves_property("pencil").value;
   expect(curves instanceof Curves).toBe(true);
   expect(curves.uses_points).toBe(false);
   expect(
@@ -115,7 +115,7 @@ function _rounded_spline_is_the_map(curves: Curves): string[] {
 }
 
 test("test_point_curves_reproduce_their_maps", () => {
-  const curves = _curves_property("points").value;
+  const curves: Curves = _curves_property("points").value;
   expect(curves instanceof Curves).toBe(true);
   expect(curves.uses_points).toBe(true);
   expect(
@@ -146,7 +146,7 @@ test("test_keyed_curves_decode_each_key", () => {
   expect(approx(prop.keyframes.map((kf) => kf.time), keys_json.map((k) => k.time))).toBe(true);
   const middles: any[] = [];
   for (const kf of prop.keyframes) {
-    const curves = kf.value;
+    const curves = kf.value as Curves;
     expect(curves instanceof Curves).toBe(true);
     expect(py_eq(_rounded_spline_is_the_map(curves), ["rgb"])).toBe(true);
     middles.push(getitem(curves.channels, "rgb").points[1]);
@@ -156,7 +156,7 @@ test("test_keyed_curves_decode_each_key", () => {
 
 test("test_keyed_curves_at_a_time", () => {
   const prop = _curves_property("keyed");
-  const unpacked = prop.keyframes.map((kf) => kf.value);
+  const unpacked = prop.keyframes.map((kf) => kf.value as Curves);
   if (len(unpacked) !== 3) throw new ValueError("not exactly 3 values to unpack");
   const [first, second, last] = unpacked;
   expect(first instanceof Curves).toBe(true);
@@ -164,7 +164,7 @@ test("test_keyed_curves_at_a_time", () => {
   expect(last instanceof Curves).toBe(true);
 
   const points = (time: number): any => {
-    const value = prop.value_at_time(time);
+    const value = prop.value_at_time(time) as Curves | null;
     return value == null ? null : getitem(value.channels, "rgb").points;
   };
 

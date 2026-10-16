@@ -27,7 +27,8 @@ function resolve_font(...args: Parameters<typeof _resolve_font_impl>): ReturnTyp
 }
 
 import { type GradientDef, collect_gradients, resolve_gradient } from "./gradients.ts";
-import { type RawSubpath, cubics_to_subpath, element_subpaths } from "./shapes.ts";
+import type { RawSubpath } from "./path_data.ts";
+import { cubics_to_subpath, element_subpaths } from "./shapes.ts";
 import { type CssRule, parse_css, resolve_properties } from "./style.ts";
 import { TextRun, outline_runs, outline_text_path } from "./text.ts";
 import { Affine, parse_transform } from "./transform.ts";

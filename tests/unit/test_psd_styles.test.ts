@@ -243,7 +243,7 @@ describe("TestParseLayerStyles", () => {
     }
     for (const name of unresolved) {
       let styles: any;
-      // TODO(port): pyrt warns() matches the message only; pytest.warns(UserWarning) category is not checked
+      // NOTE(port): every warnings.warn in psd_styles.py uses the default UserWarning, so the message-only match is equivalent
       warns(() => {
         styles = parse_layer_styles(getitem(leaves, name), [120.0, 30.0]);
       }, "mode2");

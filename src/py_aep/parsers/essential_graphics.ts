@@ -21,7 +21,7 @@ export function _parse_source_property_path(raw: string): SourcePropertyRef[] {
   const nodes = JSON.parse(raw);
   const path: SourcePropertyRef[] = [];
   for (const key of sorted(Object.keys(nodes), int)) {
-    const node = nodes[key];
+    const node = nodes[key as string];
     const index = node.index ?? null;
     path.push(
       new SourcePropertyRef(

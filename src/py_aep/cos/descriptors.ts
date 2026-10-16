@@ -32,8 +32,7 @@ import { get_ae_version_major } from "../ae_version.ts";
 
 export const _SENTINEL: unique symbol = Symbol("_SENTINEL");
 
-// TODO(port): Python `obj.__dict__` (instance-dict overrides) has no pyrt shim;
-// keep the overrides in a side table keyed by instance.
+// NOTE(port): `obj.__dict__` stand-in; a WeakMap side table keyed by instance (TextDocument aliases it as its `__dict__` field).
 export const INSTANCE_DICT = new WeakMap<object, Map<string, any>>();
 
 export function instance_dict(obj: object): Map<string, any> {
@@ -60,7 +59,7 @@ export function _extract(
     try {
       return transform(raw);
     } catch (e) {
-      // TODO(port): a native JS TypeError raised by a transform is also treated as Python TypeError here.
+      // TODO(port): a native JS TypeError (e.g. property access on null) raised by a transform is treated as Python TypeError and yields default; CPython would raise AttributeError and propagate.
       if (
         !(
           e instanceof TypeError_ ||
@@ -78,8 +77,7 @@ export function _extract(
   return raw;
 }
 
-// TODO(pyrt): pyrt int() maps null/arrays/Maps to 0 where Python's int() raises TypeError,
-// which `_extract` must turn into the default. Guard the argument type here.
+// NOTE(port): pyrt int()/float() do not raise TypeError for None/containers like CPython; this guard supplies it so `_extract` returns the default.
 export function _int_float_guard(fn: (x: any) => number): (x: any) => number {
   return (x: any) => {
     if (!is_real(x) && typeof x !== "string" && typeof x !== "boolean" && typeof x !== "bigint") {
@@ -226,7 +224,7 @@ export class CosField<T> {
    * Bakes in `transform=bool` and `reverse=bool` so call sites only
    * need the dict attribute and key.
    */
-  // TODO(port): Python raises TypeError when kwargs repeat transform/reverse; here kwargs silently win.
+  // NOTE(port): Python raises TypeError on a repeated transform/reverse keyword; no call site repeats them, so the kwargs-win spread is never observable.
   static bool(dict_attr: string, key: string, kwargs: Record<string, any> = {}): CosField<boolean | null> {
     return new this(dict_attr, key, { transform: py_bool, reverse: py_bool, ...kwargs });
   }
@@ -241,7 +239,7 @@ export class CosField<T> {
    * as `reverse`; otherwise `int` is used.
    */
   static enum<T>(enum_cls: any, dict_attr: string, key: string, kwargs: Record<string, any> = {}): CosField<T> {
-    // TODO(port): py_aep enum objects are not classes; the fallback `enum_cls` (a callable in Python) is `enum_cls.of`.
+    // NOTE(port): py_aep enums are not classes; Python's fallback `enum_cls(v)` is `enum_cls.of(v)`.
     kwargs = { ...kwargs };
     if (!("transform" in kwargs)) {
       kwargs.transform = "from_binary" in enum_cls ? enum_cls.from_binary.bind(enum_cls) : enum_cls.of;
@@ -263,8 +261,7 @@ export class CosField<T> {
     kwargs = { ...kwargs };
     // The stored value is a Python float, so box it to keep `1.0` from serializing as `1`.
     if (!("reverse" in kwargs)) kwargs.reverse = (x: any) => pyfloat(float(x));
-    // TODO(port): Python raises TypeError when kwargs repeat transform; here kwargs silently win.
-    // TODO(pyrt): pyrt float() accepts only str/number/bool; Python float(None) raises TypeError (caught natively by _extract).
+    // NOTE(port): a repeated transform keyword raises TypeError in Python; no call site passes one. _int_float_guard supplies float(None)'s TypeError.
     return new this(dict_attr, key, { transform: _int_float_guard(float), ...kwargs });
   }
 
@@ -279,7 +276,7 @@ export class CosField<T> {
   static int<T>(dict_attr: string, key: string, kwargs: Record<string, any> = {}): CosField<number | null> {
     kwargs = { ...kwargs };
     if (!("reverse" in kwargs)) kwargs.reverse = round;
-    // TODO(port): Python raises TypeError when kwargs repeat transform; here kwargs silently win.
+    // NOTE(port): a repeated transform keyword raises TypeError in Python; no call site passes one.
     return new this(dict_attr, key, { transform: _int_float_guard(int), ...kwargs });
   }
 }

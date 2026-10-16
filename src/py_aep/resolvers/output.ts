@@ -76,8 +76,8 @@ export const VIDEO_CODEC_NAMES: Map<string, string> = new Map<string, string>([
   ["apco", "ProRes 422 Proxy"],
 ]);
 
-// TODO(pyrt): re.sub replacement-template expansion (sre_parse.parse_template)
-// has no shim; local port for a pattern with zero capture groups.
+// NOTE(port): local port of CPython 3.12 re._parser.parse_template for a pattern with
+// zero capture groups (the only use: re.sub(rf"\[{key}\]", ...)); same escapes and errors.
 export function _expand_template(template: string, match: string): string {
   if (!template.includes("\\")) {
     return template;
@@ -172,8 +172,7 @@ export function _expand_template(template: string, match: string): string {
   return out.join("");
 }
 
-// TODO(pyrt): math.gcd has no shim in pyrt/num.ts; local Euclid, matching
-// Python's non-negative result for negative inputs.
+// NOTE(port): matches math.gcd (non-negative result for negative inputs; gcd(0, 0) == 0).
 export function gcd(a: number, b: number): number {
   let x = Math.abs(a);
   let y = Math.abs(b);

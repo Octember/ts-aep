@@ -19,20 +19,7 @@ import {
 import type { EnumValue } from "../../src/pyrt/index.ts";
 import { raises } from "../../src/pyrt/pytest.ts";
 import { CosField } from "../../src/py_aep/cos/descriptors.ts";
-import { ChunkField, _materialization_allowed, _suppress_materialization } from "../../src/py_aep/models/descriptors.ts";
-
-/**
- * `obj.__dict__`: the per-instance attribute dict ChunkField reads parse-time
- * overrides from. Same non-enumerable Map that models/descriptors.ts creates
- * lazily, so it must be created here before a test touches it.
- */
-// TODO(pyrt): no shim for `obj.__dict__`; mirrors instance_dict in models/descriptors.ts.
-function instance_dict(obj: any): Map<string, any> {
-  if (!Object.prototype.hasOwnProperty.call(obj, "__dict__")) {
-    Object.defineProperty(obj, "__dict__", { value: new Map<string, any>(), enumerable: false });
-  }
-  return obj.__dict__;
-}
+import { ChunkField, _materialization_allowed, _suppress_materialization, instance_dict } from "../../src/py_aep/models/descriptors.ts";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -216,8 +203,7 @@ class _SyntheticModel {
 descriptor(_SyntheticModel, "value", new ChunkField<number>("_body", "value"));
 
 const _MyEnum = int_enum("_MyEnum", { OFF: 0, ON: 1, AUTO: 2 }, {
-  // TODO(port): ChunkField calls `transform(value)` unbound; the classmethod's
-  // `cls(value)` relies on py_enum binding `this` to the enum. Confirm.
+  // NOTE(port): _enum_class/getattr(enum, "from_binary") binds the classmethod to the enum (covered by TestChunkFieldEnum below).
   from_binary(value: number) {
     return this.of(value);
   },
@@ -528,7 +514,7 @@ describe("TestChunkFieldEnumAllowOutOfEnumValues", () => {
 describe("TestChunkFieldBool", () => {
   /** `ChunkField.bool` bakes in `validate_bool`. */
 
-  // TODO(port): int/float distinction - Python's `1.0` is a float and must be
+  // TODO(port): int/float distinction (kept: JS numbers have no float type) - Python's `1.0` is a float and must be
   // rejected as a non-bool; JS `1.0 === 1`, so this row duplicates the int row.
   test.each([["no"], [2], [1], [0], [null], [[]], [1.0]])("test_rejects_non_bool[%#]", (bad) => {
     const body = new _FakeBody({ flag: false });

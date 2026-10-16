@@ -75,8 +75,9 @@ test("test_alpha_is_premultiplied_with_its_flag", () => {
    * bit that goes with that mode; without it AE resets the footage to
    * straight alpha when it opens the project.
    */
-  // TODO(port): Python next() without a default raises StopIteration; find()! yields undefined and fails later instead.
-  const ae = parse_project(FIXTURES[0]).footages.find((item) => item.name === "rgba_full.exr")!.main_source._sspc;
+  const ae_item = parse_project(FIXTURES[0]).footages.find((item) => item.name === "rgba_full.exr");
+  if (ae_item === undefined) throw new Error("StopIteration");
+  const ae = ae_item.main_source._sspc;
   const project = parse_aep(BASE, { platform: "windows" }).project;
   const ours = project.import_file(new ImportOptions(ASSETS.div("exr", "rgba_full.exr")));
   const sspc = ours.main_source._sspc;

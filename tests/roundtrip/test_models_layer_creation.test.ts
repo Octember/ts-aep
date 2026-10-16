@@ -99,8 +99,8 @@ describe("TestAddNull", () => {
     const solid = parse_aep(tmp_path.div("out.aep")).project.footages.find(
       (f) => f.id === layer.source.id,
     );
-    expect(py_eq(solid.main_source.color, ae_solid.main_source.color)).toBe(true);
-    expect(py_eq(ae_solid.main_source.color, [1.0, 1.0, 1.0])).toBe(true);
+    expect(py_eq((solid as any).main_source.color, (ae_solid as any).main_source.color)).toBe(true);
+    expect(py_eq((ae_solid as any).main_source.color, [1.0, 1.0, 1.0])).toBe(true);
     expect(py_eq([solid.width, solid.height], [ae_solid.width, ae_solid.height])).toBe(true);
   });
 
@@ -372,8 +372,8 @@ describe("TestAddSolid", () => {
     const comp = app.project.compositions[0];
     const layer = comp.add_solid([1.0, 0.5, 0.0], "OrangeSolid");
 
-    expect(layer.source.main_source instanceof SolidSource).toBe(true);
-    const color = layer.source.main_source.color;
+    expect((layer.source as any).main_source instanceof SolidSource).toBe(true);
+    const color = (layer.source as any).main_source.color;
     expect(approx(color[0], 1.0)).toBe(true);
     expect(approx(color[1], 0.5)).toBe(true);
     expect(approx(color[2], 0.0)).toBe(true);
@@ -392,7 +392,7 @@ describe("TestAddSolid", () => {
     const comp = app.project.compositions[0];
     raises(ValueError, () => comp.add_solid([0.2, 0.3]));
     raises(ValueError, () => comp.add_solid([2.0, 0.0, 0.0]));
-    raises(TypeError_, () => comp.add_solid(0.5));
+    raises(TypeError_, () => comp.add_solid(0.5 as any));
   });
 
   test("test_solid_in_solids_folder", () => {
@@ -402,7 +402,7 @@ describe("TestAddSolid", () => {
     const solids_folder =
       app.project.root_folder.items.find((item) => item.name === "Solids") ?? null;
     expect(solids_folder != null).toBe(true);
-    expect(contains(solids_folder.items, layer.source)).toBe(true);
+    expect(contains((solids_folder as any).items, layer.source)).toBe(true);
   });
 
   /**
@@ -480,7 +480,7 @@ describe("TestAddItem", () => {
   test("test_add_invalid_item_raises", () => {
     const app = parse_aep(EMPTY_COMP_AEP);
     const comp = app.project.compositions[0];
-    raises(ValueError, () => comp.add(app.project.root_folder));
+    raises(ValueError, () => comp.add(app.project.root_folder as any));
   });
 
   test("test_roundtrip", () => {

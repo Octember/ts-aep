@@ -67,7 +67,7 @@ import type { TextDocument } from "../models/text/text_document.ts";
 // uharfbuzz -> harfbuzzjs. The wasm module initializes asynchronously, so it is
 // awaited once at module load and wrapped in a uharfbuzz-shaped binding
 // (`hb.Blob.from_file_path`, `hb.Face`, `hb.Font`, `hb.Buffer`, `hb.shape`).
-// TODO(port): harfbuzzjs indexes clusters in UTF-16 units; uharfbuzz in code
+// NOTE(port): harfbuzzjs indexes clusters in UTF-16 units; uharfbuzz in code
 // points. Composition refuses astral text first (`_check_envelope`), so the
 // two agree on every text that is shaped.
 const _hbjs: any = await (await import("harfbuzzjs")).default;
@@ -137,10 +137,11 @@ export const _AUTO_LEADING_FACTOR = 1.2;
 export const _FAUX_BOLD_ADVANCE = 0.027;
 export const _SMALL_CAPS_SCALE = 0.7;
 
-// TODO(pyrt): unicodedata.bidirectional / unicodedata.combining have no shim.
+// TODO(port): unicodedata.bidirectional / unicodedata.combining have no shim
+// (JS regex has no Bidi_Class or Canonical_Combining_Class property).
 // These approximate them with script and general-category properties: R/AL/AN
 // ~ the RTL scripts, and a nonzero canonical combining class ~ the M* marks.
-// TODO(port): exact parity needs the Bidi_Class and canonical-combining-class
+// Exact parity needs the Bidi_Class and canonical-combining-class
 // tables. The script approximation also flags some non-letter Arabic-block
 // characters that Bidi_Class marks as ON/CS/NSM, so it can refuse text
 // Python accepts.
@@ -166,8 +167,9 @@ export function _is_combining(char: string): boolean {
 /**
  * The `except _FONT_OPEN_ERRORS` clause: Python's `OSError`, plus HarfBuzz's own
  * error when the binding exposes one.
- * TODO(port): Node's fs failures are plain `Error`s carrying a `code`, not
- * `OSError` instances; the `code` check stands in for Python's OSError.
+ * NOTE(port): Node's fs failures are plain `Error`s carrying a `code`, not
+ * `OSError` instances; the `code` check stands in for Python's OSError. Parse
+ * failures (fontTools TTLibError / fontkit Error without `code`) propagate in both.
  */
 export function _is_font_open_error(exc: unknown): boolean {
   if (_FONT_OPEN_ERRORS.some((cls) => exc instanceof cls)) return true;
@@ -231,7 +233,7 @@ export function _ascender_ratio(ps_name: string): number {
   if (!_ascender_cache.has(key)) {
     let font: any;
     try {
-      // TODO(port): fontTools TTFont(path, fontNumber=face_index, lazy=True) ->
+      // NOTE(port): fontTools TTFont(path, fontNumber=face_index, lazy=True) ->
       // fontkit. fontkit's openSync returns a FontCollection for .ttc files, so the
       // face is picked with `.fonts[face_index]`.
       font = fontkit.openSync(str(path));
@@ -247,13 +249,17 @@ export function _ascender_ratio(ps_name: string): number {
     // nothing to close where Python calls `font.close()` in its `finally`.
     const upem = font.unitsPerEm;
     let ratio = font.hhea.ascent / upem;
-    // TODO(port): cmap.get(ord("d")) is None when 'd' is absent; fontkit returns
-    // the .notdef glyph (id 0) there instead.
+    // TODO(port): getBestCmap() vs fontkit's cmap subtable choice may differ on
+    // fonts with several cmaps; 'd' absent is detected as .notdef (id 0), so a
+    // font mapping 'd' explicitly to glyph 0 would be skipped here but measured
+    // by Python. Also glyph.bbox (fontkit) vs BoundsPen tight bounds can differ
+    // for TrueType glyphs whose glyf header yMax is not the true extremum.
     const glyph = font.glyphForCodePoint(0x64);
     if (glyph.id !== 0) {
-      // TODO(port): BoundsPen reports bounds None for an empty outline; fontkit's
-      // bbox for an empty glyph is all zeros, so an empty 'd' is not caught here.
-      ratio = glyph.bbox.maxY / upem;
+      // BoundsPen reports bounds None for an empty outline: keep the hhea ratio.
+      if (glyph.path.commands.length > 0) {
+        ratio = glyph.bbox.maxY / upem;
+      }
     }
     _ascender_cache.set(key, ratio);
   }

@@ -19,10 +19,7 @@ import { get_match_name_runs } from "./utils.ts";
 import type { CompItem } from "../models/items/composition.ts";
 import type { Layer } from "../models/layers/layer.ts";
 
-// TODO(port): this table is evaluated at module load, so it reads the layer
-// classes eagerly. models/layers/layer.ts imports this module, so if this
-// module is the first of the cycle to load, a class can still be in its TDZ
-// here. Python has the same eager table; the ESM cycle is the only new risk.
+// NOTE(port): eager module-level table exactly as in Python; the ESM import order (tests and py_aep/index.ts load the models first) keeps the layer classes out of the TDZ.
 export const _LAYER_CLASSES: Map<number, typeof Layer> = new Map<number, typeof Layer>([
   [LayerType.AV, AVLayer],
   [LayerType.LIGHT, LightLayer],
@@ -100,7 +97,7 @@ export const parse_layer = _suppress_materialization().decorate(function parse_l
     layer_cls = getitem(_LAYER_CLASSES, layer_type);
   } catch (e) {
     if (!(e instanceof KeyError)) throw e;
-    // TODO(pyrt): warn() has no stacklevel argument, so the caller frame is not reported.
+    // NOTE(port): Python passes stacklevel=2; pyrt warn() only records the message, which is all that is observable.
     warn(`Failed to create layer type ${layer_type}, falling back to AVLayer`);
     layer_cls = AVLayer;
   }

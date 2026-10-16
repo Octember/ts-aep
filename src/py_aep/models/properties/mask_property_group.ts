@@ -8,10 +8,8 @@ import { MaskFeatherFalloff, MaskMode, MaskMotionBlur } from "../../enums/index.
 import { keyframe_tensions } from "../../resolvers/roto_bezier.ts";
 import { ChunkField } from "../descriptors.ts";
 import { validate_bool, validate_rgb_color } from "../validators.ts";
-// TODO(port): import cycle. property_group.ts imports this module at top level and
-// this module `extends PropertyGroup` at evaluation time. Python breaks the cycle with
-// a deferred import inside PropertyGroup's mask-atom method. If property_group.ts
-// evaluates first, PropertyGroup is still undefined here and the class definition throws.
+// NOTE(port): property_group.ts reaches this module only through `deferred(...)` (the
+// port of Python's in-method import), so `extends PropertyGroup` evaluates after it.
 import { PropertyGroup, _insert_before_group_end } from "./property_group.ts";
 import { deferred, descriptor, getattr, len, mod, py_assert, py_bool, zip } from "../../../pyrt/index.ts";
 import type { Utf8Chunk } from "../../binary/scalar_chunks.ts";
@@ -165,9 +163,8 @@ export class MaskPropertyGroup extends PropertyGroup {
     }
   }
 
-  // TODO(port): Python `_new` has `# type: ignore[override]`. Its keyword-only signature
-  // differs from PropertyGroup._new, and TS checks the static side of `extends`, so this
-  // may not compile until the base signature is reconciled.
+  // NOTE(port): Python `_new` has `# type: ignore[override]`; the loose param types here
+  // are the TS equivalent (the keyword-only signature differs from PropertyGroup._new).
   /**
    * Create a new mask atom with backing chunks, as AE writes it.
    *
@@ -184,12 +181,9 @@ export class MaskPropertyGroup extends PropertyGroup {
    *     mask_id: 1-based creation id, stored in the `mkif` and used
    *         to pick the outline color from the cycle palette.
    */
-  static _new(
-    parent_property: PropertyGroup,
-    property_depth: number,
-    kw: { name: string; mask_id: number },
-  ): MaskPropertyGroup {
-    const { name, mask_id } = kw;
+  static _new(parent_property_: any, property_depth: any, kw: any): any {
+    const parent_property = parent_property_ as PropertyGroup;
+    const { name, mask_id } = kw as { name: string; mask_id: number };
     const color = _MASK_COLOR_CYCLE[mod(mask_id - 1, len(_MASK_COLOR_CYCLE))];
     const _tdmn = new TdmnChunk({ value: "ADBE Mask Atom" });
     const _mkif = new MkifChunk({
@@ -340,7 +334,7 @@ export class MaskPropertyGroup extends PropertyGroup {
       // `existing.__dict__.update(mask_path.__dict__)`: plain own attributes, plus the
       // ChunkField override Map that stands in for `__dict__` (non-enumerable, so
       // Object.assign alone would skip it).
-      // TODO(pyrt): no shim for `obj.__dict__`; see descriptors.ts instance dict.
+      // NOTE(port): `instance_dict` in descriptors.ts is the `__dict__` stand-in.
       Object.assign(existing, mask_path);
       const src_dict = (mask_path as any).__dict__;
       if (src_dict instanceof Map) {

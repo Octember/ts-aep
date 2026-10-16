@@ -70,7 +70,7 @@ export function _write_value(buf: BytesIO, value: any, kw: { top_level?: boolean
     // A CosString / _NulTailStr is a String object in TS (a str subclass in Python),
     // so a typeof check alone would miss it.
     _space(buf);
-    _write_string(buf, value);
+    _write_string(buf, value as string);
   } else if (value instanceof Uint8Array) {
     _space(buf);
     _write_hex_string(buf, value);

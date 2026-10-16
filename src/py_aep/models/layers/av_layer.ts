@@ -134,8 +134,24 @@ export function _validate_collapse_transformation(value: boolean, obj: AVLayer):
  * See: https://ae-scripting.docsforadobe.dev/layer/avlayer/
  */
 export class AVLayer extends Layer {
+  // NOTE(port): accessor stubs typed for TS only; descriptor(AVLayer, ...) below redefines both on the prototype, so these bodies never run.
   /** When `True`, the layer is an adjustment layer. Read / Write. */
-  declare adjustment_layer: boolean;
+  get adjustment_layer(): boolean {
+    return false;
+  }
+
+  set adjustment_layer(_value: boolean) {}
+
+  /**
+   * `True` if this is an environment layer in a Ray-traced 3D
+   * composition. Setting this to `True` automatically sets
+   * [three_d_layer][] to `True`. Read / Write.
+   */
+  get environment_layer(): boolean {
+    return false;
+  }
+
+  set environment_layer(_value: boolean) {}
 
   /**
    * When `True`, the layer's audio is enabled. This value corresponds
@@ -154,13 +170,6 @@ export class AVLayer extends Layer {
    * <f> icon next to it in the user interface. Read / Write.
    */
   declare effects_active: boolean;
-
-  /**
-   * `True` if this is an environment layer in a Ray-traced 3D
-   * composition. Setting this to `True` automatically sets
-   * [three_d_layer][] to `True`. Read / Write.
-   */
-  declare environment_layer: boolean;
 
   /** The type of frame blending for the layer. Read / Write. */
   declare frame_blending_type: FrameBlendingType;
@@ -232,6 +241,12 @@ export class AVLayer extends Layer {
   /** The resolved source item; unset until first read (see `source`). */
   declare _source?: AVItem | null;
 
+  static _new(
+    match_name: string,
+    auto_name: string,
+    property_depth: number,
+    kw?: any,
+  ): PropertyGroup;
   static _new(kw: {
     name: string;
     layer_id: number;
@@ -243,7 +258,9 @@ export class AVLayer extends Layer {
     label?: number;
     root_tdgp_extra?: any[] | null;
     effect_param_defs?: Map<string, any> | null;
-  }): AVLayer {
+  }): AVLayer;
+  static _new(kw: any): AVLayer;
+  static _new(kw: any): any {
     const {
       name,
       layer_id,
@@ -288,12 +305,12 @@ export class AVLayer extends Layer {
     if (mode === BlendingMode.DISSOLVE && this._ldta.dancing_dissolve) {
       return BlendingMode.DANCING_DISSOLVE;
     }
-    return mode;
+    return mode as BlendingMode;
   }
 
   set blending_mode(value: BlendingMode) {
     validate_enum(BlendingMode)(value);
-    value = BlendingMode.of(value);
+    value = BlendingMode.of(value) as BlendingMode;
     // Dancing Dissolve has no transfer-mode value of its own: AE stores it
     // as Dissolve plus the dancing-dissolve flag in the ldta transfer byte.
     if (value === BlendingMode.DANCING_DISSOLVE) {
@@ -321,12 +338,12 @@ export class AVLayer extends Layer {
    * Read / Write.
    */
   get track_matte_type(): TrackMatteType {
-    return TrackMatteType.from_binary(this._ldta.track_matte_type);
+    return TrackMatteType.from_binary(this._ldta.track_matte_type) as TrackMatteType;
   }
 
   set track_matte_type(value: TrackMatteType | number) {
     validate_enum(TrackMatteType)(value);
-    value = TrackMatteType.of(value);
+    value = TrackMatteType.of(value) as TrackMatteType;
     const old_matte = this.track_matte_layer;
     this._ldta.track_matte_type = TrackMatteType.to_binary(value);
     if (value === TrackMatteType.NO_TRACK_MATTE && this._ldta.matte_layer_id != null) {
@@ -851,7 +868,7 @@ export class AVLayer extends Layer {
       throw new NotImplementedError("source_rect_at_time does not model per-character 3D text");
     }
     const document = (text.__getitem__("ADBE Text Document") as Property).value_at_time(time);
-    return text_ink_rect(document as TextDocument);
+    return text_ink_rect(document as TextDocument) as { top: number; left: number; width: number; height: number };
   }
 
   /**

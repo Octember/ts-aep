@@ -761,8 +761,7 @@ describe("TestRoundtripRevision", () => {
     const tmp_path = make_tmp_path();
     const project = parse_aep(SAMPLES_DIR.div("linearBlending_false.aep")).project;
 
-    // TODO(port): xmp_packet is an xml.etree.ElementTree.Element (no pyrt shim in models/project.ts);
-    // `.set` / `.get` assume an Element-like twin with the same API.
+    // NOTE(port): models/project.ts parses xmp_packet via pyrt etree (ET_fromstring), whose Element has the same get/set API.
     const xmp_packet = project.xmp_packet;
     xmp_packet.set("py_aep_test_marker", "1");
     project.xmp_packet = xmp_packet;

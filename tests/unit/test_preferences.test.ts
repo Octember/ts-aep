@@ -290,7 +290,7 @@ describe("TestPreferences", () => {
     const prefs_dir = prefs_dir_fixture(make_tmp_path());
     const prefs = new py_aep.Preferences(prefs_dir);
     raises(ValueError, () => prefs.get_pref_as_number("", "Quoted Int"));
-    raises(ValueError, () => prefs.get_pref_as_number("Numbers Section", "Quoted Int", 1234));
+    raises(ValueError, () => prefs.get_pref_as_number("Numbers Section", "Quoted Int", 1234 as any));
     // The wrong-typed values are deliberate; TypeScript cannot express them.
     raises(TypeError_, () => prefs.set_pref_as_bool("A", "B", 1 as any));
     raises(TypeError_, () => prefs.set_pref_as_string("A", "B", 5 as any));

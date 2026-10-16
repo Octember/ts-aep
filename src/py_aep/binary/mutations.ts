@@ -51,7 +51,7 @@ export const ITEM_SIZE_BY_TYPE: Map<LdatItemType, number> = new Map<LdatItemType
 ]);
 
 /** `[0.0] * n` (Python list repetition; no pyrt shim for lists). */
-// TODO(pyrt): list repetition `[x] * n` helper
+// NOTE(port): local stand-in for `[0.0] * n`; yields n fresh 0.0 values like CPython (n <= 0 gives []).
 export function zeros_list(n: number): number[] {
   return Array.from({ length: n }, () => 0.0);
 }
@@ -441,7 +441,7 @@ export function build_shap(
   });
   const chunks: Chunk[] = [shph, inner, omtn];
   if (py_bool(feather_points)) {
-    // TODO(port): attrs.evolve re-runs __init__ (converters); a shallow copy skips that
+    // NOTE(port): FeatherPointItem has plain int/float fields and no converters, so a shallow copy equals attrs.evolve(fp).
     chunks.push(new Fth5Chunk({ points: feather_points.map((fp) => copy(fp)) }));
   }
   return new ListChunk({ list_type: "shap", chunks: chunks });

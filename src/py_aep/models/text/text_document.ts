@@ -29,6 +29,7 @@ import {
 import { ListChunk } from "../../binary/chunk.ts";
 import type { HeadChunk } from "../../binary/item_chunks.ts";
 import { get_cos_template, cos_get, serialize } from "../../cos/index.ts";
+import { instance_dict } from "../../cos/descriptors.ts";
 import { AutoKernType, BaselineDirection, BoxAutoFitPolicy, BoxFirstBaselineAlignment, BoxVerticalAlignment, ComposerEngine, DigitSet, FontBaselineOption, FontCapsOption, LeadingType, LineJoinType, LineOrientation, ParagraphDirection, ParagraphJustification } from "../../enums/index.ts";
 import { calibrate as calibrate_composition } from "../../resolvers/text_composition.ts";
 import { requires_version } from "../../ae_version.ts";
@@ -160,9 +161,8 @@ export class TextDocument {
 
   // Python instance `__dict__`: overrides for fields without COS backing.
   // `_override` reads it directly, so it must stay separate from accessors.
-  // TODO(port): cos/descriptors.ts keeps CosField overrides in a private side table, so
-  // `_from_binary` kwargs for CosField-backed names (font_size, ...) land here but are not read by CosField.__get__.
-  __dict__: Map<string, any> = new Map();
+  // Shared with CosField.__get__ via instance_dict, so CosField-backed `_from_binary` kwargs are read back.
+  __dict__: Map<string, any> = instance_dict(this);
 
   // COS backing, assigned by `__init__` / `_from_binary`.
   declare _char_style: Dict | null;
@@ -255,7 +255,7 @@ export class TextDocument {
     if (this._char_style == null) return AutoKernType.NO_AUTO_KERN;
     const raw = this._char_style.get("11");
     if (raw == null) return AutoKernType.NO_AUTO_KERN;
-    return AutoKernType.from_binary(raw);
+    return AutoKernType.from_binary(raw as any);
   }
 
   set auto_kern_type(value: AutoKernType) {
@@ -416,14 +416,14 @@ export class TextDocument {
     const cos: Dict = deepcopy(get_cos_template());
     const btdk = new ListChunk({ list_type: "btdk", data: serialize(cos) });
     const doc: Dict = at(getitem(getitem(cos, "1"), "1"), 0);
-    const doc_0 = getitem(doc, "0");
-    const doc_0_6_0 = getitem(getitem(doc_0, "6"), "0");
-    const run_0 = at(doc_0_6_0, 0);
+    const doc_0: any = getitem(doc, "0");
+    const doc_0_6_0: any = getitem(getitem(doc_0, "6"), "0");
+    const run_0: any = at(doc_0_6_0, 0);
     const char_style: Dict = getitem(getitem(getitem(run_0, "0"), "0"), "6");
-    const doc_0_5_0 = getitem(getitem(doc_0, "5"), "0");
-    const para_run_0 = at(doc_0_5_0, 0);
+    const doc_0_5_0: any = getitem(getitem(doc_0, "5"), "0");
+    const para_run_0: any = at(doc_0_5_0, 0);
     const para_style: Dict = getitem(getitem(getitem(para_run_0, "0"), "0"), "5");
-    const fonts = getitem(getitem(getitem(cos, "0"), "1"), "0").map(
+    const fonts = (getitem(getitem(getitem(cos, "0"), "1"), "0") as any[]).map(
       (entry: Dict) =>
         new FontObject({
           _font_data: getitem(getitem(entry, "0"), "0"),
@@ -476,7 +476,7 @@ export class TextDocument {
     const obj = Object.create(this.prototype) as TextDocument;
     // `cls.__new__(cls)` skips `__init__`, so restate the class-level
     // defaults that a constructed instance would get from its field initializers.
-    obj.__dict__ = new Map();
+    obj.__dict__ = instance_dict(obj);
     obj._head = null;
     obj._preferences = null;
     obj._layout_dirty = false;
@@ -869,7 +869,7 @@ export class TextDocument {
   /** The Text layer's line orientation. Read / Write. */
   get line_orientation(): LineOrientation {
     const val = cos_get(this._cos_data, "0", "8", "0", 0, "0", "2", "1");
-    if (typeof val === "number" && Number.isInteger(val)) return LineOrientation.from_binary(val);
+    if (typeof val === "number" && Number.isInteger(val)) return LineOrientation.from_binary(val as any);
     return LineOrientation.HORIZONTAL;
   }
 
@@ -1003,7 +1003,7 @@ export class TextDocument {
   /** The box's vertical text alignment. Read / Write. */
   get box_vertical_alignment(): BoxVerticalAlignment {
     const raw = cos_get(this._box_frame(), "2", "13");
-    if (typeof raw === "number" && Number.isInteger(raw)) return BoxVerticalAlignment.from_binary(raw);
+    if (typeof raw === "number" && Number.isInteger(raw)) return BoxVerticalAlignment.from_binary(raw as any);
     return BoxVerticalAlignment.TOP;
   }
 
@@ -1014,7 +1014,7 @@ export class TextDocument {
   /** The box's auto-fit policy. Read / Write. */
   get box_auto_fit_policy(): BoxAutoFitPolicy {
     const raw = cos_get(this._box_frame(), "2", "14");
-    if (typeof raw === "number" && Number.isInteger(raw)) return BoxAutoFitPolicy.from_binary(raw);
+    if (typeof raw === "number" && Number.isInteger(raw)) return BoxAutoFitPolicy.from_binary(raw as any);
     return BoxAutoFitPolicy.NONE;
   }
 
@@ -1026,7 +1026,7 @@ export class TextDocument {
   get box_first_baseline_alignment(): BoxFirstBaselineAlignment {
     const sub = cos_get(this._box_frame(), "2", "10");
     if (sub instanceof Map && typeof sub.get("0") === "number" && Number.isInteger(sub.get("0"))) {
-      return BoxFirstBaselineAlignment.from_binary(sub.get("0"));
+      return BoxFirstBaselineAlignment.from_binary(sub.get("0") as any);
     }
     return BoxFirstBaselineAlignment.ASCENT;
   }
@@ -1227,8 +1227,7 @@ export class TextDocument {
    */
   reset_char_style(): void {
     this._require_association();
-    // TODO(port): assumes preferences.ts returns default_character_style as a plain object
-    // with identifier keys (a fixed literal record, read by name), not a Map.
+    // NOTE(port): default_character_style returns a plain identifier-keyed object (preferences.ts), read by name like Python's dict[str, Any] literal.
     const style = default_character_style(this._effective_preferences());
     this.font = style.font;
     this.font_size = style.font_size;
@@ -1274,7 +1273,7 @@ export class TextDocument {
    */
   reset_paragraph_style(): void {
     this._require_association();
-    // TODO(port): same plain-object assumption as reset_char_style for default_paragraph_style.
+    // NOTE(port): default_paragraph_style returns a plain identifier-keyed object, same as default_character_style.
     const style = default_paragraph_style(this._effective_preferences());
     this.justification = style.justification;
     this.first_line_indent = style.first_line_indent;

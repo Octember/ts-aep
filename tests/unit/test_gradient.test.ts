@@ -281,8 +281,7 @@ test("test_gradient_stops_serialized_in_lexicographic_key_order", () => {
   const color_stops = Array.from(range(12), (i) => new GradientColorStop(i / 11.0, 0.5, [i / 11.0, 0.0, 0.0]));
   const grad = new Gradient(color_stops);
   const xml = grad._utf8.value;
-  // TODO(port): str.splitlines() has no pyrt shim; split("\n") is equivalent here
-  // because the serialized XML uses only "\n" line endings.
+  // NOTE(port): split("\n") matches str.splitlines() here; the serialized XML uses only "\n" line endings.
   const keys = xml
     .split("\n")
     .filter((ln) => ln.startsWith("<key>Stop-"))

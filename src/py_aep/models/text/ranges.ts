@@ -63,7 +63,7 @@ import { validate_bool, validate_enum, validate_font_name, validate_normalized_f
 import { FontObject } from "./font_object.ts";
 import type { TextDocument } from "./text_document.ts";
 
-// TODO(pyrt): `bool()` builtin is missing from pyrt; local shim with Python truthiness.
+// NOTE(port): thin alias of pyrt py_bool (Python truthiness), exported under the builtin name.
 export const bool = (x: unknown): boolean => py_bool(x);
 
 /** A COS dict (`dict[str, Any]`): a `Map` so numeric-looking keys keep their order. */
@@ -371,7 +371,7 @@ export function _register_font_at(
   const font_array: any[] = setdefault(setdefault(setdefault(cos, "0", new Map()), "1", new Map()), "0", []);
   const entry = _build_font_entry(post_script_name);
   const version = font_version_string(post_script_name);
-  if (version != null) getitem(getitem(entry, "0"), "0").set("5", version);
+  if (version != null) (getitem(getitem(entry, "0"), "0") as Dict).set("5", version);
   font_array.splice(index, 0, entry);
 
   const bump = (holder: Dict): void => {
@@ -381,7 +381,7 @@ export function _register_font_at(
     }
   };
 
-  for (const entry_doc of py_or(dict_get(dict_get(cos, "1", new Map()), "1", []), [])) {
+  for (const entry_doc of py_or(dict_get(dict_get(cos, "1", new Map()), "1", []), []) as any[]) {
     const runs = cos_get(entry_doc, "0", "6", "0");
     if (!Array.isArray(runs)) continue;
     for (const run of runs) {
@@ -647,7 +647,7 @@ export function _apply_char_key(doc: TextDocument, start: number, end: number, k
   _split_run_array(runs, new Set([start, end]));
   let pos = 0;
   for (const run of runs) {
-    const run_end = pos + dict_get(run, "1", 0);
+    const run_end = pos + (dict_get(run, "1", 0) as number);
     if (pos >= start && run_end <= end) {
       const style = cos_get(run, "0", "0", "6");
       if (style instanceof Map) {
@@ -753,7 +753,7 @@ export function _splice_text(
       let donor: Dict | null = null;
       let pos = 0;
       for (const run of runs) {
-        const run_end = pos + dict_get(run, "1", 0);
+        const run_end = pos + (dict_get(run, "1", 0) as number);
         if (pos <= start && start < run_end) {
           donor = deepcopy(run);
           break;
@@ -771,7 +771,7 @@ export function _splice_text(
     let pos = 0;
     let inserted = false;
     for (const run of runs) {
-      const run_end = pos + dict_get(run, "1", 0);
+      const run_end = pos + (dict_get(run, "1", 0) as number);
       if (run_end <= start) {
         rebuilt.push(run);
       } else if (pos >= end) {
@@ -793,7 +793,7 @@ export function _splice_text(
     const old_spans: [number, number, Dict][] = [];
     let pos = 0;
     for (const entry of para_runs) {
-      const length = dict_get(entry, "1", 0);
+      const length = dict_get(entry, "1", 0) as number;
       old_spans.push([pos, pos + length, entry]);
       pos += length;
     }
@@ -851,7 +851,7 @@ export function _apply_para_key(doc: TextDocument, start: number, end: number, k
   if (!Array.isArray(runs)) return;
   let pos = 0;
   for (const run of runs) {
-    const run_end = pos + dict_get(run, "1", 0);
+    const run_end = pos + (dict_get(run, "1", 0) as number);
     if (pos < end && run_end > start) {
       const style = cos_get(run, "0", "0", "5");
       if (style instanceof Map) {
@@ -1019,7 +1019,7 @@ export class RangeField {
  * without run backing (parser fallbacks) fall back to the base
  * override behavior.
  */
-export class DocumentWideCosField extends CosField {
+export class DocumentWideCosField extends CosField<any> {
   __set__(obj: any, value: any): void {
     const self: any = this;
     const is_char = self.dict_attr === "_char_style";
@@ -1330,7 +1330,7 @@ export class CharacterRange extends _TextRange {
     const entries: Dict[] = [];
     let pos = 0;
     for (const run of py_or(cos_get((src_doc as any)._doc, "0", "6", "0"), [])) {
-      const run_end = pos + dict_get(run, "1", 0);
+      const run_end = pos + (dict_get(run, "1", 0) as number);
       const overlap_start = Math.max(pos, src_start);
       const overlap_end = Math.min(run_end, src_end);
       if (overlap_end > overlap_start) {
@@ -1442,14 +1442,14 @@ export class CharacterRange extends _TextRange {
       // the kern-clearing side effects below.
       return;
     }
-    // TODO(port): instance method `AutoKernType(value).to_binary()`; the enum shim has no member methods, so the member is passed explicitly.
+    // NOTE(port): AutoKernType(value).to_binary() == static to_binary(AutoKernType.of(value)); enum shim members are plain ints.
     _apply_char_key(doc, start, end, "11", AutoKernType.to_binary(AutoKernType.of(value)));
     if (value !== AutoKernType.NO_AUTO_KERN) {
       const values = _kern_values(doc);
       for (let i = start; i < Math.min(end, values.length); i++) values[i] = null;
       _rebuild_kern_runs(doc, values);
       if (start === 0) {
-        const holder = dict_get((doc as any)._doc, "0");
+        const holder = dict_get((doc as any)._doc, "0") as Dict | null;
         if (holder != null) holder.delete("7");
       }
     }

@@ -120,7 +120,7 @@ export function _resolve_effect_value(
     }
     return [value, value];
   }
-  if ([PropertyControlType.TWO_D, PropertyControlType.THREE_D].includes(control_type)) {
+  if (([PropertyControlType.TWO_D, PropertyControlType.THREE_D] as number[]).includes(control_type)) {
     // An omitted point is its pard default, a percentage of the layer
     // size. The cached value is that same percentage or a 16.16-rounded
     // fraction: Path Text's 80 % caches 0.7999878, ExtendScript reports
@@ -408,7 +408,7 @@ export function _parse_effect_properties(
       });
       if (
         synth instanceof Property &&
-        [PropertyControlType.TWO_D, PropertyControlType.THREE_D].includes(
+        ([PropertyControlType.TWO_D, PropertyControlType.THREE_D] as number[]).includes(
           synth._property_control_type,
         )
       ) {
@@ -604,8 +604,7 @@ export function _extract_enum(body: any, result: Map<string, any>): void {
 _pard_extractor(PropertyControlType.ENUM)(_extract_enum);
 
 /** Return integral floats as int, matching ExtendScript output. */
-// TODO(port): int/float distinction - JS has one number type, so an integral
-// float and an int are indistinguishable; this returns int(value) for both.
+// NOTE(port): Python returns int for integral floats, else the float; JS numbers carry the same value, and the int/float type is only observable via repr()/type().
 export function _intify(value: number): number {
   return Number.isInteger(float(value)) ? int(value) : value;
 }

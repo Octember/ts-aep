@@ -55,7 +55,7 @@ const OCS_SAMPLES_DIR = TEST_FILE.parent.parent.parent.div(
 );
 
 /** `PureWindowsPath(s).stem` - last path component (either separator), without its suffix. */
-// TODO(pyrt): PureWindowsPath shim is missing from pyrt/pathlib.ts; local helper here.
+// NOTE(port): no pyrt PureWindowsPath; this matches Python's .stem (suffix = last '.', not leading/trailing) for the backslash paths the tests feed it.
 function PureWindowsPath(s: string): { stem: string } {
   const name = s.split(/[\\/]/).pop()!;
   const i = name.lastIndexOf(".");
@@ -63,7 +63,7 @@ function PureWindowsPath(s: string): { stem: string } {
 }
 
 /** `attrs.asdict(inst)` - field name to value, in field order. */
-// TODO(pyrt): attrs.asdict is missing from pyrt/attrs.ts; local helper here (no nested recursion).
+// NOTE(port): no pyrt attrs.asdict; OutputModuleSettingsItem fields are flat (ints, bools, bytes), so Python's recursive asdict equals this shallow copy.
 function asdict(inst: any): Map<string, any> {
   const out = new Map<string, any>();
   for (const a of fields(inst.constructor)) out.set(a.name, inst[a.name]);
@@ -108,7 +108,7 @@ describe("TestRoundtripLogType", () => {
     const project = parse_aep(SAMPLES_DIR.div("render_settings.aep")).project;
     const rqi = get_rqi(project, "base");
     raises(ValueError, () => {
-      rqi.log_type = 9999;
+      rqi.log_type = 9999 as any;
     }, "Invalid value");
   });
 });
@@ -257,7 +257,7 @@ describe("TestRoundtripStartTime", () => {
     const project = parse_aep(SAMPLES_DIR.div("render_settings.aep")).project;
     const rqi = get_rqi(project, "base");
     raises(AttributeError, () => {
-      // TODO(pyrt): datetime(2025, 6, 15, 12, 0, 0) - Date months are 0-based.
+      // NOTE(port): Date months are 0-based, so month 5 is Python's datetime(2025, 6, 15, 12, 0, 0).
       rqi.start_time = new Date(2025, 5, 15, 12, 0, 0);
     }, "read-only");
   });
@@ -483,7 +483,7 @@ describe("TestRoundtripOutputModulePostRenderAction", () => {
     const rqi = get_rqi(project, "base");
     const om = rqi.output_modules[0];
     raises(ValueError, () => {
-      om.post_render_action = 9999;
+      om.post_render_action = 9999 as any;
     }, "Invalid value");
   });
 });
@@ -635,7 +635,7 @@ describe("TestRoundtripRouuFrameRateAndDepth", () => {
     body.set(b("\xff\xe0"), 0x46);
     const rouu = RouuChunk.frombytes(new Uint8Array(body), { chunk_type: "Roou" });
     expect(rouu instanceof RouuChunk).toBe(true);
-    expect(rouu.depth).toBe(OutputColorDepth.FLOATING_POINT_GRAY);
+    expect((rouu as any).depth).toBe(OutputColorDepth.FLOATING_POINT_GRAY);
     expect(OutputColorDepth.FLOATING_POINT_GRAY).toBe(-32);
     expect(py_eq(rouu.tobytes(), new Uint8Array(body))).toBe(true);
   });
@@ -659,8 +659,8 @@ describe("TestRoundtripRouuFrameRateAndDepth", () => {
     );
     const rouu = RouuChunk.frombytes(new Uint8Array(body), { chunk_type: "Roou" });
     expect(rouu instanceof RouuChunk).toBe(true);
-    expect(rouu.width).toBe(70000);
-    expect(rouu.height).toBe(66616);
+    expect((rouu as any).width).toBe(70000);
+    expect((rouu as any).height).toBe(66616);
   });
 });
 
@@ -1570,7 +1570,7 @@ describe("TestRQAddWithoutPreferences", () => {
     const arsi = recursive_find(rq._lrdr.chunks, "ARsi")[0];
     expect(arsi instanceof ArsiChunk).toBe(true);
     expect(len(arsi.tobytes())).toBe(1872);
-    expect(arsi.queue_nonempty).toBe(rq.num_items ? 1 : 0);
+    expect((arsi as any).queue_nonempty).toBe(rq.num_items ? 1 : 0);
   });
 
   test("test_parse_id_hex_section_is_bounded", () => {
@@ -1767,7 +1767,7 @@ describe.skipIf(!py_bool(AE_PREFS_DIR))("TestOMApplyTemplate", () => {
     const om1 = rqi.output_modules[1];
     om1.apply_template("TIFF Sequence with Alpha");
 
-    const fo = om1.format_options;
+    const fo = om1.format_options as any;
     expect(fo.constructor.name).toBe("TiffFormatOptions");
     const new_value = !fo.lzw_compression;
     fo.lzw_compression = new_value;
@@ -1775,7 +1775,7 @@ describe.skipIf(!py_bool(AE_PREFS_DIR))("TestOMApplyTemplate", () => {
     const out = tmp_path.div("out.aep");
     app.project.save(out);
     const rqi2 = parse_aep(out, { ae_preferences_dir: AE_PREFS_DIR }).project.render_queue.items[0];
-    expect(rqi2.output_modules[1].format_options.lzw_compression).toBe(new_value);
+    expect((rqi2.output_modules[1].format_options as any).lzw_compression).toBe(new_value);
   });
 });
 

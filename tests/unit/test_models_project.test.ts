@@ -4,18 +4,10 @@ import { describe, expect, test } from "bun:test";
 
 import "../../src/py_aep/binary/_register.ts";
 import { parse as parse_aep } from "../../src/py_aep/index.ts";
+import { FileExistsError } from "../../src/py_aep/models/validators.ts";
 import { recursive_find } from "../../src/py_aep/binary/utils.ts";
-import { b, OSError, Path, py_eq } from "../../src/pyrt/index.ts";
+import { b, Path, py_eq } from "../../src/pyrt/index.ts";
 import { make_tmp_path, raises } from "../../src/pyrt/pytest.ts";
-
-// TODO(pyrt): `FileExistsError` is not exported from pyrt/errors.ts; validators.ts
-// keeps a private stand-in with the same name. Match it by constructor name until
-// pyrt exports the real class.
-class FileExistsError extends OSError {
-  static [Symbol.hasInstance](e: unknown): boolean {
-    return (e as any)?.constructor?.name === "FileExistsError";
-  }
-}
 
 const SAMPLES_DIR = new Path(import.meta.path).parent.parent.parent.div("samples", "models", "project");
 const VIEW_SAMPLES_DIR = new Path(import.meta.path).parent.parent.parent.div("samples", "models", "view");
@@ -94,7 +86,7 @@ describe("TestSaveExistingPath", () => {
     const project = parse_aep(LAYER_SAMPLES_DIR.div("type.aep")).project;
     const out = tmp_path.div("out.aep");
     out.write_bytes(b("stub"));
-    raises(FileExistsError as any, () => project.save(out));
+    raises(FileExistsError, () => project.save(out));
     expect(py_eq(out.read_bytes(), b("stub"))).toBe(true);
   });
 });

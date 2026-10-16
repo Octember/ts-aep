@@ -73,8 +73,8 @@ export class CssRule {
   }
 }
 
-// TODO(pyrt): no `re` shim; the Python `re` calls below are written inline
-// with JS RegExp (`matchAll` stands for `findall`, `exec` for `search`).
+// NOTE(port): Python `re` calls are inline JS RegExp (`matchAll` for `finditer`, `exec` for
+// `search`); patterns use only classes/`\s`/`$` where Python and JS agree (trailing `\s*` eats any "\n" before `$`).
 export const _RULE_RE = /([^{}]+)\{([^{}]*)\}/g;
 
 export function parse_css(text: string): CssRule[] {

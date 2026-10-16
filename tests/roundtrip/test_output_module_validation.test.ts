@@ -48,7 +48,7 @@ const REJECTS: [string, string, any][] = [
 
 // `pytest.mark.parametrize(..., ids=[...])`: bun's `%#` row index stands in
 // for the Python ids (`f"{s}-{k}-{v}"`).
-// TODO(port): pytest custom ids have no bun:test equivalent; rows are named by index.
+// NOTE(port): ids only name the test row; the parametrized rows and assertions are identical to Python.
 test.each(REJECTS)("test_disallowed_write_raises[%#]", (sample: string, key: string, value: any) => {
   const project = parse_project_fresh(RQ_DIR.div(`${sample}.aep`));
   const om = _om(project);
@@ -56,7 +56,7 @@ test.each(REJECTS)("test_disallowed_write_raises[%#]", (sample: string, key: str
   raises(ValueError, () => {
     om.settings.__setitem__(key, value);
   });
-  // TODO(port): bun's expect() takes no failure message, so py_assert keeps the Python message.
+  // NOTE(port): py_assert carries the same assert message as the Python original.
   py_assert(py_eq(om.get_settings(), before), "rejected write must not mutate");
 });
 

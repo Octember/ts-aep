@@ -1,7 +1,7 @@
 // Port of py_aep/models/renderqueue/output_module.py
 
 import { AudioBitDepth, AudioChannels, AudioCodec, AudioSampleRate, CineonFileFormat, ColorManagementSystem, ConvertToLinearLight, GetSettingsFormat, MPEGAudioFormat, MPEGAudioLayer, MPEGMultiplexer, OutputAudio, OutputChannels, OutputColorDepth, OutputColorMode, OutputFormat, PostRenderAction, PostRenderActionSetting, ResizeQuality, RQItemStatus, VideoCodec } from "../../enums/index.ts";
-// TODO(port): AudioCodec, VideoCodec, MPEGAudioFormat, MPEGAudioLayer and MPEGMultiplexer are
+// NOTE(port): AudioCodec, VideoCodec, MPEGAudioFormat, MPEGAudioLayer and MPEGMultiplexer are
 // not imported by the Python module. They are imported here because `_rules_context` and
 // `validate_state` check `isinstance(value, IntEnum)` on values read from the XML format options,
 // and an enum-class membership test is the only way to tell a decoded member from a raw fallback.
@@ -49,7 +49,7 @@ import {
   NotImplementedError,
 } from "../../../pyrt/index.ts";
 
-// TODO(port): Python's `isinstance(x, bool) or isinstance(x, int)` accepts bools as ints.
+// NOTE(port): Python's `isinstance(x, bool) or isinstance(x, int)` accepts bools as ints.
 // `is_int` keeps that so raw bool fields still count as ints in the checks below.
 export function is_int(v: unknown): boolean {
   return (typeof v === "number" && Number.isInteger(v)) || typeof v === "boolean";
@@ -104,7 +104,7 @@ export function _name_or_str(key: string | null, v: any): string {
   return str(v);
 }
 
-// TODO(port): `{value!r}` of an IntEnum member is `<Cls.NAME: n>` in Python but a raw int stays
+// NOTE(port): `{value!r}` of an IntEnum member is `<Cls.NAME: n>` in Python but a raw int stays
 // `n`; both are the same number here, so a member of the key's enum always reprs as a member.
 export function _value_repr(key: string, v: any): string {
   const E = _KEY_ENUM.get(key);
@@ -535,7 +535,7 @@ export class OutputModule {
    */
   get post_render_target_comp(): CompItem {
     const comp_id = py_or(this._om_ldat.post_render_target_comp_id, null);
-    if (comp_id == null || [PostRenderAction.NONE, PostRenderAction.IMPORT].includes(this.post_render_action)) {
+    if (comp_id == null || ([PostRenderAction.NONE, PostRenderAction.IMPORT] as number[]).includes(this.post_render_action)) {
       return this._parent_rqi.comp;
     }
     return getitem(this._project.items, comp_id) as CompItem;
@@ -563,7 +563,7 @@ export class OutputModule {
   }
 
   set settings(value: any) {
-    // TODO(port): Python accepts any `Mapping`; a `Map` and a `SettingsView` are accepted here.
+    // NOTE(port): Python accepts any `Mapping`; a `Map` and a `SettingsView` are accepted here.
     if (!(value instanceof Map || value instanceof SettingsView)) {
       throw new ValueError("Settings must be a dictionary of key-value pairs");
     }
@@ -910,7 +910,7 @@ export class OutputModule {
    *         om.settings["Audio Sample Rate"] = 22050
    *     ```
    */
-  // TODO(port): Python's `@contextmanager` + `with` has no TS equivalent; the block is passed
+  // NOTE(port): Python's `@contextmanager` + `with` has no TS equivalent; the block is passed
   // as `body`, which runs inside the same transaction as the `with` body would.
   batch_edit(body: (om: OutputModule) => void): OutputModule {
     if (this._batch_depth) {
@@ -1444,7 +1444,7 @@ export class OutputModule {
 
     const [effective_width, effective_height] = this._effective_dimensions;
     const effective_frame_rate = this._effective_frame_rate;
-    // TODO(port): resolve_time_span is typed `Map<string, any>` but Python passes the live SettingsView
+    // NOTE(port): resolve_time_span is typed `Map<string, any>` but Python passes the live SettingsView
     // (read lazily by key); this adapter gives it the Map methods `getitem` uses.
     const rq_settings_map = {
       has: (k: string) => rq_settings.__contains__(k),

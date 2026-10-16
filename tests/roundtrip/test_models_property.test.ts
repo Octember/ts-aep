@@ -25,9 +25,9 @@ import {
   zip,
 } from "../../src/pyrt/index.ts";
 import { approx, make_tmp_path, raises } from "../../src/pyrt/pytest.ts";
-import { get_comp, get_first_layer, get_layer, parse_project_fresh } from "../helpers.ts";
+import { get_comp as get_comp_, get_first_layer as get_first_layer_, get_layer as get_layer_, parse_project_fresh as parse_project_fresh_ } from "../helpers.ts";
 
-import { parse as parse_aep, new as py_aep_new, Project } from "../../src/py_aep/index.ts";
+import { parse as parse_aep_, new as py_aep_new, Project } from "../../src/py_aep/index.ts";
 import { KeyframeInterpolationType, Label, MaskFeatherFalloff, MaskMode, MaskMotionBlur, PropertyControlType, PropertyType } from "../../src/py_aep/enums/index.ts";
 import { AVLayer, Keyframe, Layer, MaskPropertyGroup, Property, PropertyGroup, Shape } from "../../src/py_aep/models/index.ts";
 import { ShapeLayer, TextLayer } from "../../src/py_aep/models/layers/index.ts";
@@ -41,9 +41,16 @@ import { NORMALIZED_ARC_ACCURACY } from "../../src/py_aep/resolvers/interpolatio
 const SAMPLES_DIR = new Path(import.meta.dir, "..", "..", "samples", "models", "property");
 const BUGS_DIR = new Path(import.meta.dir, "..", "..", "samples", "bugs");
 const LAYER_SAMPLES_DIR = new Path(import.meta.dir, "..", "..", "samples", "models", "layer");
-// TODO(port): upstream assigns LAYER_SAMPLES_DIR twice with the same value; a TS const cannot be redeclared, so the duplicate is dropped.
+// NOTE(port): upstream assigns LAYER_SAMPLES_DIR twice with the same value; a TS const cannot be redeclared, so the duplicate is dropped.
 const VERSIONS_DIR = new Path(import.meta.dir, "..", "..", "samples", "versions");
 const PROPERTY_SAMPLES_DIR = new Path(import.meta.dir, "..", "..", "samples", "models", "property");
+
+// The Python tests duck-type the property tree (Property | PropertyGroup members, dynamic attributes), so these helpers return `any`.
+const parse_aep = (...args: Parameters<typeof parse_aep_>): any => parse_aep_(...args);
+const get_comp = (project: any, name: string): any => get_comp_(project, name);
+const get_first_layer = (project: any): any => get_first_layer_(project);
+const get_layer = (project: any, comp_name: string): any => get_layer_(project, comp_name);
+const parse_project_fresh = (...args: Parameters<typeof parse_project_fresh_>): any => parse_project_fresh_(...args);
 
 /** Find a property in the layer's transform by match_name. */
 function _find_property(layer: Layer, match_name: string): Property | null {

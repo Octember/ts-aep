@@ -19,7 +19,7 @@ function _fresh(rel: string) {
   return parse_aep(String(SAMPLES.div(rel)));
 }
 
-// TODO(pyrt): pytest.raises((A, B)) tuple form; pyrt raises() takes a single class.
+// NOTE(port): local equivalent of pytest.raises((TypeError, ValueError)); any listed class passes, others propagate, as in Python.
 function raises_any(classes: (abstract new (...a: any[]) => Error)[], fn: () => unknown): Error {
   try {
     fn();

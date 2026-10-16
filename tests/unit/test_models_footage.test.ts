@@ -9,7 +9,8 @@ import { Utf8Chunk } from "../../src/py_aep/binary/scalar_chunks.ts";
 import { UNDEFINED_FRAME, find_by_type } from "../../src/py_aep/binary/utils.ts";
 import { ColorProfileNotFoundError, default_icc_library, icc_profile_id } from "../../src/py_aep/color/icc.ts";
 import { ImportOptions } from "../../src/py_aep/models/import_options.ts";
-// TODO(port): Python imports UNDEFINED_FRAME via models.sources.file (re-import); TS file.ts does not re-export it, so it comes from binary/utils.ts
+import type { FootageItem } from "../../src/py_aep/models/items/footage.ts";
+// NOTE(port): Python re-imports UNDEFINED_FRAME via models.sources.file; it is the same constant from binary/utils.ts
 import { FileSource } from "../../src/py_aep/models/sources/file.ts";
 import { probe_media } from "../../src/py_aep/resolvers/media_probe.ts";
 import { AttributeError, ValueError, Path, b, bytes_, int, py_eq, repr } from "../../src/pyrt/index.ts";
@@ -192,7 +193,7 @@ describe("TestAlphaModeWrites", () => {
     const item = project.import_file(
       new ImportOptions(SAMPLES.parent.div("assets", "image_with_alpha.png")),
     );
-    return item.main_source;
+    return (item as FootageItem).main_source;
   }
 
   test.each([
@@ -222,7 +223,7 @@ describe("TestAlphaModeWrites", () => {
   test("test_rejected_without_an_alpha_channel", () => {
     const project = parse_aep(SAMPLES.div("project", "emptier.aep")).project;
     const item = project.import_file(new ImportOptions(SAMPLES.parent.div("assets", "mov_480.mov")));
-    const source = item.main_source;
+    const source = (item as FootageItem).main_source;
     expect(source.has_alpha).toBe(false);
     raises(
       ValueError,
@@ -248,8 +249,8 @@ describe("TestSourceModifiedStamp", () => {
     const project = parse_aep(SAMPLES.div("project", "emptier.aep")).project;
     const path = SAMPLES.parent.div("assets", "new_exr.0002.exr");
     const item = project.import_file(new ImportOptions(path));
-    // TODO(port): Python st_mtime is a float with ns precision; fs.Stats.mtimeMs is ms-based
-    expect(item.main_source._sspc.source_modified).toBe(int(path.stat().mtimeMs / 1000));
+    // NOTE(port): int() truncates to whole seconds, so ms-precision mtimeMs/1000 gives the same value as st_mtime
+    expect((item as FootageItem).main_source._sspc.source_modified).toBe(int(path.stat().mtimeMs / 1000));
   });
 
   test("test_sequence_carries_the_folder_mtime", () => {
@@ -258,8 +259,8 @@ describe("TestSourceModifiedStamp", () => {
     const opts = new ImportOptions(path);
     opts.sequence = true;
     const item = project.import_file(opts);
-    // TODO(port): Python st_mtime is a float with ns precision; fs.Stats.mtimeMs is ms-based
-    expect(item.main_source._sspc.source_modified).toBe(int(path.parent.stat().mtimeMs / 1000));
+    // NOTE(port): int() truncates to whole seconds, so ms-precision mtimeMs/1000 gives the same value as st_mtime
+    expect((item as FootageItem).main_source._sspc.source_modified).toBe(int(path.parent.stat().mtimeMs / 1000));
   });
 
   test("test_unreadable_media_stays_unstamped", () => {
@@ -307,7 +308,7 @@ describe("TestMediaColorProfileRecord", () => {
   function _import(name: string): FileSource {
     const project = parse_aep(SAMPLES.div("project", "emptier.aep")).project;
     const item = project.import_file(new ImportOptions(SAMPLES.parent.div("assets", name)));
-    return item.main_source;
+    return (item as FootageItem).main_source;
   }
 
   test.each([
@@ -342,7 +343,7 @@ describe("TestMediaColorProfileRecord", () => {
      */
     const source = _import("mov_480.mov");
     const clrs = source._clrs;
-    expect(find_by_type(clrs.chunks, "ipws").value).toBe(0);
+    expect((find_by_type(clrs.chunks, "ipws") as any).value).toBe(0);
     expect(py_eq(find_by_type(clrs.chunks, "apid").data, bytes_.repeat(b("\xff"), 16))).toBe(true);
     expect(source.media_color_space).toBe("Embedded");
   });
@@ -406,7 +407,7 @@ describe("TestMediaColorProfileRecord", () => {
         opts.sequence = true;
       }
       const item = project.import_file(opts);
-      expect(item.main_source.interpret_as_linear_light).toBe(expected);
+      expect((item as FootageItem).main_source.interpret_as_linear_light).toBe(expected);
     },
   );
 });

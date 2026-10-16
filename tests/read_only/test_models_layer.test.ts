@@ -37,7 +37,7 @@ const SAMPLES_DIR = new Path(import.meta.dir).parent.parent.div("samples", "mode
 const BUGS_DIR = new Path(import.meta.dir).parent.parent.div("samples", "bugs");
 const VERSIONS_DIR = new Path(import.meta.dir).parent.parent.div("samples", "versions");
 
-// TODO(pyrt): `list.index` (raises ValueError when absent, unlike `indexOf`).
+// NOTE(port): matches `list.index`: first match, ValueError "<repr> is not in list" when absent.
 function _list_index(xs: string[], x: string): number {
   const i = xs.indexOf(x);
   if (i < 0) throw new ValueError(`${repr(x)} is not in list`);
@@ -950,7 +950,7 @@ describe("TestLayerPropertyGroupInheritance", () => {
   /** layer['ADBE Transform Group']['ADBE Position'] chains correctly. */
   test("test_getitem_chained", () => {
     const layer = get_layer(parse_project(SAMPLES_DIR.div("layer_switches.aep")), "enabled_false");
-    const transform = layer.__getitem__("ADBE Transform Group");
+    const transform = layer.__getitem__("ADBE Transform Group") as PropertyGroup;
     const position = transform.__getitem__("ADBE Position");
     expect(position.match_name).toBe("ADBE Position");
   });
@@ -1290,7 +1290,7 @@ describe("TestLayerStylesEnabled", () => {
   /** Layer Styles group reports enabled=False when no style is on. */
   test("test_layer_styles_disabled_when_no_style_enabled", () => {
     const layer = get_layer(parse_project(SAMPLES_DIR.div("type.aep")), "type_shape");
-    const layer_styles = layer.properties.find((p) => p.match_name === "ADBE Layer Styles")!;
+    const layer_styles = layer.properties.find((p) => p.match_name === "ADBE Layer Styles")! as PropertyGroup;
     expect(layer_styles instanceof PropertyGroup).toBe(true);
     expect(layer_styles._deferred_ae_major != null).toBe(true);
     expect(layer_styles.enabled).toBe(false);
@@ -1316,7 +1316,7 @@ describe("TestLayerStylesEnabled", () => {
    */
   test("test_can_set_enabled_no_styles", () => {
     const layer = get_layer(parse_project(SAMPLES_DIR.div("type.aep")), "type_shape");
-    const layer_styles = layer.properties.find((p) => p.match_name === "ADBE Layer Styles")!;
+    const layer_styles = layer.properties.find((p) => p.match_name === "ADBE Layer Styles")! as PropertyGroup;
     expect(layer_styles instanceof PropertyGroup).toBe(true);
     expect(layer_styles.can_set_enabled).toBe(false);
     for (const child of layer_styles.properties) {
@@ -1336,7 +1336,7 @@ describe("TestLayerStylesEnabled", () => {
       "selection_dropshadow_enabled_opacity.aep",
     );
     const layer = parse_aep(path).project.compositions[0].layers[0];
-    const layer_styles = layer.__getitem__("ADBE Layer Styles");
+    const layer_styles = layer.__getitem__("ADBE Layer Styles") as PropertyGroup;
     expect(layer_styles instanceof PropertyGroup).toBe(true);
     expect(layer_styles.can_set_enabled).toBe(true);
     for (const child of layer_styles.properties) {

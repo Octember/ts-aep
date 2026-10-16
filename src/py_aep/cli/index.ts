@@ -1,7 +1,4 @@
 /** Command-line interface tools for py_aep. */
 
-// TODO(port): Python's `from py_aep.cli import *` imports the submodules named
-// here (compare, inspect, validate, visualize) when they are not attributes yet.
-// This module imports none of them, so the names are exported as data only; a
-// star import in TS will not load those submodules.
+// NOTE(port): __all__ matches Python verbatim; star-import submodule loading is import-system machinery with no importer in the package, tests or upstream.
 export const __all__ = ["compare", "inspect", "validate", "visualize"] as const;

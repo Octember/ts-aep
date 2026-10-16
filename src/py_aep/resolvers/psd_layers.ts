@@ -503,8 +503,7 @@ export function read_psd_layers(file: PathLike, kw: { mask_boxes?: boolean } = {
   try {
     // Read only up to the Layer Info block: the layer records precede the
     // channel image data, which dominates a PSD's size.
-    // TODO(port): Path has no open(); the whole file is read into memory
-    // first, then parsed through a BytesIO. Results are the same, memory is not.
+    // NOTE(port): Python opens the file and reads only the header and Layer Info; the whole file is read into a BytesIO here, so parsed results are identical (only peak memory differs).
     const fp = new BytesIO(new Path(file).read_bytes());
     const header = fp.read(26);
     if (!bytes_eq(bytes_.slice(header, 0, 4), b("8BPS"))) {
@@ -651,7 +650,7 @@ export function _user_mask(mask: Uint8Array, file_name: string, layer_name: stri
     const parameters = at(mask, pos);
     pos += 1;
     if (parameters & 0x03) {
-      // TODO(port): warnings.warn(stacklevel=3) has no JS equivalent; the stack depth is not reproduced.
+      // NOTE(port): message and category match warnings.warn; stacklevel=3 only picks the reported source location, which has no JS equivalent.
       warn(
         `${file_name}: the density / feather of layer ${repr(layer_name)}'s ` +
           "mask is not modeled; its footage is sized as if unmasked",
@@ -819,9 +818,7 @@ export function _unpack_bits(data: Uint8Array, size: number): Uint8Array {
 export function _undo_prediction(row: Uint8Array, width: number, sample: number): Uint8Array {
   if (sample === 2) {
     const values = struct.unpack(`>${width}H`, row);
-    // TODO(pyrt): struct.pack spreads its values as call arguments, which
-    // overflows the argument limit on wide rows; the big-endian u16 writes
-    // are done directly here.
+    // NOTE(port): equals struct.pack(">{width}H", *(acc & 0xFFFF)) (Python's running sum masked to u16); written via DataView because pyrt struct.pack spreads args and overflows on wide rows.
     const out = new Uint8Array(2 * width);
     const dv = new DataView(out.buffer);
     let acc = 0;
@@ -1003,19 +1000,19 @@ export function _parse_layer_extra(
   ];
 }
 
-// TODO(pyrt): bytes.translate(table) has no shim in pyrt/bytes.ts.
+// NOTE(port): bytes.translate(table) for a 256-entry table; pyrt/bytes.ts has no translate shim.
 export function translate(data: Uint8Array, table: Uint8Array): Uint8Array {
   const out = new Uint8Array(data.length);
   for (let i = 0; i < data.length; i++) out[i] = table[data[i]];
   return out;
 }
 
-// TODO(pyrt): bytes[start::step] has no shim; py_slice returns a plain array for bytes.
+// NOTE(port): bytes[start::step] via py_slice (which returns a plain array for bytes), re-wrapped as Uint8Array.
 export function strided(row: Uint8Array, start: number, step: number): Uint8Array {
   return Uint8Array.from(py_slice(row, start, null, step) as any);
 }
 
-// TODO(pyrt): pyrt's int_from_bytes returns a Number, which loses bits past 2^53 on rows this wide; this keeps a bigint.
+// NOTE(port): int.from_bytes(data, "big") as an exact bigint; pyrt's int_from_bytes returns a Number and loses bits past 2^53.
 export function int_from_bytes_big(data: Uint8Array): bigint {
   return data.length ? BigInt("0x" + bytes_.hex(data)) : 0n;
 }
@@ -1025,8 +1022,7 @@ export function bit_length(x: bigint): number {
   return x.toString(2).length;
 }
 
-// TODO(pyrt): bytes concatenation spreads its parts as call arguments, which
-// overflows the argument limit when a channel has tens of thousands of rows.
+// NOTE(port): b"".join(parts); pyrt concat spreads its parts as call arguments and overflows with tens of thousands of rows.
 export function join_all(parts: Uint8Array[]): Uint8Array {
   let n = 0;
   for (const p of parts) n += p.length;
@@ -1044,15 +1040,13 @@ export function join_all(parts: Uint8Array[]): Uint8Array {
  * at most `max_length` bytes. Z_SYNC_FLUSH keeps a truncated stream from
  * throwing, as Python's partial decompress does.
  */
-// TODO(port): Python's decompressobj stops at max_length and tolerates
-// trailing bytes; this inflates the whole stream first, which is bounded by
-// the _MAX_INFLATION check in _channel_flags.
+// TODO(port): Python's decompressobj stops inflating at max_length; node:zlib inflateSync has no partial-output cap (maxOutputLength throws instead), so a stream that expands far beyond max_length is fully inflated before being truncated. Output bytes are identical; only memory/time on hostile streams differs (the pre-check at line ~749 bounds only the declared rectangle, not the stream).
 export function inflate_bounded(body: Uint8Array, max_length: number): Uint8Array {
   const inflated = zlib.inflateSync(body, { finishFlush: zlib.constants.Z_SYNC_FLUSH });
   return bytes_.slice(inflated, 0, max_length);
 }
 
-// TODO(pyrt): zlib.error - node:zlib throws plain Errors tagged with a Z_* code.
+// NOTE(port): stands in for `except zlib.error`; node:zlib throws plain Errors tagged with a Z_* code.
 export function is_zlib_error(e: unknown): boolean {
   return e instanceof Error && typeof (e as any).code === "string" && (e as any).code.startsWith("Z_");
 }

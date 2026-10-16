@@ -712,7 +712,7 @@ describe("TestRoundtripFootageItemName", () => {
     const out = tmp_path.div("modified.aep");
     project.save(out);
     const reparsed = parse_aep(out).project.footages.find((f) => f.id === solid.id)!;
-    expect(py_eq(reparsed.main_source._opti.solid_name, "Opti Backed")).toBe(true);
+    expect(py_eq((reparsed.main_source._opti as any).solid_name, "Opti Backed")).toBe(true);
     expect(py_eq(reparsed._name_utf8.value, "")).toBe(true);
   });
 
@@ -726,7 +726,7 @@ describe("TestRoundtripFootageItemName", () => {
     project.save(out);
     const reparsed = parse_aep(out).project.footages.find((f) => f.id === placeholder.id)!;
     expect(py_eq(reparsed.name, "Renamed Placeholder")).toBe(true);
-    expect(py_eq(reparsed.main_source._opti.placeholder_name, "Renamed Placeholder")).toBe(true);
+    expect(py_eq((reparsed.main_source._opti as any).placeholder_name, "Renamed Placeholder")).toBe(true);
     expect(py_eq(reparsed._name_utf8.value, "")).toBe(true);
   });
 

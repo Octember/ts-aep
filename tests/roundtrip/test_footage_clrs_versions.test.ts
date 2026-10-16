@@ -73,7 +73,7 @@ test.each(import_rows)("test_import_writes_the_versions_color_records[%#]", (yea
   const item = project.import_file(new ImportOptions(getitem(_FILES, label)));
   const out = tmp_path.div("clrs.aep");
   project.save(out);
-  const ours = getitem(parse_aep(out).project.items, item.id).main_source;
+  const ours = (getitem(parse_aep(out).project.items, item.id) as any).main_source;
   expect(py_eq(_shape(ours), _shape(getitem(ae, label)))).toBe(true);
 });
 
@@ -88,7 +88,7 @@ test.each(sorted(_VERSIONS.keys()))("test_new_solid_writes_the_versions_color_re
   const solid = comp.add_solid([1.0, 0.0, 0.0]).source;
   const out = tmp_path.div("solid.aep");
   project.save(out);
-  const ours = getitem(parse_aep(out).project.items, solid.id).main_source;
+  const ours = (getitem(parse_aep(out).project.items, solid.id) as any).main_source;
   expect(py_eq(_shape(ours), _shape(ae))).toBe(true);
 });
 

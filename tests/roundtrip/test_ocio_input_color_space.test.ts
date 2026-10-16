@@ -44,7 +44,7 @@ const CONFIGS = new Map<string, string>([
   ["sergb", str(SERGB)],
 ]);
 
-// TODO(pyrt): `next(gen)` - throws StopIteration on a miss like Python.
+// NOTE(port): next(gen) with no default raises StopIteration on a miss; next_ throws the same.
 function next_<T>(items: Iterable<T>, pred: (item: T) => boolean): T {
   for (const item of items) {
     if (pred(item)) return item;

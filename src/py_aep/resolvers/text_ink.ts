@@ -27,7 +27,7 @@
  * composer itself refuses.
  */
 
-// TODO(port): text is indexed in UTF-16 units here; Python indexes code points.
+// NOTE(port): text is indexed in UTF-16 units here; Python indexes code points.
 // `_check_envelope` refuses astral characters before any of this runs, so the
 // two agree on every text that reaches these helpers.
 
@@ -55,7 +55,7 @@ import * as tc from "./text_composition.ts";
 import { BoxAccumulator } from "./shape_bounds.ts";
 
 // A glyph's outline bounds in font units, `None` for an empty glyph.
-// TODO(port): keyed by fontkit glyph id (HarfBuzz codepoint), not by glyph name.
+// NOTE(port): keyed by glyph id (HarfBuzz codepoint); Python's glyph name is order[gid], a 1:1 map, so the cache is equivalent.
 export type _GlyphBounds = Map<number, [number, number, number, number] | null>;
 
 export type _CharStyle = ReturnType<typeof tc._char_styles>[number];
@@ -71,9 +71,8 @@ export function _is_os_error(exc: unknown): boolean {
 }
 
 export function _open_face(path: string, face_index: number): any {
-  // TODO(port): fontTools `TTFont(fontNumber=...)` picks a face of a .ttc.
-  // fontkit exposes collection faces through `.fonts`; a plain font is its own
-  // face.
+  // NOTE(port): fontTools `TTFont(fontNumber=...)` picks a face of a .ttc;
+  // fontkit exposes collection faces through `.fonts`; a plain font is its own face.
   const opened: any = fontkit.openSync(path);
   return opened.fonts ? opened.fonts[face_index] : opened;
 }
@@ -246,7 +245,9 @@ export function text_ink_rect(doc: TextDocument): Record<string, number> {
 }
 
 export function _justification(paragraph_style: any): ParagraphJustification {
-  return ParagraphJustification.from_binary(int(dict_get(paragraph_style, "0", 0)));
+  return ParagraphJustification.from_binary(
+    int(dict_get(paragraph_style, "0", 0)),
+  ) as ParagraphJustification;
 }
 
 export function _point_text_ink(

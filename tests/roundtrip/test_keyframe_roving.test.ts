@@ -37,14 +37,14 @@ function _position(sample: string): Property {
   const layer: Layer = project.compositions[0].layers[0];
   const prop = layer.transform.property("ADBE Position");
   py_assert(prop != null);
-  return prop;
+  return prop as Property;
 }
 
 function _position_from(project: Project): Property {
   const layer: Layer = project.compositions[0].layers[0];
   const prop = layer.transform.property("ADBE Position");
   py_assert(prop != null);
-  return prop;
+  return prop as Property;
 }
 
 /** Stored (sub-frame) keyframe times, which `frame_time` would round. */
@@ -290,7 +290,7 @@ describe("TestOrientationInert", () => {
     for (const layer of project.compositions[0].layers) {
       const candidate = layer.transform.property("ADBE Orientation");
       if (candidate != null) {
-        prop = candidate;
+        prop = candidate as Property;
         break;
       }
     }

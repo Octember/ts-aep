@@ -57,7 +57,7 @@ describe("TestActiveItemRemoval", () => {
     app.project.compositions[0].remove();
 
     const fcid = find_by_type(app.project._rifx.chunks, "fcid");
-    expect(fcid.value).toBe(0);
+    expect((fcid as any).value).toBe(0);
     expect(app.project.active_item == null).toBe(true);
 
     const out = tmp_path.div("removed.aep");
@@ -72,7 +72,7 @@ describe("TestActiveItemRemoval", () => {
   test("test_dangling_fcid_parses", () => {
     const tmp_path: Path = make_tmp_path();
     const app = parse_app_fresh(PROPERTY_DIR.div("gradient.aep"));
-    find_by_type(app.project._rifx.chunks, "fcid").value = 4242;
+    (find_by_type(app.project._rifx.chunks, "fcid") as any).value = 4242;
     const out = tmp_path.div("dangling.aep");
     app.project.save(out);
 
@@ -195,11 +195,11 @@ describe("TestCopyToCompTransform", () => {
       (c: any) => c !== source && !py_eq([c.width, c.height], [source.width, source.height]),
     )!;
     const layer = source.layers[0];
-    const before = layer.property("Transform").property("Position").value;
+    const before = (layer.property("Transform") as any).property("Position").value;
 
     const copy = layer.copy_to_comp(target);
 
-    expect(py_eq(copy.property("Transform").property("Position").value, before)).toBe(true);
+    expect(py_eq((copy.property("Transform") as any).property("Position").value, before)).toBe(true);
   });
 
   test("test_timebase_is_restamped_to_the_destination", () => {
@@ -260,11 +260,11 @@ describe("TestPrecomposeSideEffects", () => {
   test("test_moved_layer_keeps_its_anchor_point", () => {
     const app = parse_app_fresh(PROPERTY_DIR.div("keyframe_1D.aep"));
     const comp = app.project.compositions[0];
-    const before = comp.layers[0].property("Transform").property("ADBE Anchor Point").value;
+    const before = (comp.layers[0].property("Transform") as any).property("ADBE Anchor Point").value;
 
     const new_comp = comp.precompose([0], "Pre");
 
-    const after = new_comp.layers[0].property("Transform").property("ADBE Anchor Point").value;
+    const after = (new_comp.layers[0].property("Transform") as any).property("ADBE Anchor Point").value;
     expect(py_eq(after, before)).toBe(true);
   });
 
@@ -275,15 +275,15 @@ describe("TestPrecomposeSideEffects", () => {
     const comp = app.project.compositions.find((c: any) => c.name === "main")!;
     const layer = comp.layers[0];
     const overrides = layer.property("ADBE Layer Overrides");
-    expect(len(overrides.properties)).toBe(3);
+    expect(len((overrides as any).properties)).toBe(3);
 
     comp.precompose([0], "PreKeep", false);
 
-    expect(len(comp.layers[0].property("ADBE Layer Overrides").properties)).toBe(0);
+    expect(len((comp.layers[0].property("ADBE Layer Overrides") as any).properties)).toBe(0);
     const out = tmp_path.div("kept.aep");
     app.project.save(out);
     const app2 = parse_app_fresh(out);
     const comp2 = app2.project.compositions.find((c: any) => c.name === "main")!;
-    expect(len(comp2.layers[0].property("ADBE Layer Overrides").properties)).toBe(0);
+    expect(len((comp2.layers[0].property("ADBE Layer Overrides") as any).properties)).toBe(0);
   });
 });

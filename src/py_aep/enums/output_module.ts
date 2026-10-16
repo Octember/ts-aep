@@ -4,11 +4,10 @@
  * These enums match the values used in After Effects ExtendScript.
  */
 
-// TODO(port): Python IntEnum members are plain numbers here, so instance
-// `@property`s (`label`, `kind`, `to_format_id`, `to_binary`) become enum
-// methods that take the member as their first argument `self`, e.g.
-// `OutputChannels.label(member)` instead of `member.label`. Applies to every
-// enum in this file.
+// NOTE(port): Python IntEnum members are plain numbers here, so instance
+// `@property`s (`label`, `kind`, `to_format_id`, `to_binary`) are enum methods
+// taking the member as `self`, e.g. `OutputChannels.label(member)`; same
+// values and lookups as the Python properties. Applies to every enum here.
 
 import { KeyError, ValueError, getitem, round, float, int, decode, repr, format, int_enum } from "../../pyrt/index.ts";
 import type { EnumValue } from "../../pyrt/index.ts";

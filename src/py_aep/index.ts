@@ -15,10 +15,7 @@ const _chunk = deferred<typeof import("./binary/chunk.ts")>(import.meta.url, "./
 const _application = deferred<typeof import("./parsers/application.ts")>(import.meta.url, "./parsers/application.ts");
 const _project = deferred<typeof import("./parsers/project.ts")>(import.meta.url, "./parsers/project.ts");
 
-// TODO(port): Python reads the version from the installed package metadata
-// (`importlib.metadata.version("py_aep")`) and falls back to "0.0.0" when the
-// package is not installed. The TS port has no package metadata lookup, so it
-// always reports the fallback.
+// NOTE(port): Python falls back to "0.0.0" when package metadata is absent; this port has no installed py_aep distribution (package.json is also 0.0.0), so the fallback is the Python value.
 export const __version__ = "0.0.0";
 
 /**

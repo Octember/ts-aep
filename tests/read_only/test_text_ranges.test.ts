@@ -138,9 +138,7 @@ function _compare(py_val: any, expected: any, attr: string): string | null {
     if (py_val != null && approx(py_val, expected, { abs: 1e-5 })) return null;
     return `${attr}: expected ${repr(expected)}, got ${repr(py_val)}`;
   }
-  // TODO(port): int/float distinction - Python `isinstance(x, float)` is false for
-  // int-valued numbers; JS has one number type, so this branch also takes ints.
-  // approx(abs=1e-5) gives the same answer for integers.
+  // NOTE(port): JS has one number type so this also takes ints; approx(abs=1e-5) agrees with py_eq on integers.
   if (typeof expected === "number" || typeof py_val === "number") {
     if (py_val != null && approx(py_val, expected, { abs: 1e-5 })) return null;
     return `${attr}: expected ${repr(expected)}, got ${repr(py_val)}`;
@@ -148,6 +146,15 @@ function _compare(py_val: any, expected: any, attr: string): string | null {
   // bools, ints, IntEnums (IntEnum == int holds for ExtendScript values)
   if (py_eq(py_val, expected)) return null;
   return `${attr}: expected ${repr(expected)}, got ${repr(py_val)}`;
+}
+
+/** Python repr of a JSON-decoded value (dict/list/scalars). */
+function _dict_repr(v: any): string {
+  if (Array.isArray(v)) return `[${v.map(_dict_repr).join(", ")}]`;
+  if (v != null && typeof v === "object") {
+    return `{${Object.entries(v).map(([k, x]) => `${repr(k)}: ${_dict_repr(x)}`).join(", ")}}`;
+  }
+  return repr(v);
 }
 
 /** Python dict equality: py_eq cannot compare plain records, so lift them to Maps. */
@@ -164,7 +171,7 @@ function probe(): any {
 
 function docs(): Map<string, any> {
   if (_cache.docs === undefined) {
-    // TODO(port): assumes parse_project is synchronous, as the Python call is.
+    // NOTE(port): parse_project is synchronous in the TS helpers, as in Python.
     const project = parse_project(SAMPLE);
     const comp = project.compositions[0];
     _cache.docs = new Map(comp.text_layers.map((layer: any) => [layer.name, layer.text.source_text.value]));
@@ -218,8 +225,7 @@ describe("TestRangeBoundaries", () => {
   test.each(LAYER_NAMES)("test_paragraph_ranges[%#]", (name: string) => {
     const doc = getitem(docs(), name);
     for (const entry of probe().layers[name].paragraphRanges) {
-      // TODO(port): Python dict repr of `entry`; JSON.stringify differs in message text only.
-      py_assert(entry.ok, `${name}: ES probe failed: ${JSON.stringify(entry)}`);
+      py_assert(entry.ok, `${name}: ES probe failed: ${_dict_repr(entry)}`);
       const exp = entry.value;
       const pr = doc.paragraph_range(exp.index);
       expect(str(pr)).toBe(exp.str);
@@ -233,8 +239,7 @@ describe("TestRangeBoundaries", () => {
   test.each(LAYER_NAMES)("test_composed_line_ranges[%#]", (name: string) => {
     const doc = getitem(docs(), name);
     for (const entry of probe().layers[name].composedLineRanges) {
-      // TODO(port): Python dict repr of `entry`; JSON.stringify differs in message text only.
-      py_assert(entry.ok, `${name}: ES probe failed: ${JSON.stringify(entry)}`);
+      py_assert(entry.ok, `${name}: ES probe failed: ${_dict_repr(entry)}`);
       const exp = entry.value;
       const clr = doc.composed_line_range(exp.index);
       expect(str(clr)).toBe(exp.str);
@@ -248,8 +253,7 @@ describe("TestRangeBoundaries", () => {
   test.each(LAYER_NAMES)("test_character_indexes_at[%#]", (name: string) => {
     const doc = getitem(docs(), name);
     const layer_probe = probe().layers[name];
-    // TODO(port): Object.entries puts integer-like keys first in ascending order; Python keeps
-    // JSON file order. Only the order of assertions can change, not their outcome.
+    // NOTE(port): Object.entries orders integer-like keys ascending; the probe JSON keys are already in ascending order.
     for (const [idx_s, entry] of Object.entries(layer_probe.paragraphCharacterIndexesAt)) {
       if ((entry as any).ok) {
         expect(

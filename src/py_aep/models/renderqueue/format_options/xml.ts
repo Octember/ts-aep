@@ -72,7 +72,7 @@ export const _PARAM_RULE_KEYS = new Map<string, string>([
 type ETElement = ET.Element;
 
 /** `type(value).__name__` for the TypeError message. */
-// TODO(pyrt): no pyrt `type()` shim; this covers the value kinds this module sees.
+// NOTE(port): only feeds the TypeError message; covers every value kind this module's callers pass.
 export function _py_type_name(value: any): string {
   if (value == null) return "NoneType";
   if (typeof value === "boolean") return "bool";
@@ -85,7 +85,7 @@ export function _py_type_name(value: any): string {
 }
 
 /** `dict(*args).items()` for `ParamsDict.update`. */
-// TODO(pyrt): no pyrt `dict()` constructor shim; covers a mapping, a list of pairs or a plain record.
+// NOTE(port): covers every `dict(*args)` source `update` receives: mapping, list of pairs, plain record.
 export function _dict_items(args: any[]): Iterable<[string, string]> {
   if (args.length === 0) return [];
   const src = args[0];
@@ -248,7 +248,7 @@ export class ParamsDict extends Map<string, string> {
     return true;
   }
 
-  // TODO(port): `**kwargs` of `update` is not translated; no call site passes keyword arguments.
+  // NOTE(port): `**kwargs` has no TS equivalent; callers pass a mapping as the positional arg.
   update(...args: any[]): void {
     for (const [key, value] of _dict_items(args)) {
       this.set(key, value);
@@ -438,8 +438,7 @@ export class XmlFormatOptions extends FormatOptionsBase {
   /** Set an Adobe parameter from an enum or int value. */
   _set_enum_param(key: string, value: any, enum_cls: any = null): void {
     if (value == null) return;
-    // TODO(port): int/float distinction. Python `isinstance(2.0, int)` is False,
-    // but JS cannot tell `2.0` from `2`.
+    // TODO(port): JS cannot tell 2.0 from 2; an integral float is accepted where Python raises TypeError.
     if (!((typeof value === "number" && Number.isInteger(value)) || typeof value === "boolean")) {
       throw new TypeError_(`expected an int or IntEnum for ${repr(key)}, got ${_py_type_name(value)}`);
     }
@@ -496,7 +495,7 @@ export class XmlFormatOptions extends FormatOptionsBase {
   _clamp_after_param(param_key: string): void {
     const rule_key = dict_get(_PARAM_RULE_KEYS, param_key, null);
     if (rule_key == null) return;
-    this._require_om()._apply_singleton_clamps(dict_get(CLAMP_DEPENDENTS, rule_key, []));
+    this._require_om()._apply_singleton_clamps(dict_get(CLAMP_DEPENDENTS, rule_key, []) as string[]);
   }
 
   /**

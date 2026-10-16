@@ -808,8 +808,7 @@ export class PropertyGroup extends PropertyBase {
           "assign a child property's `value` instead",
       );
     }
-    // TODO(port): Python `super().__setattr__` resolves to PropertyBase's
-    // `__setattr__` if it defines one; this goes straight to `object`.
+    // NOTE(port): PropertyBase defines no `__setattr__`, so Python's `super().__setattr__` is `object`'s, as here.
     object_setattr(this, name, value);
   }
 
@@ -1348,7 +1347,7 @@ export class PropertyGroup extends PropertyBase {
       match_name,
       this._free_numbered_name(base, same_type + 1),
       {
-        subgroups: dict_get(_VECTOR_SUBGROUPS, match_name, []),
+        subgroups: dict_get(_VECTOR_SUBGROUPS, match_name, []) as [string, number, number][],
         path_time_base,
       },
     );

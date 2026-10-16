@@ -26,10 +26,10 @@ import "../../src/py_aep/binary/_register.ts";
 import { get_comp, get_comp_from_json_by_name, get_first_layer, get_layer, load_expected, parse_project } from "../conftest.ts";
 import { Project, parse as parse_aep } from "../../src/py_aep/index.ts";
 import { KeyframeInterpolationType, MaskFeatherFalloff, MaskMode, MaskMotionBlur, PropertyType, PropertyValueType } from "../../src/py_aep/enums/index.ts";
-import { MaskPropertyGroup, Property, PropertyGroup } from "../../src/py_aep/models/index.ts";
+import { MaskPropertyGroup, Property, PropertyGroup, Shape } from "../../src/py_aep/models/index.ts";
 import type { Layer } from "../../src/py_aep/models/index.ts";
 
-// TODO(pyrt): pytest.fail has no shim in src/pyrt/pytest.ts; local helper until one exists.
+// NOTE(port): pytest.fail has no pyrt shim; the tests only need it to fail, which AssertionError_ does.
 function fail(message: string): never {
   throw new AssertionError_(message);
 }
@@ -49,15 +49,15 @@ const CANVARY_DIR = new Path(import.meta.path).parent.parent.parent.div("samples
 function _find_property(layer: Layer, match_name: string): Property | null {
   for (const prop of layer.transform) {
     if (prop.match_name === match_name) {
-      return prop;
+      return prop as Property;
     }
   }
   return null;
 }
 
 /** Extract transform properties from the expected JSON structure. */
-// TODO(port): assumes load_expected returns JSON.parse output (plain objects), so
-// `.get(...)` becomes property access and `"k" in x` stays as is.
+// NOTE(port): load_expected returns JSON.parse output (plain objects, tests/helpers.ts), so
+// `.get(...)` is property access and `"k" in x` is unchanged; missing keys compare unequal as in Python.
 function _get_json_transform_properties(expected: any, comp_name = ""): any[] {
   for (const item of expected["items"]) {
     if ("layers" in item) {
@@ -78,7 +78,7 @@ function _get_json_transform_properties(expected: any, comp_name = ""): any[] {
  * Map each property match name in an ExtendScript export to its value
  * (the first occurrence wins).
  */
-// TODO(port): walks plain JSON objects (see _get_json_transform_properties).
+// NOTE(port): walks plain JSON objects (see _get_json_transform_properties).
 function _json_values_by_match_name(expected: any): Map<string, any> {
   const values = new Map<string, any>();
 
@@ -104,7 +104,7 @@ function _json_values_by_match_name(expected: any): Map<string, any> {
 /** Return the `ADBE Mask Shape` property from the first mask. */
 function _get_mask_shape(layer: any): Property {
   expect(layer.masks).not.toBeNull();
-  const mask = layer.masks.properties[0];
+  const mask = layer.masks.properties[0] as MaskPropertyGroup;
   for (const prop of mask.properties) {
     if (prop.match_name === "ADBE Mask Shape") {
       return prop;
@@ -251,7 +251,7 @@ describe("TestPropertyStructure", () => {
     const layer = get_layer(parse_project(SAMPLES_DIR.div("effects.aep")), "effect_2dPoint");
     expect(layer.effects).not.toBeNull();
     expect(len(layer.effects.properties) > 0).toBe(true);
-    const effect = layer.effects.properties[0];
+    const effect = layer.effects.properties[0] as PropertyGroup;
     expect(effect.property_depth).toBe(2);
     for (const prop of effect.properties) {
       py_assert(prop.property_depth === 3, `${prop.match_name} has depth ${prop.property_depth}, expected 3`);
@@ -506,7 +506,7 @@ describe("TestEffectProperties", () => {
     const layer = get_first_layer(project);
     expect(layer.effects).not.toBeNull();
     expect(len(layer.effects.properties)).toBe(2);
-    for (const effect of layer.effects) {
+    for (const effect of layer.effects as Iterable<PropertyGroup>) {
       expect(effect.match_name).toBe("ADBE Gaussian Blur 2");
       expect(effect.is_effect).toBe(true);
     }
@@ -523,22 +523,22 @@ describe("TestEffectProperties", () => {
     expect(len(layer.effects.properties)).toBe(2);
 
     // Each effect should have a Blurriness property with modified value
-    const effect_0 = layer.effects.properties[0];
+    const effect_0 = layer.effects.properties[0] as PropertyGroup;
     let blurriness_0: Property | null = null;
     for (const prop of effect_0.properties) {
       if (prop.match_name === "ADBE Gaussian Blur 2-0001") {
-        blurriness_0 = prop;
+        blurriness_0 = prop as Property;
         break;
       }
     }
     expect(blurriness_0).not.toBeNull();
     expect(blurriness_0.value).toBe(20.0);
 
-    const effect_1 = layer.effects.properties[1];
+    const effect_1 = layer.effects.properties[1] as PropertyGroup;
     let blurriness_1: Property | null = null;
     for (const prop of effect_1.properties) {
       if (prop.match_name === "ADBE Gaussian Blur 2-0001") {
-        blurriness_1 = prop;
+        blurriness_1 = prop as Property;
         break;
       }
     }
@@ -561,7 +561,7 @@ describe("TestEffectProperties", () => {
         if (layer.effects == null) {
           continue;
         }
-        for (const effect of layer.effects) {
+        for (const effect of layer.effects as Iterable<PropertyGroup>) {
           if (effect.name === "S_BlurDirectional") {
             for (const prop of effect.properties) {
               if (prop.name === "Matte from Layer") {
@@ -593,7 +593,7 @@ describe("TestEffectProperties", () => {
         if (layer.effects == null) {
           continue;
         }
-        for (const effect of layer.effects) {
+        for (const effect of layer.effects as Iterable<PropertyGroup>) {
           if (effect.match_name !== "S_BlurDirectional") {
             continue;
           }
@@ -624,7 +624,7 @@ describe("TestEffectProperties", () => {
     expect(py_eq(getitem(_json_values_by_match_name(expected), "ADBE Path Text-0020"), [80, 50])).toBe(true);
     const layer = get_layer(project, "type_null");
     expect(layer.effects).not.toBeNull();
-    const prop = layer.effects.__getitem__("ADBE Path Text").__getitem__("ADBE Path Text-0020");
+    const prop = (layer.effects.__getitem__("ADBE Path Text") as PropertyGroup).__getitem__("ADBE Path Text-0020");
     expect(py_eq(prop.value, [80.0, 50.0])).toBe(true);
     expect(prop.is_modified).toBe(false);
   });
@@ -642,7 +642,7 @@ describe("TestEffectProperties", () => {
         if (layer.effects == null) {
           continue;
         }
-        for (const effect of layer.effects) {
+        for (const effect of layer.effects as Iterable<PropertyGroup>) {
           if (effect.name === "S_BlurDirectional") {
             for (const prop of effect.properties) {
               if (prop.name === "Matte from Path") {
@@ -735,7 +735,7 @@ describe("TestMasks", () => {
     const comp = get_comp(project, "masks_on_layer_kinds");
     const layer = comp.layers.find((layer) => layer.name === layer_name);
     expect(layer.masks).not.toBeNull();
-    const shape = layer.masks.properties[0].property("ADBE Mask Shape").value;
+    const shape = (layer.masks.properties[0] as PropertyGroup).property("ADBE Mask Shape").value;
     expect(len(shape.vertices)).toBe(len(expected));
     for (const [vertex, want] of zip(shape.vertices, expected)) {
       expect(approx(vertex, want, { abs: 1e-4 })).toBe(true);
@@ -769,7 +769,7 @@ describe("TestMasks", () => {
   test("test_mask_atom_inverted_default", () => {
     const layer = get_layer(parse_project(SAMPLES_DIR.div("mask.aep")), "is_mask_true");
     expect(layer.masks).not.toBeNull();
-    const mask = layer.masks.properties[0];
+    const mask = layer.masks.properties[0] as MaskPropertyGroup;
     expect(mask instanceof MaskPropertyGroup).toBe(true);
     expect(mask.inverted).toBe(false);
   });
@@ -778,7 +778,7 @@ describe("TestMasks", () => {
   test("test_mask_atom_locked_default", () => {
     const layer = get_layer(parse_project(SAMPLES_DIR.div("mask.aep")), "is_mask_true");
     expect(layer.masks).not.toBeNull();
-    const mask = layer.masks.properties[0];
+    const mask = layer.masks.properties[0] as MaskPropertyGroup;
     expect(mask instanceof MaskPropertyGroup).toBe(true);
     expect(mask.locked).toBe(false);
   });
@@ -787,7 +787,7 @@ describe("TestMasks", () => {
   test("test_mask_atom_mode_default", () => {
     const layer = get_layer(parse_project(SAMPLES_DIR.div("mask.aep")), "is_mask_true");
     expect(layer.masks).not.toBeNull();
-    const mask = layer.masks.properties[0];
+    const mask = layer.masks.properties[0] as MaskPropertyGroup;
     expect(mask instanceof MaskPropertyGroup).toBe(true);
     expect(mask.mask_mode).toBe(MaskMode.ADD);
   });
@@ -805,7 +805,7 @@ describe("TestMasks", () => {
   test("test_mask_children_parent_is_mask_group", () => {
     const layer = get_layer(parse_project(SAMPLES_DIR.div("mask.aep")), "is_mask_true");
     expect(layer.masks).not.toBeNull();
-    const mask = layer.masks.properties[0];
+    const mask = layer.masks.properties[0] as MaskPropertyGroup;
     expect(mask instanceof MaskPropertyGroup).toBe(true);
     for (const child of mask.properties) {
       expect(child.parent_property).toBe(mask);
@@ -819,7 +819,7 @@ class TestMaskAttributes {
     const project = parse_project(SAMPLES_DIR.div(filename));
     const layer = get_first_layer(project);
     expect(layer.masks).not.toBeNull();
-    const mask = layer.masks.properties[0];
+    const mask = layer.masks.properties[0] as MaskPropertyGroup;
     expect(mask instanceof MaskPropertyGroup).toBe(true);
     return mask;
   }
@@ -1046,7 +1046,7 @@ describe("TestIsModified", () => {
   test("test_effect_properties_at_default", () => {
     const layer = get_first_layer(parse_project(SAMPLES_DIR.div("is_modified_false.aep")));
     expect(layer.effects).not.toBeNull();
-    for (const effect of layer.effects) {
+    for (const effect of layer.effects as Iterable<PropertyGroup>) {
       for (const prop of effect.properties) {
         if (prop instanceof Property && prop.default_value != null) {
           // In this sample all effect params are at defaults
@@ -1064,11 +1064,11 @@ describe("TestIsModified", () => {
     const project = parse_project(SAMPLES_DIR.div("2_gaussian_20_30.aep"));
     const layer = get_first_layer(project);
     expect(layer.effects).not.toBeNull();
-    const effect = layer.effects.properties[0];
+    const effect = layer.effects.properties[0] as PropertyGroup;
     let blurriness: Property | null = null;
     for (const prop of effect.properties) {
       if (prop.match_name === "ADBE Gaussian Blur 2-0001") {
-        blurriness = prop;
+        blurriness = prop as Property;
         break;
       }
     }
@@ -1386,7 +1386,7 @@ describe("TestUnitsText", () => {
   test("test_mask_feather_pixels", () => {
     const layer = get_first_layer(parse_project(SAMPLES_DIR.div("mask_add.aep")));
     expect(layer.masks).not.toBeNull();
-    const mask = layer.masks.properties[0];
+    const mask = layer.masks.properties[0] as MaskPropertyGroup;
     // Mask children: [0]=MaskPath, [1]=Feather, [2]=Opacity, [3]=Expansion
     const feather = mask.properties[1];
     expect(feather.match_name).toBe("ADBE Mask Feather");
@@ -1397,7 +1397,7 @@ describe("TestUnitsText", () => {
   test("test_mask_opacity_percent", () => {
     const layer = get_first_layer(parse_project(SAMPLES_DIR.div("mask_add.aep")));
     expect(layer.masks).not.toBeNull();
-    const mask = layer.masks.properties[0];
+    const mask = layer.masks.properties[0] as MaskPropertyGroup;
     const opacity = mask.properties[2];
     expect(opacity.match_name).toBe("ADBE Mask Opacity");
     expect(opacity.units_text).toBe("percent");
@@ -1409,12 +1409,12 @@ describe("TestUnitsText", () => {
   test("test_effect_mask_opacity_percent", () => {
     const layer = get_layer(parse_project(SAMPLES_DIR.div("effects.aep")), "effect_2dPoint");
     expect(layer.effects).not.toBeNull();
-    const effect = layer.effects.properties[0];
+    const effect = layer.effects.properties[0] as PropertyGroup;
     // Compositing Options group is the last child of an effect
-    let comp_opts: Property | null = null;
+    let comp_opts: PropertyGroup | null = null;
     for (const child of effect.properties) {
       if (child.match_name === "ADBE Effect Built In Params") {
-        comp_opts = child;
+        comp_opts = child as PropertyGroup;
         break;
       }
     }
@@ -1422,7 +1422,7 @@ describe("TestUnitsText", () => {
     let opacity: Property | null = null;
     for (const child of comp_opts.properties) {
       if (child.match_name === "ADBE Effect Mask Opacity") {
-        opacity = child;
+        opacity = child as Property;
         break;
       }
     }
@@ -1435,7 +1435,7 @@ describe("TestUnitsText", () => {
     const project = parse_project(SAMPLES_DIR.div("effects.aep"));
     const layer = get_layer(project, "effect_2dPoint");
     expect(layer.effects).not.toBeNull();
-    for (const effect of layer.effects) {
+    for (const effect of layer.effects as Iterable<PropertyGroup>) {
       const comp_opts = effect.property("ADBE Effect Built In Params");
       py_assert(comp_opts != null, `Effect ${repr(effect.name)} missing Compositing Options`);
       expect(comp_opts.name).toBe("Compositing Options");
@@ -1450,7 +1450,7 @@ describe("TestUnitsText", () => {
   test("test_effect_property_no_unit", () => {
     const layer = get_first_layer(parse_project(SAMPLES_DIR.div("2_gaussian_20_30.aep")));
     expect(layer.effects).not.toBeNull();
-    const effect = layer.effects.properties[0];
+    const effect = layer.effects.properties[0] as PropertyGroup;
     let blurriness: Property | null = null;
     for (const child of effect.properties) {
       if (child.match_name === "ADBE Gaussian Blur 2-0001") {
@@ -1881,8 +1881,8 @@ describe("TestShapeValue", () => {
     const layer = get_layer(parse_project(SAMPLES_DIR.div("shape_misc.aep")), "shape_animated");
     const prop = _get_mask_shape(layer);
     expect(len(prop.keyframes)).toBe(2);
-    const kf0 = prop.keyframes[0].value;
-    const kf1 = prop.keyframes[1].value;
+    const kf0 = prop.keyframes[0].value as Shape;
+    const kf1 = prop.keyframes[1].value as Shape;
     expect(
       py_eq(kf0.vertices, [
         [100.0, 100.0],
@@ -1978,11 +1978,11 @@ describe("TestEffectMetadata", () => {
     const project = parse_project(SAMPLES_DIR.div("2_gaussian.aep"));
     const layer = get_first_layer(project);
     expect(layer.effects).not.toBeNull();
-    const effect = layer.effects.properties[0];
+    const effect = layer.effects.properties[0] as PropertyGroup;
     let blur_dims: Property | null = null;
     for (const prop of effect.properties) {
       if (prop.match_name === "ADBE Gaussian Blur 2-0002") {
-        blur_dims = prop;
+        blur_dims = prop as Property;
         break;
       }
     }
@@ -1997,12 +1997,12 @@ describe("TestEffectMetadata", () => {
     const project = parse_project(SAMPLES_DIR.div("2_gaussian.aep"));
     const layer = get_first_layer(project);
     expect(layer.effects).not.toBeNull();
-    const effect = layer.effects.properties[0];
+    const effect = layer.effects.properties[0] as PropertyGroup;
     // Repeat Edge Pixels is a boolean at its default - should not be modified
     let repeat_edge: Property | null = null;
     for (const prop of effect.properties) {
       if (prop.match_name === "ADBE Gaussian Blur 2-0003") {
-        repeat_edge = prop;
+        repeat_edge = prop as Property;
         break;
       }
     }
@@ -2017,11 +2017,11 @@ describe("TestEffectMetadata", () => {
     expect(len(comp.layers) >= 1).toBe(true);
     const layer = comp.layers[0];
     expect(layer.effects).not.toBeNull();
-    const effect = layer.effects.properties[0];
+    const effect = layer.effects.properties[0] as PropertyGroup;
     let flare_center: Property | null = null;
     for (const prop of effect.properties) {
       if (prop.match_name === "ADBE Lens Flare-0001") {
-        flare_center = prop;
+        flare_center = prop as Property;
         break;
       }
     }
@@ -2132,10 +2132,10 @@ describe("TestCanSetExpression", () => {
   test("test_environment_light", () => {
     const project = parse_project(LAYER_SAMPLES_DIR.div("light_source_default.aep"));
     const light = get_comp(project, "crystal").layers[0];
-    const transform = light.property("ADBE Transform Group");
+    const transform = light.property("ADBE Transform Group") as PropertyGroup;
     expect(transform.property("ADBE Rotate X").can_set_expression).toBe(true);
     expect(transform.property("ADBE Position").can_set_expression).toBe(false);
-    const options = light.property("ADBE Light Options Group");
+    const options = light.property("ADBE Light Options Group") as PropertyGroup;
     for (const mn of ["ADBE Light Color", "ADBE Light Falloff Type", "ADBE Light Shadow Diffusion"]) {
       expect(options.property(mn).can_set_expression).toBe(false);
     }
@@ -2148,13 +2148,13 @@ describe("TestCanSetExpression", () => {
   test("test_3d_model_layer", () => {
     const project = parse_project(LAYER_SAMPLES_DIR.div("light_source_default.aep"));
     const model = get_comp(project, "crystal").layers[2];
-    const materials = model.property("ADBE Material Options Group");
+    const materials = model.property("ADBE Material Options Group") as PropertyGroup;
     for (const mn of ["ADBE Light Transmission", "ADBE Metal Coefficient", "ADBE Shadow Color"]) {
       expect(materials.property(mn).can_set_expression).toBe(false);
     }
-    const plane = model.property("ADBE Plane Options Group");
+    const plane = model.property("ADBE Plane Options Group") as PropertyGroup;
     expect(plane.property("ADBE Plane Curvature").can_set_expression).toBe(true);
-    const compositing = model.property("ADBE Compositing Options Group");
+    const compositing = model.property("ADBE Compositing Options Group") as PropertyGroup;
     expect(compositing.property("ADBE Shadow Color").can_set_expression).toBe(true);
   });
 
@@ -2163,11 +2163,11 @@ describe("TestCanSetExpression", () => {
    * their name; a mask reference does not.
    */
   test("test_effect_params_follow_their_type", () => {
-    const effects = TestCanSetExpression._get_main_comp_layer(1).property("ADBE Effect Parade");
-    const drop_shadow = effects.property("ADBE Drop Shadow");
+    const effects = TestCanSetExpression._get_main_comp_layer(1).property("ADBE Effect Parade") as PropertyGroup;
+    const drop_shadow = effects.property("ADBE Drop Shadow") as PropertyGroup;
     expect(drop_shadow.property("Distance").can_set_expression).toBe(true);
     expect(drop_shadow.property("Softness").can_set_expression).toBe(true);
-    const fill = effects.property("ADBE Fill");
+    const fill = effects.property("ADBE Fill") as PropertyGroup;
     expect(fill.property("Color").can_set_expression).toBe(true);
     expect(fill.property("Fill Mask").can_set_expression).toBe(false);
   });
@@ -2190,7 +2190,7 @@ describe("TestCanVaryOverTime", () => {
   /** The Puppet Engine popup is fixed; its sibling toggles vary. */
   test("test_puppet_engine_cannot_vary", () => {
     const layer = get_layer(parse_project(SAMPLES_DIR.div("effects.aep")), "effect_puppet");
-    const puppet = layer.property("ADBE Effect Parade").property("ADBE FreePin3");
+    const puppet = (layer.property("ADBE Effect Parade") as PropertyGroup).property("ADBE FreePin3") as PropertyGroup;
     const engine = puppet.property("ADBE FreePin3 Puppet Engine");
     expect(engine.can_vary_over_time).toBe(false);
     expect(engine.can_set_expression).toBe(false);
@@ -2270,7 +2270,7 @@ describe("TestCanAddProperty", () => {
     let contents: Property | null = null;
     for (const prop of layer.properties) {
       if (prop.match_name === "ADBE Root Vectors Group") {
-        contents = prop;
+        contents = prop as Property;
         break;
       }
     }
@@ -2291,7 +2291,7 @@ describe("TestCanAddProperty", () => {
     let contents: Property | null = null;
     for (const prop of layer.properties) {
       if (prop.match_name === "ADBE Root Vectors Group") {
-        contents = prop;
+        contents = prop as Property;
         break;
       }
     }
@@ -2318,7 +2318,7 @@ class TestEffectPointSpeed {
 
   static _ramp_start(project: any): Property {
     const comp = get_comp(project, "EffectPoint");
-    const prop = comp.layers[0].effects.__getitem__(0).property(TestEffectPointSpeed.MATCH_NAME);
+    const prop = (comp.layers[0].effects.__getitem__(0) as PropertyGroup).property(TestEffectPointSpeed.MATCH_NAME);
     expect(prop instanceof Property).toBe(true);
     return prop;
   }
@@ -2403,7 +2403,7 @@ describe("TestEffectPointSpeed", () => {
     // One factor lookup per resolved ease, not a rescan of every keyframe.
     const prop = TestEffectPointSpeed._ramp_start(parse_project(TestEffectPointSpeed.SAMPLE));
     let lookups = 0;
-    // TODO(port): Python swaps `type(prop)._effect_point_speed_factor` for a counting
+    // NOTE(port): Python swaps `type(prop)._effect_point_speed_factor` for a counting
     // property on the class; this patches the accessor on the prototype the same way.
     const proto = Object.getPrototypeOf(prop) as object;
     const original = Object.getOwnPropertyDescriptor(proto, "_effect_point_speed_factor")!;
@@ -2483,7 +2483,7 @@ describe("TestEffectPointNormalization", () => {
 
     const point = layer.effects.properties
       .filter((effect) => effect.name === "Point Control")
-      .flatMap((effect) => effect.properties)
+      .flatMap((effect) => (effect as PropertyGroup).properties)
       .find((child) => child.name === "Point");
     expect(point._is_live()).toBe(false);
     // AE's default is the layer centre; the composition centre would be
@@ -2501,7 +2501,7 @@ describe("TestEffectPointNormalization", () => {
     const layer = comp.layers.find((lay) => lay.name === "solid_default");
     const point = layer.effects.properties
       .filter((effect) => effect.name === "3D Point Control")
-      .flatMap((effect) => effect.properties)
+      .flatMap((effect) => (effect as PropertyGroup).properties)
       .find((child) => child.name === "3D Point");
     expect(py_eq(point.value, [100.0, 50.0, 0.0])).toBe(true);
     // The fixture's Z is 0, which every divisor reproduces, so assert the
@@ -2659,14 +2659,14 @@ describe("TestAnchorPointNormalization", () => {
   ])("test_static_anchor_point[%#]", (layer_name: string, expected: number[]) => {
     const comp = get_comp(parse_aep(SAMPLES_DIR.div("anchor_point_z.aep")).project, "anchor_z");
     const layer = comp.layers.find((lay) => lay.name === layer_name);
-    const anchor = layer.property("ADBE Transform Group").property("ADBE Anchor Point");
+    const anchor = (layer.property("ADBE Transform Group") as PropertyGroup).property("ADBE Anchor Point");
     expect(approx(anchor.value, expected)).toBe(true);
   });
 
   test("test_animated_anchor_point", () => {
     const comp = get_comp(parse_aep(SAMPLES_DIR.div("anchor_point_z.aep")).project, "anchor_z");
     const layer = comp.layers.find((lay) => lay.name === "solid_animated");
-    const anchor = layer.property("ADBE Transform Group").property("ADBE Anchor Point");
+    const anchor = (layer.property("ADBE Transform Group") as PropertyGroup).property("ADBE Anchor Point");
     const values = anchor.keyframes.map((kf) => kf.value);
     expect(len(values)).toBe(2);
     expect(approx(values[0], [150.0, 50.0, 0.0])).toBe(true);

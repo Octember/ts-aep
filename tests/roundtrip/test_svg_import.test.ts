@@ -426,9 +426,9 @@ describe("TestSvgImportByteFidelity", () => {
     app.project.save(out);
 
     const reparsed = parse(out);
-    const layer = [...reparsed.project.items.values()].find((item: any) =>
+    const layer = ([...reparsed.project.items.values()].find((item: any) =>
       py_bool(getattr(item, "layers", null)),
-    )!.layers[0];
+    )! as any).layers[0];
     const styles = layer.__getitem__("ADBE Layer Styles");
     expect(styles instanceof PropertyGroup).toBe(true);
     expect(styles.enabled).toBe(false);

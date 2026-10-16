@@ -46,8 +46,7 @@ export class FontDesignAxis {
  * @throws ValueError If the font has no `fvar` table (not a variable font).
  */
 export function read_design_axes(font_file: _PathLike, font_number: number = 0): FontDesignAxis[] {
-  // TODO(port): fontTools TTFont(lazy=True) reads tables on demand; fontkit reads
-  // the whole file eagerly. Parity holds for results, not for I/O cost.
+  // NOTE(port): fontTools lazy=True defers table reads; fontkit reads eagerly. Results are identical, only I/O cost differs.
   const opened: any = fontkit.openSync(str(font_file));
   // TODO(port): fontTools raises on an out-of-range fontNumber; here an
   // out-of-range index yields undefined and fails later on property access.
@@ -81,7 +80,6 @@ export function read_design_axes(font_file: _PathLike, font_number: number = 0):
     }
     return axes;
   } finally {
-    // TODO(port): fontkit has no close(); the file is fully read at openSync, so no
-    // handle is held. Python closes the fontTools reader here.
+    // NOTE(port): font.close() has no twin; fontkit.openSync reads the whole file and holds no handle.
   }
 }

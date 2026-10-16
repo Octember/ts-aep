@@ -16,8 +16,8 @@ import { project_bytes } from "../helpers.ts";
 import { b, bytes_, bytes_eq, py_eq, sorted, TypeError_, ValueError } from "../../src/pyrt/index.ts";
 import { make_tmp_path, raises } from "../../src/pyrt/pytest.ts";
 
-// TODO(pyrt): `raises()` takes a single exception class; the Python
-// `pytest.raises((A, B))` tuple form is handled by this local helper.
+// NOTE(port): `raises()` takes a single class; this local helper implements the
+// Python `pytest.raises((A, B))` tuple form (isinstance any-match, rethrow otherwise).
 function _raises_any(classes: Array<abstract new (...a: any[]) => Error>, fn: () => unknown): Error {
   try {
     fn();

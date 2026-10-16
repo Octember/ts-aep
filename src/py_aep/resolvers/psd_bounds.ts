@@ -24,7 +24,7 @@
  *   (`psd_styles.merged_styles_bounds`).
  */
 
-import { and, bytes_, max, min, mod, py_bool, struct } from "../../pyrt/index.ts";
+import { and, bytes_, max, min, mod, OverflowError, py_bool, struct, ValueError } from "../../pyrt/index.ts";
 import { parse_vector_mask } from "./psd_paths.ts";
 import { merged_styles_bounds } from "./psd_styles.ts";
 import { cubic_range } from "./shape_bounds.ts";
@@ -127,14 +127,23 @@ export function _path_box(layer: PsdLayer, canvas_w: number, canvas_h: number): 
   ];
 }
 
+/** math.floor/math.ceil raise on inf/NaN. */
+function _finite(value: number): number {
+  if (Number.isNaN(value)) {
+    throw new ValueError("cannot convert float NaN to integer");
+  }
+  if (!Number.isFinite(value)) {
+    throw new OverflowError("cannot convert float infinity to integer");
+  }
+  return value;
+}
+
 export function _floor_edge(value: number): number {
-  // TODO(port): math.floor/math.ceil raise on inf/NaN in Python; Math.floor/ceil return them.
-  return Math.floor(Math.ceil(value * _SUBPIXEL) / _SUBPIXEL);
+  return Math.floor(_finite(Math.ceil(_finite(value * _SUBPIXEL))) / _SUBPIXEL);
 }
 
 export function _ceil_edge(value: number): number {
-  // TODO(port): math.floor/math.ceil raise on inf/NaN in Python; Math.floor/ceil return them.
-  return Math.ceil(Math.floor(value * _SUBPIXEL) / _SUBPIXEL);
+  return Math.ceil(_finite(Math.floor(_finite(value * _SUBPIXEL))) / _SUBPIXEL);
 }
 
 export function _intersect(a: _Box, b: _Box): _Box {

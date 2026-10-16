@@ -283,10 +283,10 @@ describe("TestStretchedLayerEaseTimeBase", () => {
     const path = tmp_path.div("stretched.aep");
     app.project.save(path);
 
-    const opacity = parse_app_fresh(path)
+    const opacity = (parse_app_fresh(path)
       .project.compositions[0]
       .layers[0]
-      .property("Transform")
+      .property("Transform") as any)
       .property("Opacity");
     for (const [time, value] of TestStretchedLayerEaseTimeBase.AE_200.entries()) {
       expect(approx(opacity.value_at_time(time), value, { abs: 1e-3 })).toBe(true);
@@ -428,10 +428,10 @@ describe("TestRovingRedistributionUnderStretch", () => {
     const path = tmp_path.div("roving.aep");
     app.project.save(path);
 
-    const reparsed = parse_app_fresh(path)
+    const reparsed = (parse_app_fresh(path)
       .project.compositions[0]
       .layers[0]
-      .property("Transform")
+      .property("Transform") as any)
       .property("Position");
     expect(
       approx(

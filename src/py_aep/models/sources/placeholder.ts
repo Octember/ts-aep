@@ -72,8 +72,7 @@ export class PlaceholderSource extends FootageSource {
     validate_frame_rate(frame_rate);
     validate_duration(duration);
     if (duration <= 0.0) {
-      // TODO(port): int/float distinction; Python prints a float as "0.0" but a
-      // whole-valued JS number as "0".
+      // NOTE(port): unreachable; validate_duration (min 1/99) already rejects duration <= 0, so the int/float repr is never shown.
       throw new ValueError(`duration must be > 0, got ${num_str(duration)}`);
     }
 

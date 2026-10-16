@@ -1025,7 +1025,7 @@ export class Property extends PropertyBase {
     for (const chunk of this._tdbs.chunks) {
       chunk.synthetic = value;
       if (hasattr(chunk, "chunks")) {
-        for (const nested of chunk.chunks) nested.synthetic = value;
+        for (const nested of (chunk as any).chunks) nested.synthetic = value;
       }
     }
   }
@@ -1399,7 +1399,7 @@ export class Property extends PropertyBase {
     // 1. Percent scaling (0-1 fraction -> 0-100 percentage)
     if (_PERCENT_MATCH_NAMES.has(this.match_name)) {
       if (typeof raw === "number" || typeof raw === "boolean") {
-        raw = raw * 100.0;
+        raw = (raw as number) * 100.0;
       } else if (Array.isArray(raw)) {
         raw = raw.map((v) => v * 100.0);
       }
@@ -1458,7 +1458,7 @@ export class Property extends PropertyBase {
     // 1. Reverse percent (0-100 -> 0-1 fraction)
     if (_PERCENT_MATCH_NAMES.has(this.match_name)) {
       if (typeof value === "number" || typeof value === "boolean") {
-        value = value / 100.0;
+        value = (value as number) / 100.0;
       } else if (Array.isArray(value)) {
         value = value.map((v) => v / 100.0);
       }
@@ -1919,7 +1919,7 @@ export class Property extends PropertyBase {
     const mapped = dict_get(UNITS_TEXT_MAP, this.match_name);
     if (mapped != null) return mapped;
     if (
-      [PropertyValueType.TwoD_SPATIAL, PropertyValueType.ThreeD_SPATIAL].includes(this._property_value_type!)
+      ([PropertyValueType.TwoD_SPATIAL, PropertyValueType.ThreeD_SPATIAL] as number[]).includes(this._property_value_type!)
     ) {
       return "pixels";
     }
@@ -2548,8 +2548,8 @@ export class Property extends PropertyBase {
 
   /** Derive the control and value types from the tdb4 flags. */
   _compute_property_types(): [PropertyControlType, PropertyValueType] {
-    let pct = PropertyControlType.UNKNOWN;
-    let pvt = PropertyValueType.UNKNOWN;
+    let pct: PropertyControlType = PropertyControlType.UNKNOWN;
+    let pvt: PropertyValueType = PropertyValueType.UNKNOWN;
 
     if (this._no_value) pvt = PropertyValueType.NO_VALUE;
     if (this._color) {
@@ -2715,7 +2715,7 @@ export class Property extends PropertyBase {
       const leader = this.separation_leader;
       if (leader != null && !leader.dimensions_separated) {
         const layer = this._containing_layer;
-        if ([LayerType.CAMERA, LayerType.LIGHT].includes(layer._ldta.layer_type)) return true;
+        if (([LayerType.CAMERA, LayerType.LIGHT] as number[]).includes(layer._ldta.layer_type)) return true;
       }
     }
     // Source Text has no meaningful default - always modified when it
@@ -2858,8 +2858,10 @@ export class Property extends PropertyBase {
     // the wrapper's own.
     const new_cdta = deepcopy(host._cdta);
     const chunks = wrapper._item_list.chunks;
-    // TODO(port): Python `chunks.index(...)` compares by attrs equality; identity is used here.
-    chunks[index_by_identity(chunks, wrapper._cdta)] = new_cdta;
+    // Python `chunks.index(...)` compares by attrs equality (first equal chunk).
+    const cdta_index = chunks.findIndex((c: any) => py_eq(c, wrapper._cdta));
+    if (cdta_index < 0) throw new ValueError("list.index(x): x not in list");
+    chunks[cdta_index] = new_cdta;
     wrapper._cdta = new_cdta;
     wrapper.add(footage);
     return wrapper;
@@ -3097,14 +3099,14 @@ export class Property extends PropertyBase {
     const interp = KeyframeInterpolationType.of(type);
     if (!this.can_vary_over_time) return false;
     if (interp === KeyframeInterpolationType.HOLD) return true;
-    if ([PropertyValueType.MARKER, PropertyValueType.TEXT_DOCUMENT].includes(this.property_value_type)) {
+    if (([PropertyValueType.MARKER, PropertyValueType.TEXT_DOCUMENT] as number[]).includes(this.property_value_type)) {
       return false;
     }
     // Only the pard-derived control type is authoritative for the
     // checkbox/dropdown test: the tdb4 flag fallback in
     // _determine_property_types maps any 1-D integer scalar to BOOLEAN,
     // but integer sliders (e.g. Mosaic blocks) interpolate in AE.
-    return ![PropertyControlType.BOOLEAN, PropertyControlType.ENUM].includes(this._property_control_type!);
+    return !([PropertyControlType.BOOLEAN, PropertyControlType.ENUM] as number[]).includes(this._property_control_type!);
   }
 
   // -- Keyframe mutation -------------------------------------------------
@@ -4585,14 +4587,6 @@ export class _EssentialOverrideProperty extends Property {
     Object.getOwnPropertyDescriptor(PropertyBase.prototype, "name")!.set!.call(this, value);
   }
 
-  get enabled(): boolean {
-    const src = this._override_source();
-    return src != null ? src.enabled : super.enabled;
-  }
-
-  set enabled(value: boolean) {
-    Object.getOwnPropertyDescriptor(PropertyBase.prototype, "enabled")!.set!.call(this, value);
-  }
 
   get min_value(): any {
     const src = this._override_source();
@@ -4659,6 +4653,20 @@ export class _EssentialOverrideProperty extends Property {
     this._effect_scale_dict = { value };
   }
 }
+
+// `enabled` is a ChunkField descriptor on PropertyBase (declared as a field), so TS
+// cannot express the override as a class accessor.
+Object.defineProperty(_EssentialOverrideProperty.prototype, "enabled", {
+  configurable: true,
+  enumerable: false,
+  get(this: _EssentialOverrideProperty): boolean {
+    const src = this._override_source();
+    return src != null ? src.enabled : Object.getOwnPropertyDescriptor(PropertyBase.prototype, "enabled")!.get!.call(this);
+  },
+  set(this: _EssentialOverrideProperty, value: boolean) {
+    Object.getOwnPropertyDescriptor(PropertyBase.prototype, "enabled")!.set!.call(this, value);
+  },
+});
 
 /**
  * The root-level `Media Replacement Comps` folder, reused if present

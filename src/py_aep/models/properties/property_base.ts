@@ -35,8 +35,7 @@ const _property = deferred<typeof import("../../parsers/property.ts")>(import.me
 const _property_value = deferred<typeof import("../../parsers/property_value.ts")>(import.meta.url, "../../parsers/property_value.ts");
 const _effect = deferred<typeof import("../../parsers/effect.ts")>(import.meta.url, "../../parsers/effect.ts");
 
-// TODO(pyrt): `list.index` / `list.remove` raise ValueError when the item is
-// absent and compare with Python `==`. No pyrt list helper exists yet.
+// NOTE(port): local twin of CPython `list.index` / `list.remove` (py_eq compare, ValueError "x is not in list"); no pyrt shim exists.
 export function list_index<T>(xs: T[], x: unknown): number {
   const i = xs.findIndex((y) => py_eq(y, x));
   if (i < 0) throw new ValueError(`${repr(x)} is not in list`);
@@ -228,7 +227,7 @@ export class PropertyBase {
     const chunks = tdgp.chunks;
     if (!chunks.some((c) => c === tdmn) || !chunks.some((c) => c === body)) return;
     const siblings = parent._properties;
-    const idx = siblings.findIndex((s) => s === this);
+    const idx = siblings.findIndex((s) => (s as unknown) === this);
     if (idx < 0) return;
     chunks.splice(0, chunks.length, ...chunks.filter((c) => c !== tdmn && c !== body));
 
@@ -409,7 +408,7 @@ export class PropertyBase {
   get property_index(): number | null {
     const parent = this.parent_property;
     if (this.property_depth === 0 || parent == null) return null;
-    return list_index(parent.properties, this as Property | PropertyGroup);
+    return list_index(parent.properties, this as unknown as Property | PropertyGroup);
   }
 
   /**
@@ -444,7 +443,7 @@ export class PropertyBase {
         "ADBE Vector Materials Group",
       ].includes(mn)
     ) {
-      return [PropertyType.NAMED_GROUP, PropertyType.INDEXED_GROUP].includes(this.property_type);
+      return [PropertyType.NAMED_GROUP, PropertyType.INDEXED_GROUP].includes(this.property_type as 6213 | 6214);
     }
     return false;
   }
@@ -556,7 +555,7 @@ export class PropertyBase {
     const [parent, parent_tdgp] = this._can_mutate();
     const [start, end] = this._find_chunk_span(parent_tdgp);
     parent_tdgp.chunks.splice(start, end - start);
-    list_remove(parent.properties, this as Property | PropertyGroup);
+    list_remove(parent.properties, this as unknown as Property | PropertyGroup);
     if (this._is_mask) _renumber_mask_auto_names(parent);
   }
 
@@ -580,7 +579,7 @@ export class PropertyBase {
       throw new IndexError(`Index ${new_index} out of range [0, ${num_props})`);
     }
 
-    const child = this as Property | PropertyGroup;
+    const child = this as unknown as Property | PropertyGroup;
     const current_index = list_index(parent.properties, child);
     if (current_index === new_index) return;
 
@@ -636,7 +635,7 @@ export class PropertyBase {
     const new_prop = this._parse_clone(cloned, parent);
 
     // Insert in model list after original
-    const model_idx = list_index(parent.properties, this as Property | PropertyGroup);
+    const model_idx = list_index(parent.properties, this as unknown as Property | PropertyGroup);
     parent.properties.splice(model_idx + 1, 0, new_prop as Property | PropertyGroup);
 
     if (this._is_mask) {

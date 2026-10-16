@@ -372,7 +372,7 @@ export function _decode_fields(
   coerces: Map<number, (value: any) => any>,
   init_names: readonly string[] | null = null,
 ): Record<string, any> {
-  // TODO(port): kwargs dict is a plain object: keys are init-name identifiers
+  // NOTE(port): kwargs dict is a plain object: keys are init-name identifiers
   // passed straight to `cls(**kw)`, never iterated for numeric-looking keys.
   const kw: Record<string, any> = {};
   for (const [i, [fld, raw]] of enumerate(zip([...data_fields], values))) {
@@ -447,7 +447,7 @@ export class FmtItem extends AttrsBase {
     }
     let kw: Record<string, any>;
     if (simple) {
-      // TODO(port): kwargs dict is a plain object keyed by init-name identifiers.
+      // NOTE(port): kwargs keys are Python identifiers (never numeric-looking), so insertion order matches dict order.
       kw = {};
       for (const [name, v] of zip([...init_names], values)) kw[name] = v;
       for (const [i, crc] of coerces) {

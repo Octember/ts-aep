@@ -76,7 +76,7 @@ test.each(["ae2018", "ae2022", "ae2023", "ae2026"])(
       const key = tkey(comp_name, layer_name, json_prop.matchName);
       const prop = dict_get(parsed, key);
       if (prop == null) continue;
-      const keys = py_or(json_prop.keyframes ?? null, []);
+      const keys: any[] = py_or(json_prop.keyframes ?? null, []) as any[];
       if (keys.length !== prop.keyframes.length) continue;
       for (const [json_key, keyframe] of zip(keys, prop.keyframes)) {
         if (py_bool(json_key.spatialAutoBezier ?? null)) {

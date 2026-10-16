@@ -8,8 +8,8 @@ import "../../src/py_aep/binary/_register.ts";
 import { Path, contains, dict_get, getitem, len, py_bool, py_eq } from "../../src/pyrt/index.ts";
 
 /**
- * TODO(port): `load_expected` returns plain JSON objects, but cli/validate.ts works on
- * dicts as Maps (rulebook §3), so convert recursively before handing JSON to it.
+ * NOTE(port): Python `json.load` dicts are Maps in this port (rulebook §3); `load_expected` yields
+ * plain objects, so convert recursively. Same data, same key order.
  */
 function _json_to_dicts(x: any): any {
   if (Array.isArray(x)) return x.map(_json_to_dicts);

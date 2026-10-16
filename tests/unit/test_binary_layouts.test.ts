@@ -13,8 +13,7 @@ import { Tdb4Chunk, TdsbChunk } from "../../src/py_aep/binary/property_chunks.ts
 import { CHUNK_TYPES } from "../../src/py_aep/binary/registry.ts";
 import { BytesIO, b, getitem, len, py_assert, py_eq, struct } from "../../src/pyrt/index.ts";
 
-// TODO(pyrt): struct.pack_into is not in pyrt/struct.ts; this writes the packed
-// bytes at `offset` in place, which is what pack_into does for a buffer that fits.
+// NOTE(port): struct.pack_into has no pyrt shim; struct.pack + buf.set writes the same bytes in place (out-of-range raises RangeError instead of struct.error, unreachable in these tests).
 function pack_into(fmt: string, buf: Uint8Array, offset: number, ...values: any[]): void {
   buf.set(struct.pack(fmt, ...values), offset);
 }

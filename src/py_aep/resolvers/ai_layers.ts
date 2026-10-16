@@ -27,8 +27,7 @@ import {
   type PathLike,
 } from "../../pyrt/index.ts";
 import { CosParser, IndirectObject, IndirectReference, decode_pdf_text_string } from "../cos/index.ts";
-// TODO(port): `SyntaxError` is caught here as the COS lexer's own error class
-// (cos.ts `SyntaxError_`), imported from the module rather than the index.
+// NOTE(port): `SyntaxError_` is the pyrt class the COS parser raises (re-exported by cos.ts), i.e. Python's `SyntaxError`.
 import { SyntaxError_ } from "../cos/cos.ts";
 
 /** Raised when a `.ai`/`.pdf` file's layers cannot be enumerated. */
@@ -72,8 +71,7 @@ export function latin1(data: Uint8Array): string {
   return Buffer.from(data).toString("latin1");
 }
 
-// TODO(pyrt): no RecursionError shim. A pathologically nested COS object
-// overflows the JS stack, which surfaces as a RangeError about the call stack.
+// TODO(port): RecursionError maps to a JS stack-overflow RangeError; the nesting depth at which it triggers differs (CPython limit 1000 vs V8 stack size), so objects nested between the two limits parse in one runtime and not the other. Proposed pyrt shim: RecursionError.
 export function is_malformed(exc: unknown): boolean {
   return (
     exc instanceof SyntaxError_ ||
@@ -268,8 +266,7 @@ export function read_ai_layers(
 
 export const _STREAM_RE = /stream\r?\n([\s\S]*?)\r?\nendstream/g;
 
-// TODO(port): zlib.error parity. Node's inflateSync throws for any corrupt
-// stream, so every inflate failure is treated as Python's zlib.error here.
+// NOTE(port): zlib.decompress raises zlib.error only for corrupt/truncated streams; inflateSync throws in the same cases, and both ignore trailing bytes.
 export function inflate_or_null(body: string): Uint8Array | null {
   try {
     return inflateSync(Buffer.from(body, "latin1"));

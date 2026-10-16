@@ -14,6 +14,7 @@ import { ColorProfileNotFoundError, default_icc_library, icc_profile_description
 import { ocio_input_envelope, resolve_ocio_config } from "../../color/ocio.ts";
 import { AI_COMP_EXTENSIONS, FORMAT_3D_MODEL_SCENE, PSD_COMP_EXTENSIONS, get_file_format, platform_source_format, type FileFormat } from "../../data/file_formats.ts";
 import { ColorManagementSystem, LinearLightMode } from "../../enums/index.ts";
+import type { Box } from "../../resolvers/ai_bounds.ts";
 import { EMPTY_BOX, footage_size, read_ai_icc_profile, read_ai_layer_bounds } from "../../resolvers/ai_bounds.ts";
 import { UnsupportedAiLayersError, read_ai_layer_ocgs } from "../../resolvers/ai_layers.ts";
 import { pixel_buffer_size, probe_media, psd_layer_channels, psd_layer_depth, type MediaInfo } from "../../resolvers/media_probe.ts";
@@ -127,8 +128,9 @@ export function _splitext_ext(name: string): string {
 }
 
 /**
- * Whether a caught Node `fs` error is Python's `OSError`. TODO(port): pyrt's
- * `Path` lets raw Node errors through, which are not `OSError` instances.
+ * Whether a caught Node `fs` error is Python's `OSError`. NOTE(port): pyrt's
+ * `Path` lets raw Node errors through, which are not `OSError` instances, so
+ * the `errno` check matches Python's `except OSError` for fs failures.
  */
 export function _is_os_error(e: unknown): boolean {
   return e instanceof OSError || typeof (e as any)?.errno === "number";
@@ -581,7 +583,8 @@ export const _C9_TO_LAYER_STYLES = new Map<number, string>(
 // A sequence frame number is at most the last 9 digits of the file stem; any
 // digits before them belong to the prefix (AE 2026: f_99999999998.png and
 // f_99999999999.png import as `f_99[999999998-999999999].png`).
-// TODO(port): Python `\d` matches Unicode digits; this regex is ASCII-only.
+// TODO(port): Python `\d` matches Unicode digits; this regex is ASCII-only
+// (stems ending in non-ASCII Nd digits; pyrt int() also rejects such digits).
 export const _FRAME_NUMBER_RE = /(\d{1,9})$/;
 
 // AE reads the `sspc` width and height as signed 16-bit values: a py_aep file
@@ -1354,7 +1357,7 @@ export class FileSource extends FootageSource {
       const [ai_layers, index] = resolve_ai_layer(path, layer_index, data);
       const ai_layer = at(ai_layers, index);
       const [icc, profile_name] = ai_document_profile(path, data);
-      let artwork_bounds: number[] | null = null;
+      let artwork_bounds: Box | null = null;
       let width = info.width;
       let height = info.height;
       if (dimensions === "layer") {

@@ -12,9 +12,7 @@
 
 // Bounds for properties without effect parameter definitions (effect
 // parameters derive their valid range from the pard chunk).
-// TODO(port): int/float distinction - Python literals `(0, 100)` are ints but
-// the annotation is `tuple[float, float]`; numbers here lose the spelling if
-// a caller renders the bound with repr().
+// NOTE(port): every Python literal here is an int, and so is the TS number; no float-spelled bound exists, so nothing is lost.
 export const _PROPERTY_MIN_MAX: Map<string, readonly [number, number]> = new Map<string, readonly [number, number]>([
   // Transform
   ["ADBE Opacity", [0, 100]],

@@ -25,7 +25,7 @@ const BASE = SAMPLES.div("models", "folder", "folder.aep");
 const ADOBE_BASE = SAMPLES.div("models", "import", "windows_stills.aep");
 const _ICC_AVAILABLE = default_icc_directories().some((d) => d.is_dir());
 
-// TODO(pyrt): shutil.copy - a local node:fs copy until pyrt has a shutil shim
+// NOTE(port): shutil.copy(src, dest) copies file bytes and permission bits; copyFileSync does the same for these file-to-file calls
 function shutil_copy(src: Path, dest: Path): Path {
   copyFileSync(fspath(src), fspath(dest));
   return dest;
@@ -39,7 +39,7 @@ function _import(project: any, path: Path, options: Record<string, any> = {}): a
   const opts = new ImportOptions(path);
   // setattr(opts, key, value) for each option: Object.assign runs the setters.
   Object.assign(opts, options);
-  // TODO(port): warnings.catch_warnings() + simplefilter("ignore") - pyrt warn only records, nothing is echoed here
+  // NOTE(port): warnings.simplefilter("ignore") only silences output; pyrt warn records without echoing, so import_file behaves the same
   return project.import_file(opts);
 }
 
@@ -164,7 +164,7 @@ function _tiff(path: Path, bits: number[], photometric: number, extra: number | 
   return path;
 }
 
-// TODO(port): zlib.crc32 is not exposed by node:zlib on every runtime; table-driven IEEE CRC-32 with the zlib polynomial
+// NOTE(port): table-driven IEEE CRC-32 (poly 0xedb88320) yields the same values as zlib.crc32
 const CRC_TABLE: number[] = Array.from({ length: 256 }, (_, n) => {
   let c = n;
   for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
@@ -188,7 +188,7 @@ function _png(path: Path, width: number, height: number): Path {
   };
 
   const header = struct.pack(">IIBBBBB", width, height, 8, 0, 0, 0, 0);
-  // TODO(port): deflateSync(level 9) bytes may differ from CPython zlib.compress(raw, 9)
+  // NOTE(port): both are zlib deflate at level 9; the tests only read the decoded pixels, never the compressed bytes
   path.write_bytes(
     concat(
       b("\x89PNG\r\n\x1a\n"),
@@ -235,15 +235,15 @@ test.each([
   const items = _layer_footage(project, asset);
   expect(py_bool(items)).toBe(true);
   const before = new Map(
-    items.map((item) => [item.id, [item.name, _pin_bytes(item.main_source)]] as const),
+    items.map((item) => [item.id, [item.name, _pin_bytes(item.main_source as FileSource)]] as const),
   );
   for (const item of items) {
-    item.main_source.reload();
+    (item.main_source as FileSource).reload();
   }
   for (const item of items) {
     const [name, pin] = getitem(before, item.id);
     expect(py_eq(item.name, name)).toBe(true);
-    expect(py_eq(_pin_bytes(item.main_source), pin)).toBe(true);
+    expect(py_eq(_pin_bytes(item.main_source as FileSource), pin)).toBe(true);
   }
   const out = tmp_path.div("reloaded.aep");
   project.save(out);
@@ -345,7 +345,7 @@ test.each([[ImportAsType.COMP], [ImportAsType.COMP_CROPPED_LAYERS]])("test_hidde
     _psd_record("top visible", [8, 8, 16, 16], { lyid: 13 }),
   ]);
   const comp = _import(_project(), path, { import_as: how });
-  const layers = new Map(comp.layers.map((layer: any) => [String(layer.name), layer] as const));
+  const layers = new Map<string, any>(comp.layers.map((layer: any) => [String(layer.name), layer] as const));
   expect(getitem(layers, "top visible").enabled).toBe(true);
   const group = getitem(layers, "hidden group");
   expect(group.enabled).toBe(false);
@@ -364,7 +364,7 @@ test("test_layer_ids_without_lyid_number_from_two", () => {
   _import(project, path, { import_as: ImportAsType.COMP });
   const ids = new Map(
     _layer_footage(project, path.name).map(
-      (item) => [String(item.main_source.layer_name), item.main_source._sspc.layer_id] as const,
+      (item) => [String((item.main_source as FileSource).layer_name), item.main_source._sspc.layer_id] as const,
     ),
   );
   expect(py_eq(ids, new Map([["a", 2], ["b", 3]]))).toBe(true);
@@ -537,11 +537,11 @@ function _clrs(source: FileSource): Map<string, any> {
     if (["epid", "apid"].includes(chunk.chunk_type)) {
       out.set(chunk.chunk_type, chunk.data);
     } else if (chunk.chunk_type === "empd") {
-      out.set("empd", at(chunks, index + 1).value);
+      out.set("empd", (at(chunks, index + 1) as any).value);
     } else if (chunk.chunk_type === "ipws") {
-      out.set("ipws", chunk.value);
+      out.set("ipws", (chunk as any).value);
     } else if (["mcsp", "ocsp"].includes(chunk.chunk_type)) {
-      out.set(chunk.chunk_type, at(chunks, index + 1).value);
+      out.set(chunk.chunk_type, (at(chunks, index + 1) as any).value);
     }
   }
   return out;
@@ -583,7 +583,7 @@ test("test_dpx_and_cineon_carry_no_profile", () => {
 });
 
 // skipif(not _ICC_AVAILABLE): the parametrized table runs only when the Adobe ICC profiles are installed
-const icc_test = _ICC_AVAILABLE ? test : test.skip;
+const icc_test: typeof test = _ICC_AVAILABLE ? test : test.skip;
 
 icc_test.each([
   // Bitmap: sRGB assigned, not taken as carried.

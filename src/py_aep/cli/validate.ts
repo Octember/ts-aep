@@ -313,7 +313,7 @@ export function compare_values(expected: any, parsed: any, tolerance = 0.001): b
 /**
  * Python `repr(x)` over the port's values, including dicts (Maps).
  *
- * TODO(pyrt): `repr()` has no dict (Map) form; this local helper stands in for it.
+ * NOTE(port): pyrt `repr()` has no dict (Map) form; this local helper matches CPython dict repr.
  * TODO(port): int/float distinction - a JS integer-valued number cannot tell
  * `1.0` (repr "1.0") from `1` (repr "1").
  */
@@ -757,8 +757,8 @@ export function compare_property(
   }
 
   // Compare individual keyframes
-  const exp_keyframes = dict_get(expected_prop, "keyframes", []);
-  const parsed_keyframes = dict_get(parsed_prop, "keyframes", []);
+  const exp_keyframes = dict_get(expected_prop, "keyframes", []) as Dict[];
+  const parsed_keyframes = dict_get(parsed_prop, "keyframes", []) as Dict[];
   for (const [ki, [exp_kf, parsed_kf]] of enumerate(zip(exp_keyframes, parsed_keyframes))) {
     compare_keyframe(exp_kf, parsed_kf, `${path}.keyframes[${ki}]`, result);
   }
@@ -1226,8 +1226,8 @@ export function compare_comp_item(
   _compare_fields(expected_item, parsed_comp, comp_mappings, path, "composition", result, "CompItem");
 
   // Compare layer counts
-  const exp_layers = dict_get(expected_item, "layers", []);
-  const parsed_layers = dict_get(parsed_comp, "layers", []);
+  const exp_layers = dict_get(expected_item, "layers", []) as Dict[];
+  const parsed_layers = dict_get(parsed_comp, "layers", []) as Dict[];
   if (len(exp_layers) !== len(parsed_layers)) {
     result.add_diff(`${path}.numLayers`, len(exp_layers), len(parsed_layers), "composition");
   }
@@ -1296,12 +1296,14 @@ export function compare_folder_hierarchy(
  * `PureWindowsPath(p).name`: the last path component, splitting on both `/` and `\`
  * on every host OS.
  *
- * TODO(pyrt): PureWindowsPath is not in pyrt; this local helper is the only user.
- * TODO(port): a drive-only or UNC-root path (`C:\`, `\\server\share`) yields the
- * drive or share name here, where Python gives "" for the root.
+ * NOTE(port): PureWindowsPath is not in pyrt; this local helper is the only user.
+ * NOTE(port): the UNC anchor (`\\server\share`) and the drive (`C:`) are stripped like
+ * PureWindowsPath's drive, so a root-only path gives "".
  */
 export function pure_windows_name(p: string): string {
-  const parts = p.replace(/^[A-Za-z]:/, "").split(/[\\/]/).filter((s) => s !== "");
+  const unc = /^[\\/]{2}[^\\/]+[\\/]+[^\\/]+/.exec(p);
+  const rest = unc ? p.slice(unc[0].length) : p.replace(/^[A-Za-z]:/, "");
+  const parts = rest.split(/[\\/]/).filter((s) => s !== "");
   return parts.length ? parts[parts.length - 1] : "";
 }
 
@@ -1381,8 +1383,8 @@ export function compare_footage_item(
     result.track_field("FootageSource", "missing_footage_path", exp_source.has("missingFootagePath"));
     // FileSource-specific fields
     if (exp_source.has("filePath")) {
-      const exp_file = getitem(exp_source, "filePath");
-      const parsed_file = dict_get(parsed_source, "file", "");
+      const exp_file = getitem(exp_source, "filePath") as string;
+      const parsed_file = dict_get(parsed_source, "file", "") as string;
       // Compare only the filename portion. PureWindowsPath splits on
       // both / and \ on every host OS (AE stores Windows-style paths,
       // and a parsed sequence frame path mixes the two); plain Path
@@ -1507,8 +1509,8 @@ export function compare_render_queue(
   verbose = false,
 ): void {
   /** Compare render queue items. */
-  const expected_items = dict_get(expected_rq, "items", []);
-  const parsed_items = dict_get(parsed_rq, "items", []);
+  const expected_items = dict_get(expected_rq, "items", []) as Dict[];
+  const parsed_items = dict_get(parsed_rq, "items", []) as Dict[];
 
   if (len(expected_items) !== len(parsed_items)) {
     result.add_diff("RenderQueue.numItems", len(expected_items), len(parsed_items), "renderqueue");
@@ -1550,8 +1552,8 @@ export function compare_render_queue(
     }
 
     // Compare output modules
-    const exp_oms = dict_get(exp_item, "outputModules", []);
-    const parsed_oms = dict_get(parsed_item, "output_modules", []);
+    const exp_oms = dict_get(exp_item, "outputModules", []) as Dict[];
+    const parsed_oms = dict_get(parsed_item, "output_modules", []) as Dict[];
 
     if (len(exp_oms) !== len(parsed_oms)) {
       result.add_diff(`${path}.numOutputModules`, len(exp_oms), len(parsed_oms), "renderqueue");
@@ -1577,7 +1579,7 @@ export function compare_render_queue(
       // Compare output module file (path comparison)
       result.track_field("OutputModule", "file", exp_om.has("file"));
       if (exp_om.has("file")) {
-        const exp_file = getitem(exp_om, "file");
+        const exp_file = getitem(exp_om, "file") as string;
         const parsed_file = dict_get(parsed_om, "file", "");
         if (py_bool(exp_file) && py_bool(parsed_file)) {
           // See the footage-source note: PureWindowsPath keeps
@@ -1620,7 +1622,7 @@ export function compare_viewer(
   };
   _compare_fields(expected_viewer, parsed_viewer, viewer_mappings, "Viewer", "viewer", result, "Viewer");
 
-  const exp_views = dict_get(expected_viewer, "views", []);
+  const exp_views = dict_get(expected_viewer, "views", []) as Dict[];
   const parsed_views: Dict[] = dict_get(parsed_viewer, "views", []);
   if (len(exp_views) !== len(parsed_views)) {
     result.add_diff("Viewer.views.length", len(exp_views), len(parsed_views), "viewer");
@@ -1629,8 +1631,8 @@ export function compare_viewer(
   for (const [i, [exp_view, parsed_view]] of enumerate(zip(exp_views, parsed_views))) {
     const path = `Viewer.views[${i}]`;
 
-    const exp_opts = dict_get(exp_view, "options", new Map());
-    const parsed_opts = dict_get(parsed_view, "options", new Map());
+    const exp_opts = dict_get(exp_view, "options", new Map()) as Dict;
+    const parsed_opts = dict_get(parsed_view, "options", new Map()) as Dict;
     const opts_path = `${path}.options`;
     const opts_mappings: Record<string, string> = {
       channels: "channels",

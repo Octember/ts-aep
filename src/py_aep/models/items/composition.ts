@@ -129,7 +129,7 @@ export function _grid_rate(cdta: CdtaChunk): number {
   return timebase / units_per_frame;
 }
 
-// TODO(pyrt): Fraction has no arithmetic operators. These two helpers are the
+// NOTE(port): exact bigint arithmetic, identical to Python's Fraction. These two helpers are the
 // exact rational `math.ceil` / `math.floor` over `num / den` (den > 0) that the
 // Python code takes of `Fraction` expressions.
 export function _ceil_ratio(num: bigint, den: bigint): number {
@@ -154,7 +154,7 @@ export function _floor_k_grid(k: number, cdta: CdtaChunk): number {
   return _floor_ratio(BigInt(k) * BigInt(timebase), BigInt(units_per_frame));
 }
 
-// TODO(pyrt): Fraction has no operators; exact `Fraction(n, d) * k >= rhs` for d > 0.
+// NOTE(port): exact bigint arithmetic, identical to Python's Fraction; exact `Fraction(n, d) * k >= rhs` for d > 0.
 export function _ratio_scaled_ge(n: number, d: number, k: number, rhs: number): boolean {
   return BigInt(n) * BigInt(k) >= BigInt(rhs) * BigInt(d);
 }
@@ -172,7 +172,7 @@ export function _frame_number(cdta: CdtaChunk, dividend: number, divisor: number
    * where the 16.16 rate reads 246.00001.
    */
   const [timebase, units_per_frame] = _grid(cdta);
-  // TODO(pyrt): Fraction arithmetic. `Fraction(dividend, divisor) * timebase /
+  // NOTE(port): exact bigint arithmetic, identical to Python's `Fraction(dividend, divisor) * timebase /
   // units_per_frame` is kept as an exact bigint numerator / denominator.
   let n = BigInt(dividend) * BigInt(timebase);
   let d = BigInt(divisor) * BigInt(units_per_frame);
@@ -253,7 +253,7 @@ export function _materialize_layer(layer: Layer): void {
   // stay synthesized, as when reading that release's own files).
   const unwritten = new Set(
     _VERSION_GATED_GROUPS.filter(([, part]) => !ae_writes(part, ae_major)).map(
-      ([match_name]) => match_name,
+      ([match_name]) => match_name as string,
     ),
   );
 
@@ -1237,7 +1237,7 @@ export class CompItem extends AVItem {
       for (const source_id of new_comp._source_ids_for_linking()) {
         const source = dict_get(project.items, source_id);
         if (source != null && "_used_in" in source) {
-          source._used_in.add(new_comp);
+          (source as any)._used_in.add(new_comp);
         }
       }
     }

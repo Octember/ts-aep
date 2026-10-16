@@ -266,7 +266,7 @@ describe("TestParentValidation", () => {
       [117.942286340599, 24.2820323027551, 0.0],
       [564.352447854375, -2.51288694035714, 50.0],
     ];
-    for (const [kf, exp] of zip(pos.keyframes, expected)) {
+    for (const [kf, exp] of zip(pos.keyframes as any[], expected)) {
       expect(approx(kf.value, exp, { abs: 1e-6 })).toBe(true);
     }
     const scale = [...lyr!.transform].find((p) => p.match_name === "ADBE Scale")!;

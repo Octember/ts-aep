@@ -32,6 +32,7 @@ import {
   zip,
 } from "../../src/pyrt/index.ts";
 import { approx } from "../../src/pyrt/pytest.ts";
+import type { Box } from "../../src/py_aep/resolvers/ai_bounds.ts";
 import { EMPTY_BOX, footage_size, read_ai_layer_bounds } from "../../src/py_aep/resolvers/ai_bounds.ts";
 import { read_ai_layers } from "../../src/py_aep/resolvers/ai_layers.ts";
 import { ai_layer_opti_boxes, parse_project } from "../helpers.ts";
@@ -69,7 +70,7 @@ const _measured_cached = lru_cache((path_: string): Map<string, number[] | null>
   const path = new Path(path_);
   const data = path.read_bytes();
   // Python wraps both reads in `warnings.catch_warnings()` with `simplefilter("ignore", UserWarning)`.
-  // TODO(pyrt): no catch_warnings / simplefilter shim; emulated by restoring the captured-warnings length afterwards.
+  // NOTE(port): pyrt warn() only records UserWarning-equivalents, so truncating the captured list equals simplefilter("ignore", UserWarning).
   const mark = warnings.length;
   let names: string[];
   let bounds: (number[] | null)[];
@@ -111,7 +112,7 @@ describe("TestProbeFixture", () => {
 
   test.each(_probe_layers())("test_derived_footage_size_matches_after_effects[%#]", (layer: string) => {
     const [_box, width, height] = getitem(_ae_layer_boxes(PROBE_AEP), layer);
-    expect(py_eq(footage_size(getitem(_measured(PROBE_PDF), layer)), [width, height])).toBe(true);
+    expect(py_eq(footage_size(getitem(_measured(PROBE_PDF), layer) as Box | null), [width, height])).toBe(true);
   });
 
   test("test_layer_with_no_artwork_measures_empty", () => {
@@ -145,7 +146,7 @@ describe("TestIllustratorFootageFixture", () => {
     const ae = _ae_layer_boxes(IMPORT_DIR.div("ai_choose_layer1_size.aep"));
     const box = getitem(_measured(ASSETS.div("ai.ai")), "Calque 1");
     expect(approx(box, getitem(ae, "Calque 1")[0], { abs: TOLERANCE })).toBe(true);
-    expect(py_eq(footage_size(box), [482, 437])).toBe(true);
+    expect(py_eq(footage_size(box as Box | null), [482, 437])).toBe(true);
   });
 
   test("test_empty_layer_matches_the_footage_import", () => {
@@ -188,7 +189,7 @@ describe("TestStandard14Fixture", () => {
 
   test.each(_std14_layers())("test_derived_footage_size_matches_after_effects[%#]", (layer: string) => {
     const [_box, width, height] = getitem(_ae_layer_boxes(STD14_AEP), layer);
-    expect(py_eq(footage_size(getitem(_measured(STD14_PDF), layer)), [width, height])).toBe(true);
+    expect(py_eq(footage_size(getitem(_measured(STD14_PDF), layer) as Box | null), [width, height])).toBe(true);
   });
 
   test("test_every_layer_is_byte_exact", () => {

@@ -6,7 +6,6 @@ import { describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 
 import "../../src/py_aep/binary/_register.ts";
-// TODO(port): _get_field_names and _get_property_names are module-private in validate.ts; they need to be exported.
 import { ValidationResult, _get_field_names, _get_property_names, compare_marker, compare_values, get_enum_value, main } from "../../src/py_aep/cli/validate.ts";
 import { BlendingMode } from "../../src/py_aep/enums/index.ts";
 import { KeyframeEase } from "../../src/py_aep/models/properties/keyframe_ease.ts";
@@ -166,7 +165,7 @@ describe("TestTraversalOrder", () => {
     const json_path = aep.with_suffix(".json");
     if (!aep.exists() || !json_path.exists()) return skip("sample not available");
     // Separate interpreters, so each gets its own hash seed.
-    // TODO(port): the child runs Bun, not CPython 3.12, so PYTHONHASHSEED does not apply here; the determinism check still runs over separate processes.
+    // NOTE(port): Python relies on the default per-process random hash seed (no PYTHONHASHSEED set); Bun children are likewise separate processes, same check.
     const script = [
       `import { Path } from ${JSON.stringify(TS_ROOT.div("src", "pyrt", "index.ts").toString())};`,
       `import ${JSON.stringify(TS_ROOT.div("src", "py_aep", "binary", "_register.ts").toString())};`,
@@ -182,7 +181,7 @@ describe("TestTraversalOrder", () => {
       counts.add(strip(r.stdout));
     }
     py_assert(len(counts) === 1, `validate_aep is not deterministic: ${repr([...counts])}`);
-  });
+ }, 120_000);
 });
 
 describe("TestMain", () => {

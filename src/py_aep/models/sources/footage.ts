@@ -284,8 +284,14 @@ export class FootageSource {
   declare _height: number;
   declare _pixel_aspect: number;
   declare _footage_missing: boolean;
-  declare _start_frame: number;
-  declare _end_frame: number;
+  // Type-only accessor stubs: the ChunkField descriptors below replace them, so
+  // FileSource can override with accessors as in Python.
+  get _start_frame(): number {
+    throw new Error("unreachable: replaced by ChunkField descriptor");
+  }
+  get _end_frame(): number {
+    throw new Error("unreachable: replaced by ChunkField descriptor");
+  }
 
   get _has_audio(): boolean {
     return this._sspc.audio_sample_rate > 0;

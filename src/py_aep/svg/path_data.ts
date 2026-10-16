@@ -321,7 +321,7 @@ export class _PathParser {
     // Correct out-of-range radii. hypot of the ratios, not a sum of
     // squares over rx * rx: a tiny radius (1e-200) would underflow the
     // square to 0.
-    // TODO(port): CPython math.hypot is correctly rounded (3.10+); Math.hypot may differ by 1 ulp.
+    // TODO(port): CPython math.hypot is correctly rounded (3.10+); V8 Math.hypot (also used for ln below) can differ by 1 ulp; needs a pyrt math.hypot shim.
     const s = Math.hypot(x1p / rx, y1p / ry);
     let co: number;
     if (s > 1) {

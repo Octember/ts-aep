@@ -5,8 +5,9 @@
 // iterfind: child, `*`, `.`, `..`, `//`, `[@a]`, `[@a='v']`, `[@a!='v']`, `[tag]`,
 // `[tag='v']`, `[.='v']`, `[n]`, `[last()]`, `[last()-n]`, `{ns}tag`, `{*}tag`, `{ns}*`).
 //
-// TODO(port): internal DTD entities whose replacement text contains markup are rejected
-// (ParseError); external entities / parameter entities are ignored.
+// TODO(port): internal DTD entities whose replacement text contains markup (`<` in the literal,
+// e.g. <!ENTITY e "<a/>">) raise ParseError here; expat parses the replacement as content.
+// External and parameter entities are ignored. Only affects DOCTYPE-bearing input.
 
 import { decode } from "./codecs.ts";
 import { IndexError, KeyError, SyntaxError_, ValueError } from "./errors.ts";

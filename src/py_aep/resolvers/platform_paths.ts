@@ -14,9 +14,10 @@ import { py_eq } from "../../pyrt/index.ts";
 export const _DRIVE = /^([A-Za-z]):[\\\/]?(.*)$/s;
 export const _UNC = /^(?:\\\\|\/\/)[^\\\/]+[\\\/]([^\\\/]+)[\\\/]?(.*)$/s;
 
-// TODO(pyrt): pathlib.PurePath / PurePosixPath / PureWindowsPath are not in pyrt. These are
-// local stand-ins covering only what this module uses: `.parts`, `/ "_"`, isinstance and type
-// identity. Parsing follows CPython's posixpath/ntpath for the inputs `_pure_path` admits.
+// NOTE(port): pyrt/pathlib.ts only has the host-flavour Path, so these are local stand-ins for
+// pathlib.PurePath / PurePosixPath / PureWindowsPath covering what this module uses (`.parts`,
+// `/ "_"`, isinstance, type identity). `_posix_parts` / `_windows_parts` below follow CPython's
+// posixpath / ntpath.splitroot for every input `_pure_path` admits; tests/ cover both flavours.
 export class PurePath {
   parts: string[];
 

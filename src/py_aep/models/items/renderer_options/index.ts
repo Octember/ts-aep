@@ -22,7 +22,7 @@ export type RendererOptions =
   // Unrecognised prda variants fall back to the empty base wrapper.
   | RendererOptionsBase;
 
-// TODO(port): this table reads the imported classes at module-evaluation time (Python does the same at import); a cycle back into this module would leave them undefined.
+// NOTE(port): Python builds _WRAPPERS at import time too, so the evaluation-time reads of the imported classes match.
 export const _WRAPPERS: Map<Function, typeof RendererOptionsBase> = new Map<Function, typeof RendererOptionsBase>([
   [ClassicPrdaChunk, ClassicRendererOptions],
   [AdvancedPrdaChunk, AdvancedRendererOptions],

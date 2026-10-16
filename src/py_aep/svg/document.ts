@@ -8,7 +8,7 @@ import type { Element } from "../../pyrt/etree.ts";
 export type { Element };
 
 // Python `NUMBER_RE.findall(value)`: the unanchored, global form of the (`^`-anchored) `NUMBER_RE` in _util.ts.
-// TODO(port): CPython's `\d` also matches non-ASCII decimal digits; this uses ASCII `\d`.
+// TODO(port): CPython `\d` matches non-ASCII decimal digits (viewBox="١ ٢ ٣ ٤"); this uses ASCII `\d` (as does NUMBER_RE in _util.ts) and pyrt float() rejects such digits (needs shim).
 export const NUMBER_FINDALL_RE = new RegExp(NUMBER_RE.source.slice(1), "g");
 
 // TYPE_CHECKING-only alias in Python.

@@ -3,7 +3,7 @@
 import { describe, expect, test } from "bun:test";
 
 import { raises } from "../../src/pyrt/pytest.ts";
-import { Path, TypeError_, ValueError, int, repr } from "../../src/pyrt/index.ts";
+import { Path, TypeError_, ValueError, int, py_eq, repr } from "../../src/pyrt/index.ts";
 import { ImportAsType } from "../../src/py_aep/enums/index.ts";
 import { CURRENT_VALUE, ImportOptions } from "../../src/py_aep/models/index.ts";
 import { COMP_CONVERSION_EXTENSIONS, get_file_format } from "../../src/py_aep/data/file_formats.ts";
@@ -11,7 +11,7 @@ import { COMP_CONVERSION_EXTENSIONS, get_file_format } from "../../src/py_aep/da
 describe("TestImportOptions", () => {
   test("test_constructor", () => {
     const opts = new ImportOptions(new Path("footage/shot.png"));
-    expect(opts.file.toString()).toBe(new Path("footage/shot.png").toString()); // TODO(pyrt): Path has no __eq__, so py_eq cannot compare Paths
+    expect(py_eq(opts.file, new Path("footage/shot.png"))).toBe(true);
     expect(opts.import_as).toBe(ImportAsType.FOOTAGE);
     expect(opts.sequence).toBe(false);
     expect(opts.force_alphabetical).toBe(false);
@@ -25,7 +25,7 @@ describe("TestImportOptions", () => {
   test("test_file_setter", () => {
     const opts = new ImportOptions(new Path("a.png"));
     opts.file = new Path("b.psd");
-    expect(opts.file.toString()).toBe(new Path("b.psd").toString()); // TODO(pyrt): Path has no __eq__, so py_eq cannot compare Paths
+    expect(py_eq(opts.file, new Path("b.psd"))).toBe(true);
   });
 
   test("test_import_as_setter", () => {

@@ -84,8 +84,8 @@ export function decode_pdf_text_string(raw: Uint8Array | string): string {
   if (raw instanceof Uint8Array) {
     return _from_bytes(raw);
   }
-  if (raw instanceof CosString && raw.cos_raw != null) {
-    return _from_bytes(raw.cos_raw);
+  if ((raw as any) instanceof CosString && (raw as any).cos_raw != null) {
+    return _from_bytes((raw as any).cos_raw);
   }
   return raw;
 }
@@ -97,8 +97,7 @@ export function _from_bytes(raw: Uint8Array): string {
   return _translate(decode(raw, "latin-1"), _OVERRIDES);
 }
 
-// TODO(pyrt): str.translate(dict) shim is missing from pyrt; local helper
-// maps each code point through the table and passes unmapped ones through.
+// NOTE(port): matches str.translate(dict): iterates code points, maps present keys, passes the rest through (no pyrt shim exists).
 export function _translate(text: string, table: Map<number, number>): string {
   let out = "";
   for (const ch of text) {

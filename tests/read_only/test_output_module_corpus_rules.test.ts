@@ -26,9 +26,9 @@ const _CORPUS: Path[] = sorted(
   (path: Path) => path.parts,
 );
 
-// TODO(port): pytest `ids=` (sample paths relative to SAMPLES_DIR) are not kept;
-// bun's `test.each` names come from `%#` (row index) only.
-test.each(_CORPUS.map((p) => [p]))("test_ae_written_state_passes_our_tables[%#]", (aep_path: Path) => {
+// pytest `ids=` are sample paths relative to SAMPLES_DIR; carried as the `%s` row label.
+const _SAMPLES_PREFIX = `${String(SAMPLES_DIR)}/`;
+test.each(_CORPUS.map((p) => [String(p).slice(_SAMPLES_PREFIX.length), p] as const))("test_ae_written_state_passes_our_tables[%s]", (_id: string, aep_path: Path) => {
   const app = parse_app(aep_path);
   for (const rqi of app.project.render_queue.items) {
     for (const om of rqi.output_modules) {

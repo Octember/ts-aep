@@ -22,13 +22,12 @@ import { BytesIO, OverflowError, ValueError, py_bool, warn, zip } from "../../py
 
 // `logging.getLogger(__name__)`: only the warning path is wired to pyrt `warn`.
 export const logger = {
-  debug() {},
-  info() {},
+  debug(..._args: any[]) {},
+  info(..._args: any[]) {},
   warning: (m: string) => warn(m),
 };
 
-// TODO(pyrt): no shim for `obj.__dict__`; the same non-enumerable Map per instance
-// that `ChunkField.__get__` / `__set__` (models/descriptors.ts) read and pop overrides from.
+// NOTE(port): `obj.__dict__[name] = value` is emulated by the same non-enumerable Map per instance that `ChunkField.__get__` / `__set__` (models/descriptors.ts) read and pop overrides from.
 export function instance_dict_set(obj: any, name: string, value: any): void {
   if (!Object.prototype.hasOwnProperty.call(obj, "__dict__")) {
     Object.defineProperty(obj, "__dict__", { value: new Map<string, any>(), enumerable: false });

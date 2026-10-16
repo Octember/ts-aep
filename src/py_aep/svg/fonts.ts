@@ -86,8 +86,8 @@ export const _GENERIC_FALLBACKS = new Map<string, readonly string[]>([
 ]);
 
 /**
- * TODO(port): pytest `monkeypatch.setattr(fonts_mod, "_font_dirs"/"_index", ...)`
- * cannot rebind ESM exports; tests use these hooks instead.
+ * NOTE(port): pytest `monkeypatch.setattr(fonts_mod, "_font_dirs"/"_index", ...)`
+ * cannot rebind ESM exports; tests use these hooks instead (same effect).
  */
 export function _set_font_dirs(fn: (() => Path[]) | null): void {
   _font_dirs_override = fn;
@@ -211,7 +211,7 @@ export function* _iter_faces(path: Path): Generator<[number, any]> {
     if (path.suffix.toLowerCase() === ".ttc") {
       fonts = [...opened.fonts];
     } else {
-      // TODO(port): TTFont(fontNumber=0) on a non-.ttc file; fontkit returns a
+      // NOTE(port): TTFont(fontNumber=0) on a non-.ttc file; fontkit returns a
       // collection (with `.fonts`) only for collection files, so take face 0.
       fonts = [opened.fonts ? opened.fonts[0] : opened];
     }
@@ -221,8 +221,8 @@ export function* _iter_faces(path: Path): Generator<[number, any]> {
   try {
     yield* enumerate(fonts);
   } finally {
-    // TODO(port): fontkit has no close(); it reads the whole file eagerly, so
-    // no handle is left open here. fontTools `lazy=True` had no such cost.
+    // NOTE(port): fontkit has no close(); it reads the whole file eagerly, so
+    // no handle is left open and `font.close()` has nothing to release.
   }
 }
 

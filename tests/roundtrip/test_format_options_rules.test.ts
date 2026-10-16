@@ -33,8 +33,7 @@ function _om(project: any): any {
 
 // -- back-reference wiring ---------------------------------------------------
 
-// TODO(pyrt): Path.relative_to is not in the pathlib shim; the pytest id is
-// the path relative to SAMPLES_DIR, built here from the parts lists.
+// NOTE(port): equals `str(p.relative_to(SAMPLES_DIR))` (test id only) for posix paths; relative_to is not in the pathlib shim.
 function _rel_id(p: Path): string {
   return p.parts.slice(SAMPLES_DIR.parts.length).join("/");
 }
@@ -134,8 +133,7 @@ test("test_stale_xml_options_reject_typed_and_raw_writes", () => {
   raises(
     RuntimeError,
     () => {
-      // TODO(port): `fo.params["k"] = v` on a ParamsDict (Map subclass) is
-      // translated as `.set`, which ParamsDict overrides with the detach guard.
+      // NOTE(port): `fo.params["k"] = v` is `.set`, which ParamsDict overrides (xml.ts __setitem__) with the detach guard.
       fo.params.set("ADBEVideoCodec", "5");
     },
     "detached",

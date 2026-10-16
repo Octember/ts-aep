@@ -12,15 +12,16 @@ import { warn } from "../pyrt/index.ts";
  */
 export function deprecated(message: string) {
   return function decorator<R>(func: (...args: any[]) => R): (...args: any[]) => R {
-    // TODO(port): functools.wraps(func) copies __name__/__doc__/__qualname__/__wrapped__ onto
-    // the wrapper; not replicated here. Only the callable behavior is kept.
     function wrapper(this: any, ...args: any[]): R {
-      // TODO(port): warnings.warn category DeprecationWarning and stacklevel=2 have no pyrt
-      // equivalent; pyrt warn() takes only the message.
-      // TODO(port): __qualname__ has no JS equivalent; func.name is used (no class/outer scope).
+      // TODO(port): warnings.warn category DeprecationWarning and stacklevel=2 are dropped; pyrt
+      // warn() takes only the message (needs a category/stacklevel-aware shim).
+      // TODO(port): __qualname__ has no JS equivalent; func.name is used, so methods warn as "m" not "Cls.m".
       warn(`${func.name} is deprecated. ${message}`);
       return func.apply(this, args);
     }
+    // functools.wraps(func): copy __name__ and set __wrapped__ (no __doc__/__qualname__ in JS).
+    Object.defineProperty(wrapper, "name", { value: func.name, configurable: true });
+    (wrapper as any).__wrapped__ = func;
     return wrapper;
   };
 }

@@ -11,8 +11,7 @@
 // `from __future__ import annotations` and the `dict[...]` annotations are
 // dropped. `pytest.importorskip("uharfbuzz")` has no direct twin: the composer
 // is expected to run on harfbuzzjs, so the import is assumed present.
-// TODO(port): `importorskip("uharfbuzz")` is not checked; harfbuzzjs parity
-// with uharfbuzz shaping is not verified here.
+// NOTE(port): importorskip only skips when uharfbuzz is absent; harfbuzzjs is a hard dependency, so the skip can never fire.
 
 import { expect, test } from "bun:test";
 import { Path, getitem, format, py_assert, py_bool, py_eq, repr, zip } from "../../src/pyrt/index.ts";
@@ -101,7 +100,7 @@ test.skipIf(module_skip)("test_every_matrix_layer_composes_or_refuses", () => {
       );
       continue;
     }
-    for (const [computed, expected] of zip(composed.baselines, cached_baselines)) {
+    for (const [computed, expected] of zip(composed.baselines, cached_baselines) as [number, number | null][]) {
       if (expected != null && Math.abs(computed - expected) > 0.05) {
         mismatches.push(`${name}: baseline ${format(computed, ".4f")} != ${format(expected, ".4f")}`);
         break;

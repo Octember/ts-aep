@@ -30,9 +30,9 @@ const _marker = deferred<typeof import("../../parsers/marker.ts")>(import.meta.u
 const _specialized_properties = deferred<typeof import("../../parsers/specialized_properties.ts")>(import.meta.url, "../../parsers/specialized_properties.ts");
 const _gradient = deferred<typeof import("../../parsers/gradient.ts")>(import.meta.url, "../../parsers/gradient.ts");
 
-// TODO(pyrt): no shim for `obj.__dict__`; the same non-enumerable Map per
-// instance that `ChunkField` (descriptors.ts) reads its overrides from.
-// `dimensions` is a read-only ChunkField, so a plain assignment would throw.
+// NOTE(port): emulates `obj.__dict__[name] = value` (Python line 167-168) with the same non-enumerable
+// per-instance Map that `ChunkField` (descriptors.ts) reads overrides from; `dimensions` is a read-only
+// ChunkField, so plain assignment would throw. Same effect as Python's instance-dict write.
 export function instance_dict_set(obj: any, name: string, value: any): void {
   if (!Object.prototype.hasOwnProperty.call(obj, "__dict__")) {
     Object.defineProperty(obj, "__dict__", { value: new Map<string, any>(), enumerable: false });

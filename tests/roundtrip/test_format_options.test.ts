@@ -21,8 +21,7 @@ import {
 import { make_tmp_path, raises } from "../../src/pyrt/pytest.ts";
 import { parse } from "../../src/py_aep/index.ts";
 import "../../src/py_aep/binary/_register.ts";
-// TODO(port): xml.etree.ElementTree (`import xml.etree.ElementTree as ET`) has no pyrt shim;
-// it only appears in annotations, so ET.Element is typed as `any` below.
+import type { Element as ETElement } from "../../src/pyrt/etree.ts";
 import { AudioCodec, CineonFileFormat, DnxResolution, Hdr10ColorPrimaries, JpegFormatType, MPEGAudioFormat, MPEGMultiplexer, MPEGMuxStreamCompatibility, MPEGProfile, OpenExrCompression, OutputChannels, OutputColorDepth, PngCompression, VideoCodec } from "../../src/py_aep/enums/index.ts";
 import { CineonFormatOptions, JpegFormatOptions, OpenExrFormatOptions, PngFormatOptions, TargaFormatOptions, TiffFormatOptions, XmlFormatOptions } from "../../src/py_aep/models/renderqueue/format_options/index.ts";
 import type { OutputModule } from "../../src/py_aep/models/renderqueue/output_module.ts";
@@ -327,11 +326,10 @@ class TestMPEGProfile {
   static H264 = FORMAT_DIR.div("h.264");
   static KEY = "ADBEVideoMPEGProfile";
 
-  static _elements(opts: XmlFormatOptions, key: string): any[] {
-    // TODO(port): ET.Element.iter / find / text / attrib have no shim yet; typed as any.
+  static _elements(opts: XmlFormatOptions, key: string): ETElement[] {
     const root = opts._xml_root;
     py_assert(root != null);
-    const out: any[] = [];
+    const out: ETElement[] = [];
     for (const elem of root.iter("ExporterParam")) {
       const ident = elem.find("ParamIdentifier");
       if (ident != null && ident.text === key) out.push(elem);
@@ -870,7 +868,7 @@ describe("TestRoundtripXmlParamsDict", () => {
 
 /** The PNG options' alpha flag, channel count and bits per channel. */
 function _png_option_fields(om: OutputModule): [boolean, number, number] {
-  const body = om.format_options._body;
+  const body = (om.format_options as PngFormatOptions)._body;
   return [body.has_alpha, body.channel_count, body.bit_depth];
 }
 

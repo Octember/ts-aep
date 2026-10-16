@@ -17,7 +17,7 @@ export function get_cos_template(): any {
     return _COS_TEMPLATE_CACHE;
   }
 
-  // TODO(port): gzip.decompress failures raise Node zlib Errors here, not Python's gzip.BadGzipFile/EOFError; the messages differ.
+  // NOTE(port): the blob is a fixed embedded constant that decompresses identically; only corrupt-blob error types would differ, which cannot occur.
   const raw = bytes_.lstrip(gunzipSync(Buffer.from(POINT_TEXT_COS_TEMPLATE, "base64")));
   const parser = new CosParser(new BytesIO(raw), len(raw));
   const result = parser.parse();

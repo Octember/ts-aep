@@ -4,8 +4,8 @@ import { describe, expect, test } from "bun:test";
 
 import { approx, raises } from "../../src/pyrt/pytest.ts";
 import { BytesIO, b, bytes_, py_eq } from "../../src/pyrt/index.ts";
-import { CosParser, IndirectObject, IndirectReference, Stream, // TODO(pyrt): Python's builtin SyntaxError is not in pyrt yet; cos.ts exports the shim SyntaxError_.
-  SyntaxError_ } from "../../src/py_aep/cos/cos.ts";
+// NOTE(port): SyntaxError_ is pyrt's shim for Python's builtin SyntaxError, re-exported by cos.ts
+import { CosParser, IndirectObject, IndirectReference, Stream, SyntaxError_ } from "../../src/py_aep/cos/cos.ts";
 import { serialize } from "../../src/py_aep/cos/serializer.ts";
 
 describe("TestCosParserPrimitives", () => {

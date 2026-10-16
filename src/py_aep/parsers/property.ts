@@ -382,8 +382,7 @@ export function _reclass_override_leaves(group: PropertyGroup): void {
     if (child instanceof PropertyGroup) {
       _reclass_override_leaves(child);
     } else if (child.constructor === _property().Property) {
-      // TODO(port): `child.__class__ = ...` is a prototype swap in JS too, but
-      // V8 deoptimizes objects whose prototype changes after construction.
+      // NOTE(port): setPrototypeOf is the JS twin of `child.__class__ = ...`; same semantics, only a V8 perf cost.
       Object.setPrototypeOf(child, _property()._EssentialOverrideProperty.prototype);
     }
   }

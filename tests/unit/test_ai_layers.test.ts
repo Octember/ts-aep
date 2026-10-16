@@ -33,9 +33,7 @@ function _pdf(oc_properties: string): Uint8Array {
   );
 }
 
-// TODO(port): AiLayer is a NamedTuple in Python, so `==` compares its fields.
-// The TS class has no `__eq__`, so py_eq would compare identities. Compare the
-// iterated fields instead.
+// NOTE(port): AiLayer is a NamedTuple, so Python's `==` compares its fields; the TS class has no `__eq__`, so compare the iterated fields (same result).
 function as_fields(layers: AiLayer[]): (number | string | boolean)[][] {
   return layers.map((layer) => [...layer]);
 }

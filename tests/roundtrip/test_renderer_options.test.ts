@@ -21,34 +21,34 @@ describe("TestRoundtripRendererOptions", () => {
   test("test_classic_shadow_map", () => {
     const tmp_path = make_tmp_path();
     const app = parse_aep(COMPOSITION_DIR.div("renderer_classic_3d.aep"));
-    app.project.compositions.at(0)!.renderer_options.shadow_map_resolution = ShadowMapResolution.RES_4000;
+    (app.project.compositions.at(0)!.renderer_options as any).shadow_map_resolution = ShadowMapResolution.RES_4000;
 
     const comp = _reparse(app, tmp_path);
 
-    expect(comp.renderer_options.shadow_map_resolution).toBe(ShadowMapResolution.RES_4000);
+    expect((comp.renderer_options as any).shadow_map_resolution).toBe(ShadowMapResolution.RES_4000);
   });
 
   test("test_cinema_4d_quality", () => {
     const tmp_path = make_tmp_path();
     const app = parse_aep(COMPOSITION_DIR.div("renderer_cinema_4d.aep"));
-    app.project.compositions.at(0)!.renderer_options.quality = 99;
+    (app.project.compositions.at(0)!.renderer_options as any).quality = 99;
 
-    expect(_reparse(app, tmp_path).renderer_options.quality).toBe(99);
+    expect((_reparse(app, tmp_path).renderer_options as any).quality).toBe(99);
   });
 
   test("test_advanced_scalars", () => {
     const tmp_path = make_tmp_path();
     const app = parse_aep(COMPOSITION_DIR.div("renderer_advanced_3d.aep"));
-    const opts = app.project.compositions.at(0)!.renderer_options;
+    const opts = app.project.compositions.at(0)!.renderer_options as any;
     opts.quality = 125;
     opts.resolution = EnvironmentLightShadowResolution.HALF;
     opts.smoothness = 20;
 
     const comp = _reparse(app, tmp_path);
 
-    expect(comp.renderer_options.quality).toBe(125);
-    expect(comp.renderer_options.resolution).toBe(EnvironmentLightShadowResolution.HALF);
-    expect(comp.renderer_options.smoothness).toBe(20);
+    expect((comp.renderer_options as any).quality).toBe(125);
+    expect((comp.renderer_options as any).resolution).toBe(EnvironmentLightShadowResolution.HALF);
+    expect((comp.renderer_options as any).smoothness).toBe(20);
   });
 
   /** Pixel values survive a save, to float32 precision.
@@ -61,14 +61,14 @@ describe("TestRoundtripRendererOptions", () => {
   test("test_advanced_casting_box", () => {
     const tmp_path = make_tmp_path();
     const app = parse_aep(COMPOSITION_DIR.div("renderer_advanced_3d.aep"));
-    const opts = app.project.compositions.at(0)!.renderer_options;
+    const opts = app.project.compositions.at(0)!.renderer_options as any;
     opts.casting_box_size = 640.0;
     opts.casting_box_center = [100.0, 200.0, -300.0];
 
     const comp = _reparse(app, tmp_path);
 
-    expect(approx(comp.renderer_options.casting_box_size, 640.0)).toBe(true);
-    expect(approx(comp.renderer_options.casting_box_center, [100.0, 200.0, -300.0])).toBe(true);
+    expect(approx((comp.renderer_options as any).casting_box_size, 640.0)).toBe(true);
+    expect(approx((comp.renderer_options as any).casting_box_center, [100.0, 200.0, -300.0])).toBe(true);
   });
 
   test("test_mapping_write_round_trips", () => {
@@ -89,8 +89,8 @@ describe("TestRoundtripRendererOptions", () => {
 
     const comp = _reparse(app, tmp_path);
 
-    expect(comp.renderer_options.quality).toBe(7);
-    expect(comp.renderer_options.smoothness).toBe(2);
+    expect((comp.renderer_options as any).quality).toBe(7);
+    expect((comp.renderer_options as any).smoothness).toBe(2);
   });
 });
 
@@ -99,7 +99,7 @@ describe("TestRendererOptionsValidation", () => {
     const comp = parse_aep(COMPOSITION_DIR.div("renderer_advanced_3d.aep")).project.compositions.at(0)!;
 
     raises(ValueError, () => {
-      comp.renderer_options.quality = 126;
+      (comp.renderer_options as any).quality = 126;
     });
   });
 
@@ -116,7 +116,7 @@ describe("TestRendererOptionsValidation", () => {
     const comp = parse_aep(COMPOSITION_DIR.div("renderer_classic_3d.aep")).project.compositions.at(0)!;
 
     raises(ValueError, () => {
-      comp.renderer_options.shadow_map_resolution = 9;
+      (comp.renderer_options as any).shadow_map_resolution = 9;
     });
   });
 
@@ -124,7 +124,7 @@ describe("TestRendererOptionsValidation", () => {
     const comp = parse_aep(COMPOSITION_DIR.div("renderer_advanced_3d.aep")).project.compositions.at(0)!;
 
     raises(ValueError, () => {
-      comp.renderer_options.casting_box_size = bad;
+      (comp.renderer_options as any).casting_box_size = bad;
     });
   });
 
@@ -134,7 +134,7 @@ describe("TestRendererOptionsValidation", () => {
       const comp = parse_aep(COMPOSITION_DIR.div("renderer_advanced_3d.aep")).project.compositions.at(0)!;
 
       raises(ValueError, () => {
-        comp.renderer_options.casting_box_center = bad;
+        (comp.renderer_options as any).casting_box_center = bad;
       });
     },
   );
@@ -143,7 +143,7 @@ describe("TestRendererOptionsValidation", () => {
     const comp = parse_aep(COMPOSITION_DIR.div("renderer_advanced_3d.aep")).project.compositions.at(0)!;
 
     raises(ValueError, () => {
-      comp.renderer_options.smoothness = 21;
+      (comp.renderer_options as any).smoothness = 21;
     });
   });
 });

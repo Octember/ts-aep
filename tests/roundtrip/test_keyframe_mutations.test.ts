@@ -54,7 +54,7 @@ function _roundtrip(app: Application, tmp_path: Path): Application {
 function _prop(app: Application, match_name: string, kw: { comp?: number; layer?: number } = {}): Property {
   const { comp = 0, layer = 0 } = kw;
   const lay = app.project.compositions[comp].layers[layer];
-  return [...lay.transform].find((p) => p.match_name === match_name)!;
+  return [...lay.transform].find((p) => p.match_name === match_name)! as Property;
 }
 
 /** Compare two lists of [x, y] pairs within tolerance. */
@@ -67,7 +67,7 @@ function _find_static(app: Application, match_name: string): [Property | null, n
   for (const [ci, comp] of app.project.compositions.entries()) {
     for (const [li, lay] of comp.layers.entries()) {
       for (const p of lay.transform) {
-        if (p.match_name === match_name && !py_bool(p.keyframes)) return [p, ci, li];
+        if (p.match_name === match_name && !py_bool(p.keyframes)) return [p as Property, ci, li];
       }
     }
   }
@@ -146,7 +146,7 @@ describe("TestKeyframeValuePersistence", () => {
     const tmp_path = make_tmp_path();
     const app = _fresh("keyframe_LINEAR.aep");
     const pos = _prop(app, "ADBE Position");
-    const v = [...pos.keyframes[0].value];
+    const v = [...(pos.keyframes[0].value as number[])];
     v[0] += 7.0;
     pos.keyframes[0].value = v;
     const app2 = _roundtrip(app, tmp_path);
@@ -425,7 +425,7 @@ describe("TestSetValueAtTime", () => {
     const pos = _prop(app, "ADBE Position");
     const n0 = pos.keyframes.length;
     const t0 = pos.keyframes[0].time;
-    const target = [11.0, 22.0, 0.0].slice(0, pos.keyframes[0].value.length);
+    const target = [11.0, 22.0, 0.0].slice(0, (pos.keyframes[0].value as number[]).length);
     pos.set_value_at_time(t0, target);
     expect(pos.keyframes.length).toBe(n0);
     expect(approx(pos.keyframes[0].value, target)).toBe(true);
@@ -437,7 +437,7 @@ describe("TestSetValueAtTime", () => {
     const pos = _prop(app, "ADBE Position");
     const n0 = pos.keyframes.length;
     const t = pos.keyframes[0].time + 0.25;
-    const target = [99.0, 88.0, 0.0].slice(0, pos.keyframes[0].value.length);
+    const target = [99.0, 88.0, 0.0].slice(0, (pos.keyframes[0].value as number[]).length);
     pos.set_value_at_time(t, target);
     expect(pos.keyframes.length).toBe(n0 + 1);
     const app2 = _roundtrip(app, tmp_path);
@@ -1018,7 +1018,7 @@ describe("TestParallelValueAliasing", () => {
     const app2 = _roundtrip(app, tmp_path);
     const comp2 = get_comp(app2.project, "layer_multiple_markers");
     const mp2 = comp2.layers[0].__getitem__("ADBE Marker");
-    const by_comment = new Map(mp2.keyframes.map((k) => [k.value.comment, k.value] as const));
+    const by_comment = new Map(mp2.keyframes.map((k) => [(k.value as MarkerValue).comment, k.value as MarkerValue] as const));
     expect(py_eq(getitem(by_comment, "first_only").params, new Map())).toBe(true);
     expect(getitem(by_comment, "first_only")._nmhd.num_params).toBe(0);
     expect(
@@ -1276,7 +1276,7 @@ describe("TestRoundtripRoving", () => {
     }
     prop.keyframes[0].out_spatial_tangent = [0.0, bow, 0.0];
     prop.keyframes[1].in_spatial_tangent = [0.0, bow, 0.0];
-    return prop;
+    return prop as Property;
   }
 
   /**
@@ -1405,7 +1405,7 @@ describe("TestRoundtripAutoBezierWrites", () => {
       keyframe.in_interpolation_type = KeyframeInterpolationType.BEZIER;
       keyframe.out_interpolation_type = KeyframeInterpolationType.BEZIER;
     }
-    return prop;
+    return prop as Property;
   }
 
   test("test_spatial_auto_bezier_writes_the_derived_tangents", () => {

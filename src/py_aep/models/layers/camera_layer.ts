@@ -71,6 +71,15 @@ export class CameraLayer extends Layer {
     return round(default_camera_zoom(comp.width, comp.pixel_aspect), 8);
   }
 
+  // Python `# type: ignore[override]`: keyword shape differs from Layer._new's.
+  static _new(kw: {
+    name: string;
+    layer_id: number;
+    duration: number;
+    containing_comp: CompItem;
+    effect_param_defs?: Map<string, Map<string, Map<string, any>>> | null;
+  }): CameraLayer;
+  static _new(...args: any[]): any;
   static _new(kw: {
     name: string;
     layer_id: number;
@@ -85,7 +94,6 @@ export class CameraLayer extends Layer {
       containing_comp,
       effect_param_defs = null,
     } = kw;
-    // TODO(port): Python `# type: ignore[override]` — this keyword shape differs from Layer._new's
     const name_cps = Array.from(name);
     const layer_name = name_cps.length > 31 ? name_cps.slice(0, 31).join("") : name;
     const ldta = new LdtaChunk({

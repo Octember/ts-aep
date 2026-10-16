@@ -28,8 +28,7 @@ function _rqi(project: any): any {
 describe("TestStrictBools", () => {
   test("test_rqi_bool_settings_reject_non_bool", () => {
     const rqi = _rqi(parse_project_fresh(SAMPLE));
-    // TODO(port): `rqi.settings["Skip Existing Files"] = "no"` translated as __setitem__ (rulebook gap:
-    // no rule for item assignment; same convention as test_format_options.test.ts).
+    // NOTE(port): Python `settings[k] = v` is SettingsView.__setitem__ (item assignment on a __setitem__ class).
     raises(TypeError_, () => {
       rqi.settings.__setitem__("Skip Existing Files", "no");
     });
@@ -54,7 +53,7 @@ describe("TestStrictBools", () => {
       "Include Source XMP Metadata",
       "Video Output",
     ]) {
-      // TODO(port): `om.settings[key] = "no"` translated as __setitem__ (rulebook gap: no rule for item assignment).
+      // NOTE(port): Python `settings[k] = v` is SettingsView.__setitem__.
       raises(TypeError_, () => {
         om.settings.__setitem__(key, "no");
       });

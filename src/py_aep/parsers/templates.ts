@@ -43,9 +43,23 @@ export const _HEADER_SIZE = 32; // bytes before first item
 // OutputModuleSettingsItem is 128 bytes (same in prefs and AEP).
 export const _OM_PREFS_ITEM_SIZE = 128;
 
-// TODO(pyrt): no `re` shim; local helper standing in for Python's re.escape.
+// NOTE(port): no `re` shim exists; this helper stands in for Python's re.escape. Only used to build
+// patterns whose escaped metacharacters are identical in Python and JS (`u`-flag safe).
 export function _re_escape(text: string): string {
   return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+// int() of a run of Unicode decimal digits (\p{Nd}), as Python's int() accepts.
+// Nd characters come in contiguous runs of ten starting at digit zero.
+function _int_nd(digits: string): number {
+  let ascii = "";
+  for (const ch of digits) {
+    const cp = ch.codePointAt(0)!;
+    let start = cp;
+    while (/^\p{Nd}$/u.test(String.fromCodePoint(start - 1))) start--;
+    ascii += String((cp - start) % 10);
+  }
+  return int(ascii);
 }
 
 /**
@@ -163,10 +177,10 @@ export function parse_render_templates(prefs_dir: Path): [RenderSettingsItem[], 
 /** Extract an integer value from a preference line like `"Key" = 42`. */
 export function _extract_int_value(lines: string[], key: string): number | null {
   for (const line of lines) {
-    // TODO(port): Python `\d` matches Unicode decimal digits; JS `\d` is ASCII only.
-    const m = new RegExp('^\\s*"' + _re_escape(key) + '"\\s*=\\s*"?(\\d+)"?').exec(line);
+    // Python `\d` matches Unicode decimal digits (\p{Nd}); `int()` accepts them too.
+    const m = new RegExp('^\\s*"' + _re_escape(key) + '"\\s*=\\s*"?(\\p{Nd}+)"?', "u").exec(line);
     if (m) {
-      return int(m[1]);
+      return _int_nd(m[1]);
     }
   }
   return null;
@@ -272,8 +286,8 @@ export function _parse_id_hex_section(text: string, section: string, id_prefix: 
   let current_idx: number | null = null;
   let current_value = "";
   let in_section = false;
-  // TODO(port): Python `\d` matches Unicode decimal digits; JS `\d` is ASCII only.
-  const entry_re = new RegExp('^\\s*"' + _re_escape(id_prefix) + ' ID #\\s*(\\d+)"\\s*=\\s*([^\\n]+)');
+  // Python `\d` matches Unicode decimal digits (\p{Nd}).
+  const entry_re = new RegExp('^\\s*"' + _re_escape(id_prefix) + ' ID #\\s*(\\p{Nd}+)"\\s*=\\s*([^\\n]+)', "u");
 
   // Python `nonlocal current_idx`: the closure writes the enclosing `let`.
   function _flush(): void {
@@ -300,7 +314,7 @@ export function _parse_id_hex_section(text: string, section: string, id_prefix: 
     const m = entry_re.exec(stripped);
     if (m) {
       _flush();
-      current_idx = int(m[1]);
+      current_idx = _int_nd(m[1]);
       const value = strip(m[2]);
       current_value = value.endsWith("\\") ? value.slice(0, -1) : value;
       continue;
@@ -319,10 +333,10 @@ export function _parse_id_hex_section(text: string, section: string, id_prefix: 
 export function _extract_template_names(lines: string[]): Map<number, string> {
   const names = new Map<number, string>();
   for (const line of lines) {
-    // TODO(port): Python `\d` matches Unicode decimal digits; JS `\d` is ASCII only.
-    const m = /^\s*"Output Module Spec Strings Name #?(\d+)"\s*=\s*"([^\n]*)"/.exec(line);
+    // Python `\d` matches Unicode decimal digits (\p{Nd}).
+    const m = /^\s*"Output Module Spec Strings Name #?(\p{Nd}+)"\s*=\s*"([^\n]*)"/u.exec(line);
     if (m) {
-      const idx = int(m[1]);
+      const idx = _int_nd(m[1]);
       names.set(idx, m[2]);
     }
   }

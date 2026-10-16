@@ -29,7 +29,7 @@ function _layer(project: Project, name: string): Layer {
 }
 
 function _curves(layer: Layer, index = 0): Property {
-  const prop = (layer.__getitem__("ADBE Effect Parade") as PropertyGroup).properties[index]
+  const prop = ((layer.__getitem__("ADBE Effect Parade") as PropertyGroup).properties[index] as PropertyGroup)
     .__getitem__("ADBE CurvesCustom-0001");
   py_assert(prop instanceof Property);
   return prop as Property;
@@ -88,5 +88,5 @@ test("test_moving_a_key_moves_its_curves", () => {
   const moved = keys.at(-1)!.value;
   expect(keys.at(-1)!.time).toBe(3.0);
   expect(moved instanceof Curves).toBe(true);
-  expect(py_eq(getitem(moved.channels, "rgb").points, getitem(first.channels, "rgb").points)).toBe(true);
+  expect(py_eq((getitem((moved as any).channels, "rgb") as any).points, (getitem((first as any).channels, "rgb") as any).points)).toBe(true);
 });

@@ -642,7 +642,7 @@ export class Preferences {
     validate_name(section_name);
     validate_name(key_name);
     _validate_pref_type(pref_type);
-    // TODO(port): Python's isinstance(value, (int, float)) also admits bool (bool subclasses int).
+    // NOTE(port): matches Python: isinstance(value, (int, float)) admits bool, and so does this check.
     if (typeof value !== "number" && typeof value !== "boolean") {
       throw new TypeError_(`expected a number, got ${py_type_name(value)}`);
     }

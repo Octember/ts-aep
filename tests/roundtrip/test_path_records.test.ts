@@ -24,9 +24,11 @@ const BASE = SAMPLES.div("models", "folder", "folder.aep");
 /** The platform this machine is not. */
 const OTHER = process.platform === "win32" ? "macos" : "windows";
 
-// TODO(port): shutil.copy2 is not in pyrt; copyFileSync copies the bytes but not the mtime.
+// shutil.copy2: bytes plus atime/mtime.
 function copy2(src: Path, dst: Path): void {
   fs.copyFileSync(fspath(src), fspath(dst));
+  const st = fs.statSync(fspath(src));
+  fs.utimesSync(fspath(dst), st.atime, st.mtime);
 }
 
 function _counts(source: FileSource): [number, number] {

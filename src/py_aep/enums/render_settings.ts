@@ -24,7 +24,7 @@ export const FrameRateSetting = int_enum(
   },
   {
     /** ExtendScript STRING format label. */
-    // TODO(port): Python `label` is a property on IntEnum members; members are plain numbers here, so it is a method called as `FrameRateSetting.label(member)`.
+    // NOTE(port): Python `@property label` is `FrameRateSetting.label(member)` per RULEBOOK enum mapping (members are plain numbers); same labels-table lookup.
     label(self: number): string {
       return getitem(_FRAME_RATE_SETTING_LABELS, self);
     },
@@ -54,7 +54,7 @@ export const RenderQuality = int_enum(
   },
   {
     /** ExtendScript STRING format label. */
-    // TODO(port): Python `label` is a property on IntEnum members; members are plain numbers here, so it is a method called as `RenderQuality.label(member)`.
+    // NOTE(port): Python `@property label` is `RenderQuality.label(member)` per RULEBOOK enum mapping (members are plain numbers); same labels-table lookup.
     label(self: number): string {
       return getitem(_RENDER_QUALITY_LABELS, self);
     },
@@ -95,7 +95,7 @@ export const FieldRender = int_enum(
   },
   {
     /** ExtendScript STRING format label. */
-    // TODO(port): Python `label` is a property on IntEnum members; members are plain numbers here, so it is a method called as `FieldRender.label(member)`.
+    // NOTE(port): Python `@property label` is `FieldRender.label(member)` per RULEBOOK enum mapping (members are plain numbers); same labels-table lookup.
     label(self: number): string {
       return getitem(_FIELD_RENDER_LABELS, self);
     },
@@ -128,7 +128,7 @@ export const PulldownSetting = int_enum(
   },
   {
     /** ExtendScript STRING format label. */
-    // TODO(port): Python `label` is a property on IntEnum members; members are plain numbers here, so it is a method called as `PulldownSetting.label(member)`.
+    // NOTE(port): Python `@property label` is `PulldownSetting.label(member)` per RULEBOOK enum mapping (members are plain numbers); same labels-table lookup.
     label(self: number): string {
       return getitem(_PULLDOWN_SETTING_LABELS, self);
     },
@@ -161,7 +161,7 @@ export const MotionBlurSetting = int_enum(
   },
   {
     /** ExtendScript STRING format label. */
-    // TODO(port): Python `label` is a property on IntEnum members; members are plain numbers here, so it is a method called as `MotionBlurSetting.label(member)`.
+    // NOTE(port): Python `@property label` is `MotionBlurSetting.label(member)` per RULEBOOK enum mapping (members are plain numbers); same labels-table lookup.
     label(self: number): string {
       return getitem(_MOTION_BLUR_SETTING_LABELS, self);
     },
@@ -196,7 +196,7 @@ export const FrameBlendingSetting = int_enum(
   },
   {
     /** ExtendScript STRING format label. */
-    // TODO(port): Python `label` is a property on IntEnum members; members are plain numbers here, so it is a method called as `FrameBlendingSetting.label(member)`.
+    // NOTE(port): Python `@property label` is `FrameBlendingSetting.label(member)` per RULEBOOK enum mapping (members are plain numbers); same labels-table lookup.
     label(self: number): string {
       return getitem(_FRAME_BLENDING_SETTING_LABELS, self);
     },
@@ -231,7 +231,7 @@ export const EffectsSetting = int_enum(
   },
   {
     /** ExtendScript STRING format label. */
-    // TODO(port): Python `label` is a property on IntEnum members; members are plain numbers here, so it is a method called as `EffectsSetting.label(member)`.
+    // NOTE(port): Python `@property label` is `EffectsSetting.label(member)` per RULEBOOK enum mapping (members are plain numbers); same labels-table lookup.
     label(self: number): string {
       return getitem(_EFFECTS_SETTING_LABELS, self);
     },
@@ -267,7 +267,7 @@ export const ProxyUseSetting = int_enum(
   },
   {
     /** ExtendScript STRING format label. */
-    // TODO(port): Python `label` is a property on IntEnum members; members are plain numbers here, so it is a method called as `ProxyUseSetting.label(member)`.
+    // NOTE(port): Python `@property label` is `ProxyUseSetting.label(member)` per RULEBOOK enum mapping (members are plain numbers); same labels-table lookup.
     label(self: number): string {
       return getitem(_PROXY_USE_SETTING_LABELS, self);
     },
@@ -302,7 +302,7 @@ export const SoloSwitchesSetting = int_enum(
   },
   {
     /** ExtendScript STRING format label. */
-    // TODO(port): Python `label` is a property on IntEnum members; members are plain numbers here, so it is a method called as `SoloSwitchesSetting.label(member)`.
+    // NOTE(port): Python `@property label` is `SoloSwitchesSetting.label(member)` per RULEBOOK enum mapping (members are plain numbers); same labels-table lookup.
     label(self: number): string {
       return getitem(_SOLO_SWITCHES_SETTING_LABELS, self);
     },
@@ -335,7 +335,7 @@ export const GuideLayers = int_enum(
   },
   {
     /** ExtendScript STRING format label. */
-    // TODO(port): Python `label` is a property on IntEnum members; members are plain numbers here, so it is a method called as `GuideLayers.label(member)`.
+    // NOTE(port): Python `@property label` is `GuideLayers.label(member)` per RULEBOOK enum mapping (members are plain numbers); same labels-table lookup.
     label(self: number): string {
       return getitem(_GUIDE_LAYERS_LABELS, self);
     },
@@ -368,7 +368,7 @@ export const DiskCacheSetting = int_enum(
   },
   {
     /** ExtendScript STRING format label. */
-    // TODO(port): Python `label` is a property on IntEnum members; members are plain numbers here, so it is a method called as `DiskCacheSetting.label(member)`.
+    // NOTE(port): Python `@property label` is `DiskCacheSetting.label(member)` per RULEBOOK enum mapping (members are plain numbers); same labels-table lookup.
     label(self: number): string {
       return getitem(_DISK_CACHE_SETTING_LABELS, self);
     },
@@ -403,7 +403,7 @@ export const ColorDepthSetting = int_enum(
   },
   {
     /** ExtendScript STRING format label. */
-    // TODO(port): Python `label` is a property on IntEnum members; members are plain numbers here, so it is a method called as `ColorDepthSetting.label(member)`.
+    // NOTE(port): Python `@property label` is `ColorDepthSetting.label(member)` per RULEBOOK enum mapping (members are plain numbers); same labels-table lookup.
     label(self: number): string {
       return getitem(_COLOR_DEPTH_SETTING_LABELS, self);
     },
@@ -444,7 +444,7 @@ export const TimeSpanSource = int_enum(
   },
   {
     /** ExtendScript STRING format label. */
-    // TODO(port): Python `label` is a property on IntEnum members; members are plain numbers here, so it is a method called as `TimeSpanSource.label(member)`.
+    // NOTE(port): Python `@property label` is `TimeSpanSource.label(member)` per RULEBOOK enum mapping (members are plain numbers); same labels-table lookup.
     label(self: number): string {
       return getitem(_TIME_SPAN_SOURCE_LABELS, self);
     },
@@ -480,7 +480,7 @@ export const PostRenderActionSetting = int_enum(
   },
   {
     /** ExtendScript STRING format label. */
-    // TODO(port): Python `label` is a property on IntEnum members; members are plain numbers here, so it is a method called as `PostRenderActionSetting.label(member)`.
+    // NOTE(port): Python `@property label` is `PostRenderActionSetting.label(member)` per RULEBOOK enum mapping (members are plain numbers); same labels-table lookup.
     label(self: number): string {
       return getitem(_POST_RENDER_ACTION_SETTING_LABELS, self);
     },

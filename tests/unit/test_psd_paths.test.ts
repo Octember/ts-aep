@@ -11,7 +11,7 @@ import {
   py_eq,
   repr,
 } from "../../src/pyrt/index.ts";
-import { read_psd_layers } from "../../src/py_aep/resolvers/psd_layers.ts";
+import { type PsdLayer, read_psd_layers } from "../../src/py_aep/resolvers/psd_layers.ts";
 import { parse_vector_mask } from "../../src/py_aep/resolvers/psd_paths.ts";
 import "../../src/py_aep/binary/_register.ts";
 
@@ -21,8 +21,9 @@ const ASSETS = new Path(import.meta.path).parent.parent.parent.div("samples", "a
 function _vector_mask(psd: string, layer: string): Uint8Array {
   for (const node of read_psd_layers(ASSETS.div(psd))) {
     if (node.name === layer) {
-      py_assert(node.vector_mask != null);
-      return node.vector_mask;
+      const mask = (node as PsdLayer).vector_mask;
+      py_assert(mask != null);
+      return mask;
     }
   }
   throw new AssertionError_(`layer ${repr(layer)} not found`);

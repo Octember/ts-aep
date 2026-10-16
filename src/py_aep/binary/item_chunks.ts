@@ -158,8 +158,9 @@ export const FORMAT_VERSIONS: Map<number, [number, number]> = new Map<number, [n
 /**
  * An After Effects version string, `"{major}.{minor}x{build}"`.
  *
- * TODO(port): Python `\d` also matches Unicode decimal digits (and `int()`
- * accepts them); JS `\d` here is ASCII only.
+ * TODO(port): Python `\d` matches Unicode decimal digits and `int()` parses
+ * them (e.g. "١٥.٠x٣"); JS `\d` here and pyrt `int()` are ASCII only, so such
+ * version strings raise ValueError instead of parsing. Needs a pyrt `int` shim.
  */
 export const AE_VERSION_RE = /^(\d+)\.(\d+)x(\d+)(?=\n?$)/;
 

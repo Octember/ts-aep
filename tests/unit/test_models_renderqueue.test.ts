@@ -68,7 +68,7 @@ test("test_output_module_preserves_noncanonical_true_byte", () => {
   const raw = new Uint8Array(new OutputModuleSettingsItem().tobytes());
   raw[47] = 0x03;
 
-  const settings = OutputModuleSettingsItem.frombytes(new Uint8Array(raw));
+  const settings = OutputModuleSettingsItem.frombytes(new Uint8Array(raw)) as OutputModuleSettingsItem;
 
   expect(settings.include_project_link).toBe(true);
   expect(py_eq(settings.tobytes(), raw)).toBe(true);

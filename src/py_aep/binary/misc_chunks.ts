@@ -537,10 +537,9 @@ register("fips")(FipsChunk);
 // pard - effect property parameter definitions (variant dispatch)
 // ---------------------------------------------------------------------------
 
-// TODO(pyrt): attrs `define` assigns fields with `self[name] = v`, which throws on the
-// getter-only `PardChunk.property_control_type` that these subclasses shadow. Python lets a
-// subclass attrs field replace the base property, so mirror that with a writable data
-// property on each subclass prototype (applied after `_PARD_VARIANTS` below).
+// NOTE(port): Python lets a subclass attrs field replace the base property; attrs `define` assigns
+// with `self[name] = v`, so a writable data property on each variant prototype (applied after
+// `_PARD_VARIANTS`) gives the same behavior.
 export function shadow_property(cls: Function, name: string): void {
   Object.defineProperty(cls.prototype, name, {
     configurable: true,
@@ -654,7 +653,6 @@ register("pard")(PardChunk);
  */
 export class GenericPardChunk extends PardChunk {
   declare _pad_pre: Uint8Array;
-  declare property_control_type: number;
   declare _raw_name: Uint8Array;
   declare _pad_post: Uint8Array;
   declare _body: Uint8Array;
@@ -687,7 +685,6 @@ export function _bytes_from_ints(value: number[]): Uint8Array {
  */
 export class ColorPardChunk extends PardChunk {
   declare _pad_pre: Uint8Array;
-  declare property_control_type: number;
   declare _raw_name: Uint8Array;
   declare _pad_post: Uint8Array;
   declare _last_color: Uint8Array;
@@ -728,7 +725,6 @@ define(ColorPardChunk, {
  */
 export class IntegerPardChunk extends PardChunk {
   declare _pad_pre: Uint8Array;
-  declare property_control_type: number;
   declare _raw_name: Uint8Array;
   declare _pad_post: Uint8Array;
   declare last_value: number;
@@ -767,7 +763,6 @@ define(IntegerPardChunk, {
  */
 export class ScalarPardChunk extends PardChunk {
   declare _pad_pre: Uint8Array;
-  declare property_control_type: number;
   declare _raw_name: Uint8Array;
   declare _pad_post: Uint8Array;
   declare last_value_raw: number;
@@ -826,7 +821,6 @@ define(ScalarPardChunk, {
  */
 export class AnglePardChunk extends PardChunk {
   declare _pad_pre: Uint8Array;
-  declare property_control_type: number;
   declare _raw_name: Uint8Array;
   declare _pad_post: Uint8Array;
   declare last_value_raw: number;
@@ -852,7 +846,6 @@ define(AnglePardChunk, {
 /** Boolean control (type 4): u4 last_value, u1 default. */
 export class BooleanPardChunk extends PardChunk {
   declare _pad_pre: Uint8Array;
-  declare property_control_type: number;
   declare _raw_name: Uint8Array;
   declare _pad_post: Uint8Array;
   declare last_value: number;
@@ -877,7 +870,6 @@ define(BooleanPardChunk, {
  */
 export class TwoDPardChunk extends PardChunk {
   declare _pad_pre: Uint8Array;
-  declare property_control_type: number;
   declare _raw_name: Uint8Array;
   declare _pad_post: Uint8Array;
   declare last_value_x_raw: number;
@@ -920,7 +912,6 @@ define(TwoDPardChunk, {
  */
 export class EnumPardChunk extends PardChunk {
   declare _pad_pre: Uint8Array;
-  declare property_control_type: number;
   declare _raw_name: Uint8Array;
   declare _pad_post: Uint8Array;
   declare last_value: number;
@@ -949,7 +940,6 @@ define(EnumPardChunk, {
  */
 export class SliderPardChunk extends PardChunk {
   declare _pad_pre: Uint8Array;
-  declare property_control_type: number;
   declare _raw_name: Uint8Array;
   declare _pad_post: Uint8Array;
   declare last_value: number;
@@ -996,7 +986,6 @@ define(SliderPardChunk, {
  */
 export class ThreeDPardChunk extends PardChunk {
   declare _pad_pre: Uint8Array;
-  declare property_control_type: number;
   declare _raw_name: Uint8Array;
   declare _pad_post: Uint8Array;
   declare last_value_x_raw: number;

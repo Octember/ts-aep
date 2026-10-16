@@ -45,7 +45,7 @@ function _tdpi_by_param_suffix(layer: Layer): Map<string, number[]> {
         if (body instanceof ListChunk) {
           for (const inner of body.chunks) {
             if (inner.chunk_type === "tdpi") {
-              setdefault(result, py_slice(c.value, -5, null), []).push(inner.value);
+              setdefault(result, py_slice((c as any).value, -5, null), []).push((inner as any).value);
             }
           }
         }
@@ -293,7 +293,7 @@ describe("TestRoundtripAVLayerFlags", () => {
     expect(layer instanceof AVLayer).toBe(true);
     expect(layer.environment_layer).toBe(false);
 
-    layer.environment_layer = true;
+    (layer as AVLayer).environment_layer = true;
     expect(layer.three_d_layer).toBe(true);
 
     const out = tmp_path.div("modified_env.aep");
@@ -310,7 +310,7 @@ describe("TestRoundtripAVLayerFlags", () => {
     const layer = get_layer(project, "threeDLayer_true");
     expect(layer instanceof AVLayer).toBe(true);
 
-    layer.environment_layer = true;
+    (layer as AVLayer).environment_layer = true;
     expect(layer.environment_layer).toBe(true);
 
     layer.three_d_layer = true;
@@ -610,7 +610,7 @@ describe("TestRoundtripAVLayerBoolFlags", () => {
     expect(layer instanceof AVLayer).toBe(true);
     expect(layer.adjustment_layer).toBe(true);
 
-    layer.adjustment_layer = false;
+    (layer as AVLayer).adjustment_layer = false;
     const out = tmp_path.div("modified.aep");
     project.save(out);
     const layer2 = get_layer(parse_aep(out).project, "adjustmentLayer_true");
@@ -1682,8 +1682,8 @@ describe("TestDuplicateComplexValueLayers", () => {
     const comp = get_comp(app.project, "shape_closed_oval");
     const original = comp.layers[0];
     const dup = original.duplicate();
-    const orig_shape = original.masks.__getitem__(0).property("ADBE Mask Shape").value;
-    const dup_shape = dup.masks.__getitem__(0).property("ADBE Mask Shape").value;
+    const orig_shape = (original.masks.__getitem__(0) as any).property("ADBE Mask Shape").value;
+    const dup_shape = (dup.masks.__getitem__(0) as any).property("ADBE Mask Shape").value;
     expect(py_eq(dup_shape.vertices, orig_shape.vertices)).toBe(true);
   });
 

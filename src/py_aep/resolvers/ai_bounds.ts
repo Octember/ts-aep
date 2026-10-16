@@ -161,7 +161,7 @@ export function _operand_str(x: any): string {
  * the second is strictly smaller/larger. Math.min/Math.max would propagate NaN
  * instead, which Python never does here.
  */
-// TODO(pyrt): pyrt min/max take an iterable; a two-argument shim is missing.
+// NOTE(port): local two-operand form of Python's min(a, b)/max(a, b); same first-wins tie and NaN behavior as CPython's comparison loop.
 export function _min2(a: number, b_: number): number {
   return b_ < a ? b_ : a;
 }
@@ -171,7 +171,7 @@ export function _max2(a: number, b_: number): number {
 }
 
 /** `sep.join(parts)` for bytes. */
-// TODO(pyrt): bytes_.join concatenates without a separator; a sep-aware join is missing.
+// NOTE(port): interleaves sep then concatenates, equal to bytes.join.
 export function join_bytes(sep: Uint8Array, parts: Uint8Array[]): Uint8Array {
   const out: Uint8Array[] = [];
   parts.forEach((part, i) => {
@@ -182,7 +182,7 @@ export function join_bytes(sep: Uint8Array, parts: Uint8Array[]): Uint8Array {
 }
 
 /** `bytes.isdigit()`: non-empty and every byte an ASCII digit. */
-// TODO(pyrt): bytes.isdigit has no shim; this is the ASCII-only check CPython performs.
+// NOTE(port): bytes.isdigit is ASCII-only in CPython (0x30-0x39), same as this check.
 export function _isdigit_bytes(data: Uint8Array): boolean {
   return data.length > 0 && Array.from(data).every((c) => c >= 0x30 && c <= 0x39);
 }
@@ -766,7 +766,7 @@ export class _GState {
    */
   stroke_half_width(): [number, number] {
     const half = this.line_width / 2.0;
-    // TODO(port): CPython 3.12 math.hypot is correctly rounded; V8 Math.hypot can differ by 1 ulp.
+    // TODO(port): CPython 3.12 math.hypot is correctly rounded; V8 Math.hypot can differ by 1 ulp for some ctm inputs.
     return [
       half * Math.hypot(this.ctm[0], this.ctm[1]),
       half * Math.hypot(this.ctm[2], this.ctm[3]),
@@ -1266,7 +1266,7 @@ export function read_ai_layer_bounds(file: PathLike, data: Uint8Array | null = n
   const doc = new _Document(data, path.name);
   const pages = doc.pages();
   if (pages.length > 1) {
-    // TODO(port): warnings.warn's UserWarning category and stacklevel are not carried by pyrt warn.
+    // NOTE(port): pyrt warn records the message, the only part observable to pytest.warns(match=); UserWarning category and stacklevel are not modeled.
     warn(
       `${path.name}: the document has ${pages.length} artboards. ` +
         "py_aep measures the first one; After Effects measures the " +

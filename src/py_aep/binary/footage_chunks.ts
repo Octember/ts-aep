@@ -35,7 +35,7 @@ import { ascii_field, bool_field, bytes_field, f4_field, f8_field, s2_field, s4_
 import { register } from "./registry.ts";
 const _render_chunks = deferred<typeof import("./render_chunks.ts")>(import.meta.url, "./render_chunks.ts");
 
-// TODO(pyrt): struct.pack_into is not in pyrt/struct.ts. This helper packs, then copies at `offset`, which is what pack_into writes.
+// NOTE(port): struct.pack_into is not in pyrt/struct.ts; pack-then-copy writes the same bytes. Only the out-of-range error type differs, and every call site writes into a fixed-size buffer in range.
 export function pack_into(buf: Uint8Array, offset: number, format: string, ...values: any[]): void {
   buf.set(struct.pack(format, ...values), offset);
 }

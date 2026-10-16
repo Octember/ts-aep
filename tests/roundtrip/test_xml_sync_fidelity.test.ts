@@ -55,14 +55,14 @@ function _header_lengths(body: Uint8Array): [number, number] {
  * only the byte-identity assertions are version-gated. The length/terminator
  * invariants below (the ones AE actually honours) run everywhere.
  */
-// TODO(port): sys.version_info >= (3, 8) - the port targets CPython 3.12, so this is always true; kept as a constant so the skip gate stays visible.
+// NOTE(port): sys.version_info >= (3, 8) is always true on the CPython 3.12 target; constant kept so the skip gate stays visible.
 const _ATTR_ORDER_PRESERVED = true;
 
 /** Re-serializing an untouched tree must reproduce AE's bytes exactly. */
 describe("TestNoOpSyncIsIdentity", () => {
   // @pytest.mark.skipif(not _ATTR_ORDER_PRESERVED, reason="py3.7 ET.tostring sorts attributes; bytes differ, semantics do not")
-  // TODO(port): pytest skipif reason string is not carried by bun's test.skip.
-  (_ATTR_ORDER_PRESERVED ? test : test.skip).each(PER_FORMAT)(
+  // NOTE(port): bun's test.skip takes no reason; the reason is the comment above, and the gate is never taken on 3.12.
+  ((_ATTR_ORDER_PRESERVED ? test : test.skip) as typeof test).each(PER_FORMAT)(
     "test_no_op_sync_is_byte_identical[%#]",
     (sample, format_code) => {
       const [, opts] = _options(sample);

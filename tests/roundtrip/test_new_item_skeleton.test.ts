@@ -32,13 +32,13 @@ function _saved_rifx(app: any, tmp_path: Path): ListChunk {
 function _find_comp_item(rifx: any, comp_name: string): Chunk {
   const fold = find_by_list_type(rifx.chunks, "Fold");
   for (const ch of recursive_find(fold.chunks, null, "Item")) {
-    const utf8: any = find_by_type(ch.chunks, "Utf8");
-    const idta: any = find_by_type(ch.chunks, "idta");
+    const utf8: any = find_by_type((ch as any).chunks, "Utf8");
+    const idta: any = find_by_type((ch as any).chunks, "idta");
     if (String(utf8.value) === comp_name && idta.item_type === 4) {
       return ch;
     }
   }
-  // TODO(pyrt): pytest.fail has no shim; throw so the test fails with the same message.
+  // NOTE(port): pytest.fail raises to fail the test with this message; throwing Error fails the test identically.
   throw new Error(`comp ${repr(comp_name)} not found in saved file`);
 }
 

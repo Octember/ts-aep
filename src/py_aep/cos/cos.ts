@@ -605,9 +605,18 @@ export class CosParser {
       }
     }
     // TODO(port): Python ints are unbounded; values past 2**53 lose precision as a JS number.
-    // TODO(port): on a bare sign, Python's int(b"+") message shows b'+', pyrt's shows '+'.
+    // Python's int() gets bytes, so its error message shows b'+' rather than '+'.
+    let value: number;
+    try {
+      value = int(head);
+    } catch (e) {
+      if (e instanceof ValueError) {
+        throw new ValueError(`invalid literal for int() with base 10: b'${head}'`);
+      }
+      throw e;
+    }
     // `+ 0` turns int("-0") from -0 into 0 like Python.
-    return new Token(TokenType.Number, int(head) + 0);
+    return new Token(TokenType.Number, value + 0);
   }
 
   lex_num_fract(char: Uint8Array | null, head: string): Token {
@@ -708,7 +717,7 @@ export class CosParser {
       if (char == null) break;
       for (const c of char) acc.push(c);
     }
-    let string = Uint8Array.from(acc);
+    let string: Uint8Array = Uint8Array.from(acc);
 
     // Default to UTF-8 encoding
     let encoding = "utf-8";

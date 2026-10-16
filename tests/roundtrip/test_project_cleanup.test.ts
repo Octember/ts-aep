@@ -147,8 +147,8 @@ describe("TestConsolidateFootage", () => {
   test("test_merges_identical_sources", () => {
     const project = parse_aep(FOOTAGE_MISC).project;
     // footages 5 and 6 reference the same file and differ only by loop.
-    const first = getitem(project.items, 5);
-    const second = getitem(project.items, 6);
+    const first = getitem(project.items, 5) as FootageItem;
+    const second = getitem(project.items, 6) as FootageItem;
     expect(first instanceof FootageItem).toBe(true);
     expect(second instanceof FootageItem).toBe(true);
     first.main_source.loop = second.main_source.loop;
@@ -163,8 +163,8 @@ describe("TestConsolidateFootage", () => {
 
   test("test_retargets_layers", () => {
     const project = parse_aep(FOOTAGE_MISC).project;
-    const first = getitem(project.items, 5);
-    const second = getitem(project.items, 6);
+    const first = getitem(project.items, 5) as FootageItem;
+    const second = getitem(project.items, 6) as FootageItem;
     expect(first instanceof FootageItem).toBe(true);
     expect(second instanceof FootageItem).toBe(true);
     first.main_source.loop = second.main_source.loop;
@@ -182,8 +182,8 @@ describe("TestConsolidateFootage", () => {
 
   test("test_retargets_cached_layer_source", () => {
     const project = parse_aep(FOOTAGE_MISC).project;
-    const first = getitem(project.items, 5);
-    const second = getitem(project.items, 6);
+    const first = getitem(project.items, 5) as FootageItem;
+    const second = getitem(project.items, 6) as FootageItem;
     expect(first instanceof FootageItem).toBe(true);
     expect(second instanceof FootageItem).toBe(true);
     first.main_source.loop = second.main_source.loop;
@@ -212,8 +212,8 @@ describe("TestConsolidateFootage", () => {
   test("test_roundtrip", () => {
     const tmp_path = make_tmp_path();
     const project = parse_aep(FOOTAGE_MISC).project;
-    const first = getitem(project.items, 5);
-    const second = getitem(project.items, 6);
+    const first = getitem(project.items, 5) as FootageItem;
+    const second = getitem(project.items, 6) as FootageItem;
     expect(first instanceof FootageItem).toBe(true);
     expect(second instanceof FootageItem).toBe(true);
     first.main_source.loop = second.main_source.loop;

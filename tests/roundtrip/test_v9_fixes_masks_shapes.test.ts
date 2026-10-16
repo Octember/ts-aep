@@ -50,7 +50,7 @@ function _reparse_mask(app: py_aep.Application, tmp_path: Path): any {
 function _tensions(path_prop: any): number[][] {
   const shaps = filter_by_list_type(path_prop._kf_value_container.chunks, "shap");
   return shaps.map((s) =>
-    find_by_type(s.chunks, "omtn").tensions.map((t) => round(t.value, 6)),
+    (find_by_type(s.chunks, "omtn") as any).tensions.map((t) => round(t.value, 6)),
   );
 }
 
@@ -58,7 +58,7 @@ function _round(points: number[][], digits = 3): number[][] {
   return points.map((p) => p.map((x) => round(x, digits)));
 }
 
-// TODO(pyrt): pyrt `raises` takes one exception class; this accepts a tuple like `pytest.raises((A, B))`.
+// NOTE(port): local helper equals `pytest.raises((A, B))` for a tuple; the pyrt `raises` takes a single class.
 function raises_any(classes: (abstract new (...a: any[]) => Error)[], fn: () => unknown): Error {
   try {
     fn();
@@ -236,7 +236,7 @@ describe("TestPathValueValidation", () => {
   test("test_shape_layer_path_rejects_non_shape", () => {
     const app = py_aep.new();
     const comp = app.project.root_folder.add_comp("C", 400, 300, 1.0, 5.0, 24.0);
-    const group = comp.add_shape().__getitem__("ADBE Root Vectors Group");
+    const group = comp.add_shape().__getitem__("ADBE Root Vectors Group") as any;
     const path = group
       .add_property("ADBE Vector Shape - Group")
       .property("ADBE Vector Shape");
@@ -354,7 +354,7 @@ describe("TestShapeCopies", () => {
     const comp = app.project.root_folder.add_comp("C", 800, 600, 1.0, 5.0, 24.0);
     const a = comp.add_solid([1.0, 0.0, 0.0], "A", 200, 100, 1.0);
     const b = comp.add_solid([0.0, 1.0, 0.0], "B", 400, 400, 1.0);
-    const mask_a = a.masks.add_property("ADBE Mask Atom");
+    const mask_a = a.masks.add_property("ADBE Mask Atom") as any;
     mask_a.property("ADBE Mask Shape").value = new Shape(TRIANGLE);
     return [app, comp, b, mask_a];
   };
@@ -373,7 +373,7 @@ describe("TestShapeCopies", () => {
     const b2 = comp.layers.find((lyr) => String(lyr.name) === "B")!;
     expect(
       py_eq(
-        _round(b2.masks.properties[0].property("ADBE Mask Shape").value.vertices),
+        _round((b2.masks.properties[0] as any).property("ADBE Mask Shape").value.vertices),
         TRIANGLE,
       ),
     ).toBe(true);
@@ -381,7 +381,7 @@ describe("TestShapeCopies", () => {
 
   test("test_mask_copied_to_a_shape_path_keeps_its_pixels", () => {
     const [, comp, , mask_a] = _two_layers();
-    const group = comp.add_shape().__getitem__("ADBE Root Vectors Group");
+    const group = comp.add_shape().__getitem__("ADBE Root Vectors Group") as any;
     const path = group
       .add_property("ADBE Vector Shape - Group")
       .property("ADBE Vector Shape");
@@ -394,7 +394,7 @@ describe("TestFeatherPoints", () => {
   test("test_new_shape_keeps_feather_points", () => {
     const tmp_path = make_tmp_path();
     const app = parse(FEATHER);
-    const path = app.project.compositions[0].layers[0].masks.properties[0].property(
+    const path = (app.project.compositions[0].layers[0].masks.properties[0] as any).property(
       "ADBE Mask Shape",
     );
     const value = path.value;
@@ -406,7 +406,7 @@ describe("TestFeatherPoints", () => {
     });
     const out = tmp_path.div("feather.aep");
     app.project.save(out);
-    const reread = parse(out).project.compositions[0].layers[0].masks.properties[0];
+    const reread = parse(out).project.compositions[0].layers[0].masks.properties[0] as any;
     const points = reread.property("ADBE Mask Shape").value.feather_points;
     expect(
       py_eq(

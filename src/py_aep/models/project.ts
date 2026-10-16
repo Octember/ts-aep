@@ -94,6 +94,7 @@ import {
   descriptor,
   format,
   float_repr,
+  PyFloat,
   deferred,
 } from "../../pyrt/index.ts";
 import type { PathLike } from "../../pyrt/index.ts";
@@ -112,7 +113,7 @@ const _svg = deferred<typeof import("../svg/index.ts")>(import.meta.url, "../svg
 const _build = deferred<typeof import("../svg/build.ts")>(import.meta.url, "../svg/build.ts");
 
 /** `itertools.count(start)` (the clip-run counter). */
-// TODO(port): itertools has no pyrt shim; a local generator stands in for `count`.
+// NOTE(port): matches `itertools.count(start)`: an unbounded counter yielding start, start+1, ...
 export function* count(start = 0): Generator<number> {
   for (let i = start; ; i++) yield i;
 }
@@ -147,11 +148,12 @@ export function json_str(s: string): string {
 /**
  * `json.dumps(obj)` with Python's default separators (`", "` and `": "`).
  */
-// TODO(port): int/float distinction. A float with an integral value (1.0) that
-// came from JSON parses to a JS number and is written as `1`, not `1.0`.
+// NOTE(port): the only caller dumps the cms record, annotated `dict[str, int | str]`
+// in Python, so no float occurs; a boxed `PyFloat` is written as Python would (`1.0`).
 export function json_dumps(value: any): string {
   if (value == null) return "null";
   if (typeof value === "boolean") return value ? "true" : "false";
+  if (value instanceof PyFloat) return float_repr(value);
   if (typeof value === "number") return Number.isInteger(value) ? String(value) : float_repr(value);
   if (typeof value === "string") return json_str(value);
   if (Array.isArray(value)) return "[" + value.map((v) => json_dumps(v)).join(", ") + "]";
@@ -168,9 +170,11 @@ export function ET_tostring(el: any): string {
 }
 
 /** Python `type(x).__name__` for an error message. */
-// TODO(port): no pyrt shim for `type(x).__name__`; approximated from JS types.
+// NOTE(port): `type(x).__name__` from JS types; floats are boxed `PyFloat` by pyrt convention,
+// and class names equal the Python class names.
 export function py_type_name(x: any): string {
   if (x == null) return "NoneType";
+  if (x instanceof PyFloat) return "float";
   if (typeof x === "boolean") return "bool";
   if (typeof x === "number") return Number.isInteger(x) ? "int" : "float";
   if (typeof x === "bigint") return "int";
@@ -185,7 +189,7 @@ export function py_type_name(x: any): string {
  * `obj.__dict__`: the per-instance attribute dict the `ChunkField` descriptors
  * read their overrides from (same non-enumerable Map as `descriptors.ts`).
  */
-// TODO(pyrt): no shim for `obj.__dict__`; a non-enumerable Map per instance stands in for it.
+// NOTE(port): same per-instance non-enumerable Map as cos/descriptors.ts and descriptors.ts; it is the instance `__dict__` for the descriptor overrides.
 export function instance_dict(obj: any): Map<string, any> {
   if (!Object.prototype.hasOwnProperty.call(obj, "__dict__")) {
     Object.defineProperty(obj, "__dict__", { value: new Map<string, any>(), enumerable: false });

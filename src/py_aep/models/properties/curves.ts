@@ -97,8 +97,7 @@ export class _NaturalSpline {
     return lo;
   }
 
-  // TODO(port): Python `__call__` (the spline object is called); no rulebook
-  // mapping for `__call__`, so it is a plain method called as `.__call__(x)`.
+  // NOTE(port): Python `__call__`; no rulebook mapping, so callers use `.__call__(x)` explicitly.
   __call__(x: number): number {
     const xs = this.xs;
     const ys = this.ys;
@@ -109,7 +108,7 @@ export class _NaturalSpline {
     const h = xs[i + 1] - xs[i];
     const u = (xs[i + 1] - x) / h;
     const v = 1.0 - u;
-    // TODO(port): V8's `**` may differ from C `pow` in the last ulp (u**3, v**3).
+    // TODO(port): V8 `**` (fdlibm pow) may differ from glibc `pow` by 1 ulp for u**3, v**3 (u,v in [0,1]); needs a pyrt pow shim.
     const cubic = (u ** 3 - u) * m[i] + (v ** 3 - v) * m[i + 1];
     return u * ys[i] + v * ys[i + 1] + (cubic * h * h) / 6.0;
   }
@@ -195,8 +194,7 @@ export class CurvesChannel {
   }
 
   __repr__(): string {
-    // TODO(pyrt): repr prints a tuple as a list; points are tuples in Python,
-    // so render each `(x, y)` pair by hand.
+    // NOTE(port): points are tuples in Python, so each `(x, y)` pair is rendered by hand with float repr.
     const points = `[${this._points.map(([x, y]) => `(${repr(x)}, ${repr(y)})`).join(", ")}]`;
     return `CurvesChannel(${repr(this._name)}, points=${points})`;
   }

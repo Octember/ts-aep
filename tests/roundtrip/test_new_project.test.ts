@@ -313,8 +313,7 @@ describe("TestNewMutations", () => {
 function _ae_prefs_dir(): Path | null {
   const base = new Path(os.homedir(), "AppData", "Roaming", "Adobe", "After Effects");
   if (!base.is_dir()) return null;
-  // TODO(port): Windows PurePath sorts case-insensitively; sorting by name here
-  // is case-sensitive. AE version directories are all digits, so the order matches.
+  // NOTE(port): sibling paths share a parent, so sorting by name matches Path ordering (only Windows case-folding differs; AE version dirs are digits).
   const dirs = sorted(
     base.iterdir().filter((d) => d.is_dir() && isdigit(d.name.slice(0, 1))),
     (d) => d.name,

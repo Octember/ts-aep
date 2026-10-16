@@ -38,8 +38,10 @@ function _reopened(project: Project, tmp_path: Path, comp_name: string, layer_na
   const out = tmp_path.div("out.aep");
   project.save(out);
   const comp = get_comp(parse_aep(out).project, comp_name);
-  // TODO(port): Python `next(...)` raises StopIteration when no layer matches; `find(...)!` yields undefined instead.
-  return comp.layers.find((layer) => layer.name === layer_name)!;
+  const found = comp.layers.find((layer) => layer.name === layer_name);
+  // Python `next(...)` raises StopIteration when no layer matches.
+  if (found === undefined) throw new Error("StopIteration");
+  return found;
 }
 
 function _assert_written(prop: Property, value: number[] | number): void {

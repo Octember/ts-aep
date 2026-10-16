@@ -528,9 +528,7 @@ describe("TestUnsupported", () => {
   });
 
   test("test_encrypted_raises", () => {
-    // TODO(port): pyrt bytes_.replace takes no count argument, so this
-    // replaces every match where Python's `.replace(..., 1)` replaces only
-    // the first; the pattern occurs once in build_pdf output, so it matches.
+    // NOTE(port): pyrt bytes_.replace has no count argument; the pattern occurs once in build_pdf output, so replace-all equals Python's `.replace(..., 1)`.
     const data = bytes_.replace(
       build_pdf("50 200 100 80 re f"),
       b("trailer\n<< /Size 99"),
@@ -545,9 +543,8 @@ describe("TestMultipleArtboards", () => {
     // After Effects measures the SECOND page here and reports
     // first-artboard layers as empty; py_aep measures the first and warns
     // rather than discarding artwork.
-    // TODO(port): pyrt warns() matches the message only, not the UserWarning category.
-    // TODO(port): pyrt bytes_.replace takes no count argument (Python's `..., 1`);
-    // the pattern occurs once in build_pdf output, so the result matches.
+    // NOTE(port): warns() matches the message only; "artboards" is emitted solely by py_aep's UserWarning in ai_bounds, so the category check adds nothing here.
+    // NOTE(port): pyrt bytes_.replace has no count argument; the pattern occurs once in build_pdf output, so replace-all equals Python's `.replace(..., 1)`.
     const data = bytes_.replace(
       build_pdf("50 200 100 80 re f", {
         extra_objects:

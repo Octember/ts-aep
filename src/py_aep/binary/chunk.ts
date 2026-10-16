@@ -262,7 +262,8 @@ export class Chunk extends AttrsBase {
     return attrs_eq(this, other, py_eq);
   }
 
-  // TODO(port): attrs-generated `__repr__` (field list, repr=False skipped) is not reproduced.
+  // TODO(port): attrs-generated `__repr__` (field list, repr=False skipped) is not reproduced; pyrt has no attrs repr shim, so repr(chunk)/f"{chunk!r}" differs.
+
 }
 
 define(Chunk, {
@@ -392,24 +393,6 @@ export class DeferredListChunk extends ListChunk {
     this._parsed_chunks = null;
   }
 
-  get chunks(): Chunk[] {
-    let parsed = this._parsed_chunks;
-    if (parsed == null) {
-      const body = this._raw_body;
-      const ctx = this._raw_ctx || EMPTY_CTX;
-      parsed = read_chunks(new BytesIO(body), len(body), { ctx });
-      this._parsed_chunks = parsed;
-      this._raw_body = b("");
-      this._raw_ctx = null;
-    }
-    return parsed;
-  }
-
-  set chunks(value: Chunk[]) {
-    this._parsed_chunks = value;
-    this._raw_body = b("");
-  }
-
   /** Whether `chunks` was accessed or assigned (the raw body is gone). */
   get is_parsed(): boolean {
     return this._parsed_chunks != null;
@@ -429,6 +412,28 @@ export class DeferredListChunk extends ListChunk {
     return written;
   }
 }
+
+// `chunks` is a property on ListChunk; TS forbids overriding it with an accessor
+// in the class body, so the Python `@property` pair is installed on the prototype.
+Object.defineProperty(DeferredListChunk.prototype, "chunks", {
+  configurable: true,
+  get(this: DeferredListChunk): Chunk[] {
+    let parsed = this._parsed_chunks;
+    if (parsed == null) {
+      const body = this._raw_body;
+      const ctx = this._raw_ctx || EMPTY_CTX;
+      parsed = read_chunks(new BytesIO(body), len(body), { ctx });
+      this._parsed_chunks = parsed;
+      this._raw_body = b("");
+      this._raw_ctx = null;
+    }
+    return parsed;
+  },
+  set(this: DeferredListChunk, value: Chunk[]) {
+    this._parsed_chunks = value;
+    this._raw_body = b("");
+  },
+});
 
 /**
  * Non-LIST chunk whose body contains child chunks without a list_type.
@@ -653,8 +658,9 @@ export function _resolve_ldat_context(siblings: Chunk[], ctx: ReadContext): Reco
   // so a top-level import would be circular.
   const Lhd3Chunk = CHUNK_TYPES.get("lhd3")!;
   if (!py_bool(siblings)) return {};
-  const lhd3: any = siblings[0];
-  if (!(lhd3 instanceof Lhd3Chunk)) return {};
+  const lhd3_sibling: any = siblings[0];
+  if (!(lhd3_sibling instanceof Lhd3Chunk)) return {};
+  const lhd3: any = lhd3_sibling;
   const result: Record<string, any> = {
     item_type: lhd3.item_type,
     item_size: lhd3.item_size,

@@ -93,8 +93,7 @@ export class GradientColorStop {
 
   __repr__(): string {
     const [r, g, b] = this.color;
-    // TODO(port): int/float distinction - Python prints an int-valued float as `0.0`
-    // and a Python int as `0`; float_repr assumes a float.
+    // NOTE(port): fields are annotated float (parsed/default values are floats), so float_repr matches f"{x}"; only out-of-annotation int args would differ.
     return (
       `GradientColorStop(offset=${float_repr(this.offset)}, midpoint=${float_repr(this.midpoint)}, ` +
       `color=(${float_repr(r)}, ${float_repr(g)}, ${float_repr(b)}))`
@@ -145,7 +144,7 @@ export class GradientAlphaStop {
   }
 
   __repr__(): string {
-    // TODO(port): int/float distinction - see GradientColorStop.__repr__.
+    // NOTE(port): see GradientColorStop.__repr__.
     return (
       `GradientAlphaStop(offset=${float_repr(this.offset)}, midpoint=${float_repr(this.midpoint)}, ` +
       `alpha=${float_repr(this.alpha)})`

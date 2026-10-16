@@ -14,7 +14,7 @@ import { SAMPLES_DIR, parse_app_fresh } from "../helpers.ts";
 const PROPERTY_DIR = SAMPLES_DIR.div("models", "property");
 const LAYER_DIR = SAMPLES_DIR.div("models", "layer");
 
-// TODO(pyrt): Python builtin `next(iterator)` / `next(genexpr)` has no pyrt
+// NOTE(port): Python builtin `next(iterator)` / `next(genexpr)` has no pyrt
 // shim. Local helper: first element of `xs` satisfying `pred` (any element
 // when `pred` is omitted), raising StopIteration when none does.
 function next<T>(xs: Iterable<T>, pred: ((x: T) => boolean) | null = null): T {
@@ -46,7 +46,7 @@ describe("TestThreeDLayerRefreshesTransform", () => {
   test("test_toggling_on_renames_rotation", () => {
     const app = parse_app_fresh(PROPERTY_DIR.div("keyframe_1D.aep"));
     const layer = app.project.compositions[0].layers[0];
-    const rotate_z = layer.property("Transform").property("ADBE Rotate Z");
+    const rotate_z = (layer.property("Transform") as py_aep.PropertyGroup).property("ADBE Rotate Z");
     expect(py_bool(layer.three_d_layer)).toBe(false);
     expect(str(rotate_z.name)).toBe("Rotation");
 
@@ -58,7 +58,7 @@ describe("TestThreeDLayerRefreshesTransform", () => {
   test("test_toggling_off_restores_the_name", () => {
     const app = parse_app_fresh(PROPERTY_DIR.div("keyframe_1D.aep"));
     const layer = app.project.compositions[0].layers[0];
-    const rotate_z = layer.property("Transform").property("ADBE Rotate Z");
+    const rotate_z = (layer.property("Transform") as py_aep.PropertyGroup).property("ADBE Rotate Z");
 
     layer.three_d_layer = true;
     layer.three_d_layer = false;
@@ -74,15 +74,15 @@ describe("TestThreeDLayerRefreshesTransform", () => {
     const app = parse_app_fresh(PROPERTY_DIR.div("keyframe_1D.aep"));
     const layer = app.project.compositions[0].layers[0];
     layer.three_d_layer = true;
-    const in_memory = str(layer.property("Transform").property("ADBE Rotate Z").name);
+    const in_memory = str((layer.property("Transform") as py_aep.PropertyGroup).property("ADBE Rotate Z").name);
 
     const out = tmp_path.div("three_d.aep");
     app.project.save(out);
 
     const app2 = parse_app_fresh(out);
-    const reparsed = app2.project.compositions[0]
+    const reparsed = (app2.project.compositions[0]
       .layers[0]
-      .property("Transform")
+      .property("Transform") as py_aep.PropertyGroup)
       .property("ADBE Rotate Z");
     const reparsed_name = str(reparsed.name);
     expect(in_memory).toBe(reparsed_name);
@@ -101,7 +101,7 @@ describe("TestScaleZFollowsTheThreeDSwitch", () => {
     const app = py_aep.new();
     const comp = app.project.root_folder.add_comp("Z", 320, 240, 1.0, 10.0, 24.0);
     const layer = comp.add_solid([1, 0, 0], "ScaleZ", 320, 240, 1.0);
-    return [app, layer, layer.property("Transform").property("ADBE Scale")] as const;
+    return [app, layer, (layer.property("Transform") as py_aep.PropertyGroup).property("ADBE Scale")] as const;
   };
 
   test("test_three_d_shows_the_z", () => {
@@ -134,10 +134,10 @@ describe("TestScaleZFollowsTheThreeDSwitch", () => {
     const out = tmp_path.div("scale_z.aep");
     app.project.save(out);
 
-    const reparsed = parse_app_fresh(out)
+    const reparsed = (parse_app_fresh(out)
       .project.compositions[0]
       .layers[0]
-      .property("Transform")
+      .property("Transform") as py_aep.PropertyGroup)
       .property("ADBE Scale");
     expect(approx(reparsed.value, [60.0, 70.0, 100.0])).toBe(true);
   });
@@ -176,7 +176,7 @@ describe("TestCameraAndLightSeparate", () => {
       ? next(app.project.compositions, (c) => c.name === comp_name)
       : app.project.compositions[0];
     const layer = comp.layers[0];
-    const pos = layer.property("Transform").property("ADBE Position");
+    const pos = (layer.property("Transform") as py_aep.PropertyGroup).property("ADBE Position");
     const before = [...pos.value];
     expect(py_bool(pos.dimensions_separated)).toBe(false);
 
@@ -190,7 +190,7 @@ describe("TestCameraAndLightSeparate", () => {
     const comp2 = py_bool(comp_name)
       ? next(app2.project.compositions, (c) => c.name === comp_name)
       : app2.project.compositions[0];
-    const pos2 = comp2.layers[0].property("Transform").property("ADBE Position");
+    const pos2 = (comp2.layers[0].property("Transform") as py_aep.PropertyGroup).property("ADBE Position");
     expect(py_bool(pos2.dimensions_separated)).toBe(true);
     // The Z the camera/light is positioned at must survive.
     expect(approx(pos2.value, before)).toBe(true);
@@ -207,7 +207,7 @@ describe("TestCameraAndLightSeparate", () => {
   test("test_a_hidden_leader_is_not_a_separated_one", () => {
     const app = parse_app_fresh(LAYER_DIR.div("lightType.aep"));
     const comp = next(app.project.compositions, (c) => c.name === "lightType_AMBIENT");
-    const pos = comp.layers[0].property("Transform").property("ADBE Position");
+    const pos = (comp.layers[0].property("Transform") as py_aep.PropertyGroup).property("ADBE Position");
 
     expect(pos._tdsb.hidden).toBe(true);
     expect(pos.dimensions_separated).toBe(false);
@@ -291,11 +291,11 @@ describe("TestPrecomposedEffectPoint", () => {
   test("test_anchor_point_still_survives_precompose", () => {
     const app = parse_app_fresh(PROPERTY_DIR.div("keyframe_1D.aep"));
     const comp = app.project.compositions[0];
-    const before = [...comp.layers[0].property("Transform").property("ADBE Anchor Point").value];
+    const before = [...(comp.layers[0].property("Transform") as py_aep.PropertyGroup).property("ADBE Anchor Point").value];
 
     const new_comp = comp.precompose([0], "Pre");
 
-    const after = new_comp.layers[0].property("Transform").property("ADBE Anchor Point").value;
+    const after = (new_comp.layers[0].property("Transform") as py_aep.PropertyGroup).property("ADBE Anchor Point").value;
     expect(approx(after, before)).toBe(true);
   });
 });
@@ -314,7 +314,7 @@ describe("TestEaseSpeedsAreNotLayerTime", () => {
     const comp = app.project.root_folder.add_comp("C", 320, 240, 1.0, 40.0, 24.0);
     const layer = comp.add_solid([1, 1, 1], "L", 320, 240, 1.0);
     layer.stretch = stretch;
-    const op = layer.property("Transform").property("Opacity");
+    const op = (layer.property("Transform") as py_aep.PropertyGroup).property("Opacity");
     op.set_value_at_time(1.0, 0.0);
     op.set_value_at_time(5.0, 100.0);
     for (const kf of op.keyframes) {

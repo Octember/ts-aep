@@ -240,8 +240,8 @@ export function build_property_node(prop: Property): Node {
     if (Array.isArray(prop.value)) {
       if (len(prop.value) <= 4) attrs.set("value", prop.value);
     } else if (typeof prop.value === "number") {
-      // TODO(port): int/float distinction - a Python int takes the `else` branch,
-      // but round(int, 2) is the identity, so rounding every number is equivalent.
+      // TODO(port): int/float distinction - rounding is equivalent (round(int, 2) is the identity),
+      // but an integral Python float (100.0) is a plain JS number here and displays as `100`.
       attrs.set("value", round(prop.value, 2));
     } else {
       attrs.set("value", prop.value);
@@ -317,15 +317,15 @@ export function build_output_module_node(om: OutputModule): Node {
 
 /**
  * Python `str(dict)`: `{'k': v, ...}` with repr'd keys and values.
- * TODO(pyrt): pyrt `repr`/`str` do not handle a Map (Python dict) yet.
+ * NOTE(port): matches CPython dict repr; pyrt `repr` has no Map support, so it is spelled locally.
  */
 export function dict_repr(d: Map<any, any>): string {
   return "{" + [...d].map(([k, v]) => `${repr(k)}: ${attr_repr(k, v)}`).join(", ") + "}";
 }
 
 /**
- * `repr(v)` for an attrs value. TODO(port): int/float distinction - `frame_rate`
- * is always a Python float (`24.0`), so it is spelled via float_repr.
+ * `repr(v)` for an attrs value. NOTE(port): `frame_rate` is always a Python float
+ * (`24.0`), so it is spelled via float_repr; other attrs are ints/strs.
  */
 export function attr_repr(k: string, v: any): string {
   return k === "frame_rate" && typeof v === "number" ? float_repr(v) : repr(v);
@@ -632,7 +632,7 @@ export type Args = {
 };
 
 /**
- * TODO(pyrt): argparse shim missing. Minimal local parser for exactly the
+ * TODO(port): argparse shim missing (prefix-abbreviated options like `--for` are not accepted). Minimal local parser for exactly the
  * options this CLI declares (long and short forms, `--opt=value`, `-fVALUE`,
  * `--`). argparse's prefix matching and exact error/help layout are not
  * reproduced; the help text is hand-copied from argparse's output.

@@ -15,6 +15,7 @@ import "../../src/py_aep/binary/_register.ts";
 import { parse_project } from "../conftest.ts";
 import { CameraLayer } from "../../src/py_aep/models/layers/index.ts";
 import { Property } from "../../src/py_aep/models/properties/property.ts";
+import type { PropertyGroup } from "../../src/py_aep/models/properties/property_group.ts";
 
 const SAMPLES_DIR = new Path(import.meta.dir).div("..", "..", "samples", "models", "layer");
 const CAMERAS_AEP = SAMPLES_DIR.div("camera_rigs.aep");
@@ -29,7 +30,9 @@ function _camera(comp_name: string): CameraLayer {
 
 describe("TestCameraOptionDefaults", () => {
   const _opt = (cam: CameraLayer, match_name: string): Property => {
-    const prop = cam.__getitem__("ADBE Camera Options Group").__getitem__(match_name);
+    const prop = (cam.__getitem__("ADBE Camera Options Group") as PropertyGroup).__getitem__(
+      match_name,
+    ) as Property;
     expect(prop instanceof Property).toBe(true);
     return prop;
   };
@@ -56,7 +59,7 @@ describe("TestCameraOptionDefaults", () => {
 
   test("test_ae26_has_fifteen_options", () => {
     const cam = _camera("CAM_ONE");
-    const options = cam.__getitem__("ADBE Camera Options Group").properties;
+    const options = (cam.__getitem__("ADBE Camera Options Group") as PropertyGroup).properties;
     expect(len(options)).toBe(15);
     const names = options.map((p) => p.match_name);
     expect(names.includes("ADBE Camera Focus Area Width")).toBe(true);
@@ -88,7 +91,7 @@ describe("TestCameraOptionDefaults", () => {
     const cam = project.compositions
       .flatMap((c) => c.layers)
       .find((ly) => ly instanceof CameraLayer)!;
-    const options = cam.__getitem__("ADBE Camera Options Group").properties;
+    const options = (cam.__getitem__("ADBE Camera Options Group") as PropertyGroup).properties;
     expect(len(options)).toBe(13);
     const names = options.map((p) => p.match_name);
     expect(names.includes("ADBE Camera Focus Area Width")).toBe(false);

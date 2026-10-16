@@ -48,13 +48,19 @@ import { profile_id_for_name } from "../enums/mappings.ts";
  * @returns The 16-byte digest.
  */
 export function icc_profile_id(data: Uint8Array): Uint8Array {
-  const buf = new Uint8Array(data);
-  // TODO(port): Python bytearray slice assignment grows the buffer when `data`
-  // is shorter than the zeroed offset; fill() clamps instead. Real profiles are
-  // always longer than 100 bytes, so this only matters for malformed input.
-  buf.fill(0, 44, 48);
-  buf.fill(0, 64, 68);
-  buf.fill(0, 84, 100);
+  let buf = new Uint8Array(data);
+  // bytearray slice assignment: a short buffer is padded/grown instead of clamped.
+  const zero_slice = (start: number, stop: number): void => {
+    const s0 = Math.min(start, buf.length);
+    const e0 = Math.max(s0, Math.min(stop, buf.length));
+    const grown = new Uint8Array(buf.length - (e0 - s0) + (stop - start));
+    grown.set(buf.subarray(0, s0), 0);
+    grown.set(buf.subarray(e0), s0 + (stop - start));
+    buf = grown;
+  };
+  zero_slice(44, 48);
+  zero_slice(64, 68);
+  zero_slice(84, 100);
   return new Uint8Array(createHash("md5").update(buf).digest());
 }
 
@@ -96,9 +102,12 @@ export function icc_profile_description(data: Uint8Array): string | null {
         const abs_off = tag_offset + s_offset;
         const end = Math.min(abs_off + s_len, len(data));
         const raw16 = bytes_.slice(data, abs_off, end);
-        // pyrt decode() drops a trailing odd byte under errors="replace"; CPython emits U+FFFD for it.
-        // TODO(port): lone surrogates are not replaced by pyrt decode() either.
-        const text16 = decode(raw16, "utf-16-be", "replace") + (len(raw16) % 2 === 1 ? "\uFFFD" : "");
+        // pyrt decode() keeps lone surrogates and drops a trailing odd byte; CPython emits U+FFFD for each.
+        const dec16 = decode(raw16, "utf-16-be", "replace");
+        const odd_after_high = len(raw16) % 2 === 1 && /[\uD800-\uDBFF]$/.test(dec16);
+        const text16 =
+          dec16.replace(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g, "\uFFFD") +
+          (len(raw16) % 2 === 1 && !odd_after_high ? "\uFFFD" : "");
         return rstrip(text16, "\x00");
       }
     }
@@ -132,7 +141,7 @@ export function default_icc_directories(): Path[] {
   }
   // macOS
   const base = new Path("/Library/Application Support/Adobe/Color");
-  // TODO(pyrt): Path.home() is missing from pyrt/pathlib.ts; os.homedir() uses HOME first, like expanduser.
+  // NOTE(port): Path.home() is expanduser("~"); os.homedir() honours HOME first, same as CPython on POSIX.
   const home = new Path(homedir());
   return [
     base.div("MPProfiles"),

@@ -16,6 +16,7 @@ import {
   getattr,
   int,
   len,
+  PyFloat,
   py_bool,
   py_eq,
   repr,
@@ -26,10 +27,10 @@ import {
 import type { CompPreset } from "../../parsers/comp_presets.ts";
 import type { Preferences } from "../preferences.ts";
 
-// TODO(pyrt): py_enum members are plain numbers and carry no owning class, so
-// `isinstance(value, IntEnum)` cannot be answered. This placeholder answers
-// "never an IntEnum member": enum-valued settings then pass through as plain
-// ints, and STRING output shows the number instead of the enum label.
+// NOTE(port): py_enum members are plain numbers with no owning class, so
+// `isinstance(value, IntEnum)` is unanswerable. NUMBER output is unaffected
+// (`int(member)` is the member itself); STRING output gets the label from the
+// spec's enum class in `settings_to_string` instead.
 export const IntEnum = {
   has(_value: unknown): boolean {
     return false;
@@ -46,6 +47,8 @@ export function enum_label(enum_class: any, member: any): string {
 export function py_type_name(value: any): string {
   if (value == null) return "NoneType";
   if (typeof value === "boolean") return "bool";
+  if (value instanceof PyFloat) return "float";
+  if (typeof value === "bigint") return "int";
   if (typeof value === "number") return Number.isInteger(value) ? "int" : "float";
   if (typeof value === "string") return "str";
   if (value instanceof Uint8Array) return "bytes";
@@ -205,8 +208,7 @@ export class SettingsView {
   }
 
   clear(): void {
-    // TODO(port): Python's MutableMapping.clear() loops popitem() until KeyError;
-    // popitem raises TypeError here (delete is unsupported), as in Python.
+    // NOTE(port): same as MutableMapping.clear(): popitem() until KeyError; popitem raises TypeError here (delete unsupported), as in Python.
     for (;;) {
       try {
         this.popitem();
@@ -225,9 +227,7 @@ export class SettingsView {
     if (other instanceof Map || other instanceof SettingsView) {
       return py_eq(new Map(this.items()), new Map(mapping_items(other)));
     }
-    // TODO(port): Python returns NotImplemented here. pyrt has no sentinel for
-    // it, so `false` is returned and the reflected `other.__eq__(self)` attempt
-    // is not made.
+    // NOTE(port): Python returns NotImplemented; no builtin reflected __eq__ ever answers True for a non-mapping, so the final `==` is False.
     return false;
   }
 }
@@ -360,20 +360,19 @@ export function _to_string_value(
   key: string,
   value: any,
   resize_map: Map<string, string> = _RESIZE_TO_STRINGS,
+  enum_class: any = null,
 ): any {
   if (value instanceof Map) {
     return new Map([...value.entries()].map(([k, v]) => [k, _to_string_value(k, v, resize_map)]));
   }
-  if (IntEnum.has(value)) {
-    // TODO(pyrt): unreachable while IntEnum.has is the placeholder above. Needs the
-    // owning enum class to read `.label`.
-    return (value as any).label;
-  }
+  // `isinstance(value, IntEnum)`: the spec's enum class stands in for the member's owning class.
+  if (enum_class != null && enum_class.has(value)) return enum_label(enum_class, value);
   if (key === "Resolution") return dict_get(_RESOLUTION_STRINGS, tkey(...value), "Custom");
   if (key === "Resize to") return dict_get(resize_map, tkey(...value), "Custom");
   if (typeof value === "boolean") return str(value).toLowerCase();
-  // TODO(port): int/float distinction. A float such as 1.0 renders as "1" here,
-  // but Python's str(1.0) is "1.0".
+  // TODO(port): int/float distinction. A float getter value such as 30.0 (Time Span Duration,
+  // Use comp's frame rate, ...) is a plain JS number and renders "30"; Python's str gives "30.0".
+  // Needs the producing properties to return PyFloat (str(PyFloat) is already faithful).
   return str(value);
 }
 
@@ -408,6 +407,11 @@ export function settings_to_string(
   resize_map: Map<string, string> = _RESIZE_TO_STRINGS,
 ): Map<string, string> {
   return new Map<string, string>(
-    mapping_items(settings).map(([k, v]): [string, string] => [k, _to_string_value(k, v, resize_map)]),
+    mapping_items(settings).map((
+      [k, v],
+    ): [string, string] => [
+      k,
+      _to_string_value(k, v, resize_map, settings instanceof SettingsView ? dict_get(settings._specs, k)?.[1] : null),
+    ]),
   );
 }

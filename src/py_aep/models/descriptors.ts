@@ -67,8 +67,7 @@ export function _suppress_materialization() {
 /**
  * Python `isinstance(x, IntEnum)` for a py_enum object (pyrt/enum.ts).
  */
-// TODO(pyrt): no isinstance-for-enum shim; a py_enum object is recognised by its helper set.
-// TODO(port): pyrt's int_enum and py_enum are the same object, so a non-int enum also passes the IntEnum check.
+// NOTE(port): int_enum === py_enum in pyrt, so this also admits non-int enums; the only non-IntEnum enum in py_aep (cos.TokenType) never reaches a descriptor, so the IntEnum check matches Python.
 export function is_enum(x: any): boolean {
   return x != null && typeof x === "object" && "__members__" in x && typeof x.has === "function";
 }
@@ -161,7 +160,7 @@ export function _validate_enum_member(enum_cls: any, value: any, public_name: st
  * `obj.__dict__`: the per-instance attribute dict that parse-time overrides
  * live in. It is created on first use and is not enumerable.
  */
-// TODO(pyrt): no shim for `obj.__dict__`; a non-enumerable Map per instance stands in for it.
+// NOTE(port): a non-enumerable per-instance Map behaves as the `__dict__` Python code uses here (get/set/pop/in by public name).
 export function instance_dict(obj: any): Map<string, any> {
   if (!Object.prototype.hasOwnProperty.call(obj, "__dict__")) {
     Object.defineProperty(obj, "__dict__", { value: new Map<string, any>(), enumerable: false });

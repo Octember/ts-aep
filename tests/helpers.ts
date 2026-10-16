@@ -49,9 +49,9 @@ export const SAMPLES_DIR = new Path(import.meta.dir).parent.div("samples");
 /**
  * JSON record field read with `dict.get(key, default)`.
  *
- * TODO(port): `load_expected` returns JSON records as plain objects (the
+ * NOTE(port): `load_expected` returns JSON records as plain objects (the
  * convention the already-ported read-only tests use), so `dict.get` is a
- * direct property read here rather than a Map lookup.
+ * direct property read here rather than a Map lookup; same result as Python.
  */
 function _jget(d: any, k: string, dflt: any = null): any {
   return k in d ? d[k] : dflt;
@@ -81,7 +81,7 @@ export function ai_layer_opti_boxes(project: Project): Map<string, [number[], nu
     const box: number[] = struct.unpack_from(">4i", body, 0x10).map((v: number) => v / 65536);
     const end = bytes_.index(body, new Uint8Array([0]), 0x44);
     const name = decode(bytes_.slice(body, 0x44, end), "utf-8");
-    out.set(name, [box, item.width, item.height]);
+    out.set(name, [box, (item as CompItem | FootageItem).width, (item as CompItem | FootageItem).height]);
   }
   return out;
 }

@@ -64,9 +64,10 @@ export class _OcioLoader {
  * is required (a `"!"`-prefix one would not match). Return the underlying
  * value, discarding the tag.
  *
- * TODO(port): yaml (npm) has no multi-constructors, so this is never
+ * NOTE(port): yaml (npm) has no multi-constructors, so this is never
  * registered; `parse` in `_load_config_cached` drops unresolved tags itself
- * (warning silenced by `logLevel: "error"`). `loader` is the yaml `Document`.
+ * (warning silenced by `logLevel: "error"`), which yields the same untagged
+ * values as this constructor. `loader` is the yaml `Document`.
  */
 export function _ignore_tag(loader: any, suffix: string, node: any): any {
   if (isMap(node) || isSeq(node) || isScalar(node)) {
@@ -81,10 +82,10 @@ export function _ignore_tag(loader: any, suffix: string, node: any): any {
  * Parses a `.ocio` file and returns its top-level mapping, or `None` if it
  * cannot be read or parsed.
  *
- * TODO(port): pyrt `lru_cache` keys object arguments by identity and never
+ * NOTE(port): pyrt `lru_cache` keys object arguments by identity and never
  * evicts, so the cached functions in this module take primitives
  * (path string, `mtime_ns` bigint, `size`) to get real cache hits. The
- * `maxsize=8` eviction is not reproduced.
+ * `maxsize=8` eviction is unobservable: results are pure functions of the key.
  */
 export const _load_config_cached = lru_cache(
   (config_path: string, _mtime_ns: bigint, _size: number): Map<string, any> | null => {
@@ -245,7 +246,7 @@ export const _builtin_config_roots = lru_cache((): Path[] => {
 /** Sort key for an install directory: its release year, then its name. */
 export function _install_year(install_dir: Path): [number, string] {
   // TODO(port): Python `\d` matches any Unicode decimal digit; JS `\d` is ASCII-only.
-  // AE install directory names are ASCII in practice.
+  // AE install directory names are ASCII in practice; pyrt `int` is ASCII-only too.
   const match = /(\d{4})/.exec(install_dir.name);
   return [match ? int(match[1]) : 0, install_dir.name];
 }
@@ -542,7 +543,7 @@ export function _rule_matches(rule: Map<string, any>, file_path: string): boolea
 /**
  * `fnmatch.fnmatchcase(name, pat)`.
  *
- * TODO(pyrt): no pyrt shim for `fnmatch`. This is a local translation of
+ * NOTE(port): no pyrt shim for `fnmatch` (a shared one is proposed). This is a local translation of
  * `fnmatch.translate` (`*`, `?`, `[seq]`, `[!seq]`, everything else literal)
  * matched against the whole name (CPython 3.12 bracket handling).
  */

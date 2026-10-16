@@ -38,7 +38,7 @@ function _effect_props(comp_name: string, layer_name: string): Property[] {
   // Python `next(...)` raises StopIteration when no layer matches; `find` yields undefined instead.
   const layer = comp.layers.find((ly: any) => ly.name === layer_name)!;
   py_assert(layer.effects != null);
-  return layer.effects.__getitem__(0).properties.filter((p: any) => p instanceof Property);
+  return (layer.effects.__getitem__(0) as any).properties.filter((p: any) => p instanceof Property);
 }
 
 function _expected_props(comp_name: string, layer_name: string): Map<string, any> {
@@ -54,14 +54,14 @@ test.each(_CASES)("test_points_and_popups_match_json[%#]", (comp_name: string, l
   let checked = 0;
   for (const prop of _effect_props(comp_name, layer_name)) {
     if (
-      ![PropertyControlType.TWO_D, PropertyControlType.THREE_D, PropertyControlType.ENUM].includes(
-        prop._property_control_type,
-      )
+      !(
+        [PropertyControlType.TWO_D, PropertyControlType.THREE_D, PropertyControlType.ENUM] as PropertyControlType[]
+      ).includes(prop._property_control_type)
     ) {
       continue;
     }
     const prop_json = getitem(expected, prop.match_name);
-    // TODO(port): pytest assertion message `prop.name` is not carried by the approx idiom.
+    // NOTE(port): Python's `, prop.name` is only a failure message; bun's expect has no message arg, pass/fail is identical.
     expect(approx(prop.value, prop_json.value)).toBe(true);
     expect(prop.is_modified).toBe(prop_json.isModified);
     checked += 1;

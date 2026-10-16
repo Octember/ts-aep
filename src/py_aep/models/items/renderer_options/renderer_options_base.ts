@@ -28,10 +28,7 @@ export class RendererOptionsBase extends SettingsView {
 
   constructor(kw: { body: any; comp: CompItem }) {
     const { body, comp } = kw;
-    // TODO(port): Python passes `self` as the SettingsView owner. TS forbids
-    // touching `this` (passing it included) before super(), so the owner is
-    // patched in just below. SettingsView only stores the reference, so
-    // nothing observes the placeholder in between.
+    // NOTE(port): Python passes `self` as the owner; TS forbids touching `this` before super(), so the owner is patched in just below (SettingsView only stores it).
     super(null as any, (new.target as typeof RendererOptionsBase)._SPEC);
     this._body = body;
     this._comp = comp;
@@ -46,10 +43,7 @@ export class RendererOptionsBase extends SettingsView {
     // A fresh wrapper is built on every `renderer_options` access, so a
     // write to a name with no backing descriptor would vanish with the
     // wrapper. Reject it instead of silently dropping it.
-    // TODO(port): Python `hasattr(type(self), name)` is checked with
-    // `in` on the prototype, not pyrt `hasattr`. Descriptors live on the
-    // prototype (pyrt `descriptor`), and pyrt `hasattr` would invoke their
-    // getters with the prototype as `this`, which can throw.
+    // NOTE(port): `name in prototype` is `hasattr(type(self), name)`; pyrt `hasattr` would run descriptor getters on the prototype.
     if (!name.startsWith("_") && !(name in (this.constructor as any).prototype)) {
       throw new AttributeError(`${this.constructor.name} has no option ${repr(name)}`);
     }

@@ -49,8 +49,7 @@ test.each(REJECTS.map(([s, k, v]) => [`${s}-${k}-${v}`, s, k, v]))(
   "test_disallowed_under_codec_context[%s]",
   (_id: string, sample: string, key: string, value: unknown) => {
     const project = parse_project_fresh(FORMAT_DIR.div(`${sample}.aep`));
-    // TODO(port): `om.settings[key] = value` translated as __setitem__ (rulebook gap:
-    // no rule for item assignment; same convention as test_format_options.test.ts).
+    // NOTE(port): `settings[key] = value` is Python __setitem__; called explicitly, same validation path.
     raises(ValueError, () => {
       _om(project).settings.__setitem__(key, value);
     });

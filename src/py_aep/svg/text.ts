@@ -81,7 +81,7 @@ export function _load_font(path: Path, font_number = 0): any {
   const key = `${fspath(path)}#${font_number}`;
   let font = dict_get(_font_cache, key);
   if (font == null) {
-    // TODO(port): TTFont(lazy=True) has no fontkit equivalent; openSync reads the whole file. A .ttc resolves its face through `.fonts`.
+    // NOTE(port): lazy=True only defers table parsing (no result difference); a .ttc resolves its face through `.fonts`.
     const opened: any = fontkit.openSync(fspath(path));
     font = opened.fonts ? opened.fonts[font_number] : opened;
     _font_cache.set(key, font);
@@ -97,7 +97,7 @@ export function _load_font(path: Path, font_number = 0): any {
  * cubic segments reach `_lineTo` / `_curveToOne`.
  */
 export class _CubicContourPen {
-  // TODO(port): fontTools BasePen base class dropped. `_draw_glyph` drives these
+  // NOTE(port): fontTools BasePen base class dropped. `_draw_glyph` drives these
   // methods from fontkit path commands; fontkit already emits implied on-curve
   // points and decomposes composite glyphs.
   declare contours: RawSubpath[];
@@ -131,10 +131,10 @@ export class _CubicContourPen {
     const [x0, y0] = this._cur;
     const [x1, y1] = pt1;
     const [x2, y2] = pt2;
-    // TODO(port): confirm the 2/3 weighting operand order matches fontTools BasePen bit-for-bit.
+    // fontTools BasePen._qCurveToOne uses the literal 0.66666666666666667 weight.
     this._curveToOne(
-      [x0 + ((x1 - x0) * 2) / 3, y0 + ((y1 - y0) * 2) / 3],
-      [x2 + ((x1 - x2) * 2) / 3, y2 + ((y1 - y2) * 2) / 3],
+      [x0 + 0.66666666666666667 * (x1 - x0), y0 + 0.66666666666666667 * (y1 - y0)],
+      [x2 + 0.66666666666666667 * (x1 - x2), y2 + 0.66666666666666667 * (y1 - y2)],
       pt2,
     );
   }
@@ -158,7 +158,7 @@ export class _CubicContourPen {
   }
 
   _endPath(): void {
-    // TODO(port): fontkit paths never emit an end-path for open contours (glyf and CFF both close); kept for parity.
+    // NOTE(port): fontkit never emits an end-path (glyf and CFF contours always close), so this is unreachable, as in fontTools for glyf/CFF.
     if (py_bool(this._segs)) {
       this.contours.push(new RawSubpath(this._segs, false));
     }
@@ -199,7 +199,7 @@ export function _glyphs(font: any, text: string): [(number | null)[], number[], 
   // Windows symbol faces Wingdings/Webdings/Symbol/Marlett, and similar). Treat
   // it as empty so every char maps to no glyph and the run is dropped, matching
   // the "unresolved font is skipped" behaviour rather than crashing read_svg.
-  // TODO(port): fontkit has no getBestCmap(); the internal cmap processor is used instead.
+  // TODO(port): fontkit has no getBestCmap(); its internal cmap processor may pick a different subtable than fontTools for fonts with several Unicode cmaps.
   // Its lookup returns 0 for unmapped code points, which is reported as null here.
   let cmap: any = null;
   try {
@@ -208,7 +208,7 @@ export function _glyphs(font: any, text: string): [(number | null)[], number[], 
     // fontkit throws when no supported cmap subtable exists (fontTools: getBestCmap() is None).
     cmap = null;
   }
-  // TODO(port): getGlyphSet() → the fontkit font itself; glyphs are addressed by id, not name.
+  // NOTE(port): getGlyphSet() → the fontkit font itself; glyphs are addressed by id, not name (ids are unique, same mapping as names).
   const glyph_set = font;
   const units_per_em = font.unitsPerEm;
   const names: (number | null)[] = [];

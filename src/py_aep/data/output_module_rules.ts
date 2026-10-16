@@ -467,7 +467,7 @@ export const _CONDITIONAL_RULES = new Map<OutputFormat, Rule[]>([
         ],
       ],
     ].flatMap(([channels, table]) =>
-      table.map(
+      (table as number[][]).map(
         ([kbps, rate]): Rule => [
           new Map<string, any>([
             ["BitRate", kbps],

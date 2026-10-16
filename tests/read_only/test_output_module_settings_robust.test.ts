@@ -24,9 +24,10 @@ const _CORPUS: Path[] = sorted(
   (path: Path) => path.parts,
 );
 
-// TODO(port): pytest `ids=` (sample paths relative to SAMPLES_DIR) are not kept;
-// bun's `test.each` names come from `%#` (row index) only.
-test.each(_CORPUS.map((p) => [p]))("test_settings_and_format_options_reads_never_raise[%#]", (aep_path: Path) => {
+/** pytest `ids=[str(p.relative_to(SAMPLES_DIR)) for p in _CORPUS]` */
+const _IDS = _CORPUS.map((p) => p.path.slice(SAMPLES_DIR.path.length + 1));
+
+test.each(_CORPUS.map((p, i) => [_IDS[i], p] as const))("test_settings_and_format_options_reads_never_raise[%s]", (_id: string, aep_path: Path) => {
   const app = parse_app(aep_path);
   for (const rqi of app.project.render_queue.items) {
     for (const om of rqi.output_modules) {
@@ -46,8 +47,7 @@ test.each(_CORPUS.map((p) => [p]))("test_settings_and_format_options_reads_never
   }
 });
 
-// TODO(port): same `ids=` gap as above.
-test.each(_CORPUS.map((p) => [p]))("test_rouu_depth_and_frame_rate_decode[%#]", (aep_path: Path) => {
+test.each(_CORPUS.map((p, i) => [_IDS[i], p] as const))("test_rouu_depth_and_frame_rate_decode[%s]", (_id: string, aep_path: Path) => {
   // Every AE-written `Rouu` holds a listed depth and a positive output
   // frame rate, including the 29.97 fps modules whose rate fraction sits
   // right before the depth.

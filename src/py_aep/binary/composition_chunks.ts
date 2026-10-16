@@ -26,8 +26,7 @@ export const _MAX_TIMEBASE = 115200;
  */
 export const WORK_AREA_TO_END = 0xffffffff;
 
-// TODO(pyrt): the Fraction shim has no arithmetic, comparison or floor.
-// These exact helpers work on its bigint `n` / `d` for `frame_grid`.
+// NOTE(port): the Fraction shim has no operators; these exact bigint n/d helpers (reduced by the constructor) equal Python's Fraction *, /, <, >, floor in frame_grid.
 export function frac_mul(a: Fraction, b: Fraction): Fraction {
   return new Fraction(a.n * b.n, a.d * b.d);
 }

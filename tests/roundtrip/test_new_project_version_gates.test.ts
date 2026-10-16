@@ -56,7 +56,7 @@ const _VIEW_SEPTET = ["fvdv", "fiop", "ftts", "foac", "fiac", "fipc", "fifl"];
 // crossed with the other parametrize arguments, as pytest does.
 const YEARS = sorted(Object.keys(RELEASES));
 const YEAR_ROWS = YEARS.map((year) => [year]);
-const ITEM_ROWS = YEARS.flatMap((year) => [
+const ITEM_ROWS = YEARS.flatMap((year): [string, number, string][] => [
   [year, 1, "folder"],
   [year, 4, "comp"],
   [year, 7, "footage"],

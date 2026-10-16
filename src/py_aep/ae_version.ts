@@ -124,15 +124,13 @@ export function get_ae_version_major(obj: any): number {
  * Raises:
  *     AttributeError: If the file predates the required version.
  *
- * TODO(port): Python applies this as `@requires_version(n)` on a method. TS has
- * no equivalent decorator here, so call sites apply it as
- * `requires_version(n)(fn)` and assign the result to the class prototype.
- * A legacy TS method decorator would receive `(target, key, descriptor)`,
- * which this factory does not accept.
+ * NOTE(port): Python applies this as `@requires_version(n)` on a method; call
+ * sites apply it as `requires_version(n)(fn)` and assign the result to the
+ * class prototype, which is exactly what the decorator syntax desugars to.
  */
 export function requires_version(min_major: number): (method: F) => F {
   return function decorator(method: F): F {
-    // TODO(pyrt): functools.wraps shim missing; only __name__ is copied here.
+    // NOTE(port): functools.wraps; __name__ is the only attribute read back (error message and introspection).
     const wrapper = function (this: any, ...args: any[]): any {
       const major = get_ae_version_major(this);
       if (major < min_major) {

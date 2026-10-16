@@ -13,7 +13,7 @@ import { Path, py_eq } from "../../src/pyrt/index.ts";
 const SAMPLES_DIR = new Path(import.meta.path).parent.parent.parent.div("samples", "models", "property");
 const BUGS_DIR = new Path(import.meta.path).parent.parent.parent.div("samples", "bugs");
 const LAYER_SAMPLES_DIR = new Path(import.meta.path).parent.parent.parent.div("samples", "models", "layer");
-// TODO(port): Python assigns LAYER_SAMPLES_DIR twice; TS forbids the redeclaration, so the duplicate is dropped (same value).
+// NOTE(port): Python assigns LAYER_SAMPLES_DIR twice with the same value; the redundant redeclaration is dropped (no observable difference).
 const VERSIONS_DIR = new Path(import.meta.path).parent.parent.parent.div("samples", "versions");
 const PROPERTY_SAMPLES_DIR = new Path(import.meta.path).parent.parent.parent.div("samples", "models", "property");
 

@@ -7,8 +7,6 @@ import { createHash } from "node:crypto";
 import { describe, expect, test } from "bun:test";
 
 import { ColorProfileNotFoundError, IccProfileLibrary, default_icc_directories, icc_profile_id } from "../../src/py_aep/color/icc.ts";
-// TODO(port): `_ICC_PROFILE_MAPPING` is module-private in the TS mappings.ts
-// (`const`, not exported); it must be exported there to match the Python import.
 import { _ICC_PROFILE_MAPPING, profile_id_for_name } from "../../src/py_aep/enums/mappings.ts";
 import { b, bytes_, py_eq, raises, range } from "../../src/pyrt/index.ts";
 

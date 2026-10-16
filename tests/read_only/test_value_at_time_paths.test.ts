@@ -37,7 +37,6 @@ import "../../src/py_aep/binary/_register.ts";
 import { get_comp, load_expected, parse_project } from "../helpers.ts";
 import { Shape } from "../../src/py_aep/models/properties/shape.ts";
 import type { Property } from "../../src/py_aep/models/properties/property.ts";
-// TODO(port): _subdivision_cuts is not exported from resolvers/interpolation.ts yet (Python imports the private name).
 import { _subdivision_cuts, euler_to_quaternion, interpolate_shapes, slerp_orientation } from "../../src/py_aep/resolvers/interpolation.ts";
 import type { Layer } from "../../src/py_aep/models/layers/layer.ts";
 

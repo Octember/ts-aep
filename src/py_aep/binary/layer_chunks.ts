@@ -212,7 +212,7 @@ export class LdtaChunk extends Chunk {
 
   set auto_orient(value: number) {
     this.auto_orient_along_path = value === 1;
-    const is_poi_rig = [LayerType.CAMERA, LayerType.LIGHT].includes(this.layer_type);
+    const is_poi_rig = ([LayerType.CAMERA, LayerType.LIGHT] as number[]).includes(this.layer_type);
     this.camera_or_poi_auto_orient = value === 2 && !is_poi_rig;
     this.poi_auto_orient = value === 2 && is_poi_rig;
     this.characters_toward_camera = value === 3;

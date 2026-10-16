@@ -431,7 +431,7 @@ export class LdatItem extends AttrsBase {
     if (item_type === LdatItemType.color) {
       kf_data = KfColor.frombytes(payload);
       trailing = payload.slice(144);
-    } else if ([LdatItemType.no_value, LdatItemType.orientation].includes(item_type)) {
+    } else if (([LdatItemType.no_value, LdatItemType.orientation] as LdatItemType[]).includes(item_type)) {
       // An orientation keyframe keeps its angles in the sibling
       // `otky` container, so its item carries the same valueless
       // 48-byte ease prefix as a shape or gradient key - measured on
@@ -442,15 +442,15 @@ export class LdatItem extends AttrsBase {
       // a speed and lost the influence entirely.
       kf_data = KfNoValue.frombytes(payload);
       trailing = payload.slice(48);
-    } else if ([LdatItemType.three_d_spatial, LdatItemType.two_d_spatial].includes(item_type)) {
+    } else if (([LdatItemType.three_d_spatial, LdatItemType.two_d_spatial] as LdatItemType[]).includes(item_type)) {
       py_assert(num_value != null);
-      kf_data = KfPosition.frombytes(payload, { num_value });
+      kf_data = KfPosition.frombytes(payload, { num_value: num_value as 7 | 9 });
       // prefix(8) + fixed_doubles(5*8) + arrays(3*num_value*8)
       const expected = 8 + 5 * 8 + 3 * num_value * 8;
       trailing = payload.slice(expected);
     } else if (num_value != null) {
       // three_d, two_d, one_d
-      kf_data = KfMultiDimensional.frombytes(payload, { num_value });
+      kf_data = KfMultiDimensional.frombytes(payload, { num_value: num_value as 2 | 4 });
       const expected = 5 * num_value * 8;
       trailing = payload.slice(expected);
     } else {

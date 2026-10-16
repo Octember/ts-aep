@@ -46,10 +46,8 @@ export function build_layer_view_block(): Chunk[] {
   ];
 }
 
-// TODO(pyrt): Python `eval(expr, {"__builtins__": {}}, dict(env))` has no pyrt shim.
-// The spec grammar is arithmetic over `env` names only (`W2 - ZV`, `-ZV`, `TB`),
-// where JS and CPython agree on IEEE doubles, so a Function over the env names
-// stands in. Global names stay reachable; the specs are trusted generated data.
+// NOTE(port): the only specs in data/comp_skeleton_specs.ts are `+`/`-`/unary minus over env names and int
+// literals (`W2 - ZV`, `-ZV`, `H2 + 5000`, `TB`); there JS doubles and CPython eval agree, so Function stands in.
 export function _evaluate(value: any, env: Record<string, number>): any {
   if (typeof value === "string" && value.startsWith("$")) {
     const names = Object.keys(env);

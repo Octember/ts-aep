@@ -172,7 +172,7 @@ describe("TestSignedWorkAreaStart", () => {
     const cdta = new CdtaChunk();
     cdta.work_area_start_dividend = -1024;
     cdta.work_area_start_divisor = 24576;
-    const again = CdtaChunk.frombytes(cdta.tobytes());
+    const again = CdtaChunk.frombytes(cdta.tobytes()) as CdtaChunk;
     expect(again instanceof CdtaChunk).toBe(true);
     expect(approx(again.work_area_start, -1 / 24)).toBe(true);
   });

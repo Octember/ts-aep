@@ -27,6 +27,7 @@ import {
   py_bool,
   repr,
   round,
+  StopIteration,
   str,
   ValueError,
 } from "../../../pyrt/index.ts";
@@ -34,14 +35,13 @@ import {
 const _output_module = deferred<typeof import("./output_module.ts")>(import.meta.url, "./output_module.ts");
 const _parsers_output_module = deferred<typeof import("../../parsers/output_module.ts")>(import.meta.url, "../../parsers/output_module.ts");
 
-// TODO(port): Python `datetime` (naive) and `timedelta` have no pyrt shim. The epoch is kept
-// as a UTC `Date`, which is the same instant for a naive datetime.
+// NOTE(port): the epoch is a UTC `Date`; Python's naive datetime(1904, 1, 1) is the same wall-clock instant.
 export const _AEP_EPOCH = new Date(Date.UTC(1904, 0, 1));
 
 /** Convert Mac HFS+ epoch timestamp to datetime, or None if 0. */
 export function _start_time_from_binary(value: number): Date | null {
   if (!value) return null;
-  // TODO(port): timedelta keeps microseconds; a Date keeps whole milliseconds only.
+  // NOTE(port): value is a u4 whole-second count, so the Date's millisecond precision loses nothing.
   return new Date(_AEP_EPOCH.getTime() + value * 1000);
 }
 
@@ -402,9 +402,8 @@ export class RenderQueueItem {
         chunk_type: "RCom",
         chunks: [utf8_chunk],
       });
-      // TODO(port): Python `next(...)` raises StopIteration when the list chunk is missing;
-      // index_by_identity raises ValueError. Unreachable for a well-formed item.
-      const idx = index_by_identity(this._litm.chunks, this._list_chunk);
+      const idx = this._litm.chunks.findIndex((c: any) => c === this._list_chunk);
+      if (idx === -1) throw new StopIteration();
       this._litm.chunks.splice(idx, 0, rcom_chunk);
       this._rcom_utf8 = utf8_chunk;
       this._rcom = rcom_chunk;
@@ -521,7 +520,7 @@ export class RenderQueueItem {
   }
 
   set settings(value: Map<string, any> | SettingsView) {
-    // TODO(port): Python `isinstance(value, Mapping)`; a SettingsView is a MutableMapping there.
+    // NOTE(port): Python isinstance(value, Mapping) accepts dict and SettingsView (a MutableMapping); Map and SettingsView are their TS counterparts.
     if (!(value instanceof Map || value instanceof SettingsView)) {
       throw new ValueError("Settings must be a dictionary of key-value pairs");
     }
@@ -859,7 +858,7 @@ export class RenderQueueItem {
     // status holds the raw binary value (ExtendScript value minus 3013),
     // so compare and assign in that encoding via to_binary().
     if (
-      [RQItemStatus.DONE, RQItemStatus.ERR_STOPPED].includes(
+      ([RQItemStatus.DONE, RQItemStatus.ERR_STOPPED] as number[]).includes(
         RQItemStatus.from_binary(new_rsi.status),
       )
     ) {

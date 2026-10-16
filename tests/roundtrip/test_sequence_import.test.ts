@@ -19,6 +19,8 @@ import { make_tmp_path, raises } from "../../src/pyrt/pytest.ts";
 const ASSETS = new Path(import.meta.dir, "..", "..", "samples", "assets");
 const BASE = new Path(import.meta.dir, "..", "..", "samples", "models", "folder", "folder.aep");
 
+type Seq = Omit<FootageItem, "main_source" | "proxy_source"> & { main_source: any; proxy_source: any };
+
 /** A folder named `shots` holding a copy of one still per name. */
 function _folder(tmp_path: Path, ...names: string[]): Path {
   const frame = ASSETS.div("image_with_alpha.png").read_bytes();
@@ -30,21 +32,21 @@ function _folder(tmp_path: Path, ...names: string[]): Path {
   return folder;
 }
 
-function _import(file: Path, kw: { alphabetical: boolean }): [Project, FootageItem] {
+function _import(file: Path, kw: { alphabetical: boolean }): [Project, Seq] {
   const { alphabetical } = kw;
   const project = parse_aep(BASE).project;
   const opts = new ImportOptions(file);
   opts.sequence = true;
   opts.force_alphabetical = alphabetical;
-  return [project, project.import_file(opts)];
+  return [project, project.import_file(opts) as Seq];
 }
 
-function _reparsed(project: Project, item: FootageItem, tmp_path: Path): FootageItem {
+function _reparsed(project: Project, item: Seq, tmp_path: Path): Seq {
   const out = tmp_path.div("sequence.aep");
   project.save(out);
   const found = parse_aep(out).project.footages.find((f) => f.id === item.id);
   if (found === undefined) throw new Error("StopIteration");
-  return found as FootageItem;
+  return found as Seq;
 }
 
 class TestAlphabeticalSequence {
@@ -103,7 +105,7 @@ describe("TestAlphabeticalSequence", () => {
     const stvc = find_by_list_type(source._pin.chunks, "StVc");
     expect(stvc.chunks[0] instanceof U4LeChunk).toBe(true);
     expect(stvc.chunks[0].chunk_type).toBe("StVS");
-    expect(stvc.chunks[0].value).toBe(7);
+    expect((stvc.chunks[0] as U4LeChunk).value).toBe(7);
     expect(py_eq(source.file_names, TestAlphabeticalSequence.ORDER)).toBe(true);
     expect(reparsed.name).toBe("shots");
   });
@@ -144,7 +146,7 @@ describe("TestAlphabeticalSequence", () => {
     expect(py_eq(source.file_names, [...TestAlphabeticalSequence.ORDER, "zz.png"])).toBe(true);
     expect(item.duration).toBe(8 / 30);
     const stvc = find_by_list_type(source._pin.chunks, "StVc");
-    expect(stvc.chunks[0].value).toBe(8);
+    expect((stvc.chunks[0] as U4LeChunk).value).toBe(8);
   });
 });
 

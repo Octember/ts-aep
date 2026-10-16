@@ -39,8 +39,8 @@ import {
   str,
 } from "../../pyrt/index.ts";
 
-// TODO(pyrt): builtin print(..., file=sys.stderr). console.log/console.error
-// match print's trailing newline.
+// NOTE(port): print(text) / print(text, file=sys.stderr) only ever receive a
+// single str here; console.log/console.error append the same "\n" print does.
 export const sys = { stderr: process.stderr };
 export function print(text: string, kw: { file?: unknown } = {}): void {
   if (kw.file === sys.stderr) console.error(text);
@@ -241,11 +241,11 @@ export function _dump_chunk(path: Path, chunk_path: string): number {
 
 // ── CLI ─────────────────────────────────────────────────────────────────────
 
-// TODO(pyrt): argparse is not in pyrt. This is the subset main() declares: a
-// positional, store_true flags and typed value options, with argparse's
-// error exit status 2. Help and usage layout are simplified and not
-// byte-identical to argparse (TODO(port)). Value-conversion errors say
-// "invalid value" where argparse says "invalid int value" (TODO(port)).
+// TODO(port): argparse is not in pyrt; this is the subset main() declares (a
+// positional, store_true flags, typed value options, error exit status 2).
+// Gaps: -h/--help and usage text layout/wrapping differ from argparse, and
+// value-conversion errors say "invalid value" instead of "invalid int value".
+// Affects only help/usage/error stderr text, not parsed values.
 export const NEGATIVE_NUMBER = /^-\d+$|^-\d*\.\d+$/;
 
 export type ArgSpec = {

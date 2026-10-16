@@ -25,7 +25,7 @@ describe("TestAE2025", () => {
     const result = validate_aep(aep_path, json_path);
     // Report differences as warnings, not failures
     for (const diff of result.differences) {
-      // TODO(port): Python's stacklevel=1 has no pyrt equivalent; pyrt warn takes only the message.
+      // NOTE(port): stacklevel=1 only selects the reported source location; the warning text and test outcome match Python.
       warn(diff);
     }
   });

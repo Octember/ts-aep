@@ -807,7 +807,7 @@ export class Keyframe {
     if (getattr(this, name) !== bezier) {
       const prop = this._property;
       if (prop == null || prop.is_interpolation_type_valid(bezier)) {
-        // TODO(port): Python setattr() with a computed name; written as an indexed assignment.
+        // NOTE(port): Python setattr() with a computed name; indexed assignment hits the same accessor.
         (this as any)[name] = bezier;
       }
     }

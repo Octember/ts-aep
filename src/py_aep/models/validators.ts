@@ -99,15 +99,15 @@ export function _validate_number(
       // with dynamic bounds that resolve to None.
       return;
     }
-    // TODO(port): Python `isinstance(value, (int, float))` also admits bool; mirrored here.
+    // NOTE(port): Python `isinstance(value, (int, float))` also admits bool; mirrored here.
     if (!(typeof value === "number" || typeof value === "boolean")) {
       throw new TypeError_(`expected ${type_label}, got ${type_name(value)}`);
     }
     if (lo != null) {
-      if (exclusive_min && value <= lo) throw new ValueError(`must be > ${str(lo)}, got ${str(value)}`);
-      if (!exclusive_min && value < lo) throw new ValueError(`must be >= ${str(lo)}, got ${str(value)}`);
+      if (exclusive_min && (value as number) <= lo) throw new ValueError(`must be > ${str(lo)}, got ${str(value)}`);
+      if (!exclusive_min && (value as number) < lo) throw new ValueError(`must be >= ${str(lo)}, got ${str(value)}`);
     }
-    if (hi != null && value > hi) throw new ValueError(`must be <= ${str(hi)}, got ${str(value)}`);
+    if (hi != null && (value as number) > hi) throw new ValueError(`must be <= ${str(hi)}, got ${str(value)}`);
   };
 }
 
@@ -191,7 +191,7 @@ export function validate_enum(enum_cls: any): Validator {
   if (cached != null) return cached;
 
   const _validator = function (value: any, instance: any = null): void {
-    // TODO(port): enum members are plain numbers here, so `has` also matches an int that is a member; the int branch below then sees only non-members.
+    // NOTE(port): enum members are plain numbers, so `has` also accepts member ints; Python's int branch accepts those too (enum_cls(value) succeeds), so outcomes match.
     if (enum_cls.has(value)) return;
     // Before the int branch: `bool` subclasses `int`, so `om.format =
     // True` would otherwise silently select the member whose value is 1.
@@ -258,7 +258,7 @@ export function _validate_str(
     value = String(value);
     if (!allow_empty && !value) throw new ValueError("must not be empty");
     if (!allow_null && value.includes("\x00")) throw new ValueError("must not contain null bytes");
-    // TODO(port): Python `len` counts code points; Array.from matches that for astral text.
+    // NOTE(port): Python `len` counts code points; Array.from matches that for astral text.
     const n_chars = Array.from(value).length;
     if (max_length != null && n_chars > max_length) {
       throw new ValueError(`must be at most ${max_length} characters, got ${n_chars}`);
@@ -422,7 +422,7 @@ export const validate_cinema_4d_quality = _validate_number({ min: 1, max: 99, in
 
 // An `[x, y]` point stored as two float32 values (shape vertices / tangents,
 // and the bounding box): a larger coordinate cannot be serialized.
-// TODO(port): FLOAT32_MAX is read at module load; this only works while bin_utils does not import this module (an import cycle would leave it undefined).
+// NOTE(port): Python reads FLOAT32_MAX at import too; bin_utils imports neither this module nor anything that does, so no cycle.
 export const validate_f4_point = validate_sequence({ length: 2, min: -FLOAT32_MAX, max: FLOAT32_MAX });
 
 /** Validate an After Effects version string, `"{major}.{minor}x{build}"`.
@@ -434,7 +434,7 @@ export function validate_ae_version(value: any, instance: any = null): void {
   if (!(typeof value === "string" || value instanceof String)) {
     throw new TypeError_(`expected a version string, got ${type_name(value)}`);
   }
-  // TODO(port): Python `$` also matches before a single trailing newline; the JS regex does not.
+  // NOTE(port): AE_VERSION_RE (item_chunks.ts) emulates Python `$` with `(?=\n?$)`, so a trailing newline matches as in Python.
   const match = AE_VERSION_RE.exec(String(value));
   if (match == null) {
     throw new ValueError(

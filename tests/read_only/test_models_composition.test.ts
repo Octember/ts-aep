@@ -22,6 +22,7 @@ import "../../src/py_aep/binary/_register.ts";
 import { get_comp, get_comp_from_json_by_name, load_expected, parse_project } from "../conftest.ts";
 import { GuideOrientationType } from "../../src/py_aep/enums/index.ts";
 import { AVLayer, CameraLayer, LightLayer, ShapeLayer, TextLayer } from "../../src/py_aep/models/layers/index.ts";
+import type { PropertyGroup } from "../../src/py_aep/models/properties/property_group.ts";
 import { FileSource } from "../../src/py_aep/models/sources/file.ts";
 import { SolidSource } from "../../src/py_aep/models/sources/solid.ts";
 import { _resolve_controller_source_layer, _walk_source_property, resolve_essential_property_controllers } from "../../src/py_aep/resolvers/essential_properties.ts";
@@ -33,7 +34,7 @@ const LAYER_SAMPLES_DIR = new Path(import.meta.dir).parent.parent.div("samples",
 const FOOTAGE_SAMPLES_DIR = new Path(import.meta.dir).parent.parent.div("samples", "models", "footage");
 const EG_SAMPLES_DIR = new Path(import.meta.dir).parent.parent.div("samples", "models", "essential_graphics");
 
-// TODO(pyrt): builtin next() without a default has no shim. `find` keeps the
+// NOTE(port): local stand-in for next(gen) without default. `find` keeps the
 // first-match laziness; a miss throws StopIteration as Python's next() does.
 function next_<T>(found: T | undefined): T {
   if (found === undefined) throw new StopIteration();
@@ -501,7 +502,7 @@ describe("TestCompItemLayerFiltering", () => {
     expect(len(comp.file_layers)).toBe(1);
     for (const layer of comp.file_layers) {
       expect(layer instanceof AVLayer).toBe(true);
-      expect(layer.source.main_source instanceof FileSource).toBe(true);
+      expect((layer.source as any).main_source instanceof FileSource).toBe(true);
     }
   });
 
@@ -510,7 +511,7 @@ describe("TestCompItemLayerFiltering", () => {
     expect(len(comp.solid_layers)).toBe(2);
     for (const layer of comp.solid_layers) {
       expect(layer instanceof AVLayer).toBe(true);
-      expect(layer.source.main_source instanceof SolidSource).toBe(true);
+      expect((layer.source as any).main_source instanceof SolidSource).toBe(true);
     }
   });
 
@@ -659,7 +660,7 @@ describe("TestEssentialGraphics", () => {
     // controller UUIDs verbatim.
     const project = parse_project(EG_SAMPLES_DIR.div("multiple_controllers.aep"));
     const source = next_(project.compositions.find((c) => c.name === "primary"));
-    // TODO(port): assumes `uuid` is a string so Set identity matches Python's set semantics.
+    // NOTE(port): MotionGraphicsController.uuid is a str in Python and a string here, so Set identity matches.
     const controller_uuids = new Set(source.motion_graphics_controllers.map((c) => c.uuid));
     expect(len(controller_uuids)).toBe(3);
 
@@ -786,9 +787,9 @@ describe("TestEssentialGraphics", () => {
     const host = next_(project.compositions.find((c) => c.name === "image_with_alpha 2"));
     const layer = next_(host.layers.find((la) => py_bool(la.essential_property_uuids)));
 
-    const overrides = next_(layer.properties.find((p) => p.match_name === "ADBE Layer Overrides"));
+    const overrides = next_(layer.properties.find((p) => p.match_name === "ADBE Layer Overrides")) as PropertyGroup;
     expect(overrides.num_properties).toBe(1);
-    const alt = overrides.properties[0];
+    const alt = overrides.properties[0] as any;
     expect(alt.match_name).toBe("ADBE Layer Source Alternate");
     expect(alt.name).toBe("image_with_alpha.png");
     expect(alt.can_set_alternate_source).toBe(true);
@@ -803,7 +804,7 @@ describe("TestEssentialGraphics", () => {
     expect(src.containing_comp.name).toBe("image_with_alpha");
 
     // The Source Options copy is an unset slot (blsi == 0).
-    const src_group = next_(layer.properties.find((p) => p.match_name === "ADBE Source Options Group"));
+    const src_group = next_(layer.properties.find((p) => p.match_name === "ADBE Source Options Group")) as PropertyGroup;
     const src_alt = next_(
       src_group.properties.find((c) => c.match_name === "ADBE Layer Source Alternate"),
     );
@@ -823,9 +824,9 @@ describe("TestEssentialGraphics", () => {
     const layer = next_(
       project.compositions
         .flatMap((comp) => comp.layers)
-        .find((la) => py_bool(resolve_essential_property_controllers(la))),
+        .find((la) => py_bool(resolve_essential_property_controllers(la as AVLayer))),
     );
-    const ctrls = resolve_essential_property_controllers(layer);
+    const ctrls = resolve_essential_property_controllers(layer as AVLayer);
     const by_name = new Map(ctrls.map((c) => [c.name, c] as const));
 
     const blur = getitem(by_name, "Gaussian Blur Blurriness");
@@ -866,14 +867,14 @@ describe("TestEssentialGraphics", () => {
         .find(
           (la) =>
             la.properties.some((p) => p.match_name === "ADBE Layer Overrides") &&
-            next_(la.properties.find((p) => p.match_name === "ADBE Layer Overrides")).num_properties > 0,
+            (next_(la.properties.find((p) => p.match_name === "ADBE Layer Overrides")) as PropertyGroup).num_properties > 0,
         ),
     );
-    const overrides = next_(layer.properties.find((p) => p.match_name === "ADBE Layer Overrides"));
+    const overrides = next_(layer.properties.find((p) => p.match_name === "ADBE Layer Overrides")) as PropertyGroup;
     expect(overrides.num_properties).toBe(1);
     expect(overrides.is_modified).toBe(true); // non-empty override group
 
-    const grp = overrides.properties[0];
+    const grp = overrides.properties[0] as any;
     expect(grp.match_name).toBe("ADBE Layer Overrides Group");
     expect(grp.num_properties).toBe(2);
     expect(grp.is_modified).toBe(true);
@@ -911,11 +912,11 @@ describe("TestEssentialGraphics", () => {
       project.compositions
         .flatMap((comp) => comp.layers)
         .find((la) =>
-          la.properties.some((p) => p.match_name === "ADBE Layer Overrides" && p.num_properties > 0),
+          la.properties.some((p) => p.match_name === "ADBE Layer Overrides" && (p as PropertyGroup).num_properties > 0),
         ),
     );
-    const overrides = next_(layer.properties.find((p) => p.match_name === "ADBE Layer Overrides"));
-    const leaf = overrides.properties[0];
+    const overrides = next_(layer.properties.find((p) => p.match_name === "ADBE Layer Overrides")) as PropertyGroup;
+    const leaf = overrides.properties[0] as any;
     expect(leaf.match_name).toBe("ADBE Point Control-0001");
     expect(py_eq(leaf.value, [500.0, 500.0])).toBe(true); // pixels, not the stored [0.5, 0.5]
     expect(leaf.is_modified).toBe(false); // equals source, once in the same units
@@ -932,10 +933,10 @@ describe("TestEssentialGraphics", () => {
       project.compositions
         .flatMap((comp) => comp.layers)
         .find((la) =>
-          la.properties.some((p) => p.match_name === "ADBE Layer Overrides" && p.num_properties > 0),
+          la.properties.some((p) => p.match_name === "ADBE Layer Overrides" && (p as PropertyGroup).num_properties > 0),
         ),
     );
-    const overrides = next_(layer.properties.find((p) => p.match_name === "ADBE Layer Overrides"));
+    const overrides = next_(layer.properties.find((p) => p.match_name === "ADBE Layer Overrides")) as PropertyGroup;
     const names = overrides.properties.map((leaf) => leaf.name);
     expect(py_eq(names, ["Brightness", "Layer Opacity", "Background Color"])).toBe(true);
   });

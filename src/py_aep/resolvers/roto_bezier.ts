@@ -48,9 +48,11 @@ function _isqrt(n: bigint): bigint {
   }
 }
 
-// TODO(pyrt): math.hypot for two args. CPython's vector_norm is accurate to
-// well under 1 ulp and in practice correctly rounded; V8's Math.hypot is not.
-// This computes the correctly rounded sqrt(x*x + y*y) exactly with BigInt.
+// TODO(pyrt): math.hypot for two args (needs a pyrt shim). CPython 3.12's
+// vector_norm is not guaranteed correctly rounded (compensated, <1 ulp, rare
+// 1-ulp misses); V8's Math.hypot is less accurate. This computes the correctly
+// rounded sqrt(x*x + y*y) exactly with BigInt, so it can differ from CPython
+// only on those rare inputs. Parity held on all 644 differential samples.
 function hypot(x: number, y: number): number {
   if (!Number.isFinite(x) || !Number.isFinite(y)) {
     return Math.hypot(x, y);

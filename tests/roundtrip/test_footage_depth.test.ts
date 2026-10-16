@@ -37,8 +37,8 @@ const _COMP_FILES = [
   "ai.ai",
 ];
 
-// TODO(pyrt): PureWindowsPath(...).name has no pyrt shim; take the last segment
-// on either separator, which is what PureWindowsPath yields for these paths.
+// NOTE(port): PureWindowsPath(...).name is the last segment on either separator;
+// identical for the file paths AE stores (no trailing separator or bare drive).
 function PureWindowsPath_name(p: string): string {
   return p.split(/[\\/]/).pop()!;
 }
@@ -93,8 +93,8 @@ test.each(sorted(_ae_sources().keys()))("test_import_caches_after_effects_depth[
   const project = _windows_project();
   const item = project.import_file(new ImportOptions(_asset(name))) as FootageItem;
   const ae = getitem(_ae_sources(), name);
-  expect(item.main_source._sspc.depth).toBe(ae._sspc.depth);
-  expect(py_eq(_depth_bytes(item.main_source), _depth_bytes(ae))).toBe(true);
+  expect((item.main_source as FileSource)._sspc.depth).toBe(ae._sspc.depth);
+  expect(py_eq(_depth_bytes(item.main_source as FileSource), _depth_bytes(ae))).toBe(true);
 });
 
 test.each(_COMP_FILES)("test_layered_comp_import_caches_after_effects_depth[%#]", (comp_file) => {
@@ -131,7 +131,7 @@ test("test_chosen_background_layer_is_opaque", () => {
   const options = new ImportOptions(ASSETS.div("depth", "psd_rgb8_bg_layer.psd"));
   options.layer_index = 1; // list_layers order is top first: the Background
   const item = project.import_file(options) as FootageItem;
-  const source = item.main_source;
+  const source = item.main_source as FileSource;
   expect(py_eq(_depth_bytes(source), _depth_bytes(getitem(ae, source._sspc.layer_index)))).toBe(true);
   expect(py_eq(source._sspc.data_size, getitem(ae, source._sspc.layer_index)._sspc.data_size)).toBe(true);
   expect(source.has_alpha).toBe(false);
@@ -142,15 +142,16 @@ test("test_sequence_caches_the_frame_depth", () => {
   // AE 2026 macOS: the 10-bit DPX sequence is 48 like its frames).
   const truth = new Map<string, FileSource>(
     parse_project(SAMPLES.div("models", "import", "media_gap_formats.aep")).footages.map(
-      (f) => [f.name, f.main_source] as const,
+      (f) => [f.name, f.main_source as FileSource] as const,
     ),
   );
   const project = _windows_project();
   const options = new ImportOptions(ASSETS.div("dpx_seq.0001.dpx"));
   options.sequence = true;
   const item = project.import_file(options) as FootageItem;
-  expect(py_eq(_depth_bytes(item.main_source), _depth_bytes(getitem(truth, item.name)))).toBe(true);
-  expect(item.main_source._sspc.depth).toBe(48);
+  const main_source = item.main_source as FileSource;
+  expect(py_eq(_depth_bytes(main_source), _depth_bytes(getitem(truth, item.name)))).toBe(true);
+  expect(main_source._sspc.depth).toBe(48);
 });
 
 test("test_reload_refreshes_the_depth", () => {
@@ -159,11 +160,12 @@ test("test_reload_refreshes_the_depth", () => {
   fs.copyFileSync(fspath(ASSETS.div("depth", "png_rgb8.png")), fspath(media));
   const project = _windows_project();
   const item = project.import_file(new ImportOptions(media)) as FootageItem;
-  expect(item.main_source._sspc.depth).toBe(24);
+  const main_source = item.main_source as FileSource;
+  expect(main_source._sspc.depth).toBe(24);
   fs.copyFileSync(fspath(ASSETS.div("depth", "png_rgba16.png")), fspath(media));
-  item.main_source.reload();
-  expect(item.main_source._sspc.depth).toBe(64);
-  expect(item.main_source.has_alpha).toBe(true);
+  main_source.reload();
+  expect(main_source._sspc.depth).toBe(64);
+  expect(main_source.has_alpha).toBe(true);
 });
 
 test.each(sorted(_ae_sources().keys()))("test_import_sets_after_effects_media_flags[%#]", (name) => {
@@ -179,7 +181,7 @@ test("test_sequence_sets_only_the_first_media_flag", () => {
   // AE 2026 (macOS) imports a GIF sequence with 0x70 bit 3 set and 0x9F
   // bit 3 clear (imio_sequence.aep).
   const truth = parse_project(SAMPLES.div("models", "import", "imio_sequence.aep"));
-  const ae = truth.footages.find((f) => f.main_source._target_is_folder)!.main_source;
+  const ae = truth.footages.find((f) => (f.main_source as FileSource)._target_is_folder)!.main_source as FileSource;
   const project = parse_aep(BASE, { platform: "macos" }).project;
   const options = new ImportOptions(ASSETS.div("sequence_001.gif"));
   options.sequence = true;
@@ -217,7 +219,7 @@ test("test_hq_field_separation_keeps_the_container_media_bit", () => {
   item.main_source.high_quality_field_separation = true;
   const out = tmp_path.div("hq.aep");
   project.save(out);
-  const reread = getitem(parse_aep(out).project.items, item.id).main_source as FileSource;
+  const reread = (getitem(parse_aep(out).project.items, item.id) as FootageItem).main_source as FileSource;
   expect(reread.high_quality_field_separation).toBe(true);
   expect(reread._sspc.tobytes()[0x9f]).toBe(0x09);
 });
@@ -343,7 +345,7 @@ test.each(sorted(_mode_sources().keys()))("test_color_mode_import_matches_after_
   const item = project.import_file(new ImportOptions(ASSETS.div("depth", name))) as FootageItem;
   const out = tmp_path.div("modes.aep");
   project.save(out);
-  const ours = (getitem(parse_aep(out).project.items, item.id) as FootageItem).main_source;
+  const ours = (getitem(parse_aep(out).project.items, item.id) as FootageItem).main_source as FileSource;
   const ae = getitem(_mode_sources(), name);
   expect(py_eq(ours._opti.tobytes(), ae._opti.tobytes())).toBe(true);
   expect(py_eq(_depth_bytes(ours), _depth_bytes(ae))).toBe(true);

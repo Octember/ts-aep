@@ -811,7 +811,7 @@ export class _ArcSpline {
   }
 }
 
-// TODO(port): `functools.lru_cache(maxsize=1024)` keys its entries by argument value. pyrt `lru_cache` keys by object identity, and `_measured_curve` returns a fresh array per call, so this local LRU keys on `tkey(curve, accuracy)` and keeps the same 1024 bound.
+// NOTE(port): matches `functools.lru_cache(maxsize=1024)` (value-keyed via `tkey`, LRU eviction at 1024); pyrt `lru_cache` keys by identity and would never hit.
 export const _arc_spline_cache = new Map<string, _ArcSpline>();
 
 /** A cached `_ArcSpline`: every evaluated frame rebuilds the same one. */
@@ -1603,7 +1603,7 @@ export function _split_cubic(cubic: _Cubic, t: number): [_Cubic, _Cubic] {
  * lopsided segments, both cut identically).
  */
 export function _subdivision_cuts(segment_count: number, target_count: number): number[][] {
-  // TODO(pyrt): `collections.deque` has no shim; an array with shift() (popleft) and push() is used instead.
+  // NOTE(port): an array with shift() (popleft) and push() is order-identical to `collections.deque` here.
   const pieces: [number, number, number][] = [];
   for (let index = 0; index < segment_count; index++) pieces.push([index, 0.0, 1.0]);
   while (pieces.length < target_count) {

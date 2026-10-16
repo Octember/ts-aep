@@ -32,10 +32,11 @@ const _file = deferred<typeof import("../sources/file.ts")>(import.meta.url, "..
 const _placeholder = deferred<typeof import("../sources/placeholder.ts")>(import.meta.url, "../sources/placeholder.ts");
 const _solid = deferred<typeof import("../sources/solid.ts")>(import.meta.url, "../sources/solid.ts");
 
-// TODO(pyrt): CPython `set` iteration order. `Item.__hash__` is `hash(self.id)`, so
+// NOTE(port): CPython `set` iteration order. `Item.__hash__` is `hash(self.id)`, so
 // `set[CompItem]` iterates in open-addressing table order (deterministic, not insertion
 // order). This emulates the 3.12 table (linear probes 9, perturb 5, resize at fill*5 >= mask*3)
-// for the add / discard / iterate surface that `AVItem._used_in` uses.
+// for the add / discard / iterate surface that `AVItem._used_in` uses. Exact for ids in
+// [0, 2^31) (AE item ids); a generic pyrt set shim would supersede it.
 export class _IdHashSet<T extends { id: number }> {
   private _keys: (T | null)[] = new Array(8).fill(null);
   private _hashes: number[] = new Array(8).fill(0); // -1 = dummy
@@ -188,20 +189,22 @@ export function _sync_proxy_active(obj: AVItem): void {
  *
  * See: https://ae-scripting.docsforadobe.dev/item/avitem/
  */
+// Annotation-only attributes of AVItem.duration/frame_duration/frame_rate (interface merge so subclasses may override them with accessors).
+export interface AVItem {
+  duration: number;
+  frame_duration: number;
+  frame_rate: number;
+}
 export class AVItem extends Item {
   // Python: annotation-only attributes, with `"""…"""` attribute docstrings.
-  // TODO(port): subclasses (composition.ts, footage.ts) define several of these
-  // as accessors (`get duration()`, `get width()`, ...); TS rejects an accessor
-  // that overrides a declared property (TS2610), so those files must be reconciled.
+  // NOTE(port): subclasses (composition.ts, footage.ts) override some of these with accessors;
+  // `declare` emits no runtime field, so the prototype accessors apply and tsc reports no TS2610.
 
   /** The duration of the item in seconds. Still footages have a duration of 0. Read-only for a `FootageItem`, otherwise Read / Write. */
-  declare duration: number;
 
   /** The duration of the item in frames. Still footages have a duration of 0. Read-only for a `FootageItem`, otherwise Read / Write. */
-  declare frame_duration: number;
 
   /** The frame rate of the item in frames-per-second. Read-only for a `FootageItem`, otherwise Read / Write. */
-  declare frame_rate: number;
 
   /** The height of the item in pixels. Read / Write. */
   declare height: number;
@@ -268,7 +271,7 @@ export class AVItem extends Item {
     }
     if (this._viewer != null) {
       py_assert(this._parent_folder != null);
-      // TODO(port): Python `list.remove` compares with `==`; Viewer is assumed to have no `__eq__`, so identity matches.
+      // NOTE(port): Python `list.remove` uses `==`; `Viewer` defines no `__eq__` (viewer.py), so identity matches.
       const idx = this._parent_folder._viewers.indexOf(this._viewer);
       if (idx < 0) {
         throw new ValueError("list.remove(x): x not in list");

@@ -10,7 +10,7 @@ import { CurvesArbpChunk } from "../../src/py_aep/binary/property_chunks.ts";
 import { to_dict } from "../../src/py_aep/cli/validate.ts";
 import { CURVES_CHANNELS, Curves } from "../../src/py_aep/models/properties/curves.ts";
 
-// TODO(pyrt): struct.pack_into is not in pyrt/struct.ts; local helper over struct.pack.
+// NOTE(port): struct.pack_into is not in pyrt/struct.ts; this helper writes the struct.pack bytes at the offset, same as pack_into for in-range writes (tests never overflow).
 function pack_into(format: string, buf: Uint8Array, offset: number, ...values: any[]): void {
   buf.set(struct.pack(format, ...values), offset);
 }
@@ -104,7 +104,7 @@ test("test_to_dict_emits_the_curves", () => {
   expect(getitem(data, "mode")).toBe(1);
   expect(getitem(data, "version")).toBe(1);
   expect(getitem(data, "is_identity")).toBe(false);
-  const rgb = getitem(getitem(data, "channels"), "rgb");
+  const rgb = getitem(getitem(data, "channels") as any, "rgb") as any;
   expect(py_eq(getitem(rgb, "points"), [[0, 0], [168, 93], [255, 246]])).toBe(true);
   expect(py_eq(getitem(rgb, "map"), [...range(256)])).toBe(true);
   expect(getitem(rgb, "selected")).toBe(-1);

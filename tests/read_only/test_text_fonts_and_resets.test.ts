@@ -65,7 +65,7 @@ describe("TestBaselineLocs", () => {
     const got = _doc(parse_project(BASELINES_AEP), "PROBE_MAIN", layer_name).baseline_locs;
     expect(len(got)).toBe(len(expected));
     for (const [g, w] of zip(got, expected)) {
-      if (w > 1e38) {
+      if ((w as number) > 1e38) {
         // empty-line sentinel
         expect(approx(g, FLT_MAX)).toBe(true);
       } else {

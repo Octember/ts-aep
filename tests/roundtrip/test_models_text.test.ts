@@ -220,8 +220,9 @@ describe("TestRegisterFont", () => {
   test("test_new_font_tag_is_cos_name", () => {
     const [_project, doc] = _get_text_document(SAMPLES_DIR.div("type.aep"), "type_text");
     doc.font = "Arial-BoldMT"; // not in the template -> _register_font
-    const new_entry = getitem(getitem(getitem(doc._cos_data, "0"), "1"), "0").at(-1)!;
-    expect(getitem(getitem(new_entry, "0"), "99") instanceof CosName).toBe(true);
+    const g: (o: any, k: any) => any = getitem;
+    const new_entry = g(g(g(doc._cos_data, "0"), "1"), "0").at(-1);
+    expect(g(g(new_entry, "0"), "99") instanceof CosName).toBe(true);
   });
 
   test("test_new_font_roundtrips", () => {

@@ -106,8 +106,8 @@ describe("TestFormatText", () => {
     format_text(node, output_limited, undefined, undefined, 1);
 
     // Limited depth should produce less or equal output
-    // TODO(port): len counts UTF-16 units here; Python counts code points (differs only for astral characters).
-    expect(len(output_limited.getvalue()) <= len(output_full.getvalue())).toBe(true);
+    // Python len(str) counts code points; spreading a string iterates code points.
+    expect([...output_limited.getvalue()].length <= [...output_full.getvalue()].length).toBe(true);
   });
 });
 

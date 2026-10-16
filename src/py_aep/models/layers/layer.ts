@@ -325,11 +325,7 @@ export class Layer extends PropertyGroup {
       properties,
       essential_property_uuids,
     } = kw;
-    // TODO(port): Python assigns self._ldta, self._cmta, self._layer_list and
-    // self.essential_property_uuids before super().__init__(). TS cannot touch
-    // `this` before super(), so those assignments move below the super call.
-    // The match-name lookup uses new.target in place of self, and the
-    // remaining assignment order is unchanged.
+    // NOTE(port): TS cannot touch `this` before super(); the early self._ldta/_cmta/_layer_list/essential_property_uuids assignments move below it (the base __init__ never reads them) and new.target stands in for self in the match-name lookup.
 
     let layer_type_raw: number;
     let match_name: string;
@@ -365,13 +361,21 @@ export class Layer extends PropertyGroup {
   }
 
   /** Build a layer from a fresh ldta chunk (`Layer._new`). */
+  // Python marks this override `# type: ignore[override]`; the first overload mirrors the base signature.
+  static _new(
+    match_name: string,
+    auto_name: string,
+    property_depth: number,
+    kw?: any,
+  ): PropertyGroup;
   static _new(kw: {
     ldta: LdtaChunk;
     name: string;
     containing_comp: CompItem;
     root_tdgp_extra?: any[] | null;
     effect_param_defs?: Map<string, Map<string, Map<string, any>>> | null;
-  }): Layer {
+  }): Layer;
+  static _new(kw: any): any {
     const { ldta, name, containing_comp } = kw;
     const root_tdgp_extra = kw.root_tdgp_extra ?? null;
     const effect_param_defs = kw.effect_param_defs ?? null;
@@ -1085,7 +1089,7 @@ export class Layer extends PropertyGroup {
       write_compensation("ADBE Position", new_pos);
     }
 
-    if ([LayerType.CAMERA, LayerType.LIGHT].includes(this._ldta.layer_type)) {
+    if (([LayerType.CAMERA, LayerType.LIGHT] as number[]).includes(this._ldta.layer_type)) {
       // A camera or light keeps its point of interest in the Anchor
       // Point slot, in its parent's space: AE 2026 remaps it like
       // Position (a two-node camera's POI [900, 500, 0] under a null at
@@ -1259,7 +1263,7 @@ export class Layer extends PropertyGroup {
 
     // Clean track matte refs on AV layers
     for (const layer of comp.av_layers) {
-      if (layer !== this) {
+      if ((layer as Layer) !== this) {
         const ldta = layer._ldta;
         if ("matte_layer_id" in ldta && ldta.matte_layer_id === removed_id) {
           ldta.matte_layer_id = 0;
@@ -1271,7 +1275,7 @@ export class Layer extends PropertyGroup {
     comp._project._ensure_used_in_linked();
     const source = getattr(this, "source", null);
     if (source != null && "_used_in" in source) {
-      _av_layer()._unregister_source_usage(source, comp, { exclude: this });
+      _av_layer()._unregister_source_usage(source, comp, { exclude: this as any });
     }
 
     // Remove chunk block from comp's chunk list

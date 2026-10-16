@@ -66,9 +66,7 @@ const AE2018_SAMPLE = new Path(import.meta.path).parent.parent.parent.div(
   "complete.aep",
 );
 
-// TODO(pyrt): Python builtin `next(iterator)` / `next(genexpr)` has no pyrt
-// shim. Local helper: first element of `xs` satisfying `pred` (any element
-// when `pred` is omitted), raising StopIteration when none does.
+// NOTE(port): local stand-in for Python `next(genexpr)`; first match or StopIteration, as in CPython.
 function next<T>(xs: Iterable<T>, pred: ((x: T) => boolean) | null = null): T {
   const it = xs[Symbol.iterator]();
   for (let r = it.next(); !r.done; r = it.next()) {
@@ -331,7 +329,7 @@ describe("TestDuplicateAgainstAE", () => {
     expect(a._ldta.matte_layer_id).toBe(b_.id);
     expect(py_bool(a.transform.property("ADBE Opacity").expression_enabled)).toBe(true);
     const inner_layer = next(dup.layers, (la) => la.name === "Inner");
-    const overrides = next(
+    const overrides: any = next(
       inner_layer.properties,
       (p) => p.match_name === "ADBE Layer Overrides",
     );
@@ -351,8 +349,8 @@ describe("TestDuplicateEdgeCases", () => {
     const project = parse_project_fresh(EG_SAMPLE);
     const host = _comp(project, "image_with_alpha 2");
     const original = next(host.layers, (la) => py_bool(la.essential_property_uuids));
-    const orig_alt = at(
-      next(original.properties, (p) => p.match_name === "ADBE Layer Overrides").properties,
+    const orig_alt: any = at(
+      (next(original.properties, (p) => p.match_name === "ADBE Layer Overrides") as any).properties,
       0,
     );
     expect(orig_alt.alternate_source != null).toBe(true);
@@ -365,8 +363,8 @@ describe("TestDuplicateEdgeCases", () => {
     const dup2 = _comp(project2, dup.name);
     const layer = next(dup2.layers, (la) => py_bool(la.essential_property_uuids));
     expect(py_eq(layer.essential_property_uuids, original.essential_property_uuids)).toBe(true);
-    const alt = at(
-      next(layer.properties, (p) => p.match_name === "ADBE Layer Overrides").properties,
+    const alt: any = at(
+      (next(layer.properties, (p) => p.match_name === "ADBE Layer Overrides") as any).properties,
       0,
     );
     expect(alt.can_set_alternate_source).toBe(true);

@@ -31,7 +31,7 @@ import type { Layer } from "./layer.ts";
 export class TextLayer extends AVLayer {
   static _auto_name: string = "Text";
 
-  // TODO(port): Python `# type: ignore[override]` — this keyword shape differs from AVLayer._new's
+  // NOTE(port): Python has the same `# type: ignore[override]`; the keyword shape differs from AVLayer._new's in both.
   static _new(kw: {
     name: string;
     layer_id: number;

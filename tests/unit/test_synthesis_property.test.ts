@@ -138,7 +138,7 @@ describe("TestPropSpecFieldConsistency", () => {
         `${spec_id}: dimensions=${spec.dimensions} but value has ${len(spec.value)} elements`,
       );
     } else if (spec.dimensions <= 1) {
-      // TODO(port): type(x).__name__ has no pyrt shim; the message uses typeof instead.
+      // NOTE(port): same isinstance(int, float) check as Python; only the failure-message type name differs (typeof vs type().__name__).
       py_assert(
         typeof spec.value === "number",
         `${spec_id}: dimensions=${spec.dimensions} but value is ${typeof spec.value}, expected scalar`,

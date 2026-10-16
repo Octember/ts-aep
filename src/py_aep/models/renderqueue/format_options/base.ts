@@ -22,15 +22,11 @@ export class FormatOptionsBase {
    * Back-reference to the owning output module. `null` while the parser
    * is building the wrapper, before `OutputModule` wires it up - which
    * is why detachment needs its own flag rather than reusing `is None`.
-   *
-   * TODO(port): Python declares these as class-level defaults. They are
-   * instance fields here so that reads through the `py_object` proxy fall
-   * back to the default for every wrapper, as the class attribute did.
    */
-  _parent_om: OutputModule | null = null;
+  declare _parent_om: OutputModule | null;
 
   /** Set when the owning module has replaced this wrapper's chunk. */
-  _detached: boolean = false;
+  declare _detached: boolean;
 
   constructor() {
     return py_object(this);
@@ -56,3 +52,7 @@ export class FormatOptionsBase {
     object_setattr(this, name, value);
   }
 }
+
+// Class-level defaults, as in Python: instances fall back to the prototype until assigned.
+FormatOptionsBase.prototype._parent_om = null;
+FormatOptionsBase.prototype._detached = false;

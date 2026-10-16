@@ -101,7 +101,7 @@ function _eq_approx(actual: any, a: _Approx): boolean {
   return approx(actual, a.expected, { abs: a.abs });
 }
 
-// TODO(pyrt): pytest.raises((A, B)) - the shim takes one class; this accepts any of the listed classes.
+// NOTE(port): pytest.raises((A, B)) - local helper accepts any listed class, same as CPython tuple matching (instanceof any); re-throws otherwise like pytest.
 function raises_any(classes: any[], fn: () => unknown): Error {
   try {
     fn();

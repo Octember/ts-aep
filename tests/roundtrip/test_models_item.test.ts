@@ -81,7 +81,7 @@ describe("TestProxySource", () => {
 
   function _find(project: Project, name: string, cls: new (...a: any[]) => any): CompItem | FootageItem {
     for (const i of project.items.values()) {
-      if (getattr(i, "name", "") === name && i instanceof cls) return i;
+      if (getattr(i, "name", "") === name && i instanceof cls) return i as CompItem | FootageItem;
     }
     throw new StopIteration();
   }
