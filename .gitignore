@@ -4,3 +4,5 @@ samples
 .sync/
 .diff/
 dist/
+*-E
+*.ts-e
