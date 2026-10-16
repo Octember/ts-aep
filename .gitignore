@@ -1,6 +1,6 @@
 node_modules/
 samples
-.upstream/
+.upstream
 .sync/
 .diff/
 dist/
