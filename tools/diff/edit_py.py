@@ -11,6 +11,7 @@ usage: uv run --project .upstream python tools/diff/edit_py.py OUT_DIR PER_SAMPL
 
 import hashlib
 import inspect
+import enum
 import json
 import pathlib
 import re
@@ -119,7 +120,17 @@ def main():
         for e in plan:
             try:
                 obj, attr = resolve(app, e["path"])
-                setattr(obj, attr, decode(e["value"]))
+                new = decode(e["value"])
+                old = getattr(obj, attr, None)
+                # ts-aep enum members are plain numbers (RULEBOOK sec 6), so an
+                # int edit of an enum-valued field cannot be told from the
+                # member: hand Python the member too when the int is one.
+                if isinstance(old, enum.Enum) and isinstance(new, int):
+                    try:
+                        new = type(old)(new)
+                    except ValueError:
+                        pass
+                setattr(obj, attr, new)
                 outcomes.append("ok")
             except Exception as ex:  # noqa: BLE001
                 outcomes.append(type(ex).__name__)
