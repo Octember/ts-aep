@@ -616,7 +616,7 @@ export function tostring(
     }
     return latin1_bytes(s);
   }
-  if (lower === "utf-8" || lower === "utf8") return new TextEncoder().encode(text); // lone surrogates -> U+FFFD, as Buffer did
+  if (lower === "utf-8" || lower === "utf8") return new TextEncoder().encode(text); // lone surrogates -> U+FFFD (unchanged from the node encoder used before)
   throw new ValueError(`unsupported tostring encoding ${enc}`);
 }
 

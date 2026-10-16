@@ -63,6 +63,10 @@ is active.
 
 Host caveats:
 
+- Node must be 22.3+ (or 20.16+): older Node has no `process.getBuiltinModule`,
+  so the library silently falls back to the in-memory fs and real paths are
+  not found.
+
 - Text recomposition shapes with harfbuzz (wasm). In a browser, serve
   `node_modules/harfbuzzjs/hb.wasm` next to the bundle's `index.js`. Where it
   cannot load, the library still loads and only shaping raises (the console
@@ -80,7 +84,8 @@ Host caveats:
 Smoke checks: `bun tools/browser-smoke/run.ts [N]` runs the bundle with
 `process` hidden (memory fs, POSIX paths) over N samples and checks saves are
 byte-identical; `tools/browser-smoke/index.html` does the same in a real
-browser (instructions in the file).
+browser (instructions in the file); `tools/browser-smoke/workers-run.ts` runs
+the same check inside workerd through miniflare (see its header).
 
 ### Development
 
