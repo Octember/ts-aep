@@ -11,7 +11,7 @@
  * compressed PGF block and are not supported.
  */
 
-import { inflateSync } from "node:zlib";
+import * as zlib from "../../pyrt/zlib.ts";
 import {
   BytesIO,
   Path,
@@ -69,7 +69,7 @@ export const _OBJ_HEADER_WINDOW = 64;
  * byte offsets of the Python `bytes` patterns (`rb"..."`).
  */
 export function latin1(data: Uint8Array): string {
-  return Buffer.from(data).toString("latin1");
+  return bytes_.latin1_str(data);
 }
 
 // TODO(pyrt): no RecursionError shim. A pathologically nested COS object
@@ -268,13 +268,12 @@ export function read_ai_layers(
 
 export const _STREAM_RE = /stream\r?\n([\s\S]*?)\r?\nendstream/g;
 
-// TODO(port): zlib.error parity. Node's inflateSync throws for any corrupt
-// stream, so every inflate failure is treated as Python's zlib.error here.
 export function inflate_or_null(body: string): Uint8Array | null {
   try {
-    return inflateSync(Buffer.from(body, "latin1"));
-  } catch {
-    return null;
+    return zlib.decompress(bytes_.latin1_bytes(body));
+  } catch (e) {
+    if (e instanceof zlib.error) return null;
+    throw e;
   }
 }
 

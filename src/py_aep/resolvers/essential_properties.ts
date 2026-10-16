@@ -16,9 +16,9 @@ import type { Project } from "../models/project.ts";
 import type { Property } from "../models/properties/property.ts";
 import type { PropertyGroup } from "../models/properties/property_group.ts";
 
-const _composition = deferred<typeof import("../models/items/composition.ts")>(import.meta.url, "../models/items/composition.ts");
-const _av_layer = deferred<typeof import("../models/layers/av_layer.ts")>(import.meta.url, "../models/layers/av_layer.ts");
-const _property_group = deferred<typeof import("../models/properties/property_group.ts")>(import.meta.url, "../models/properties/property_group.ts");
+const _composition = deferred<typeof import("../models/items/composition.ts")>("py_aep/models/items/composition");
+const _av_layer = deferred<typeof import("../models/layers/av_layer.ts")>("py_aep/models/layers/av_layer");
+const _property_group = deferred<typeof import("../models/properties/property_group.ts")>("py_aep/models/properties/property_group");
 
 /** Essential Graphics controller type for a Media Replacement slot. */
 export const _MEDIA_REPLACEMENT_CONTROLLER_TYPE = 14;

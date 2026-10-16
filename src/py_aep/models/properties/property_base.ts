@@ -30,10 +30,10 @@ import type { MaskPropertyGroup } from "./mask_property_group.ts";
 import type { Property } from "./property.ts";
 import type { PropertyGroup } from "./property_group.ts";
 
-const _property_group = deferred<typeof import("./property_group.ts")>(import.meta.url, "./property_group.ts");
-const _property = deferred<typeof import("../../parsers/property.ts")>(import.meta.url, "../../parsers/property.ts");
-const _property_value = deferred<typeof import("../../parsers/property_value.ts")>(import.meta.url, "../../parsers/property_value.ts");
-const _effect = deferred<typeof import("../../parsers/effect.ts")>(import.meta.url, "../../parsers/effect.ts");
+const _property_group = deferred<typeof import("./property_group.ts")>("py_aep/models/properties/property_group");
+const _property = deferred<typeof import("../../parsers/property.ts")>("py_aep/parsers/property");
+const _property_value = deferred<typeof import("../../parsers/property_value.ts")>("py_aep/parsers/property_value");
+const _effect = deferred<typeof import("../../parsers/effect.ts")>("py_aep/parsers/effect");
 
 // TODO(pyrt): `list.index` / `list.remove` raise ValueError when the item is
 // absent and compare with Python `==`. No pyrt list helper exists yet.

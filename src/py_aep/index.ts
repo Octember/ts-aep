@@ -11,9 +11,9 @@ import { validate_ae_release, validate_platform } from "./models/validators.ts";
 import { CompPreset } from "./parsers/comp_presets.ts";
 import { list_layers } from "./resolvers/source_layers.ts";
 
-const _chunk = deferred<typeof import("./binary/chunk.ts")>(import.meta.url, "./binary/chunk.ts");
-const _application = deferred<typeof import("./parsers/application.ts")>(import.meta.url, "./parsers/application.ts");
-const _project = deferred<typeof import("./parsers/project.ts")>(import.meta.url, "./parsers/project.ts");
+const _chunk = deferred<typeof import("./binary/chunk.ts")>("py_aep/binary/chunk");
+const _application = deferred<typeof import("./parsers/application.ts")>("py_aep/parsers/application");
+const _project = deferred<typeof import("./parsers/project.ts")>("py_aep/parsers/project");
 
 // TODO(port): Python reads the version from the installed package metadata
 // (`importlib.metadata.version("py_aep")`) and falls back to "0.0.0" when the
@@ -130,3 +130,10 @@ export function new_(
 }
 
 export { AdvancedRendererOptions, AlphaMode, Application, AudioBitDepth, AudioChannels, AudioSampleRate, AutoKernType, AutoOrientType, AVItem, AVLayer, BaselineDirection, BitsPerChannel, BlendingMode, BoxAutoFitPolicy, BoxFirstBaselineAlignment, BoxVerticalAlignment, CameraLayer, ChannelType, Cinema4DRendererOptions, CineonFormatOptions, ClassicRendererOptions, CloseOptions, ColorDepthSetting, ColorManagementSystem, CompPreset, CompItem, ComposerEngine, CTFontTechnology, CTFontType, CTScript, DigitSet, DiskCacheSetting, EffectsSetting, EnvironmentLightShadowResolution, FastPreviewType, FeatherPoint, FeetFramesFilmType, FieldRender, FieldSeparationType, FileSource, FillLightingCorrectionType, FillMethodType, FillOutputDepthType, FillRangeType, FolderItem, FontBaselineOption, FontCapsOption, FontObject, FootageItem, FootageSource, FootageTimecodeDisplayStartType, FrameBlendingSetting, FrameBlendingType, FrameRateSetting, FramesCountType, GetSettingsFormat, GpuAccelType, GuideOrientationType, GuideLayers, Guide, ImportAsType, ImportOptions, Item, CURRENT_VALUE, JpegFormatOptions, Keyframe, KeyframeEase, KeyframeInterpolationType, Label, Language, Layer, LayerQuality, LayerSamplingQuality, LeadingType, LightLayer, LightType, LinearLightMode, LineJoinType, LineOrientation, list_layers, LogType, LoopMode, LutInterpolationMethod, MarkerValue, MaskFeatherFalloff, MaskMode, MaskMotionBlur, MaskPropertyGroup, MotionBlurSetting, new_ as new, OpenExrFormatOptions, OutputAudio, OutputChannels, OutputColorDepth, OutputColorMode, OutputFormat, OutputModule, ParametricMeshLayer, ParametricMeshType, ParagraphDirection, ParagraphJustification, PlaceholderSource, PlayMode, PngFormatOptions, PostRenderAction, Preferences, PREFType, Project, ProjectThread, Property, PropertyBase, PropertyControlType, PropertyGroup, PropertyType, PropertyValueType, ProxyUseSetting, PulldownMethod, PulldownPhase, PulldownSetting, PurgeTarget, RayTracedRendererOptions, RendererOptionsBase, RenderQuality, RenderQueue, RenderQueueItem, ResizeQuality, ResolveType, RQItemStatus, SettingsView, ShadowMapResolution, Shape, ShapeLayer, SolidSource, SoloSwitchesSetting, TargaFormatOptions, TextDocument, TextLayer, ThreeDModelLayer, TiffFormatOptions, TimeDisplayType, TimeSpanSource, ToolType, TrackMatteType, View, Viewer, ViewerType, ViewOptions, XmlFormatOptions };
+
+// Host file system controls (not part of py_aep's Python API): browsers and
+// Workers read and write through the in-memory fs; see README "Use".
+export { memfs, use_memory_fs, use_host_fs, fs_backend } from "../pyrt/host.ts";
+
+// Last import: registers every `deferred()` target (pyrt/deferred.ts).
+import "./_modules.ts";

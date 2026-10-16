@@ -19,7 +19,7 @@ import type { AVLayer } from "../layers/av_layer.ts";
 import type { Property } from "./property.ts";
 import type { Shape } from "./shape.ts";
 
-const _property = deferred<typeof import("../../parsers/property.ts")>(import.meta.url, "../../parsers/property.ts");
+const _property = deferred<typeof import("../../parsers/property.ts")>("py_aep/parsers/property");
 
 // Mask outline colors cycled by creation index for new masks. AE picks
 // from the label colors via an app-global counter that persists across

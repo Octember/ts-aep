@@ -36,11 +36,11 @@ import type { TextDocument } from "../text/text_document.ts";
 import { validate_bool, validate_enum, validate_name, validate_number, validate_vector2, validate_vector3 } from "../validators.ts";
 import { Layer } from "./layer.ts";
 
-const _av_item = deferred<typeof import("../items/av_item.ts")>(import.meta.url, "../items/av_item.ts");
-const _composition = deferred<typeof import("../items/composition.ts")>(import.meta.url, "../items/composition.ts");
-const _footage = deferred<typeof import("../items/footage.ts")>(import.meta.url, "../items/footage.ts");
-const _solid = deferred<typeof import("../sources/solid.ts")>(import.meta.url, "../sources/solid.ts");
-const _core = deferred<typeof import("../../synthesis/core.ts")>(import.meta.url, "../../synthesis/core.ts");
+const _av_item = deferred<typeof import("../items/av_item.ts")>("py_aep/models/items/av_item");
+const _composition = deferred<typeof import("../items/composition.ts")>("py_aep/models/items/composition");
+const _footage = deferred<typeof import("../items/footage.ts")>("py_aep/models/items/footage");
+const _solid = deferred<typeof import("../sources/solid.ts")>("py_aep/models/sources/solid");
+const _core = deferred<typeof import("../../synthesis/core.ts")>("py_aep/synthesis/core");
 
 export function _finite(point: number[]): number[] {
   /**

@@ -9,8 +9,8 @@
  * This reads external media files (not `.aep` chunks), so `struct` is used here.
  */
 
-import * as fs from "node:fs";
-import { inflateSync } from "node:zlib";
+import * as host from "../../pyrt/host.ts";
+import * as zlib from "../../pyrt/zlib.ts";
 import {
   AttributeError,
   BytesIO,
@@ -223,7 +223,7 @@ export function _image_depth(has_alpha: boolean, bits: number, kw: { gray?: bool
 }
 
 /**
- * A read-only binary file over `node:fs`, the `open(path, "rb")` the probe
+ * A read-only binary file over the host fs (pyrt/host), the `open(path, "rb")` the probe
  * reads through.
  */
 // TODO(pyrt): file-object shim (`open(path, "rb")`); pyrt only has BytesIO.
@@ -233,13 +233,13 @@ export class _OsFile {
 
   constructor(readonly path: string) {
     try {
-      this.fd = fs.openSync(path, "r");
+      this.fd = host.fs.openSync(path, "r");
     } catch (e: any) {
       if (e?.code === "ENOENT") throw new FileNotFoundError(`[Errno 2] No such file or directory: '${path}'`);
       if (typeof e?.code === "string") throw new OSError(`${e.message}`);
       throw e;
     }
-    this._size = fs.fstatSync(this.fd).size;
+    this._size = host.fs.fstatSync(this.fd).size;
   }
 
   private readonly _size: number;
@@ -254,7 +254,7 @@ export class _OsFile {
     const out = new Uint8Array(n);
     let got = 0;
     while (got < n) {
-      const r = fs.readSync(this.fd, out, got, n - got, this.pos + got);
+      const r = host.fs.readSync(this.fd, out, got, n - got, this.pos + got);
       if (r === 0) break;
       got += r;
     }
@@ -292,7 +292,7 @@ export class _OsFile {
   }
 
   close(): void {
-    fs.closeSync(this.fd);
+    host.fs.closeSync(this.fd);
   }
 }
 
@@ -464,10 +464,11 @@ export function _png_iccp(body: Uint8Array): Uint8Array | null {
   const split = bytes_.find(body, 0); // body.find(b"\x00")
   if (split < 0 || !bytes_eq(bytes_.slice(body, split + 1, split + 2), b("\x00"))) return null; // 0 = deflate
   try {
-    return new Uint8Array(inflateSync(body.slice(split + 2)));
-  } catch {
+    return zlib.decompress(body.slice(split + 2));
+  } catch (e) {
     // zlib.error: an unreadable profile counts as absent.
-    return null;
+    if (e instanceof zlib.error) return null;
+    throw e;
   }
 }
 
@@ -2194,7 +2195,7 @@ export function _probe_aac(fp: IO): MediaInfo {
 // SWF - file header (AE rasterizes the movie to video)
 // ---------------------------------------------------------------------------
 
-// TODO(port): lzma.decompress(format=FORMAT_ALONE) has no node:zlib equivalent and pyrt has no LZMA decoder.
+// TODO(port): lzma.decompress(format=FORMAT_ALONE) has no zlib/fflate equivalent and pyrt has no LZMA decoder.
 export function _lzma_alone_decompress(data: Uint8Array): Uint8Array {
   throw new NotImplementedError(`LZMA (FORMAT_ALONE) decoding is not ported yet (${data.length} bytes)`);
 }
@@ -2206,7 +2207,7 @@ export function _probe_swf(fp: IO): MediaInfo {
   if (bytes_eq(sig, b("FWS"))) {
     body = fp.read(21);
   } else if (bytes_eq(sig, b("CWS"))) {
-    body = new Uint8Array(inflateSync(fp.read())).slice(0, 21);
+    body = zlib.decompress(fp.read()).slice(0, 21);
   } else if (bytes_eq(sig, b("ZWS"))) {
     fp.read(4); // uncompressed length precedes the LZMA stream
     const stream = fp.read();
@@ -2427,7 +2428,7 @@ export function _split_ws(data: Uint8Array): Uint8Array[] {
 
 /** Latin-1 view of bytes, so a byte regex runs as a string regex. */
 export function _latin1(data: Uint8Array): string {
-  return Buffer.from(data.buffer, data.byteOffset, data.length).toString("latin1");
+  return bytes_.latin1_str(data);
 }
 
 /** Radiance HDR (RGBE) - text header with a resolution line (still image). */

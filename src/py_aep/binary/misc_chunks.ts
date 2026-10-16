@@ -6,7 +6,7 @@
  * PardChunk and PrdaChunk use variant subclass dispatch for polymorphic layouts.
  */
 
-import { randomBytes } from "node:crypto";
+import { uuid4_bytes } from "../../pyrt/uuid.ts";
 import { define, field, b, bytes_, decode, dict_get, encode, getattr, len, py_assert, py_or, round, descriptor, TypeError_, ValueError } from "../../pyrt/index.ts";
 import type { IO } from "../../pyrt/index.ts";
 import { read_bytes } from "./bin_utils.ts";
@@ -71,10 +71,7 @@ export class PguiChunk extends Chunk {
   /** Build a pgui with a fresh random GUID. */
   static new_(): PguiChunk {
     // uuid4().bytes: random bits with the version nibble and RFC 4122 variant set.
-    const u = new Uint8Array(randomBytes(16));
-    u[6] = (u[6] & 0x0f) | 0x40;
-    u[8] = (u[8] & 0x3f) | 0x80;
-    return new this({ guid: u });
+    return new this({ guid: uuid4_bytes() });
   }
 }
 define(PguiChunk, {

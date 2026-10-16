@@ -1,6 +1,7 @@
 /** Chunk tree mutation helpers for the binary I/O layer. */
 
-import { randomBytes } from "node:crypto";
+import { b64encode } from "../../pyrt/base64.ts";
+import { uuid4_bytes } from "../../pyrt/uuid.ts";
 
 import {
   b,
@@ -1181,7 +1182,7 @@ export function build_dropdown_control(kw: {
   const { tdsn_name, time_base, layer_id } = kw;
   // uuid4().bytes is 16 random bytes; base64 of those, padding stripped.
   const match_name =
-    "Pseudo/@@" + rstrip(Buffer.from(randomBytes(16)).toString("base64"), "=");
+    "Pseudo/@@" + rstrip(b64encode(uuid4_bytes()), "=");
   const part_bytes = bytes_.replace(
     bytes_.fromhex(DROPDOWN_CONTROL.part),
     encode(DROPDOWN_CONTROL.placeholder, "ascii"),

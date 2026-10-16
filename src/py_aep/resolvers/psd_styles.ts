@@ -20,7 +20,7 @@
  *   is dropped and the descriptor's color imported.
  */
 
-import { readFileSync } from "node:fs";
+import * as host from "../../pyrt/host.ts";
 
 import { Gradient, GradientAlphaStop, GradientColorStop } from "../models/properties/gradient.ts";
 import { iter_image_resources } from "./media_probe.ts";
@@ -689,7 +689,7 @@ export function read_global_light(file: PathLike): [number, number] {
   let angle = 120.0,
     altitude = 30.0;
   // TODO(port): Python open() raises OSError/FileNotFoundError; readFileSync raises a Node error instead.
-  const fp = new BytesIO(readFileSync(fspath(file)));
+  const fp = new BytesIO(host.fs.readFileSync(fspath(file)));
   if (!bytes_eq(fp.read(4), b("8BPS"))) return [angle, altitude];
   fp.seek(26);
   for (const [resource_id, body] of iter_image_resources(fp)) {

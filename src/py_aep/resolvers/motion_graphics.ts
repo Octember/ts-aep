@@ -43,11 +43,11 @@ import type { Property } from "../models/properties/property.ts";
 import type { PropertyGroup } from "../models/properties/property_group.ts";
 import { deferred, dict_get, float_repr, py_bool, py_eq, py_or } from "../../pyrt/index.ts";
 
-const _composition = deferred<typeof import("../models/items/composition.ts")>(import.meta.url, "../models/items/composition.ts");
-const _footage = deferred<typeof import("../models/items/footage.ts")>(import.meta.url, "../models/items/footage.ts");
-const _layer = deferred<typeof import("../models/layers/layer.ts")>(import.meta.url, "../models/layers/layer.ts");
-const _solid = deferred<typeof import("../models/sources/solid.ts")>(import.meta.url, "../models/sources/solid.ts");
-const _text_document = deferred<typeof import("../models/text/text_document.ts")>(import.meta.url, "../models/text/text_document.ts");
+const _composition = deferred<typeof import("../models/items/composition.ts")>("py_aep/models/items/composition");
+const _footage = deferred<typeof import("../models/items/footage.ts")>("py_aep/models/items/footage");
+const _layer = deferred<typeof import("../models/layers/layer.ts")>("py_aep/models/layers/layer");
+const _solid = deferred<typeof import("../models/sources/solid.ts")>("py_aep/models/sources/solid");
+const _text_document = deferred<typeof import("../models/text/text_document.ts")>("py_aep/models/text/text_document");
 
 // AE stores this in a CPrp path node's index to mean "match by name".
 export const _BY_NAME_INDEX = 0xffffffff;

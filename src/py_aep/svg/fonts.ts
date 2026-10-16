@@ -9,7 +9,7 @@
  */
 
 import * as fontkit from "fontkit";
-import { homedir } from "node:os";
+import * as host from "../../pyrt/host.ts";
 import {
   Path,
   dict_get,
@@ -25,7 +25,7 @@ import {
 /** `Path.home()` */
 // TODO(pyrt): Path.home() is missing from pyrt/pathlib.ts; local helper until it lands.
 export function home(): Path {
-  return new Path(homedir());
+  return new Path(host.homedir());
 }
 
 export const _FONT_SUFFIXES: readonly string[] = [".ttf", ".otf", ".ttc"];
@@ -103,14 +103,14 @@ export function _font_dirs(): Path[] {
     return _font_dirs_override();
   }
   const dirs: Path[] = [];
-  if (process.platform === "win32") {
-    const windir = process.env.WINDIR ?? "C:\\Windows";
+  if (host.platform === "win32") {
+    const windir = host.env.WINDIR ?? "C:\\Windows";
     dirs.push(new Path(windir).div("Fonts"));
-    const local = process.env.LOCALAPPDATA;
+    const local = host.env.LOCALAPPDATA;
     if (py_bool(local)) {
       dirs.push(new Path(local).div("Microsoft", "Windows", "Fonts"));
     }
-  } else if (process.platform === "darwin") {
+  } else if (host.platform === "darwin") {
     dirs.push(
       new Path("/System/Library/Fonts"),
       new Path("/Library/Fonts"),
@@ -169,14 +169,14 @@ export function _name(font: any, ...ids: number[]): string | null {
  */
 export function _adobe_font_dirs(): Path[] {
   const dirs: Path[] = [];
-  if (process.platform === "win32") {
-    const appdata = process.env.APPDATA;
+  if (host.platform === "win32") {
+    const appdata = host.env.APPDATA;
     if (py_bool(appdata)) {
       dirs.push(
         new Path(appdata).div("Adobe", "CoreSync", "plugins", "livetype", "r"),
       );
     }
-  } else if (process.platform === "darwin") {
+  } else if (host.platform === "darwin") {
     dirs.push(
       home().div(
         "Library",

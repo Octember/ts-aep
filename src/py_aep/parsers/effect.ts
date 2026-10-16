@@ -32,7 +32,7 @@ import {
   zip,
 } from "../../pyrt/index.ts";
 
-const _property = deferred<typeof import("./property.ts")>(import.meta.url, "./property.ts");
+const _property = deferred<typeof import("./property.ts")>("py_aep/parsers/property");
 
 // `logging.getLogger(__name__)`: this module logs nothing today, so only the
 // warning path is wired to pyrt `warn`.

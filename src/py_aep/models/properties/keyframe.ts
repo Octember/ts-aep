@@ -24,7 +24,7 @@ import {
   zip,
 } from "../../../pyrt/index.ts";
 
-const _property = deferred<typeof import("./property.ts")>(import.meta.url, "./property.ts");
+const _property = deferred<typeof import("./property.ts")>("py_aep/models/properties/property");
 
 // TYPE_CHECKING: `_ValueType = Union[list[float], float, Curves, Gradient, MarkerValue, Shape, TextDocument, None]`
 export type _ValueType = number[] | number | Curves | Gradient | MarkerValue | Shape | TextDocument | null;

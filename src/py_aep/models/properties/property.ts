@@ -36,11 +36,11 @@ import type { PropertyGroup } from "./property_group.ts";
 import { type MaskPropertyGroup } from "./mask_property_group.ts";
 import { deferred, deepcopy, dict_get, getitem, isclose, py_bool, py_eq, py_or, py_and, sorted, warn, int, round, floordiv, TypeError_, ValueError, KeyError, IndexError, AttributeError, NotImplementedError, py_assert, contains, repr, hasattr, getattr, min, max, range, enumerate, zip, len, float, lshift, rshift, and, or, b, descriptor } from "../../../pyrt/index.ts";
 
-const _property_group = deferred<typeof import("./property_group.ts")>(import.meta.url, "./property_group.ts");
-const _av_item = deferred<typeof import("../items/av_item.ts")>(import.meta.url, "../items/av_item.ts");
-const _footage = deferred<typeof import("../items/footage.ts")>(import.meta.url, "../items/footage.ts");
-const _folder = deferred<typeof import("../items/folder.ts")>(import.meta.url, "../items/folder.ts");
-const _essential_properties = deferred<typeof import("../../resolvers/essential_properties.ts")>(import.meta.url, "../../resolvers/essential_properties.ts");
+const _property_group = deferred<typeof import("./property_group.ts")>("py_aep/models/properties/property_group");
+const _av_item = deferred<typeof import("../items/av_item.ts")>("py_aep/models/items/av_item");
+const _footage = deferred<typeof import("../items/footage.ts")>("py_aep/models/items/footage");
+const _folder = deferred<typeof import("../items/folder.ts")>("py_aep/models/items/folder");
+const _essential_properties = deferred<typeof import("../../resolvers/essential_properties.ts")>("py_aep/resolvers/essential_properties");
 
 // TODO(pyrt): `list_mul` is Python `[x] * n` for a list; no pyrt shim exists.
 export function list_mul<T>(xs: T[], n: number): T[] {

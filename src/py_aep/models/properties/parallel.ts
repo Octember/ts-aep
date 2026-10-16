@@ -26,9 +26,9 @@ import { Shape } from "./shape.ts";
 import type { Keyframe } from "./keyframe.ts";
 import type { Property } from "./property.ts";
 
-const _marker = deferred<typeof import("../../parsers/marker.ts")>(import.meta.url, "../../parsers/marker.ts");
-const _specialized_properties = deferred<typeof import("../../parsers/specialized_properties.ts")>(import.meta.url, "../../parsers/specialized_properties.ts");
-const _gradient = deferred<typeof import("../../parsers/gradient.ts")>(import.meta.url, "../../parsers/gradient.ts");
+const _marker = deferred<typeof import("../../parsers/marker.ts")>("py_aep/parsers/marker");
+const _specialized_properties = deferred<typeof import("../../parsers/specialized_properties.ts")>("py_aep/parsers/specialized_properties");
+const _gradient = deferred<typeof import("../../parsers/gradient.ts")>("py_aep/parsers/gradient");
 
 // TODO(pyrt): no shim for `obj.__dict__`; the same non-enumerable Map per
 // instance that `ChunkField` (descriptors.ts) reads its overrides from.

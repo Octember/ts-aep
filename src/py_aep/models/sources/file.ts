@@ -1,7 +1,6 @@
 // Port of py_aep/models/sources/file.py.
 
-import * as fs from "node:fs";
-import * as nodepath from "node:path";
+import * as host from "../../../pyrt/host.ts";
 
 import { OptiChunk, SspcChunk, TextOptiChunk, build_ai_document_opti_data, build_ai_layer_opti_data, build_craw_opti_data, build_dpx_opti_data, build_exr_opti_data, build_generic_opti_data, build_psd_layer_opti_data, build_psd_opti_data, build_rhdr_opti_data, build_text_opti_data, build_tiff_opti_data, type PsdOptiChunk } from "../../binary/footage_chunks.ts";
 import { EmpdChunk } from "../../binary/misc_chunks.ts";
@@ -1007,7 +1006,7 @@ export class FileSource extends FootageSource {
     // AE locates footage only by an absolute path (a relative one opens
     // as missing), and its scripts' `new File()` resolves a relative path
     // against the current folder: resolve against the working directory.
-    const path = new Path(nodepath.resolve(String(file)));
+    const path = new Path(host.path.resolve(String(file)));
 
     if (reserved_c8 == null) {
       // AE 2026 writes byte 0xC9 = 0x02 for raster/media file footage but
@@ -1460,7 +1459,7 @@ export class FileSource extends FootageSource {
       // scandir's entries know their type, and the cheap name test runs
       // first: no stat per file of a large frame folder.
       file_names = sorted(
-        fs
+        host.fs
           .readdirSync(file.parent.path)
           .filter(
             (name) =>
@@ -1615,7 +1614,7 @@ export class FileSource extends FootageSource {
 
     // A path stored for the other platform is read where AE on this one
     // looks for it (`/Users/x` -> `C:\Users\x`).
-    const host_file = platform_path(this._file, { windows: process.platform === "win32" });
+    const host_file = platform_path(this._file, { windows: host.platform === "win32" });
     validate_file_exists(host_file);
     const path = new Path(host_file);
     let fmt = get_file_format(path.suffix);

@@ -33,7 +33,7 @@ import {
   type FieldSpec,
 } from "../../pyrt/index.ts";
 
-const _chunk = deferred<typeof import("./chunk.ts")>(import.meta.url, "./chunk.ts");
+const _chunk = deferred<typeof import("./chunk.ts")>("py_aep/binary/chunk");
 
 export type _StructInfo = [
   string,

@@ -25,7 +25,7 @@ import { validate_name, validate_string } from "../validators.ts";
 import type { Project } from "../project.ts";
 import type { FolderItem } from "./folder.ts";
 
-const _folder = deferred<typeof import("./folder.ts")>(import.meta.url, "./folder.ts");
+const _folder = deferred<typeof import("./folder.ts")>("py_aep/models/items/folder");
 
 // TODO(pyrt): list.remove shim. Python compares with `==` (Item.__eq__ is by
 // id), so the match uses py_eq rather than identity.

@@ -10,7 +10,7 @@ import type { Preferences } from "./preferences.ts";
 import type { Viewer } from "./viewer/viewer.ts";
 import { deferred, descriptor, int, repr, split, str, ValueError, type Path } from "../../pyrt/index.ts";
 
-const _project = deferred<typeof import("./project.ts")>(import.meta.url, "./project.ts");
+const _project = deferred<typeof import("./project.ts")>("py_aep/models/project");
 
 // Version-gated parts After Effects expects from the format version alone,
 // whatever the file holds. Measured on AE 2026: projects relabelled across

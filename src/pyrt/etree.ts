@@ -8,6 +8,7 @@
 // TODO(port): internal DTD entities whose replacement text contains markup are rejected
 // (ParseError); external entities / parameter entities are ignored.
 
+import { latin1_bytes, latin1_str } from "./bytes.ts";
 import { decode } from "./codecs.ts";
 import { IndexError, KeyError, SyntaxError_, ValueError } from "./errors.ts";
 
@@ -613,9 +614,9 @@ export function tostring(
       const cp = ch.codePointAt(0)!;
       s += cp < 128 ? ch : `&#${cp};`;
     }
-    return new Uint8Array(Buffer.from(s, "latin1"));
+    return latin1_bytes(s);
   }
-  if (lower === "utf-8" || lower === "utf8") return new Uint8Array(Buffer.from(text, "utf8"));
+  if (lower === "utf-8" || lower === "utf8") return new TextEncoder().encode(text); // lone surrogates -> U+FFFD, as Buffer did
   throw new ValueError(`unsupported tostring encoding ${enc}`);
 }
 
@@ -1062,7 +1063,7 @@ function decode_xml_bytes(data: Uint8Array): string {
     enc = "utf-16-be";
     start = 2;
   } else {
-    const head = Buffer.from(data.subarray(0, 200)).toString("latin1");
+    const head = latin1_str(data.subarray(0, 200));
     const m = /^<\?xml[^>]*?encoding\s*=\s*["']([A-Za-z][A-Za-z0-9._-]*)["']/.exec(head);
     if (m !== null) enc = m[1];
   }

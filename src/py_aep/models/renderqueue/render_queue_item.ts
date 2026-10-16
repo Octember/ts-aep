@@ -31,8 +31,8 @@ import {
   ValueError,
 } from "../../../pyrt/index.ts";
 
-const _output_module = deferred<typeof import("./output_module.ts")>(import.meta.url, "./output_module.ts");
-const _parsers_output_module = deferred<typeof import("../../parsers/output_module.ts")>(import.meta.url, "../../parsers/output_module.ts");
+const _output_module = deferred<typeof import("./output_module.ts")>("py_aep/models/renderqueue/output_module");
+const _parsers_output_module = deferred<typeof import("../../parsers/output_module.ts")>("py_aep/parsers/output_module");
 
 // TODO(port): Python `datetime` (naive) and `timedelta` have no pyrt shim. The epoch is kept
 // as a UTC `Date`, which is the same instant for a naive datetime.

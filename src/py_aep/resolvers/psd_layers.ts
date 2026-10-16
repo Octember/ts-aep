@@ -9,7 +9,7 @@
  * top. `read_psd_layers` returns the reconstructed tree of leaf layers and groups.
  */
 
-import * as zlib from "node:zlib";
+import * as zlib from "../../pyrt/zlib.ts";
 
 import {
   BytesIO,
@@ -1048,11 +1048,10 @@ export function join_all(parts: Uint8Array[]): Uint8Array {
 // trailing bytes; this inflates the whole stream first, which is bounded by
 // the _MAX_INFLATION check in _channel_flags.
 export function inflate_bounded(body: Uint8Array, max_length: number): Uint8Array {
-  const inflated = zlib.inflateSync(body, { finishFlush: zlib.constants.Z_SYNC_FLUSH });
-  return bytes_.slice(inflated, 0, max_length);
+  return zlib.decompressobj().decompress(body, max_length);
 }
 
-// TODO(pyrt): zlib.error - node:zlib throws plain Errors tagged with a Z_* code.
+/** `except zlib.error` */
 export function is_zlib_error(e: unknown): boolean {
-  return e instanceof Error && typeof (e as any).code === "string" && (e as any).code.startsWith("Z_");
+  return e instanceof zlib.error;
 }

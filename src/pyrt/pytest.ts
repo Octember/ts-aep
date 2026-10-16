@@ -12,9 +12,7 @@
 //   tmp_path fixture                        const tmp_path = make_tmp_path()
 //   assert a == b                           expect(py_eq(a, b)).toBe(true)  or  expect(a).toBe(b) for primitives
 
-import * as fs from "node:fs";
-import * as os from "node:os";
-import * as nodepath from "node:path";
+import { fs, path as nodepath, tmpdir } from "./host.ts";
 import { py_eq } from "./builtins.ts";
 import { warnings } from "./errors.ts";
 import { Path } from "./pathlib.ts";
@@ -66,5 +64,5 @@ export function skip(reason = ""): void {
 }
 
 export function make_tmp_path(): Path {
-  return new Path(fs.mkdtempSync(nodepath.join(os.tmpdir(), "py_aep-")));
+  return new Path(fs.mkdtempSync(nodepath.join(tmpdir(), "py_aep-")));
 }

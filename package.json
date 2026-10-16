@@ -12,6 +12,7 @@
     "typescript": "5.9.2"
   },
   "dependencies": {
+    "fflate": "0.8.2",
     "fontkit": "2.0.4",
     "harfbuzzjs": "0.4.7",
     "yaml": "2.6.0"

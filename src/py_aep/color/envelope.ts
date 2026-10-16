@@ -24,6 +24,7 @@
  */
 
 import { decode, encode, dict_get, getitem, num_str, str } from "../../pyrt/index.ts";
+import { b64decode, b64encode } from "../../pyrt/base64.ts";
 
 // baseProfileType values.
 
@@ -110,7 +111,7 @@ export function _compact(obj: object): string {
 }
 
 export function _b64(text: string): string {
-  return Buffer.from(encode(text, "utf-8")).toString("base64");
+  return b64encode(encode(text, "utf-8"));
 }
 
 export function _envelope(color_profile_data_b64: string, name: string, profile_type: number): string {
@@ -193,7 +194,7 @@ export function build_ocio_display_envelope(display: string, view: string): stri
  * @param icc_bytes The raw ICC profile bytes to embed.
  */
 export function build_icc_envelope(name: string, icc_bytes: Uint8Array): string {
-  return _envelope(Buffer.from(icc_bytes).toString("base64"), name, PROFILE_TYPE_ICC);
+  return _envelope(b64encode(icc_bytes), name, PROFILE_TYPE_ICC);
 }
 
 /** A decoded color-profile envelope. */
@@ -249,12 +250,10 @@ export class ColorProfile {
 export function parse_envelope(envelope_json: string): ColorProfile {
   const outer = json_loads(envelope_json);
   const base = getitem(outer, "baseColorProfile");
-  // TODO(port): b64decode(validate=False) drops non-alphabet characters and
-  // raises on bad padding; Buffer.from(..., "base64") is lenient about padding.
   return new ColorProfile(
     getitem(base, "colorProfileName"),
     getitem(outer, "baseProfileType"),
-    new Uint8Array(Buffer.from(getitem(base, "colorProfileData"), "base64")),
+    b64decode(getitem(base, "colorProfileData")),
   );
 }
 

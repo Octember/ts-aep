@@ -31,7 +31,7 @@
  * rather than reproducing behaviour that drops artwork.
  */
 
-import { inflateSync } from "node:zlib";
+import * as zlib from "../../pyrt/zlib.ts";
 import { IndirectReference } from "../cos/index.ts";
 import { STD14_EXTENT, STD14_FIRST_CODE, STD14_STANDARD_QUOTES, STD14_WIDTHS } from "../data/std14_metrics.ts";
 import { UnsupportedAiLayersError, _find_ai_icc, _object_offsets, _parse_object_at, read_ai_layer_ocgs } from "./ai_layers.ts";
@@ -387,9 +387,9 @@ export class _Document {
         );
       }
       try {
-        // TODO(port): zlib.decompress -> inflateSync; the error text differs from CPython's zlib.error message.
-        body = new Uint8Array(inflateSync(body));
+        body = zlib.decompress(body);
       } catch (exc) {
+        if (!(exc instanceof zlib.error)) throw exc;
         throw Object.assign(this._reject(`corrupt content stream (${exc})`), { cause: exc });
       }
     }

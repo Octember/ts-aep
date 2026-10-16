@@ -12,10 +12,10 @@
  */
 
 // Python's `platform`, `re`, `fnmatch`, `functools`, `typing` and `pathlib`
-// imports map to `process.platform`, `RegExp`, `fnmatchcase` (below),
+// imports map to `host.platform`, `RegExp`, `fnmatchcase` (below),
 // pyrt `lru_cache`, plain types and pyrt `Path`.
 
-import { statSync } from "node:fs";
+import * as host from "../../pyrt/host.ts";
 import { parse, YAMLError, isMap, isSeq, isScalar } from "yaml";
 import {
   Path,
@@ -106,7 +106,7 @@ export const _load_config_cached = lru_cache(
 export function _config_stamp(config_path: Path): [bigint, number] | null {
   let st: any;
   try {
-    st = statSync(config_path.path, { bigint: true });
+    st = host.fs.statSync(config_path.path, { bigint: true });
   } catch (e: any) {
     // `except OSError`: node fs errors carry a `code`.
     if (!e?.code) throw e;
@@ -224,9 +224,9 @@ export function require_ocio_config(config: string | null, purpose: string): Pat
  * a layered PSD), so an install added while it runs goes unseen.
  */
 export const _builtin_config_roots = lru_cache((): Path[] => {
-  // `platform.system() == "Windows"` -> `process.platform === "win32"`; macOS otherwise.
+  // `platform.system() == "Windows"` -> `host.platform === "win32"`; macOS otherwise.
   const bases =
-    process.platform === "win32"
+    host.platform === "win32"
       ? [new Path("C:\\Program Files\\Adobe"), new Path("C:\\Program Files (x86)\\Adobe")]
       : [new Path("/Applications")];
   const roots: Path[] = [];

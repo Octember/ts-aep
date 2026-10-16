@@ -33,7 +33,7 @@
  * Python 3.7 (no wheels), where the resolver reports unsupported.
  */
 
-import { readFileSync } from "node:fs";
+import * as host from "../../pyrt/host.ts";
 import * as fontkit from "fontkit";
 import type { Path } from "../../pyrt/index.ts";
 import {
@@ -78,7 +78,7 @@ class _HbBlob {
     this.data = data;
   }
   static from_file_path(path: string): _HbBlob {
-    return new _HbBlob(new Uint8Array(readFileSync(path)));
+    return new _HbBlob(new Uint8Array(host.fs.readFileSync(path)));
   }
 }
 

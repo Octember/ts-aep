@@ -1,7 +1,6 @@
-// The `pathlib.Path` subset py_aep uses, over node:fs / node:path.
+// The `pathlib.Path` subset py_aep uses, over the host fs / path (pyrt/host).
 
-import * as fs from "node:fs";
-import * as nodepath from "node:path";
+import { fs, path as nodepath, type HostStats } from "./host.ts";
 import { FileNotFoundError } from "./errors.ts";
 
 export class Path {
@@ -140,7 +139,7 @@ export class Path {
     return this.glob("**/" + pattern);
   }
 
-  stat(): fs.Stats {
+  stat(): HostStats {
     return fs.statSync(this.path);
   }
 }

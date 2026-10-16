@@ -5,7 +5,8 @@
  * template.
  */
 
-import { gunzipSync } from "node:zlib";
+import { b64decode } from "../../pyrt/base64.ts";
+import { gzip_decompress } from "../../pyrt/zlib.ts";
 import { BytesIO, bytes_, len, py_assert } from "../../pyrt/index.ts";
 import { CosParser } from "./cos.ts";
 
@@ -17,8 +18,7 @@ export function get_cos_template(): any {
     return _COS_TEMPLATE_CACHE;
   }
 
-  // TODO(port): gzip.decompress failures raise Node zlib Errors here, not Python's gzip.BadGzipFile/EOFError; the messages differ.
-  const raw = bytes_.lstrip(gunzipSync(Buffer.from(POINT_TEXT_COS_TEMPLATE, "base64")));
+  const raw = bytes_.lstrip(gzip_decompress(b64decode(POINT_TEXT_COS_TEMPLATE)));
   const parser = new CosParser(new BytesIO(raw), len(raw));
   const result = parser.parse();
   py_assert(result instanceof Map);
