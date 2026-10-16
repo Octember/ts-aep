@@ -19,6 +19,10 @@ for pf in sorted(py_dir.glob("*.jsonl")):
     if ts is None:
         report["per_sample"][pf.stem] = "missing ts dump"
         continue
+    if py and py[0][0] == "$parse":
+        # Python itself cannot parse this sample: a harness problem, never "identical".
+        report["per_sample"][pf.stem] = f"python parse error {py[0][1]}"
+        continue
     pm = dict((p, v) for p, v in py)
     tm = dict((p, v) for p, v in ts)
     diffs = []
