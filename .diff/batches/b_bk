@@ -1,0 +1,12 @@
+samples/models/property/is_modified_false.aep
+samples/models/property/keyframe_1D.aep
+samples/models/property/keyframe_BEZIER.aep
+samples/models/property/keyframe_HOLD.aep
+samples/models/property/keyframe_LINEAR.aep
+samples/models/property/keyframe_bezier_asymmetric_ease_1D.aep
+samples/models/property/keyframe_bezier_ease_2D_position.aep
+samples/models/property/keyframe_bezier_ease_in_out_1D.aep
+samples/models/property/keyframe_bezier_ease_scale.aep
+samples/models/property/keyframe_bezier_extreme_ease_1D.aep
+samples/models/property/keyframe_bezier_multi_ease_1D.aep
+samples/models/property/keyframe_bezier_nonzero_speed.aep

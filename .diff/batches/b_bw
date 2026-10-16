@@ -1,0 +1,12 @@
+samples/models/renderqueue/starting_9999999.aep
+samples/models/renderqueue/time_span.aep
+samples/models/renderqueue/time_span_custom_start_00_duration_24s13f.aep
+samples/models/renderqueue/time_span_custom_start_01_duration_29.9583s.aep
+samples/models/renderqueue/time_span_custom_start_01s_23f_duration_24s13f.aep
+samples/models/renderqueue/time_span_length_of_comp.aep
+samples/models/renderqueue/time_span_negative.aep
+samples/models/renderqueue/use_comp_frame_number_off.aep
+samples/models/renderqueue/use_comp_frame_number_on.aep
+samples/models/renderqueue/use_this_frame_rate_24.aep
+samples/models/renderqueue/use_this_frame_rate_30.aep
+samples/models/selection/selection_dropshadow_enabled_opacity.aep

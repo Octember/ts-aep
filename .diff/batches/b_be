@@ -1,0 +1,12 @@
+samples/models/output_module/output_color_space/arriflex_daylight.aep
+samples/models/output_module/output_color_space/canon_cinema_clog2.aep
+samples/models/output_module/output_color_space/cie_rgb.aep
+samples/models/output_module/output_color_space/colormatch_rgb.aep
+samples/models/output_module/output_color_space/image_p3.aep
+samples/models/output_module/output_color_space/prophoto_rgb.aep
+samples/models/output_module/output_color_space/srgb.aep
+samples/models/output_module/output_color_space/working_color_space.aep
+samples/models/output_module/output_color_space_ocio/aces_acescg_yo.aep
+samples/models/output_module/preserve_rgb_off.aep
+samples/models/output_module/preserve_rgb_on.aep
+samples/models/output_module/resize_checked.aep

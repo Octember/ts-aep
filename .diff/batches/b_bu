@@ -1,0 +1,12 @@
+samples/models/renderqueue/frame_rate.aep
+samples/models/renderqueue/guide_layers_current.aep
+samples/models/renderqueue/lock_aspect_ratio_off.aep
+samples/models/renderqueue/lock_aspect_ratio_on.aep
+samples/models/renderqueue/motion_blur_current.aep
+samples/models/renderqueue/motion_blur_off_for_all_layers.aep
+samples/models/renderqueue/numItems_1.aep
+samples/models/renderqueue/numItems_2.aep
+samples/models/renderqueue/output_to_comp_and_frame_range.aep
+samples/models/renderqueue/output_to_comp_folder_and_name.aep
+samples/models/renderqueue/output_to_custom_all_fields.aep
+samples/models/renderqueue/output_to_project_and_comp_name.aep

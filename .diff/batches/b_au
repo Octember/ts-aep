@@ -1,0 +1,12 @@
+samples/models/import/psd_blend_4cc_all.aep
+samples/models/import/psd_clipping_mask.aep
+samples/models/import/psd_clipping_mask_cropped.aep
+samples/models/import/psd_comp.aep
+samples/models/import/psd_fill_opacity.aep
+samples/models/import/psd_group_styles.aep
+samples/models/import/psd_layer_styles.aep
+samples/models/import/psd_layer_styles_single.aep
+samples/models/import/psd_layer_styles_variant.aep
+samples/models/import/psd_mask_crops_editable.aep
+samples/models/import/psd_mask_crops_merge.aep
+samples/models/import/psd_noise_gradient.aep

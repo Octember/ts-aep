@@ -1,0 +1,22 @@
+{
+ "per_sample": {
+  "samples__models__renderqueue__time_span_negative.aep": 2
+ },
+ "samples": 12,
+ "identical": 11,
+ "differing": 1,
+ "top": [
+  {
+   "attr": "app.project.render_queue.items[].start_time",
+   "samples": 1,
+   "sample": "samples__models__renderqueue__time_span_negative.aep",
+   "path": "app.project.render_queue.items[0].start_time",
+   "py": {
+    "$obj": "datetime"
+   },
+   "ts": {
+    "$obj": "Date"
+   }
+  }
+ ]
+}

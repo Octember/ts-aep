@@ -1,0 +1,12 @@
+samples/models/property/property_3D_position.aep
+samples/models/property/property_path_orientation_ease.aep
+samples/models/property/property_path_orientation_pin.aep
+samples/models/property/property_rotation.aep
+samples/models/property/property_scale.aep
+samples/models/property/property_types.aep
+samples/models/property/property_vat_edge_cases.aep
+samples/models/property/scale_unlinked.aep
+samples/models/property/shape_basic.aep
+samples/models/property/shape_feather.aep
+samples/models/property/shape_misc.aep
+samples/models/property/text_animator.aep

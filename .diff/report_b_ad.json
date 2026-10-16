@@ -1,0 +1,25 @@
+{
+ "per_sample": {
+  "samples__models__essential_graphics__multiple_controllers.aep": 8,
+  "samples__models__essential_graphics__point_controller.aep": 3,
+  "samples__models__essential_graphics__slider_controller.aep": 3,
+  "samples__models__essential_graphics__text_source_text.aep": 2
+ },
+ "samples": 12,
+ "identical": 8,
+ "differing": 4,
+ "top": [
+  {
+   "attr": "app.project.active_item.compositions[].av_layers[].essential_property_controllers[].source_property_path[]",
+   "samples": 4,
+   "sample": "samples__models__essential_graphics__multiple_controllers.aep",
+   "path": "app.project.active_item.compositions[0].av_layers[0].essential_property_controllers[0].source_property_path[0]",
+   "py": {
+    "$list": 2
+   },
+   "ts": {
+    "$obj": "SourcePropertyRef"
+   }
+  }
+ ]
+}

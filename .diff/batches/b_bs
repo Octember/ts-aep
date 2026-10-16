@@ -1,0 +1,12 @@
+samples/models/renderqueue/field_render_upper_field_first.aep
+samples/models/renderqueue/field_render_upper_field_first_pulldown_sswww.aep
+samples/models/renderqueue/field_render_upper_field_first_pulldown_swwws.aep
+samples/models/renderqueue/field_render_upper_field_first_pulldown_wssww.aep
+samples/models/renderqueue/field_render_upper_field_first_pulldown_wwssw.aep
+samples/models/renderqueue/field_render_upper_field_first_pulldown_wwwss.aep
+samples/models/renderqueue/format_aiff.aep
+samples/models/renderqueue/format_avi.aep
+samples/models/renderqueue/format_dpx_cineon_sequence.aep
+samples/models/renderqueue/format_h264.aep
+samples/models/renderqueue/format_iff_sequence.aep
+samples/models/renderqueue/format_jpeg_sequence.aep

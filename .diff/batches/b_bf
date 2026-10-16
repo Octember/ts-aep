@@ -1,0 +1,12 @@
+samples/models/output_module/resize_custom_960x540.aep
+samples/models/output_module/resize_dvcpro_hd_960x720_1.33_23.976_fps.aep
+samples/models/output_module/resize_hd_1920x1080_29.97_fps.aep
+samples/models/output_module/resize_quality_high.aep
+samples/models/output_module/resize_quality_low.aep
+samples/models/output_module/resize_unchecked.aep
+samples/models/output_module/template.aep
+samples/models/project/Audio_sample_rate_22050.aep
+samples/models/project/Audio_sample_rate_96000.aep
+samples/models/project/bitsPerChannel_16.aep
+samples/models/project/bitsPerChannel_32.aep
+samples/models/project/bitsPerChannel_8.aep

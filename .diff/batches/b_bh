@@ -1,0 +1,12 @@
+samples/models/project/footageTimecodeDisplayStartType_source.aep
+samples/models/project/framesCountType_start0.aep
+samples/models/project/framesUseFeetFrames_false.aep
+samples/models/project/framesUseFeetFrames_true.aep
+samples/models/project/gpuAccelType_mercury_gpu_acceleration_CUDA.aep
+samples/models/project/gpuAccelType_mercury_software_only.aep
+samples/models/project/linearBlending_false.aep
+samples/models/project/linearBlending_true.aep
+samples/models/project/linearizeWorkingSpace_false.aep
+samples/models/project/linearizeWorkingSpace_true.aep
+samples/models/project/lutInterpolationMethod_tetrahedral.aep
+samples/models/project/lutInterpolationMethod_trilinear.aep

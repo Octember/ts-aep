@@ -1,0 +1,12 @@
+samples/models/format_options/targa/24_bits_per_pixel.aep
+samples/models/format_options/targa/32_bits_per_pixel.aep
+samples/models/format_options/targa/base.aep
+samples/models/format_options/targa/rle_compression_on.aep
+samples/models/format_options/tiff/base.aep
+samples/models/format_options/tiff/ibm_pc_byte_order_on.aep
+samples/models/format_options/tiff/lze_compression_on.aep
+samples/models/format_options/wav/audio_codec_ccitt_a-law.aep
+samples/models/format_options/wav/audio_codec_ccitt_u-law.aep
+samples/models/format_options/wav/audio_codec_gsm_6.10.aep
+samples/models/format_options/wav/audio_codec_ima_adpcm.aep
+samples/models/format_options/wav/audio_codec_microsoft_adpcm.aep

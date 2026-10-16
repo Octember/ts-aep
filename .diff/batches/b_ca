@@ -1,0 +1,12 @@
+samples/models/view/roi_left_viewer.aep
+samples/models/view/roi_off.aep
+samples/models/view/roi_on.aep
+samples/models/view/roi_right.aep
+samples/models/view/rulers_off.aep
+samples/models/view/rulers_on.aep
+samples/models/view/snap_to_guides_off.aep
+samples/models/view/snap_to_guides_on.aep
+samples/models/view/title_action_safe_off.aep
+samples/models/view/title_action_safe_on.aep
+samples/models/view/transparency_grid_off.aep
+samples/models/view/transparency_grid_on.aep

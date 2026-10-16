@@ -1,0 +1,12 @@
+samples/models/format_options/jpeg/quality_0.aep
+samples/models/format_options/jpeg/quality_10.aep
+samples/models/format_options/mp3/base.aep
+samples/models/format_options/mp3/mp3_mono_18.aep
+samples/models/format_options/mp3/mp3_mono_320.aep
+samples/models/format_options/openexr/base.aep
+samples/models/format_options/openexr/compression_b44.aep
+samples/models/format_options/openexr/compression_b44a.aep
+samples/models/format_options/openexr/compression_dwaa_1.0.aep
+samples/models/format_options/openexr/compression_dwaa_10000000000.0.aep
+samples/models/format_options/openexr/compression_dwaa_45.0.aep
+samples/models/format_options/openexr/compression_dwab_200.0.aep

@@ -1,0 +1,12 @@
+samples/models/selection/selection_text_source_text.aep
+samples/models/text/baseline_locs.aep
+samples/models/text/box_matrix.aep
+samples/models/text/box_overflow.aep
+samples/models/text/replace_font.aep
+samples/models/text/replace_font_after.aep
+samples/models/text/reset_style.aep
+samples/models/text/reset_style_after.aep
+samples/models/text/text_ranges.aep
+samples/models/text/text_writes.aep
+samples/models/text/text_writes2.aep
+samples/models/text/text_writes3.aep

@@ -1,0 +1,12 @@
+samples/models/property/keyframe_separated_dimensions.aep
+samples/models/property/keyframe_single.aep
+samples/models/property/keyframe_spatial.aep
+samples/models/property/keyframe_spatial_anchor_point.aep
+samples/models/property/keyframe_spatial_auto_bezier.aep
+samples/models/property/keyframe_spatial_bezier_3D.aep
+samples/models/property/keyframe_spatial_bezier_arc.aep
+samples/models/property/keyframe_spatial_bezier_s_curve.aep
+samples/models/property/keyframe_spatial_continuous.aep
+samples/models/property/keyframe_spatial_in_hold.aep
+samples/models/property/keyframe_spatial_pixel_aspect.aep
+samples/models/property/keyframe_spatial_temporal_auto_bezier.aep

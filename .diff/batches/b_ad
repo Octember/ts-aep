@@ -1,0 +1,12 @@
+samples/models/essential_graphics/multiple_controllers.aep
+samples/models/essential_graphics/no_essential_properties.aep
+samples/models/essential_graphics/point_controller.aep
+samples/models/essential_graphics/slider_controller.aep
+samples/models/essential_graphics/text_source_text.aep
+samples/models/folder/folder.aep
+samples/models/footage/alphaMode.aep
+samples/models/footage/cms_acescg_colorspace.aep
+samples/models/footage/cms_matte_paint_role.aep
+samples/models/footage/conformFrameRate.aep
+samples/models/footage/conform_frame_rate_2.5.aep
+samples/models/footage/conform_frame_rate_2.5_uff_off.aep

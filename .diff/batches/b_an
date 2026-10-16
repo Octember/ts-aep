@@ -1,0 +1,12 @@
+samples/models/format_options/png/color_primaries_rec2020.aep
+samples/models/format_options/png/color_primaries_rec709.aep
+samples/models/format_options/png/compression_interlaced.aep
+samples/models/format_options/png/compression_none.aep
+samples/models/format_options/png/content_light_levels_average_1.797693e+308.aep
+samples/models/format_options/png/content_light_levels_maximum_1.797693e+308.aep
+samples/models/format_options/png/include_hdr10_metadata_on.aep
+samples/models/format_options/png/luminance_max_1.797693e+308.aep
+samples/models/format_options/png/luminance_min_0.aep
+samples/models/format_options/png/png_rgba.aep
+samples/models/format_options/quicktime/Quicktime_720p-DNxHD-HQ-10-bit_Compressed.aep
+samples/models/format_options/quicktime/Quicktime_720p-DNxHD-HQ-10-bit_None.aep
