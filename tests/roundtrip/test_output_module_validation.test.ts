@@ -1,0 +1,203 @@
+/**
+ * Format-dependent validation of output-module settings writes.
+ *
+ * Reject cases assert `ValueError` on values AE's dialog never offers for
+ * the format; accept cases write an allowed value and verify it survives a
+ * save + fresh reparse (including the clamp side effects).
+ */
+
+import { expect, test } from "bun:test";
+
+import { parse_project_fresh } from "../helpers.ts";
+import { OutputAudio, OutputChannels, OutputColorDepth, OutputColorMode } from "../../src/py_aep/enums/index.ts";
+import { Path, py_assert, py_eq, ValueError } from "../../src/pyrt/index.ts";
+import { make_tmp_path, raises } from "../../src/pyrt/pytest.ts";
+
+const RQ_DIR = new Path(import.meta.dir).parent.parent.div("samples").div("models").div("renderqueue");
+
+function _om(project: any): any {
+  return project.render_queue.items[0].output_modules[0];
+}
+
+const REJECTS: [string, string, any][] = [
+  // (sample, key, value) - corruption-preventing rows first: turning
+  // video on for an audio format writes comp dimensions into the Rouu.
+  ["format_mp3", "Video Output", true],
+  ["format_wav", "Video Output", true],
+  ["format_aiff", "Output Audio", OutputAudio.OFF],
+  ["format_mp3", "Output Audio", OutputAudio.AUTO],
+  ["format_tiff_sequence", "Video Output", false],
+  ["format_png_sequence", "Output Audio", OutputAudio.ON],
+  ["format_png_sequence", "Depth", OutputColorDepth.FLOATING_POINT],
+  ["format_openexr_sequence", "Depth", OutputColorDepth.MILLIONS_OF_COLORS],
+  ["format_jpeg_sequence", "Channels", OutputChannels.RGBA],
+  ["format_jpeg_sequence", "Depth", OutputColorDepth.TRILLIONS_OF_COLORS],
+  ["format_radiance_sequence", "Channels", OutputChannels.RGBA],
+  ["format_radiance_sequence", "Depth", OutputColorDepth.MILLIONS_OF_COLORS],
+  ["format_targa_sequence", "Depth", OutputColorDepth.TRILLIONS_OF_COLORS],
+  ["format_dpx_cineon_sequence", "Depth", OutputColorDepth.MILLIONS_OF_COLORS],
+  ["format_sgi_sequence", "Depth", OutputColorDepth.FLOATING_POINT],
+  ["format_h264", "Channels", OutputChannels.RGBA],
+  ["format_h264", "Depth", OutputColorDepth.TRILLIONS_OF_COLORS],
+  ["format_h264", "Audio Sample Rate", 8000],
+  ["format_quicktime", "Depth", OutputColorDepth.FLOATING_POINT],
+  ["format_aiff", "Audio Sample Rate", 24000],
+  ["format_mp3", "Audio Sample Rate", 88200],
+  ["format_mp3", "Audio Bit Depth", 4], // 32-bit; MP3 is locked to 16
+];
+
+// `pytest.mark.parametrize(..., ids=[...])`: bun's `%#` row index stands in
+// for the Python ids (`f"{s}-{k}-{v}"`).
+// TODO(port): pytest custom ids have no bun:test equivalent; rows are named by index.
+test.each(REJECTS)("test_disallowed_write_raises[%#]", (sample: string, key: string, value: any) => {
+  const project = parse_project_fresh(RQ_DIR.div(`${sample}.aep`));
+  const om = _om(project);
+  const before = om.get_settings();
+  raises(ValueError, () => {
+    om.settings.__setitem__(key, value);
+  });
+  // TODO(port): bun's expect() takes no failure message, so py_assert keeps the Python message.
+  py_assert(py_eq(om.get_settings(), before), "rejected write must not mutate");
+});
+
+// NOTE: the samples store RGB channels, so only base (non-`+`) depths
+// are writable - the channels<->depth parity rows mirror AE's dialog,
+// which offers `+` depths only under RGB+Alpha.
+const ACCEPTS: [string, string, any][] = [
+  ["format_tiff_sequence", "Depth", OutputColorDepth.FLOATING_POINT],
+  ["format_sgi_sequence", "Depth", OutputColorDepth.TRILLIONS_OF_COLORS],
+  ["format_iff_sequence", "Depth", OutputColorDepth.TRILLIONS_OF_COLORS],
+  ["format_aiff", "Audio Sample Rate", 96000],
+  ["format_wav", "Audio Sample Rate", 8000],
+  ["format_avi", "Audio Sample Rate", 96000],
+  ["format_h264", "Audio Sample Rate", 44100],
+  // The sample stores bitrate 128 + stereo, which resolves 44100.
+  ["format_mp3", "Audio Sample Rate", 44100],
+  ["format_quicktime", "Depth", OutputColorDepth.TRILLIONS_OF_COLORS],
+  ["format_photoshop_sequence", "Depth", OutputColorDepth.FLOATING_POINT],
+];
+
+/** QT alpha is AE-legal: the factory template "High Quality with
+ * Alpha" writes a QT Rouu with depth 32 (millions+). */
+test("test_quicktime_supports_alpha", () => {
+  const tmp_path = make_tmp_path();
+  const project = parse_project_fresh(
+    new Path(import.meta.dir)
+      .parent.parent.div("samples")
+      .div("models")
+      .div("format_options")
+      .div("quicktime")
+      .div("apple_prores_4444.aep"),
+  );
+  const om = project.render_queue.items[0].output_modules[0];
+  om.settings.__setitem__("Channels", OutputChannels.RGBA);
+  expect(om.settings.__getitem__("Depth")).toBe(OutputColorDepth.MILLIONS_OF_COLORS_PLUS);
+  project.save(tmp_path.div("out.aep"));
+  const om2 = _om(parse_project_fresh(tmp_path.div("out.aep")));
+  expect(om2.settings.__getitem__("Channels")).toBe(OutputChannels.RGBA);
+  expect(om2.settings.__getitem__("Depth")).toBe(OutputColorDepth.MILLIONS_OF_COLORS_PLUS);
+  expect(py_eq(om2.validate_state(), [])).toBe(true);
+});
+
+/** AE offers `+` depths only under RGB+Alpha (parity rows). */
+test("test_plus_depth_requires_rgba_channels", () => {
+  const project = parse_project_fresh(RQ_DIR.div("format_photoshop_sequence.aep"));
+  const om = _om(project);
+  raises(ValueError, () => {
+    om.settings.__setitem__("Depth", OutputColorDepth.FLOATING_POINT_PLUS); // RGB module
+  });
+  om.settings.__setitem__("Channels", OutputChannels.RGBA);
+  om.settings.__setitem__("Depth", OutputColorDepth.FLOATING_POINT_PLUS);
+  raises(ValueError, () => {
+    om.settings.__setitem__("Depth", OutputColorDepth.FLOATING_POINT); // base under RGBA
+  });
+});
+
+test.each(ACCEPTS)("test_allowed_write_survives_roundtrip[%#]", (sample: string, key: string, value: any) => {
+  const tmp_path = make_tmp_path();
+  const project = parse_project_fresh(RQ_DIR.div(`${sample}.aep`));
+  const om = _om(project);
+  om.settings.__setitem__(key, value);
+  expect(om.settings.__getitem__(key)).toBe(value);
+  project.save(tmp_path.div("out.aep"));
+  const reparsed = parse_project_fresh(tmp_path.div("out.aep"));
+  expect(_om(reparsed).settings.__getitem__(key)).toBe(value);
+});
+
+/** Switching PNG to RGB+Alpha forces Straight and the +alpha depth. */
+test("test_png_rgba_clamps_color_straight", () => {
+  const tmp_path = make_tmp_path();
+  const project = parse_project_fresh(RQ_DIR.div("format_png_sequence.aep"));
+  const om = _om(project);
+  om.settings.__setitem__("Color", OutputColorMode.PREMULTIPLIED); // inert while RGB
+  om.settings.__setitem__("Channels", OutputChannels.RGBA);
+  expect(om.settings.__getitem__("Color")).toBe(OutputColorMode.STRAIGHT_UNMATTED);
+  expect(om.settings.__getitem__("Depth")).toBe(OutputColorDepth.MILLIONS_OF_COLORS_PLUS);
+  project.save(tmp_path.div("out.aep"));
+  const om2 = _om(parse_project_fresh(tmp_path.div("out.aep")));
+  expect(om2.settings.__getitem__("Channels")).toBe(OutputChannels.RGBA);
+  expect(om2.settings.__getitem__("Color")).toBe(OutputColorMode.STRAIGHT_UNMATTED);
+  expect(om2.settings.__getitem__("Depth")).toBe(OutputColorDepth.MILLIONS_OF_COLORS_PLUS);
+});
+
+test("test_exr_rgba_clamps_color_premultiplied", () => {
+  const tmp_path = make_tmp_path();
+  const project = parse_project_fresh(RQ_DIR.div("format_openexr_sequence.aep"));
+  const om = _om(project);
+  om.settings.__setitem__("Color", OutputColorMode.STRAIGHT_UNMATTED); // inert while RGB
+  om.settings.__setitem__("Channels", OutputChannels.RGBA);
+  expect(om.settings.__getitem__("Color")).toBe(OutputColorMode.PREMULTIPLIED);
+  expect(om.settings.__getitem__("Depth")).toBe(OutputColorDepth.FLOATING_POINT_PLUS);
+  project.save(tmp_path.div("out.aep"));
+  const om2 = _om(parse_project_fresh(tmp_path.div("out.aep")));
+  expect(om2.settings.__getitem__("Color")).toBe(OutputColorMode.PREMULTIPLIED);
+  expect(om2.settings.__getitem__("Depth")).toBe(OutputColorDepth.FLOATING_POINT_PLUS);
+});
+
+test("test_rgba_color_write_rejected_after_clamp", () => {
+  const project = parse_project_fresh(RQ_DIR.div("format_png_sequence.aep"));
+  const om = _om(project);
+  om.settings.__setitem__("Channels", OutputChannels.RGBA);
+  raises(ValueError, () => {
+    om.settings.__setitem__("Color", OutputColorMode.PREMULTIPLIED);
+  });
+});
+
+/**
+ * Video-section side effects must not write dims into an audio Rouu.
+ *
+ * The Video Output gate blocks the direct write; the crop/resize/ROI
+ * post_set hooks used to bypass it by writing comp dimensions (which
+ * ARE the video-output flag) into the audio-only Rouu.
+ */
+test("test_crop_resize_roi_writes_keep_audio_module_audio_only", () => {
+  const project = parse_project_fresh(RQ_DIR.div("format_mp3.aep"));
+  const om = _om(project);
+  om.settings.__setitem__("Crop", true);
+  om.settings.__setitem__("Crop Left", 10);
+  om.settings.__setitem__("Use Region of Interest", true);
+  om.settings.__setitem__("Resize", false);
+  expect(om.settings.__getitem__("Video Output")).toBe(false);
+  expect(py_eq([om._roou.width, om._roou.height], [0, 0])).toBe(true);
+  expect(py_eq(om.validate_state(), [])).toBe(true);
+  raises(ValueError, () => {
+    om.settings.__setitem__("Resize to", [1280, 720]);
+  });
+});
+
+/**
+ * An out-of-enum stored byte degrades permissively, never raises.
+ *
+ * OutputChannels has no from_binary fallback, so a garbage channels
+ * byte makes the descriptor read raise; the context builder, clamps
+ * and validate_state must treat that as "unclean -> skip" instead of
+ * propagating (permissive-degradation contract).
+ */
+test("test_garbage_channels_byte_stays_permissive", () => {
+  const project = parse_project_fresh(RQ_DIR.div("format_png_sequence.aep"));
+  const om = _om(project);
+  om._om_ldat.channels = 7; // not a valid OutputChannels member
+  om.settings.__setitem__("Depth", OutputColorDepth.TRILLIONS_OF_COLORS); // no raise
+  om.settings.__setitem__("Audio Channels", om.settings.__getitem__("Audio Channels")); // clamp path
+  expect(py_eq(om.validate_state(), [])).toBe(true);
+});

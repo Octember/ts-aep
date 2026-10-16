@@ -1,0 +1,11 @@
+import { ValueError } from "../../pyrt/index.ts";
+
+/**
+ * Raised when an SVG uses a feature py_aep cannot import, or cannot be
+ * read at all (not well-formed XML, an unusable canvas size).
+ *
+ * The message names the offending element or feature so callers can
+ * report exactly what is unsupported (e.g. an unimplemented path
+ * command or a referenced filter).
+ */
+export class UnsupportedSVGError extends ValueError {}

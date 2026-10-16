@@ -1,0 +1,103 @@
+// Python: src/py_aep/models/guide.py (`from __future__ import annotations`: dropped)
+
+import { GuideItem } from "../binary/ldat_chunks.ts";
+import { GuideOrientationType } from "../enums/index.ts";
+import { float, descriptor, float_repr } from "../../pyrt/index.ts";
+import { ChunkField } from "./descriptors.ts";
+import { validate_f8 } from "./validators.ts";
+
+/**
+ * A ruler guide used for alignment in a composition.
+ *
+ * Guides are horizontal or vertical lines placed at specific pixel positions
+ * within a composition. They are visual aids and do not affect rendering.
+ *
+ * Note:
+ *     Guide class has no ExtendScript equivalent.
+ *
+ * Example:
+ *     ```python
+ *     from py_aep import parse
+ *
+ *     app = parse("project.aep")
+ *     comp = app.project.compositions[0]
+ *     for guide in comp.guides:
+ *         print(guide.orientation_type, guide.position)
+ *     ```
+ */
+export class Guide {
+  /** The orientation of the guide. Read / Write. */
+  declare orientation_type: GuideOrientationType;
+
+  /**
+   * The position of the guide in pixels from the top (horizontal) or
+   * left (vertical) edge of the composition. Read / Write.
+   *
+   * May be negative or fractional: guides sit anywhere on the ruler, and
+   * After Effects accepts both (probed on AE 2026, backed by a signed f8).
+   */
+  declare position: number;
+
+  /** The position type of the guide. Always 0 (pixels). Read / Write. */
+  declare position_type: number;
+
+  declare _guide_item: GuideItem;
+
+  constructor(_guide_item: GuideItem) {
+    this._guide_item = _guide_item;
+  }
+
+  /**
+   * Create a new guide with the given orientation and position.
+   *
+   * Any `orientation_type` value other than 0 or 1 defaults to
+   * horizontal (matching ExtendScript behavior).
+   *
+   * Args:
+   *     orientation_type: 0 for horizontal, 1 for vertical.
+   *     position: The pixel position of the guide.
+   *
+   * Returns:
+   *     A new `Guide` instance backed by a freshly created `GuideItem`.
+   */
+  static _new(orientation_type: number, position: number): Guide {
+    const orientation = GuideOrientationType.from_binary(orientation_type);
+    validate_f8(position);
+    const item = new GuideItem({
+      orientation_type: GuideOrientationType.to_binary(orientation),
+      position_type: 0,
+      position: float(position),
+    });
+    return new this(item);
+  }
+
+  __repr__(): string {
+    const orient =
+      this.orientation_type === GuideOrientationType.HORIZONTAL
+        ? "horizontal"
+        : "vertical";
+    return `Guide(${orient}, position=${float_repr(this.position)})`;
+  }
+}
+
+descriptor(
+  Guide,
+  "orientation_type",
+  ChunkField.enum<GuideOrientationType>(
+    GuideOrientationType,
+    "_guide_item",
+    "orientation_type",
+  ),
+);
+
+descriptor(
+  Guide,
+  "position",
+  new ChunkField<number>("_guide_item", "position", { validate: validate_f8 }),
+);
+
+descriptor(
+  Guide,
+  "position_type",
+  new ChunkField<number>("_guide_item", "position_type"),
+);

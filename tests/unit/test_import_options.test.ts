@@ -1,0 +1,350 @@
+/** Tests for the ImportOptions parameter container. */
+
+import { describe, expect, test } from "bun:test";
+
+import { raises } from "../../src/pyrt/pytest.ts";
+import { Path, TypeError_, ValueError, int, repr } from "../../src/pyrt/index.ts";
+import { ImportAsType } from "../../src/py_aep/enums/index.ts";
+import { CURRENT_VALUE, ImportOptions } from "../../src/py_aep/models/index.ts";
+import { COMP_CONVERSION_EXTENSIONS, get_file_format } from "../../src/py_aep/data/file_formats.ts";
+
+describe("TestImportOptions", () => {
+  test("test_constructor", () => {
+    const opts = new ImportOptions(new Path("footage/shot.png"));
+    expect(opts.file.toString()).toBe(new Path("footage/shot.png").toString()); // TODO(pyrt): Path has no __eq__, so py_eq cannot compare Paths
+    expect(opts.import_as).toBe(ImportAsType.FOOTAGE);
+    expect(opts.sequence).toBe(false);
+    expect(opts.force_alphabetical).toBe(false);
+  });
+
+  test("test_constructor_accepts_path", () => {
+    const opts = new ImportOptions(new Path("footage/shot.png"));
+    expect(opts.file instanceof Path).toBe(true);
+  });
+
+  test("test_file_setter", () => {
+    const opts = new ImportOptions(new Path("a.png"));
+    opts.file = new Path("b.psd");
+    expect(opts.file.toString()).toBe(new Path("b.psd").toString()); // TODO(pyrt): Path has no __eq__, so py_eq cannot compare Paths
+  });
+
+  test("test_import_as_setter", () => {
+    const opts = new ImportOptions(new Path("a.psd"));
+    opts.import_as = ImportAsType.COMP;
+    expect(opts.import_as).toBe(ImportAsType.COMP);
+  });
+
+  test("test_sequence_setter", () => {
+    const opts = new ImportOptions(new Path("frame001.png"));
+    opts.sequence = true;
+    expect(opts.sequence).toBe(true);
+  });
+
+  test("test_force_alphabetical_setter", () => {
+    const opts = new ImportOptions(new Path("frame001.png"));
+    opts.force_alphabetical = true;
+    expect(opts.force_alphabetical).toBe(true);
+  });
+
+  // --- can_import_as ---
+  // AE 2026 capability per extension (measured via
+  // scripts/jsx/can_import_as_matrix.jsx). can_import_as additionally gates
+  // on py_aep's own import support, so an extension that is AE-capable but
+  // whose format is unimplemented (absent from data.file_formats, e.g.
+  // .svg / .aep / .aet) returns False here for every type.
+
+  const _MATRIX = new Map<string, Set<number>>([
+    // Still images / audio / video: footage only.
+    [".png", new Set([ImportAsType.FOOTAGE])],
+    [".jpg", new Set([ImportAsType.FOOTAGE])],
+    [".tif", new Set([ImportAsType.FOOTAGE])],
+    [".tga", new Set([ImportAsType.FOOTAGE])],
+    [".bmp", new Set([ImportAsType.FOOTAGE])],
+    [".gif", new Set([ImportAsType.FOOTAGE])],
+    [".dpx", new Set([ImportAsType.FOOTAGE])],
+    [".cin", new Set([ImportAsType.FOOTAGE])],
+    [".heic", new Set([ImportAsType.FOOTAGE])],
+    [".heif", new Set([ImportAsType.FOOTAGE])],
+    [".mp3", new Set([ImportAsType.FOOTAGE])],
+    [".aif", new Set([ImportAsType.FOOTAGE])],
+    [".wav", new Set([ImportAsType.FOOTAGE])],
+    // Layered Photoshop: footage, comp, and comp-cropped.
+    [
+      ".psd",
+      new Set([ImportAsType.FOOTAGE, ImportAsType.COMP, ImportAsType.COMP_CROPPED_LAYERS]),
+    ],
+    [
+      ".psb",
+      new Set([ImportAsType.FOOTAGE, ImportAsType.COMP, ImportAsType.COMP_CROPPED_LAYERS]),
+    ],
+    // Multi-channel EXR: footage or comp-cropped, but NOT plain comp.
+    [".exr", new Set([ImportAsType.FOOTAGE, ImportAsType.COMP_CROPPED_LAYERS])],
+    // SVG: comp-cropped only - not even footage.
+    [".svg", new Set([ImportAsType.COMP_CROPPED_LAYERS])],
+    // QuickTime: footage or project.
+    [".mov", new Set([ImportAsType.FOOTAGE, ImportAsType.PROJECT])],
+    // Project / template: project only - not footage.
+    [".aep", new Set([ImportAsType.PROJECT])],
+    [".aet", new Set([ImportAsType.PROJECT])],
+  ]);
+
+  test("test_can_import_as_matches_matrix", () => {
+    const all_types = [
+      ImportAsType.FOOTAGE,
+      ImportAsType.COMP,
+      ImportAsType.COMP_CROPPED_LAYERS,
+      ImportAsType.PROJECT,
+    ];
+    for (const [ext, expected] of _MATRIX.entries()) {
+      // can_import_as is gated by what py_aep can actually import, so an
+      // AE-capable extension with no implemented format yields False.
+      // Comp-conversion formats (e.g. SVG) are implemented without a
+      // media-format entry.
+      let implemented: boolean;
+      if (COMP_CONVERSION_EXTENSIONS.has(ext)) {
+        implemented = true;
+      } else {
+        try {
+          get_file_format(ext);
+          implemented = true;
+        } catch (e) {
+          if (!(e instanceof ValueError)) throw e;
+          implemented = false;
+        }
+      }
+      const opts = new ImportOptions(new Path("asset" + ext));
+      for (const t of all_types) {
+        // PROJECT import is unimplemented for every format, so
+        // can_import_as never returns True for it (even where AE can);
+        // a cropped import is implemented for SVG and PSD/PSB only.
+        const cropped_ok = COMP_CONVERSION_EXTENSIONS.has(ext) || [".psd", ".psb"].includes(ext);
+        const want = implemented
+          ? expected.has(t) && t !== ImportAsType.PROJECT && (t !== ImportAsType.COMP_CROPPED_LAYERS || cropped_ok)
+          : false;
+        // Labeled so a failing row names its extension and type, as pytest's message does.
+        expect({ label: `${ext} / ${ImportAsType.name_of(t)}`, got: opts.can_import_as(t) }).toEqual({
+          label: `${ext} / ${ImportAsType.name_of(t)}`,
+          got: want,
+        });
+      }
+    }
+  });
+
+  test("test_can_import_as_unknown_extension_all_false", () => {
+    const opts = new ImportOptions(new Path("data.xyz"));
+    expect(opts.can_import_as(ImportAsType.FOOTAGE)).toBe(false);
+    expect(opts.can_import_as(ImportAsType.COMP)).toBe(false);
+    expect(opts.can_import_as(ImportAsType.COMP_CROPPED_LAYERS)).toBe(false);
+    expect(opts.can_import_as(ImportAsType.PROJECT)).toBe(false);
+  });
+
+  test("test_can_import_as_accepts_int", () => {
+    const opts = new ImportOptions(new Path("design.psd"));
+    expect(opts.can_import_as(int(ImportAsType.COMP))).toBe(true);
+  });
+
+  // --- is_file_name_numbered ---
+
+  test("test_numbered_filename", () => {
+    const opts = new ImportOptions(new Path("frame001.png"));
+    const [is_numbered, first] = opts.is_file_name_numbered();
+    expect(is_numbered).toBe(true);
+    expect(first).toBe(1);
+  });
+
+  test("test_numbered_filename_large", () => {
+    const opts = new ImportOptions(new Path("shot_1234.exr"));
+    const [is_numbered, first] = opts.is_file_name_numbered();
+    expect(is_numbered).toBe(true);
+    expect(first).toBe(1234);
+  });
+
+  test("test_not_numbered_filename", () => {
+    const opts = new ImportOptions(new Path("background.png"));
+    const [is_numbered, first] = opts.is_file_name_numbered();
+    expect(is_numbered).toBe(false);
+    expect(first).toBe(0);
+  });
+
+  test("test_numbered_no_prefix", () => {
+    const opts = new ImportOptions(new Path("0042.tiff"));
+    const [is_numbered, first] = opts.is_file_name_numbered();
+    expect(is_numbered).toBe(true);
+    expect(first).toBe(42);
+  });
+
+  // --- repr ---
+
+  test("test_repr", () => {
+    const opts = new ImportOptions(new Path("shot.png"));
+    const r = repr(opts);
+    expect(r.includes("ImportOptions")).toBe(true);
+    expect(r.includes("shot.png")).toBe(true);
+    expect(r.includes("FOOTAGE")).toBe(true);
+  });
+
+  // --- case insensitive extension matching ---
+
+  test("test_can_import_as_case_insensitive", () => {
+    const opts = new ImportOptions(new Path("FILE.PSD"));
+    expect(opts.can_import_as(ImportAsType.COMP)).toBe(true);
+  });
+
+  test("test_can_import_as_project_always_false", () => {
+    // AE can import a .mov as a project, but py_aep does not implement
+    // PROJECT import for any format, so can_import_as gates it out.
+    const opts = new ImportOptions(new Path("CLIP.MOV"));
+    expect(opts.can_import_as(ImportAsType.PROJECT)).toBe(false);
+  });
+});
+
+describe("TestImportOptionsLayerSelection", () => {
+  /** layer_index / layer_dimensions (py_aep extensions). */
+
+  test("test_defaults", () => {
+    const opts = new ImportOptions(new Path("a.psd"));
+    expect(opts.layer_index).toBe(null);
+    expect(opts.layer_dimensions).toBe(null);
+  });
+
+  test("test_layer_index_setter", () => {
+    const opts = new ImportOptions(new Path("a.psd"));
+    opts.layer_index = 0;
+    expect(opts.layer_index).toBe(0);
+    opts.layer_index = 3;
+    expect(opts.layer_index).toBe(3);
+    opts.layer_index = null;
+    expect(opts.layer_index).toBe(null);
+  });
+
+  test("test_layer_index_rejects_negative", () => {
+    const opts = new ImportOptions(new Path("a.psd"));
+    raises(ValueError, () => {
+      opts.layer_index = -1;
+    });
+  });
+
+  test("test_layer_index_rejects_non_int", () => {
+    const opts = new ImportOptions(new Path("a.psd"));
+    raises(TypeError_, () => {
+      (opts as any).layer_index = "Layer 1";
+    });
+  });
+
+  test("test_layer_index_rejects_current_value", () => {
+    // CURRENT_VALUE only makes sense for replace: an import has no
+    // current binding to keep.
+    const opts = new ImportOptions(new Path("a.psd"));
+    raises(
+      ValueError,
+      () => {
+        (opts as any).layer_index = CURRENT_VALUE;
+      },
+      "only valid for FootageItem.replace",
+    );
+  });
+
+  test("test_current_value_repr", () => {
+    expect(repr(CURRENT_VALUE)).toBe("CURRENT_VALUE");
+  });
+
+  test("test_layer_dimensions_setter", () => {
+    const opts = new ImportOptions(new Path("a.psd"));
+    opts.layer_dimensions = "layer";
+    expect(opts.layer_dimensions).toBe("layer");
+    opts.layer_dimensions = "document";
+    expect(opts.layer_dimensions).toBe("document");
+    opts.layer_dimensions = null;
+    expect(opts.layer_dimensions).toBe(null);
+  });
+
+  test("test_layer_dimensions_rejects_unknown", () => {
+    const opts = new ImportOptions(new Path("a.psd"));
+    raises(ValueError, () => {
+      opts.layer_dimensions = "canvas";
+    });
+  });
+});
+
+describe("TestImportOptionsRange", () => {
+  /** range_start / range_end semantics (probed against AE 2026). */
+
+  test("test_defaults_are_zero", () => {
+    const opts = new ImportOptions(new Path("a.png"));
+    expect(opts.range_start).toBe(0);
+    expect(opts.range_end).toBe(0);
+  });
+
+  test("test_setters", () => {
+    const opts = new ImportOptions(new Path("a.png"));
+    opts.range_start = 10;
+    opts.range_end = 30;
+    expect(opts.range_start).toBe(10);
+    expect(opts.range_end).toBe(30);
+  });
+
+  test("test_rejects_negative_and_non_int", () => {
+    const opts = new ImportOptions(new Path("a.png"));
+    raises(ValueError, () => {
+      opts.range_start = -1;
+    });
+    raises(TypeError_, () => {
+      (opts as any).range_end = "5";
+    });
+  });
+
+  test("test_accepts_the_full_u4_range", () => {
+    const opts = new ImportOptions(new Path("a.png"));
+    for (const value of [0, 1, 2 ** 31, 0xffffffff]) {
+      opts.range_start = value;
+      opts.range_end = value;
+      expect([opts.range_start, opts.range_end]).toEqual([value, value]);
+    }
+  });
+
+  test.each([[0x1_0000_0000], [2 ** 40], [2 ** 63]])("test_rejects_values_wider_than_u4[%#]", (value) => {
+    // Both land in an `sspc` u4_field(); a wider value used to be accepted
+    // here and then fail at save() as a struct.error from the binary layer.
+    // The bound is the field's capacity, NOT AE's 3-hour duration ceiling -
+    // AE 2026 opens a ranged sequence well past that.
+    const opts = new ImportOptions(new Path("a.png"));
+    raises(ValueError, () => {
+      opts.range_start = value;
+    });
+    raises(ValueError, () => {
+      opts.range_end = value;
+    });
+  });
+
+  test("test_set_time_error_when_alphabetical", () => {
+    // AE: "You cannot set sequence range start for an alphabetical
+    // sequence" - thrown at set time.
+    const opts = new ImportOptions(new Path("a.png"));
+    opts.force_alphabetical = true;
+    raises(
+      ValueError,
+      () => {
+        opts.range_start = 2;
+      },
+      "alphabetical",
+    );
+    raises(
+      ValueError,
+      () => {
+        opts.range_end = 5;
+      },
+      "alphabetical",
+    );
+  });
+
+  test("test_alphabetical_resets_range", () => {
+    // AE resets the range (no error) when force_alphabetical is set
+    // AFTER a range - probed 2026-07-14.
+    const opts = new ImportOptions(new Path("a.png"));
+    opts.range_start = 2;
+    opts.range_end = 5;
+    opts.force_alphabetical = true;
+    expect(opts.range_start).toBe(0);
+    expect(opts.range_end).toBe(0);
+  });
+});

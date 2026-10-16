@@ -1,0 +1,201 @@
+import { ListChunk, Chunk } from "../../binary/chunk.ts";
+import { LHD3_BLOCK_SINGLE, set_lhd3_count, type LdatChunk, type Lhd3Chunk } from "../../binary/ldat_chunks.ts";
+import { build_rq_settings_list } from "../../binary/mutations.ts";
+import { RhedChunk } from "../../binary/project_chunks.ts";
+import { ArsiChunk, RoutChunk } from "../../binary/render_chunks.ts";
+import { getattr, len, TypeError_ } from "../../pyrt/index.ts";
+import { CompItem } from "../items/composition.ts";
+import type { Project } from "../project.ts";
+import { RenderQueueItem } from "./render_queue_item.ts";
+
+/**
+ * Clear the `synthetic` flag on a chunk and its container subtree.
+ *
+ * `parse_render_queue` leaves a synthesized render-queue scaffold (a missing
+ * `LRdr`, settings `LIST:list`, or empty-queue `ldat`) marked `synthetic` so
+ * `write_aep` skips it and an untouched queue-less file round-trips
+ * byte-identically. The first `add()` calls this to materialize the whole
+ * subtree so the populated queue is serialized. A no-op for a normal AE file
+ * whose `LRdr` is already fully present and non-synthetic.
+ */
+function _ensure_materialized(chunk: Chunk): void {
+  chunk.synthetic = false;
+  const children = getattr(chunk, "chunks", null);
+  if (children != null) {
+    for (const child of children) {
+      _ensure_materialized(child);
+    }
+  }
+}
+
+/**
+ * The `RenderQueue` object represents the render automation process, the data
+ * and functionality that is available through the Render Queue panel of a
+ * particular After Effects project. Attributes provide access to items in
+ * the render queue and their render status.
+ *
+ * Example:
+ * ```python
+ * from py_aep import parse
+ *
+ * app = parse("project.aep")
+ * render_queue = app.project.render_queue
+ * for rq_item in render_queue:
+ *     ...
+ * ```
+ *
+ * See: https://ae-scripting.docsforadobe.dev/renderqueue/renderqueue/
+ */
+export class RenderQueue {
+  declare _lrdr: ListChunk;
+  declare _rs_lhd3: Lhd3Chunk;
+  declare _rs_ldat: LdatChunk;
+  declare _rout: RoutChunk;
+  declare _litm: ListChunk;
+  declare _arsi: ArsiChunk;
+  declare _items: RenderQueueItem[];
+  declare _parent: Project;
+
+  constructor(kw: {
+    _lrdr: ListChunk;
+    _rs_lhd3: Lhd3Chunk;
+    _rs_ldat: LdatChunk;
+    _rout: RoutChunk;
+    _litm: ListChunk;
+    _arsi: ArsiChunk;
+    parent: Project;
+    items: RenderQueueItem[];
+  }) {
+    const { _lrdr, _rs_lhd3, _rs_ldat, _rout, _litm, _arsi, parent, items } = kw;
+    this._lrdr = _lrdr;
+    this._rs_lhd3 = _rs_lhd3;
+    this._rs_ldat = _rs_ldat;
+    this._rout = _rout;
+    this._litm = _litm;
+    this._arsi = _arsi;
+    this._items = items;
+    this._parent = parent;
+  }
+
+  /**
+   * Build an empty render queue with its backing `LIST:LRdr` tree.
+   *
+   * Mirrors the empty-queue scaffold AE writes and `parse_render_queue`
+   * yields: `Rhed` + empty `Rout` + a settings `LIST:list` (lhd3 plus a
+   * synthetic ldat) + empty `LItm` + `LSIf[ARsi]`. The settings ldat is
+   * synthetic so it is skipped by `write_aep()` until the first `add()`.
+   */
+  static _new(parent: Project): RenderQueue {
+    const rhed = new RhedChunk({});
+    const rout = new RoutChunk({});
+    const [settings, rs_lhd3, rs_ldat] = build_rq_settings_list();
+    const litm = new ListChunk({ list_type: "LItm" });
+    const arsi = new ArsiChunk({});
+    const lrdr = new ListChunk({
+      list_type: "LRdr",
+      chunks: [
+        rhed,
+        rout,
+        settings,
+        litm,
+        new ListChunk({ list_type: "LSIf", chunks: [arsi] }),
+      ],
+    });
+    return new this({
+      _lrdr: lrdr,
+      _rs_lhd3: rs_lhd3,
+      _rs_ldat: rs_ldat,
+      _rout: rout,
+      _litm: litm,
+      _arsi: arsi,
+      parent,
+      items: [],
+    });
+  }
+
+  /**
+   * Iterate the queue's items.
+   *
+   * Iterates a snapshot, so removing items as they come up - the
+   * obvious way to empty the queue - visits every one instead of
+   * skipping every other item (issue #230).
+   */
+  [Symbol.iterator](): Iterator<RenderQueueItem> {
+    return [...this.items][Symbol.iterator]();
+  }
+
+  /** A collection of all items in the render queue. Read-only. */
+  get items(): RenderQueueItem[] {
+    return this._items;
+  }
+
+  /** The {@link Project} containing this render queue. Read-only. */
+  get parent(): Project {
+    return this._parent;
+  }
+
+  /**
+   * The number of items in the render queue. Read-only.
+   *
+   * Note:
+   *     Equivalent to `len(render_queue.items)`
+   */
+  get num_items(): number {
+    return len(this.items);
+  }
+
+  /**
+   * Add a composition to the render queue.
+   *
+   * Creates a new {@link RenderQueueItem} with default render settings and
+   * a single default output module.
+   *
+   * Args:
+   *     comp: The {@link CompItem} to render.
+   *
+   * Returns:
+   *     The newly created {@link RenderQueueItem}.
+   */
+  add(comp: CompItem): RenderQueueItem {
+    if (!(comp instanceof CompItem)) {
+      throw new TypeError_("comp must be a CompItem");
+    }
+
+    // Create the new RQ item with all backing chunks
+    const rqi = RenderQueueItem._new(comp, { parent: this });
+
+    // Materialize any synthesized scaffold the parser left synthetic (an
+    // empty-queue ldat, or - for a queue-less file - the whole LRdr tree),
+    // so the populated queue is actually written. No-op for a normal file.
+    _ensure_materialized(this._lrdr);
+
+    // Append render settings to LRdr's ldat and keep the lhd3 capacity
+    // counters in sync with the new item count - AE keeps _count_b /
+    // _counter_a / _counter_b equal to `count` for this list and rejects
+    // the file ("Invalid read length") when they go stale.
+    this._rs_ldat.items.push(rqi._ldat);
+    set_lhd3_count(this._rs_lhd3, this._rs_lhd3.count + 1, LHD3_BLOCK_SINGLE);
+
+    // Append Rout items (5 per RQ item) and update header
+    for (const ri of rqi._rout_items) {
+      this._rout.items.push(ri);
+    }
+    this._rout.count = len(this._rout.items);
+
+    // Insert OM metadata and OM container into LItm
+    this._litm.chunks.push(rqi._list_chunk);
+    this._litm.chunks.push(rqi._lom);
+
+    // AE flips two bytes in the LRdr "LSIf/ARsi" state chunk once the
+    // render queue is non-empty; without this AE reports "missing data
+    // in file" when opening the result. RenderQueueItem.remove clears the
+    // non-empty flag again when the last item is removed.
+    this._arsi.queue_nonempty = 1;
+    this._arsi.active_slot_state = 0x73;
+
+    // Register in model list
+    this._items.push(rqi);
+
+    return rqi;
+  }
+}

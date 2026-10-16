@@ -1,0 +1,58 @@
+import { RuntimeError, object_setattr, py_object } from "../../../../pyrt/index.ts";
+import type { OutputModule } from "../output_module.ts";
+
+/**
+ * Shared plumbing for the format-specific render-option wrappers.
+ *
+ * Every wrapper holds an `Ropt` chunk that lives inside its output
+ * module's block. `OutputModule.apply_template()` and a rolled-back
+ * `batch_edit()` REPLACE that chunk (the new one may even be a different
+ * format, and so a different wrapper class), rebinding
+ * `OutputModule._format_options` to a freshly parsed object. A reference
+ * the caller took before that point still wraps the old chunk, which is
+ * no longer in the tree - so its writes would land in an orphaned body
+ * and be silently dropped from the saved file, while reading back as if
+ * they had succeeded.
+ *
+ * Those call sites mark the outgoing wrapper detached, and every write
+ * is gated on it here.
+ */
+export class FormatOptionsBase {
+  /**
+   * Back-reference to the owning output module. `null` while the parser
+   * is building the wrapper, before `OutputModule` wires it up - which
+   * is why detachment needs its own flag rather than reusing `is None`.
+   *
+   * TODO(port): Python declares these as class-level defaults. They are
+   * instance fields here so that reads through the `py_object` proxy fall
+   * back to the default for every wrapper, as the class attribute did.
+   */
+  _parent_om: OutputModule | null = null;
+
+  /** Set when the owning module has replaced this wrapper's chunk. */
+  _detached: boolean = false;
+
+  constructor() {
+    return py_object(this);
+  }
+
+  _check_attached(): void {
+    if (this._detached) {
+      throw new RuntimeError(
+        "format options are detached from their output module: the " +
+          "module replaced them (apply_template, or a rolled-back " +
+          "batch_edit). Re-fetch `output_module.format_options`.",
+      );
+    }
+  }
+
+  __setattr__(name: string, value: any): void {
+    // Public fields only: `__init__` assigns `_body` (and friends), and
+    // the detach itself writes `_detached`, both before/while there is
+    // anything to guard.
+    if (!name.startsWith("_")) {
+      this._check_attached();
+    }
+    object_setattr(this, name, value);
+  }
+}

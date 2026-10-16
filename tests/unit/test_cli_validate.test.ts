@@ -1,0 +1,221 @@
+/**
+ * Tests for the CLI validate module.
+ */
+
+import { describe, expect, test } from "bun:test";
+import { spawnSync } from "node:child_process";
+
+import "../../src/py_aep/binary/_register.ts";
+// TODO(port): _get_field_names and _get_property_names are module-private in validate.ts; they need to be exported.
+import {
+  ValidationResult,
+  _get_field_names,
+  _get_property_names,
+  compare_marker,
+  compare_values,
+  get_enum_value,
+  main,
+} from "../../src/py_aep/cli/validate.ts";
+import { BlendingMode } from "../../src/py_aep/enums/index.ts";
+import { KeyframeEase } from "../../src/py_aep/models/properties/keyframe_ease.ts";
+import { Property } from "../../src/py_aep/models/properties/property.ts";
+import { Path, getitem, len, py_assert, py_eq, range, repr, sorted, str, strip } from "../../src/pyrt/index.ts";
+import { make_tmp_path, skip } from "../../src/pyrt/pytest.ts";
+
+/** Path(__file__).parent.parent.parent / "samples" */
+const SAMPLES_DIR = new Path(import.meta.path).parent.parent.parent.div("samples");
+const TS_ROOT = new Path(import.meta.path).parent.parent.parent;
+
+describe("TestGetEnumValue", () => {
+  /** Tests for get_enum_value(). */
+
+  test("test_enum_returns_value", () => {
+    expect(get_enum_value(BlendingMode.ADD)).toBe(BlendingMode.ADD);
+  });
+
+  test("test_non_enum_returns_as_is", () => {
+    expect(get_enum_value(42)).toBe(42);
+    expect(get_enum_value("test")).toBe("test");
+    expect(get_enum_value(null)).toBeNull();
+  });
+});
+
+describe("TestCompareValues", () => {
+  /** Tests for compare_values(). */
+
+  test("test_none_both", () => {
+    expect(compare_values(null, null)).toBe(true);
+  });
+
+  test("test_none_one", () => {
+    expect(compare_values(null, 1)).toBe(false);
+    expect(compare_values(1, null)).toBe(false);
+  });
+
+  test("test_booleans", () => {
+    expect(compare_values(true, true)).toBe(true);
+    expect(compare_values(false, false)).toBe(true);
+    expect(compare_values(true, false)).toBe(false);
+  });
+
+  test("test_integers", () => {
+    expect(compare_values(1, 1)).toBe(true);
+    expect(compare_values(1, 2)).toBe(false);
+  });
+
+  test("test_floats_with_tolerance", () => {
+    expect(compare_values(1.0, 1.0001)).toBe(true);
+    expect(compare_values(1.0, 2.0)).toBe(false);
+  });
+
+  test("test_strings", () => {
+    expect(compare_values("abc", "abc")).toBe(true);
+    expect(compare_values("abc", "def")).toBe(false);
+  });
+
+  test("test_lists", () => {
+    expect(compare_values([1, 2, 3], [1, 2, 3])).toBe(true);
+    expect(compare_values([1, 2], [1, 2, 3])).toBe(false);
+    expect(compare_values([1, 2, 3], [1, 2, 4])).toBe(false);
+  });
+
+  test("test_nested_lists", () => {
+    expect(compare_values([1.0, 2.0], [1.0001, 2.0001])).toBe(true);
+  });
+});
+
+describe("TestValidationResult", () => {
+  /** Tests for ValidationResult class. */
+
+  test("test_empty", () => {
+    const result = new ValidationResult();
+    expect(len(result)).toBe(0);
+    expect(py_eq(result.differences, [])).toBe(true);
+    expect(py_eq(result.warnings, [])).toBe(true);
+  });
+
+  test("test_add_diff", () => {
+    const result = new ValidationResult();
+    result.add_diff("test.field", 1, 2, "test");
+    expect(len(result)).toBe(1);
+    expect(result.differences[0].includes("test.field")).toBe(true);
+    expect(getitem(result.categories, "test")).toBe(1);
+  });
+
+  test("test_add_warning", () => {
+    const result = new ValidationResult();
+    result.add_warning("some warning");
+    expect(len(result.warnings)).toBe(1);
+    expect(result.warnings[0]).toBe("some warning");
+  });
+});
+
+describe("TestCompareMarker", () => {
+  /** Tests for compare_marker(). */
+
+  test("test_matching_marker", () => {
+    const result = new ValidationResult();
+    const expected_marker = new Map<string, any>([
+      ["time", 1.0],
+      ["comment", "test"],
+      ["chapter", ""],
+      ["url", ""],
+      ["duration", 0],
+    ]);
+    const parsed_marker = new Map<string, any>([
+      ["frame_time", 30],
+      ["comment", "test"],
+      ["chapter", ""],
+      ["url", ""],
+      ["duration", 0],
+    ]);
+    compare_marker(expected_marker, parsed_marker, "Marker[0]", 30.0, result);
+    // time=frame_time/fps = 30/30 = 1.0
+    const marker_diffs = result.differences.filter((d) => d.includes("Marker"));
+    expect(len(marker_diffs)).toBe(0);
+  });
+
+  test("test_mismatching_marker_comment", () => {
+    const result = new ValidationResult();
+    const expected_marker = new Map<string, any>([["comment", "expected"]]);
+    const parsed_marker = new Map<string, any>([["comment", "actual"]]);
+    compare_marker(expected_marker, parsed_marker, "Marker[0]", 30.0, result);
+    expect(len(result)).toBeGreaterThanOrEqual(1);
+  });
+});
+
+describe("TestTraversalOrder", () => {
+  /**
+   * `to_dict` must walk attributes in a fixed order.
+   *
+   * Reading a model attribute can realize lazily-parsed children, and
+   * `to_dict` memoizes the first result it reaches a shared object by, so
+   * an unordered walk let `PYTHONHASHSEED` change the report: two runs
+   * over the same project disagreed by 16 differences on whether an
+   * effect had all of its parameters.
+   */
+
+  test("test_field_names_are_ordered", () => {
+    const names = _get_field_names(new KeyframeEase(0.0, 50.0));
+    expect(names != null).toBe(true);
+    expect(Array.isArray(names)).toBe(true);
+    expect(py_eq([...names], sorted(names))).toBe(true);
+  });
+
+  test("test_property_names_are_ordered", () => {
+    const names = _get_property_names(Property);
+    expect(Array.isArray(names)).toBe(true);
+    expect(py_eq([...names], sorted(names))).toBe(true);
+  });
+
+  /** The reported differences must not vary between runs. */
+  test("test_repeated_validation_is_identical", () => {
+    const aep = SAMPLES_DIR.div("bugs", "29.97_fps_time_scale_3.125.aep");
+    const json_path = aep.with_suffix(".json");
+    if (!aep.exists() || !json_path.exists()) return skip("sample not available");
+    // Separate interpreters, so each gets its own hash seed.
+    // TODO(port): the child runs Bun, not CPython 3.12, so PYTHONHASHSEED does not apply here; the determinism check still runs over separate processes.
+    const script = [
+      `import { Path } from ${JSON.stringify(TS_ROOT.div("src", "pyrt", "index.ts").toString())};`,
+      `import ${JSON.stringify(TS_ROOT.div("src", "py_aep", "binary", "_register.ts").toString())};`,
+      `import { validate_aep } from ${JSON.stringify(TS_ROOT.div("src", "py_aep", "cli", "validate.ts").toString())};`,
+      `const r = validate_aep(new Path(${JSON.stringify(aep.toString())}), new Path(${JSON.stringify(json_path.toString())}));`,
+      `console.log(r.differences.length);`,
+    ].join("\n");
+    const counts = new Set<string>();
+    for (const _ of range(3)) {
+      // check=True: a non-zero exit raises here, as CalledProcessError does in Python.
+      const r = spawnSync(process.execPath, ["-e", script], { encoding: "utf8" });
+      if (r.status !== 0) throw new Error(`child process exited ${r.status}: ${r.stderr}`);
+      counts.add(strip(r.stdout));
+    }
+    py_assert(len(counts) === 1, `validate_aep is not deterministic: ${repr([...counts])}`);
+  });
+});
+
+describe("TestMain", () => {
+  /** Tests for the CLI main() entry point. */
+
+  test("test_missing_aep", () => {
+    const tmp_path = make_tmp_path();
+    const exit_code = main([str(tmp_path.div("nonexistent.aep")), str(tmp_path.div("test.json"))]);
+    expect(exit_code).toBe(1);
+  });
+
+  test("test_missing_json", () => {
+    const tmp_path = make_tmp_path();
+    const aep_path = SAMPLES_DIR.div("models", "composition", "bgColor_custom.aep");
+    const exit_code = main([str(aep_path), str(tmp_path.div("nonexistent.json"))]);
+    expect(exit_code).toBe(1);
+  });
+
+  test("test_valid_input", () => {
+    const aep_path = SAMPLES_DIR.div("models", "composition", "bgColor_custom.aep");
+    const json_path = SAMPLES_DIR.div("models", "composition", "bgColor_custom.json");
+    const exit_code = main([str(aep_path), str(json_path)]);
+    // Should return 0 (success) or 1 (differences found), depending on
+    // how many fields the parser currently handles.
+    expect(typeof exit_code === "number" && Number.isInteger(exit_code)).toBe(true);
+    expect([0, 1].includes(exit_code)).toBe(true);
+  });
+});

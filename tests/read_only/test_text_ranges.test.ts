@@ -1,0 +1,367 @@
+/**
+ * Parity tests for CharacterRange / ParagraphRange / ComposedLineRange.
+ *
+ * Every assertion compares the parsed `samples/models/text/text_ranges.aep`
+ * against `text_ranges_probe.json`, the exhaustive ExtendScript ground truth
+ * dumped by `scripts/jsx/generate_text_range_samples.jsx` from the very AE
+ * session that saved the sample.
+ */
+
+import { describe, expect, test } from "bun:test";
+import * as fs from "node:fs";
+import {
+  Path,
+  ValueError,
+  at,
+  dict_get,
+  fspath,
+  getattr,
+  getitem,
+  int,
+  len,
+  py_assert,
+  py_bool,
+  py_eq,
+  repr,
+  split,
+  str,
+} from "../../src/pyrt/index.ts";
+import { approx, raises } from "../../src/pyrt/pytest.ts";
+import { parse_project } from "../helpers.ts";
+
+// `Path(__file__).parent.parent.parent / "samples" / ...` in the Python source.
+const SAMPLES_DIR = new Path(import.meta.dir, "..", "..", "samples", "models", "text");
+const SAMPLE = SAMPLES_DIR.div("text_ranges.aep");
+const PROBE = SAMPLES_DIR.div("text_ranges_probe.json");
+
+// ExtendScript attribute -> py_aep CharacterRange attribute. Attributes
+// deliberately not exposed (host-font-resolved) are absent: fontFamily,
+// fontStyle, fontLocation.
+const ATTR_MAP: Map<string, string> = new Map([
+  ["characterStart", "character_start"],
+  ["characterEnd", "character_end"],
+  ["isRangeValid", "is_range_valid"],
+  ["text", "text"],
+  ["fillColor", "fill_color"],
+  ["strokeColor", "stroke_color"],
+  ["strokeOverFill", "stroke_over_fill"],
+  ["strokeWidth", "stroke_width"],
+  ["applyFill", "apply_fill"],
+  ["applyStroke", "apply_stroke"],
+  ["font", "font"],
+  ["fontObject", "font_object"],
+  ["fontSize", "font_size"],
+  ["fauxBold", "faux_bold"],
+  ["fauxItalic", "faux_italic"],
+  ["autoLeading", "auto_leading"],
+  ["leading", "leading"],
+  ["kerning", "kerning"],
+  ["autoKernType", "auto_kern_type"],
+  ["tracking", "tracking"],
+  ["baselineShift", "baseline_shift"],
+  ["horizontalScale", "horizontal_scale"],
+  ["verticalScale", "vertical_scale"],
+  ["fontCapsOption", "font_caps_option"],
+  ["fontBaselineOption", "font_baseline_option"],
+  ["ligature", "ligature"],
+  ["noBreak", "no_break"],
+  ["baselineDirection", "baseline_direction"],
+  ["tsume", "tsume"],
+  ["digitSet", "digit_set"],
+  ["lineJoinType", "line_join_type"],
+  ["allCaps", "all_caps"],
+  ["smallCaps", "small_caps"],
+  ["superscript", "superscript"],
+  ["subscript", "subscript"],
+  ["composerEngine", "composer_engine"],
+  ["justification", "justification"],
+  ["firstLineIndent", "first_line_indent"],
+  ["startIndent", "start_indent"],
+  ["endIndent", "end_indent"],
+  ["spaceBefore", "space_before"],
+  ["spaceAfter", "space_after"],
+  ["leadingType", "leading_type"],
+  ["autoHyphenate", "auto_hyphenate"],
+  ["hangingRoman", "hanging_roman"],
+  ["everyLineComposer", "every_line_composer"],
+  ["direction", "direction"],
+]);
+
+const _AE_ERROR_PREFIX = "Error: After Effects error: ";
+const _MARKER_RE = /<U\+([0-9A-F]{4})>/g;
+
+function _load_probe(): any {
+  return JSON.parse(fs.readFileSync(fspath(PROBE), "utf-8"));
+}
+
+/** ES text -> py text: CR becomes LF, marker escapes become chars.
+ *
+ * The probe writer replaces lone surrogates with `<U+XXXX>` markers
+ * (a raw lone surrogate kills ExtendScript's File.write); decode them
+ * back to compare against py_aep's surrogatepass slicing.
+ */
+function _expected_text(value: string): string {
+  const decoded = value.replace(_MARKER_RE, (_m: string, hex: string) =>
+    String.fromCodePoint(parseInt(hex, 16)),
+  );
+  return decoded.replaceAll("\r", "\n");
+}
+
+/** Build the CharacterRange a probe dict key describes (e.g. `0_-1`). */
+function _range_from_key(doc: any, key: string): any {
+  const i = key.lastIndexOf("_");
+  const start_s = key.slice(0, i);
+  const end_s = key.slice(i + 1);
+  const start = int(start_s);
+  if (end_s === "def") return doc.character_range(start);
+  return doc.character_range(start, int(end_s));
+}
+
+/** Return a mismatch description, or `null` when values agree. */
+function _compare(py_val: any, expected: any, attr: string): string | null {
+  if (expected === "<<undefined>>") {
+    if (py_val == null) return null;
+    return `${attr}: expected None (ES undefined), got ${repr(py_val)}`;
+  }
+  if (attr === "fontObject") {
+    const expected_name = typeof expected === "string" ? at(split(expected, ":", 1), 1) : null;
+    const actual_name = py_val != null ? py_val.post_script_name : null;
+    if (actual_name === expected_name) return null;
+    return `${attr}: expected ${repr(expected_name)}, got ${repr(actual_name)}`;
+  }
+  if (attr === "text") {
+    expected = _expected_text(expected);
+    if (py_eq(py_val, expected)) return null;
+    return `${attr}: expected ${repr(expected)}, got ${repr(py_val)}`;
+  }
+  if (Array.isArray(expected)) {
+    if (py_val != null && approx(py_val, expected, { abs: 1e-5 })) return null;
+    return `${attr}: expected ${repr(expected)}, got ${repr(py_val)}`;
+  }
+  // TODO(port): int/float distinction - Python `isinstance(x, float)` is false for
+  // int-valued numbers; JS has one number type, so this branch also takes ints.
+  // approx(abs=1e-5) gives the same answer for integers.
+  if (typeof expected === "number" || typeof py_val === "number") {
+    if (py_val != null && approx(py_val, expected, { abs: 1e-5 })) return null;
+    return `${attr}: expected ${repr(expected)}, got ${repr(py_val)}`;
+  }
+  // bools, ints, IntEnums (IntEnum == int holds for ExtendScript values)
+  if (py_eq(py_val, expected)) return null;
+  return `${attr}: expected ${repr(expected)}, got ${repr(py_val)}`;
+}
+
+// Module-scoped fixtures from the Python file, as lazily cached module state.
+const _cache: { probe?: any; docs?: Map<string, any> } = {};
+
+function probe(): any {
+  return (_cache.probe ??= _load_probe());
+}
+
+function docs(): Map<string, any> {
+  if (_cache.docs === undefined) {
+    // TODO(port): assumes parse_project is synchronous, as the Python call is.
+    const project = parse_project(SAMPLE);
+    const comp = project.compositions[0];
+    _cache.docs = new Map(comp.text_layers.map((layer: any) => [layer.name, layer.text.source_text.value]));
+  }
+  return _cache.docs;
+}
+
+const LAYER_NAMES = [
+  "RangesPoint",
+  "RangesBox",
+  "RangesKernLead",
+  "RangesJust",
+  "RangesEmpty",
+  "RangesTrailing",
+  "RangesEmoji",
+  "RangesTextReset",
+];
+
+/** text / paragraph_count / composed_line_count parity per layer. */
+describe("TestDocumentLevel", () => {
+  test.each(LAYER_NAMES)("test_text[%#]", (name: string) => {
+    const expected = probe().layers[name];
+    expect(getitem(docs(), name).text).toBe(_expected_text(expected.text));
+  });
+
+  test.each(LAYER_NAMES)("test_paragraph_count[%#]", (name: string) => {
+    const expected = probe().layers[name].paragraphCount;
+    if (expected.ok) {
+      expect(getitem(docs(), name).paragraph_count).toBe(expected.value);
+    }
+  });
+
+  test.each(LAYER_NAMES)("test_composed_line_count[%#]", (name: string) => {
+    const expected = probe().layers[name].composedLineCount;
+    if (expected.ok) {
+      expect(getitem(docs(), name).composed_line_count).toBe(expected.value);
+    }
+  });
+
+  test("test_document_kerning_reads_zero", () => {
+    // ExtendScript exports kerning=0 on every TextDocument value object,
+    // even with manual per-character kerning present; the real values
+    // are only reachable through character_range(...).kerning.
+    expect(getitem(docs(), "RangesKernLead").kerning).toBe(0);
+    expect(getitem(docs(), "RangesKernLead").character_range(1, 4).kerning).toBe(200);
+  });
+});
+
+/** Paragraph / composed-line boundary and index-lookup parity. */
+describe("TestRangeBoundaries", () => {
+  test.each(LAYER_NAMES)("test_paragraph_ranges[%#]", (name: string) => {
+    const doc = getitem(docs(), name);
+    for (const entry of probe().layers[name].paragraphRanges) {
+      // TODO(port): Python dict repr of `entry`; JSON.stringify differs in message text only.
+      py_assert(entry.ok, `${name}: ES probe failed: ${JSON.stringify(entry)}`);
+      const exp = entry.value;
+      const pr = doc.paragraph_range(exp.index);
+      expect(str(pr)).toBe(exp.str);
+      expect(pr.character_start).toBe(exp.characterStart);
+      expect(pr.character_end).toBe(exp.characterEnd);
+      expect(pr.is_range_valid).toBe(exp.isRangeValid);
+      expect(pr.character_range().text).toBe(_expected_text(exp.charRangeText));
+    }
+  });
+
+  test.each(LAYER_NAMES)("test_composed_line_ranges[%#]", (name: string) => {
+    const doc = getitem(docs(), name);
+    for (const entry of probe().layers[name].composedLineRanges) {
+      // TODO(port): Python dict repr of `entry`; JSON.stringify differs in message text only.
+      py_assert(entry.ok, `${name}: ES probe failed: ${JSON.stringify(entry)}`);
+      const exp = entry.value;
+      const clr = doc.composed_line_range(exp.index);
+      expect(str(clr)).toBe(exp.str);
+      expect(clr.character_start).toBe(exp.characterStart);
+      expect(clr.character_end).toBe(exp.characterEnd);
+      expect(clr.is_range_valid).toBe(exp.isRangeValid);
+      expect(clr.character_range().text).toBe(_expected_text(exp.charRangeText));
+    }
+  });
+
+  test.each(LAYER_NAMES)("test_character_indexes_at[%#]", (name: string) => {
+    const doc = getitem(docs(), name);
+    const layer_probe = probe().layers[name];
+    // TODO(port): Object.entries puts integer-like keys first in ascending order; Python keeps
+    // JSON file order. Only the order of assertions can change, not their outcome.
+    for (const [idx_s, entry] of Object.entries(layer_probe.paragraphCharacterIndexesAt)) {
+      if ((entry as any).ok) {
+        expect(
+          py_eq(doc.paragraph_character_indexes_at(int(idx_s)), (entry as any).value),
+        ).toBe(true);
+      }
+    }
+    for (const [idx_s, entry] of Object.entries(layer_probe.composedLineCharacterIndexesAt)) {
+      if ((entry as any).ok) {
+        expect(
+          py_eq(doc.composed_line_character_indexes_at(int(idx_s)), (entry as any).value),
+        ).toBe(true);
+      }
+    }
+  });
+});
+
+/** Every probed attribute of every probed range, against ES values. */
+describe("TestCharacterRangeAttributes", () => {
+  test.each(LAYER_NAMES)("test_attribute_parity[%#]", (name: string) => {
+    const doc = getitem(docs(), name);
+    const mismatches: string[] = [];
+    for (const [key, entry] of Object.entries(probe().layers[name].charRanges) as [string, any][]) {
+      if (!entry.ok) {
+        // Creation must fail on the py side too.
+        raises(ValueError, () => _range_from_key(doc, key));
+        continue;
+      }
+      const rng = _range_from_key(doc, key);
+      for (const [es_attr, expected] of Object.entries(entry.value)) {
+        const py_attr = dict_get(ATTR_MAP, es_attr);
+        if (py_attr == null) continue;
+        const mismatch = _compare(getattr(rng, py_attr), expected, es_attr);
+        if (mismatch != null) mismatches.push(`[${key}] ${mismatch}`);
+      }
+    }
+    py_assert(!py_bool(mismatches), `${name}:\n` + mismatches.join("\n"));
+  });
+});
+
+/** Creation-time errors and zero-span semantics from the edge probes. */
+describe("TestEdgeCases", () => {
+  const _assert_edge = (doc: any, edge: any, build: () => unknown): void => {
+    if (edge.ok) {
+      build();
+      return;
+    }
+    let expected_message: string = edge.error;
+    if (expected_message.startsWith(_AE_ERROR_PREFIX)) {
+      expected_message = expected_message.slice(_AE_ERROR_PREFIX.length);
+    }
+    const exc = raises(ValueError, build);
+    expect(exc.message).toBe(expected_message);
+  };
+
+  test("test_point_edges", () => {
+    const doc = getitem(docs(), "RangesPoint");
+    const edges = probe().layers.RangesPoint.edges;
+    const length = len(doc.text);
+
+    _assert_edge(doc, edges.eof_default_end, () => doc.character_range(length));
+    _assert_edge(doc, edges.neg_two_end, () => doc.character_range(0, -2));
+    _assert_edge(doc, edges.para_0_0, () => doc.paragraph_range(0, 0));
+    _assert_edge(doc, edges.start_oob, () => doc.character_range(9999));
+    _assert_edge(doc, edges.end_oob, () => doc.character_range(0, 9999));
+    _assert_edge(doc, edges.end_before_start, () => doc.character_range(5, 2));
+    _assert_edge(doc, edges.para_oob, () => doc.paragraph_range(99));
+
+    {
+      const eof = edges.eof_zero_span.value;
+      const rng = doc.character_range(length, -1);
+      expect(rng.character_start).toBe(eof.s);
+      expect(rng.character_end).toBe(eof.e);
+      expect(rng.text).toBe(eof.text);
+      expect(rng.font_size).toBe(eof.fontSize);
+    }
+
+    {
+      const zero = edges.char_0_0.value;
+      const rng = doc.character_range(0, 0);
+      expect(rng.character_start).toBe(zero.s);
+      expect(rng.character_end).toBe(zero.e);
+      expect(rng.text).toBe(zero.text);
+    }
+
+    {
+      const neg = edges.line_neg_end.value;
+      const clr = doc.composed_line_range(0, -1);
+      expect(clr.character_start).toBe(neg.s);
+      expect(clr.character_end).toBe(neg.e);
+    }
+  });
+
+  test("test_empty_edges", () => {
+    const doc = getitem(docs(), "RangesEmpty");
+    const edges = probe().layers.RangesEmpty.edges;
+    _assert_edge(doc, edges.char_0_def, () => doc.character_range(0));
+    const para = edges.para_0.value;
+    const pr = doc.paragraph_range(0);
+    expect(pr.character_start).toBe(para.s);
+    expect(pr.character_end).toBe(para.e);
+    const line = edges.line_0.value;
+    const clr = doc.composed_line_range(0);
+    expect(clr.character_start).toBe(line.s);
+    expect(clr.character_end).toBe(line.e);
+  });
+
+  test("test_split_surrogate", () => {
+    const doc = getitem(docs(), "RangesEmoji");
+    const edges = probe().layers.RangesEmoji.edges;
+    const split_ = edges.split_surrogate_range.value;
+    const rng = doc.character_range(2, 3);
+    expect(rng.character_start).toBe(split_.s);
+    expect(rng.character_end).toBe(split_.e);
+    expect(rng.text).toBe(_expected_text(split_.text));
+    expect(rng.font_size).toBe(split_.fontSize);
+    const prefix = edges.split_surrogate_text.value;
+    expect(doc.character_range(0, 3).text).toBe(_expected_text(prefix));
+  });
+});

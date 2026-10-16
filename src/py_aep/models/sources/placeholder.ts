@@ -1,0 +1,117 @@
+import { ValueError, num_str } from "../../../pyrt/index.ts";
+import { PlaceholderOptiChunk, SspcChunk } from "../../binary/footage_chunks.ts";
+import {
+  validate_duration,
+  validate_footage_dimension,
+  validate_frame_rate,
+  validate_opti_name,
+} from "../validators.ts";
+import { FootageSource } from "./footage.ts";
+
+import type { ListChunk } from "../../binary/chunk.ts";
+import type { OptiChunk } from "../../binary/footage_chunks.ts";
+import type { U1Chunk } from "../../binary/scalar_chunks.ts";
+
+/**
+ * The `PlaceholderSource` object describes the footage source of a
+ * placeholder.
+ *
+ * Example:
+ * ```python
+ * from py_aep import PlaceholderSource, parse
+ *
+ * app = parse("project.aep")
+ * footage = app.project.footages[0]
+ * if isinstance(footage.main_source, PlaceholderSource):
+ *     print(footage.main_source.width)
+ * ```
+ *
+ * Info:
+ * `PlaceholderSource` is a subclass of [FootageSource][] object. All
+ * methods and attributes of [FootageSource][] are available when working
+ * with `PlaceholderSource`. `PlaceholderSource` does not define any
+ * additional methods or attributes.
+ *
+ * See: https://ae-scripting.docsforadobe.dev/sources/placeholdersource/
+ */
+export class PlaceholderSource extends FootageSource {
+  static _owns_name = true;
+
+  declare _opti: OptiChunk;
+
+  get _rate_is_assumed(): boolean {
+    return true;
+  }
+
+  constructor(kw: {
+    _sspc: SspcChunk;
+    _opti: OptiChunk;
+    _linl?: U1Chunk | null;
+    _clrs?: ListChunk | null;
+  }) {
+    const { _sspc, _opti, _linl = null, _clrs = null } = kw;
+    super({ _sspc, _linl, _clrs });
+    this._opti = _opti;
+  }
+
+  /**
+   * Create a new placeholder source with backing chunks.
+   *
+   * Args:
+   *     name: The placeholder name.
+   *     width: Width in pixels (4-30000).
+   *     height: Height in pixels (4-30000).
+   *     frame_rate: Frame rate in fps (1.0-99.0).
+   *     duration: Duration in seconds (> 0, <= 10800).
+   */
+  static _new(
+    name: string,
+    width: number,
+    height: number,
+    frame_rate: number,
+    duration: number,
+  ): PlaceholderSource {
+    validate_opti_name(name);
+    validate_footage_dimension(width);
+    validate_footage_dimension(height);
+    validate_frame_rate(frame_rate);
+    validate_duration(duration);
+    if (duration <= 0.0) {
+      // TODO(port): int/float distinction; Python prints a float as "0.0" but a
+      // whole-valued JS number as "0".
+      throw new ValueError(`duration must be > 0, got ${num_str(duration)}`);
+    }
+
+    const sspc = new SspcChunk({
+      width,
+      height,
+      alpha_mode_raw: 3,
+      layer_index: 0xfffffffe,
+    });
+    sspc.footage_missing_at_save = true;
+    sspc.native_frame_rate = frame_rate;
+    sspc.duration = duration;
+
+    const opti = new PlaceholderOptiChunk({ placeholder_name: name });
+
+    return new this({ _sspc: sspc, _opti: opti });
+  }
+
+  /**
+   * A placeholder's duration is in seconds whatever its rate: AE 2026
+   * reports 10 s for a 10 s placeholder even with a conform rate stored
+   * (as py_aep once wrote one).
+   */
+  get _duration(): number {
+    return this._sspc.duration * this._sspc.loop;
+  }
+
+  _resolve_name(raw_name: string): string {
+    return (this._opti as PlaceholderOptiChunk).placeholder_name;
+  }
+
+  _store_name(value: string): void {
+    validate_opti_name(value);
+    (this._opti as PlaceholderOptiChunk).placeholder_name = value;
+  }
+}

@@ -1,0 +1,514 @@
+/**
+ * Property override tables keyed by match name.
+ *
+ * These lookup tables correct or supplement binary data:
+ * - _PROPERTY_MIN_MAX: min/max bounds for non-effect properties
+ * - _PROPERTY_DEFAULTS: fallback values for synthesized effect properties
+ * - _ALWAYS_MODIFIED: match names always reported as modified by ExtendScript
+ * - _ISSPATIAL_OVERRIDES: binary stores incorrect is_spatial value
+ * - _NAME_OVERRIDES: binary stores incorrect display name
+ * - _CANVARY_OVERRIDES: binary stores incorrect can_vary_over_time value
+ */
+
+// Bounds for properties without effect parameter definitions (effect
+// parameters derive their valid range from the pard chunk).
+// TODO(port): int/float distinction - Python literals `(0, 100)` are ints but
+// the annotation is `tuple[float, float]`; numbers here lose the spelling if
+// a caller renders the bound with repr().
+export const _PROPERTY_MIN_MAX: Map<string, readonly [number, number]> = new Map<string, readonly [number, number]>([
+  // Transform
+  ["ADBE Opacity", [0, 100]],
+  // Geometry Options
+  ["ADBE Bevel Direction", [1, 2]],
+  // Material Options
+  ["ADBE Reflection Coefficient", [0, 100]],
+  ["ADBE Glossiness Coefficient", [0, 100]],
+  ["ADBE Fresnel Coefficient", [0, 100]],
+  ["ADBE Transparency Coefficient", [0, 100]],
+  ["ADBE Transp Rolloff", [0, 100]],
+  ["ADBE Index of Refraction", [1, 5]],
+  // Mask properties
+  ["ADBE Mask Feather", [0, 32000]],
+  ["ADBE Mask Opacity", [0, 100]],
+  ["ADBE Mask Offset", [-32000, 32000]],
+]);
+
+// Non-effect properties that ExtendScript reports as having NO min/max
+// bounds, but whose binary carries an all-zero `[0.0]` tdum/tduM placeholder
+// (AE writes these for Scale and the separated-Position followers). The
+// placeholder bytes are preserved on disk for round-trip fidelity; they are
+// suppressed only when surfacing `min_value`/`max_value` so `has_min`/
+// `has_max` match ExtendScript.
+//
+// `ADBE Time Remapping` also carries a `[0.0]` placeholder, but ExtendScript
+// DOES report `hasMax=True`/`maxValue=0` for it, so it is intentionally
+// excluded here (suppressing it would diverge from ground truth). Its
+// spurious value-setter rejection is handled separately in `_get_max`.
+export const _PLACEHOLDER_UNBOUNDED: ReadonlySet<string> = new Set<string>([
+  "ADBE Scale",
+  "ADBE Position_0",
+  "ADBE Position_1",
+  "ADBE Position_2",
+  // Light/Camera props that carry an all-zero [0.0] tduM (and tdum):
+  // ExtendScript reports hasMax=False for all, and hasMin=False for
+  // Light Intensity (the others keep a real min via their fallback).
+  "ADBE Light Falloff Distance",
+  "ADBE Light Falloff Start",
+  "ADBE Light Shadow Darkness",
+  "ADBE Light Shadow Diffusion",
+  "ADBE Light Intensity",
+  "ADBE Camera Zoom",
+  // Material-assignment 2D params carry all-zero [0.0] tdum/tduM;
+  // ExtendScript reports hasMin=hasMax=False.
+  "ADBE3D Material Texturre Offset",
+  "ADBE3D Material Scale",
+]);
+
+// Non-effect properties ExtendScript reports as FULLY unbounded (hasMin=False
+// AND hasMax=False) but for which a synthesis spec sets a min/max fallback
+// (a UI range AE does not expose via the scripting bounds API). The bounds are
+// suppressed on read so `has_min`/`has_max` and the value setter match
+// ExtendScript; `is_modified`/`default_value` (which read the spec directly,
+// not `min_value`) are unaffected.
+export const _UNBOUNDED_MATCH_NAMES: ReadonlySet<string> = new Set<string>([
+  "ADBE R Channel Blend",
+  "ADBE G Channel Blend",
+  "ADBE B Channel Blend",
+  "ADBE Blend Interior",
+  "ADBE Blend Ranges",
+  "ADBE Vector Scale",
+  "ADBE Vector Repeater Scale",
+]);
+
+// Default values for synthesized effect properties whose pard `default`
+// field could not be verified against ExtendScript ground truth. Defaults
+// normally come straight from the pard default field (validated across
+// the whole sample corpus: 140/140 parameters match); an entry here is
+// removable once a sample containing the parameter shows the pard
+// prediction matches ExtendScript output.
+export const _PROPERTY_DEFAULTS: Map<string, number | number[]> = new Map<string, number | number[]>([
+  ["ADBE Lumetri-0130", 27], // Color Space
+  ["ADBE Playgnd-0253", 0], // Selection Map
+  ["ADBE Playgnd-0501", 0], // Use Layer As Map
+  ["/fm_quality", 1], // Roto Brush Quality
+]);
+
+// ---------------------------------------------------------------------------
+
+// Properties that ExtendScript always reports as is_modified=True, even when
+// their value is at the default state. Most are effect CUSTOM_VALUE data blobs
+// (curves, meshes, LUTs, separators) in specific GPU effects where AE considers
+// the property modified on creation; the media-replacement slot
+// `ADBE Layer Source Alternate` is likewise always reported modified by AE
+// (confirmed on both its Essential-Properties override and Source-Options copies).
+export const _ALWAYS_MODIFIED: ReadonlySet<string> = new Set<string>([
+  // Media replacement source slot (Essential Properties + Source Options)
+  "ADBE Layer Source Alternate",
+  // Liquify
+  "ADBE LIQUIFY-0014",
+  // Lumetri Color
+  "ADBE Lumetri-0001",
+  "ADBE Lumetri-0004",
+  "ADBE Lumetri-0024",
+  "ADBE Lumetri-0032",
+  "ADBE Lumetri-0039",
+  "ADBE Lumetri-0042",
+  "ADBE Lumetri-0047",
+  "ADBE Lumetri-0060",
+  "ADBE Lumetri-0073",
+  "ADBE Lumetri-0085",
+  "ADBE Lumetri-0093",
+  "ADBE Lumetri-0095",
+  "ADBE Lumetri-0096",
+  "ADBE Lumetri-0098",
+  "ADBE Lumetri-0099",
+  "ADBE Lumetri-0100",
+  "ADBE Lumetri-0106",
+  "ADBE Lumetri-0108",
+  "ADBE Lumetri-0110",
+  "ADBE Lumetri-0112",
+  "ADBE Lumetri-0122",
+  "ADBE Lumetri-0125",
+  "ADBE Lumetri-0126",
+  "ADBE Lumetri-0129",
+  // OCIO effects
+  "ADBE OCIO CDL Transform-0006",
+  "ADBE OCIO FILE Transform-0005",
+]);
+
+// ---------------------------------------------------------------------------
+// Binary flag corrections
+// ---------------------------------------------------------------------------
+
+// Match names where the binary stores an incorrect is_spatial value.
+export const _ISSPATIAL_OVERRIDES: Map<string, boolean> = new Map<string, boolean>([
+  ["ADBE Orientation", true],
+  ["ADBE Fill-0002", true], // Fill > Color
+  ["ADBE Mask Shape", true],
+  ["ADBE Vector Shape", true], // shape-layer Path
+  ["ADBE Shadow Color", true],
+  ["ADBE Vector Fill Color", true],
+  // Text-animator color properties report isSpatial=True in AE.
+  ["ADBE Text Fill Color", true],
+  ["ADBE Text Stroke Color", true],
+  ["ADBE 3DText Front RGB", true],
+  ["ADBE 3DText Bevel RGB", true],
+  ["ADBE 3DText Side RGB", true],
+  ["ADBE 3DText Back RGB", true],
+  ["ADBE HUE SATURATION-0003", true], // Channel Range
+  ["ADBE CurvesCustom-0001", true],
+  ["ADBE Easy Levels-0002", true],
+  ["ADBE Easy Levels2-0002", true],
+  ["ADBE LIQUIFY-0014", true],
+  ["ADBE Lumetri-0032", true],
+  ["ADBE Lumetri-0047", true],
+  ["ADBE Lumetri-0073", true],
+  ["ADBE Lumetri-0085", true],
+  ["ADBE MESH WARP-0004", true],
+  ["ADBE RESHAPE-0006", true],
+  ["APC Colorama-0012", true],
+]);
+
+// Match names where AE reports a different display name than the binary.
+export const _NAME_OVERRIDES: Map<string, string> = new Map<string, string>([
+  ["ADBE Tint-0004", ""], // Swap Colors button - hidden in ExtendScript
+  ["ADBE 3D Tracker-0311", "Average Error: %.2f pixels"],
+  ["ADBE 3D Tracker-0313", "Average Error: -"],
+  ["ADBE Apply Color LUT-0001", "<LUT not set>"],
+  ["ADBE Apply Color LUT2-0001", "<LUT not set>"],
+  ["ADBE Arithmetic-0005", "Clipping"],
+  ["ADBE Basic 3D-0004", "Specular Highlight"],
+  ["ADBE Basic 3D-0005", "Preview"],
+  ["ADBE Bulge-0007", "Pinning"],
+  ["ADBE Camera Lens Blur-0021", "Edge Behavior"],
+  ["ADBE Cell Pattern-0003", "Contextual Slider"],
+  ["ADBE Channel Blur-0005", "Edge Behavior"],
+  ["ADBE Circle-0004", "Contextual Slider"],
+  ["ADBE Compound Blur-0003", "If Layer Sizes Differ"],
+  ["ADBE Displacement Map-0007", "Edge Behavior"],
+  ["ADBE Geometry2-0003", "Scale Height"],
+  ["ADBE Geometry2-0004", "Scale Width"],
+  ["ADBE LIQUIFY-0002", "Tool Options"],
+  ["ADBE LIQUIFY-0017", "Clone Offset"],
+  ["ADBE Lightning 2-0003", "Contextual Control"],
+  ["ADBE Lightning-0025", "Simulation"],
+  ["ADBE Noise Alpha-0005", "Contextual Control"],
+  ["ADBE Noise Alpha2-0005", "Contextual Control"],
+  ["ADBE Noise-0002", "Noise Type"],
+  ["ADBE Noise-0003", "Clipping"],
+  ["ADBE Noise2-0002", "Noise Type"],
+  ["ADBE Noise2-0003", "Clipping"],
+  ["ADBE OCIO Color Space Transform-0003", "Reset Control"],
+  ["ADBE OCIO Display Transform-0005", "Reset Control"],
+  ["ADBE OCIO Look Transform-0005", "Reset Control"],
+  ["ADBE Paint Bucket-0005", "Contextual Slider"],
+  ["ADBE Remove Color Matting-0002", "Clipping"],
+  ["ADBE Scatter-0003", "Scatter Randomness"],
+  ["ADBE Set Channels-0009", "If Layer Sizes Differ"],
+  ["ADBE Set Matte2-0004", "If Layer Sizes Differ"],
+  ["ADBE Set Matte3-0004", "If Layer Sizes Differ"],
+  ["ADBE Time Displacement-0004", "If Layer Sizes Differ"],
+  ["ADBE 3D Tracker-0001", ""],
+  ["ADBE 3D Tracker-0011", ""],
+  ["ADBE 3D Tracker-0400", ""],
+  ["ADBE Ramp-0008", ""],
+  ["ADBE SubspaceStabilizer-0001", ""],
+  ["ADBE SubspaceStabilizer-0011", ""],
+  ["ADBE Upscale-0003", ""],
+  ["ADBE Upscale-0004", ""],
+]);
+
+// Match names where neither the tdb4 byte nor the pard param flags
+// (PardChunk.param_flags bit 1, the authoritative source for effect
+// parameters) yield the canVaryOverTime value ExtendScript reports,
+// plus entries not yet verified against the pard flags. An entry is
+// removable once a sample containing the parameter shows the pard
+// prediction matches this table (and the ExtendScript JSON, when
+// available).
+export const _CANVARY_OVERRIDES: Map<string, boolean> = new Map<string, boolean>([
+  // Hold-only (AE's interpolation mask for it is 4), which still varies;
+  // the tdb4 byte py reads marks only the interpolating masks.
+  ["ADBE Light Falloff Type", true],
+  // Puppet pin internals are not regular effect parameters; the engine
+  // dropdown's pard flags even disagree with ExtendScript.
+  ["ADBE FreePin3 Outlines", false],
+  ["ADBE FreePin3 Puppet Engine", false],
+  ["ADBE FreePin3 Mesh", false],
+  ["ADBE FreePin3 Mesh Tri Count", false],
+  ["ADBE FreePin3 PosPin Vtx Index", false],
+]);
+
+// ---------------------------------------------------------------------------
+// can_set_expression overrides
+// ---------------------------------------------------------------------------
+
+// Match names where canSetExpression is always False regardless of context.
+export const _CANSETEXPR_FALSE_OVERRIDES: ReadonlySet<string> = new Set<string>([
+  // Paint stroke properties
+  "ADBE Paint Clone Time",
+  "ADBE Paint Clone Position",
+  "ADBE Paint Clone Time Shift",
+  // Material coefficients no renderer shows (probed on AE 2026 under
+  // Classic 3D, Advanced 3D and Cinema 4D)
+  "ADBE Transparency Coefficient",
+  "ADBE Transp Rolloff",
+  "ADBE Index of Refraction",
+  // Puppet pin
+  "ADBE FreePin3 PosPin Scale",
+  "ADBE FreePin3 PosPin Rotation",
+  // Text on path
+  "ADBE Text Reverse Path",
+  "ADBE Text Perpendicular To Path",
+  "ADBE Text Force Align Path",
+  "ADBE Text First Margin",
+  "ADBE Text Last Margin",
+  // Text range-selector bounds (can keyframe but not expression);
+  // the Units/Based On/Shape/Randomize props are already covered by
+  // their can_vary_over_time=False.
+  "ADBE Text Index Start",
+  "ADBE Text Index End",
+  "ADBE Text Index Offset",
+  "ADBE Text Random Seed",
+  // Vector stroke dashes / gaps / offset
+  "ADBE Vector Stroke Dash 1",
+  "ADBE Vector Stroke Dash 2",
+  "ADBE Vector Stroke Dash 3",
+  "ADBE Vector Stroke Gap 1",
+  "ADBE Vector Stroke Gap 2",
+  "ADBE Vector Stroke Gap 3",
+  "ADBE Vector Stroke Offset",
+  // Gradient highlight (length / angle never expressionable)
+  "ADBE Vector Grad HiLite Length",
+  "ADBE Vector Grad HiLite Angle",
+  // Vector taper
+  "ADBE Vector Taper StartWidthPx",
+  "ADBE Vector Taper EndWidthPx",
+  "ADBE Vector Taper Wave Cycles",
+  // Light background (always false even on light layers)
+  "ADBE Light Backgd Opacity",
+  "ADBE Light Backgd Blur",
+  // Light falloff
+  "ADBE Light Falloff Start",
+  "ADBE Light Falloff Distance",
+  // Vec3D material properties (per-face material options - never expressionable)
+  "ADBE Vec3D Front RGB",
+  "ADBE Vec3D Front Ambient",
+  "ADBE Vec3D Front Diffuse",
+  "ADBE Vec3D Front Specular",
+  "ADBE Vec3D Front Shininess",
+  "ADBE Vec3D Front Metal",
+  "ADBE Vec3D Front Reflection",
+  "ADBE Vec3D Front Gloss",
+  "ADBE Vec3D Front Fresnel",
+  "ADBE Vec3D Front Xparency",
+  "ADBE Vec3D Front XparRoll",
+  "ADBE Vec3D Front IOR",
+  "ADBE Vec3D Bevel RGB",
+  "ADBE Vec3D Bevel Ambient",
+  "ADBE Vec3D Bevel Diffuse",
+  "ADBE Vec3D Bevel Specular",
+  "ADBE Vec3D Bevel Shininess",
+  "ADBE Vec3D Bevel Metal",
+  "ADBE Vec3D Bevel Reflection",
+  "ADBE Vec3D Bevel Gloss",
+  "ADBE Vec3D Bevel Fresnel",
+  "ADBE Vec3D Bevel Xparency",
+  "ADBE Vec3D Bevel XparRoll",
+  "ADBE Vec3D Bevel IOR",
+  "ADBE Vec3D Side RGB",
+  "ADBE Vec3D Side Ambient",
+  "ADBE Vec3D Side Diffuse",
+  "ADBE Vec3D Side Specular",
+  "ADBE Vec3D Side Shininess",
+  "ADBE Vec3D Side Metal",
+  "ADBE Vec3D Side Reflection",
+  "ADBE Vec3D Side Gloss",
+  "ADBE Vec3D Side Fresnel",
+  "ADBE Vec3D Side Xparency",
+  "ADBE Vec3D Side XparRoll",
+  "ADBE Vec3D Side IOR",
+  "ADBE Vec3D Back RGB",
+  "ADBE Vec3D Back Ambient",
+  "ADBE Vec3D Back Diffuse",
+  "ADBE Vec3D Back Specular",
+  "ADBE Vec3D Back Shininess",
+  "ADBE Vec3D Back Metal",
+  "ADBE Vec3D Back Reflection",
+  "ADBE Vec3D Back Gloss",
+  "ADBE Vec3D Back Fresnel",
+  "ADBE Vec3D Back Xparency",
+  "ADBE Vec3D Back XparRoll",
+  "ADBE Vec3D Back IOR",
+  // Replace Source / Item Cache Entry
+  "ADBE Layer Source Alternate",
+  // A shape gradient's color stops (ExtendScript, gradient.aep: false
+  // on both the fill and the stroke, though they are keyframeable)
+  "ADBE Vector Grad Colors",
+]);
+
+// Match names never expressionable on parametric mesh layers (AE 2026
+// ExtendScript evidence from parametric_meshes.json): the material
+// texture-projection params and Displacement Intensity.
+export const _PARAMETRIC_MESH_NO_EXPRESSION: ReadonlySet<string> = new Set<string>([
+  "ADBE Displacement Intensity",
+  "ADBE3D Material Projection",
+  "ADBE3D Material Texturre Offset",
+  "ADBE3D Material Rotation",
+  "ADBE3D Material Scale",
+]);
+
+// Mesh option / bevel group -> owning mesh type (raw ldta value).
+// ExtendScript allows expressions only on the ACTIVE mesh type's numeric
+// streams; the inactive types' streams report canSetExpression=False.
+// (Creation-side counterpart: `property._PARAMETRIC_MESH_ACTIVE_GROUPS`.)
+export const _PARAMETRIC_MESH_GROUP_TYPE: Map<string, number> = new Map<string, number>([
+  ["ADBE CubeMeshOptionsSGrp", 0],
+  ["ADBE CubeBevelOptionsSGrp", 0],
+  ["ADBE SphereMeshOptionsSGrp", 1],
+  ["ADBE PlaneMeshOptionsSGrp", 2],
+  ["ADBE TorusMeshOptionsSGrp", 3],
+  ["ADBE ConeMeshOptionsSGrp", 4],
+  ["ADBE ConeBevelBevelSGrp", 4],
+  ["ADBE CylinderMeshOptionsSGrp", 5],
+  ["ADBE CylinderBevelOptionsSGrp", 5],
+]);
+
+// Checkbox / toggle mesh streams: ExtendScript reports these as
+// expressionable even in INACTIVE mesh option groups.
+export const _PARAMETRIC_MESH_CHECKBOX_STREAMS: ReadonlySet<string> = new Set<string>([
+  "ADBE SphereSliceCapsStrm",
+  "ADBE SphereInvertSliceStrm",
+  "ADBE TorusCapsStrm",
+  "ADBE TorusInvertSliceStrm",
+  "ADBE ConeTopCapStrm",
+  "ADBE ConeBottomCapStrm",
+  "ADBE ConeSliceCapsStrm",
+  "ADBE ConeInvertSliceStrm",
+  "ADBE CylinderTopCapStrm",
+  "ADBE CylinderBottomCapStrm",
+  "ADBE CylinderSliceCapsStrm",
+  "ADBE CylinderInvertSliceStrm",
+]);
+
+// The material options every 3D renderer shows.
+export const _MATERIAL_COEFFICIENTS: ReadonlySet<string> = new Set<string>([
+  "ADBE Ambient Coefficient",
+  "ADBE Diffuse Coefficient",
+  "ADBE Specular Coefficient",
+  "ADBE Shininess Coefficient",
+  "ADBE Metal Coefficient",
+]);
+
+// Match names that are expressionable only on 3D AV layers.
+export const _CANSETEXPR_3D_ONLY: ReadonlySet<string> = new Set<string>([
+  "ADBE Orientation",
+  "ADBE Rotate X",
+  "ADBE Rotate Y",
+  ..._MATERIAL_COEFFICIENTS,
+]);
+
+// Match names a 3D layer shows under one renderer only (probed on AE 2026
+// across Classic 3D, Advanced 3D and Cinema 4D): light transmission is
+// Classic 3D's, colored shadows Advanced 3D's, reflections Cinema 4D's.
+// Keyed by `CompItem.renderer` name.
+export const _CANSETEXPR_RENDERER_3D_ONLY: Map<string, string> = new Map<string, string>([
+  ["ADBE Light Transmission", "ADBE Advanced 3d"],
+  ["ADBE Shadow Color", "ADBE Calder"],
+  ["ADBE Reflection Coefficient", "ADBE Ernst"],
+  ["ADBE Glossiness Coefficient", "ADBE Ernst"],
+  ["ADBE Fresnel Coefficient", "ADBE Ernst"],
+]);
+
+// Match names hidden on a 3D layer drawn by Classic 3D, which cannot bend it
+// (a 3D model or parametric mesh layer keeps them under every renderer).
+export const _CANSETEXPR_2D_ONLY: ReadonlySet<string> = new Set<string>([
+  "ADBE Plane Curvature",
+  "ADBE Plane Subdivision",
+]);
+
+// Extrusion depths, hidden on a 3D text or shape layer drawn by Classic 3D,
+// which cannot extrude (probed on AE 2026; a 3D footage layer keeps them).
+export const _CANSETEXPR_EXTRUSION_DEPTHS: ReadonlySet<string> = new Set<string>([
+  "ADBE Bevel Depth",
+  "ADBE Hole Bevel Depth",
+  "ADBE Extrsn Depth",
+]);
+
+// A 3D model brings its own materials, so its layer hides every renderer's
+// material options (probed on AE 2026 under Classic 3D, Advanced 3D and
+// Cinema 4D).
+export const _MODEL_LAYER_HIDDEN_MATERIALS: ReadonlySet<string> = new Set<string>([
+  ..._MATERIAL_COEFFICIENTS,
+  ...[..._CANSETEXPR_RENDERER_3D_ONLY.keys()],
+]);
+
+// Transform match names that are never expressionable on camera layers.
+export const _CAMERA_NO_EXPRESSION: ReadonlySet<string> = new Set<string>([
+  "ADBE Scale",
+  "ADBE Opacity",
+  // AE 2026 camera-options additions: ExtendScript reports
+  // canSetExpression False for both (probed camera_defaults AE26).
+  "ADBE Camera Focus Area Width",
+  "ADBE Camera Split Blur Level",
+]);
+
+// Transform match names that are never expressionable on any light layer.
+export const _LIGHT_NO_EXPRESSION: ReadonlySet<string> = new Set<string>([
+  "ADBE Scale",
+  "ADBE Opacity",
+]);
+
+// Additional match names not expressionable on ambient lights.
+// Ambient lights support Color, Intensity, and (oddly) Rotate X/Y.
+export const _LIGHT_AMBIENT_NO_EXPRESSION: ReadonlySet<string> = new Set<string>([
+  "ADBE Position",
+  "ADBE Anchor Point",
+  "ADBE Orientation",
+  "ADBE Rotate Z",
+  "ADBE Light Cone Angle",
+  "ADBE Light Cone Feather 2",
+  "ADBE Light Falloff Type",
+  "ADBE Light Shadow Darkness",
+  "ADBE Light Shadow Diffusion",
+]);
+
+// Additional match names not expressionable on point lights.
+// Point lights have Position but not Orientation/Anchor/RotateX/Y/Z.
+export const _LIGHT_POINT_NO_EXPRESSION: ReadonlySet<string> = new Set<string>([
+  "ADBE Anchor Point",
+  "ADBE Orientation",
+  "ADBE Rotate X",
+  "ADBE Rotate Y",
+  "ADBE Rotate Z",
+  "ADBE Light Cone Angle",
+  "ADBE Light Cone Feather 2",
+]);
+
+// Spot and Parallel lights support all transform expressions.
+// Only Cone properties are Spot-exclusive.
+export const _LIGHT_SPOT_NO_EXPRESSION: ReadonlySet<string> = new Set<string>();
+
+// A parallel light is aimed by its point of interest alone.
+export const _LIGHT_PARALLEL_NO_EXPRESSION: ReadonlySet<string> = new Set<string>([
+  "ADBE Orientation",
+  "ADBE Rotate X",
+  "ADBE Rotate Y",
+  "ADBE Rotate Z",
+  "ADBE Light Cone Angle",
+  "ADBE Light Cone Feather 2",
+  "ADBE Light Shadow Diffusion",
+]);
+
+// An environment light has no position and takes its color from its source,
+// but rotates like an ambient light.
+export const _LIGHT_ENVIRONMENT_NO_EXPRESSION: ReadonlySet<string> = new Set<string>([
+  "ADBE Position",
+  "ADBE Anchor Point",
+  "ADBE Orientation",
+  "ADBE Rotate Z",
+  "ADBE Light Color",
+  "ADBE Light Cone Angle",
+  "ADBE Light Cone Feather 2",
+  "ADBE Light Falloff Type",
+  "ADBE Light Shadow Diffusion",
+]);

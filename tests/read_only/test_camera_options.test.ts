@@ -1,0 +1,155 @@
+/**
+ * Tests for synthesized Camera Options defaults (AE 2026 ground truth).
+ *
+ * An untouched camera stores no Camera Options chunks; py synthesizes them.
+ * Zoom and Focus Distance default to `comp width / 0.72` (AE's 50mm lens),
+ * Aperture to a width-independent constant, and AE 2026 exposes two options
+ * (Focus Area Width, Near/Far Blur Level) that AE 25 did not. All values were
+ * probed against AE 2026 (2026-07-14) at comp widths 1920/1280/640.
+ */
+
+import { describe, expect, test } from "bun:test";
+import { Path, len } from "../../src/pyrt/index.ts";
+import { approx } from "../../src/pyrt/pytest.ts";
+import "../../src/py_aep/binary/_register.ts";
+import { parse_project } from "../conftest.ts";
+import { CameraLayer } from "../../src/py_aep/models/layers/index.ts";
+import { Property } from "../../src/py_aep/models/properties/property.ts";
+
+const SAMPLES_DIR = new Path(import.meta.dir).div("..", "..", "samples", "models", "layer");
+const CAMERAS_AEP = SAMPLES_DIR.div("camera_rigs.aep");
+const TYPE_AEP = SAMPLES_DIR.div("type.aep");
+
+function _camera(comp_name: string): CameraLayer {
+  const project = parse_project(CAMERAS_AEP);
+  const comp = project.compositions.find((c) => c.name === comp_name)!;
+  const cam = comp.layers.find((ly) => ly instanceof CameraLayer)!;
+  return cam;
+}
+
+describe("TestCameraOptionDefaults", () => {
+  const _opt = (cam: CameraLayer, match_name: string): Property => {
+    const prop = cam.__getitem__("ADBE Camera Options Group").__getitem__(match_name);
+    expect(prop instanceof Property).toBe(true);
+    return prop;
+  };
+
+  test("test_zoom_and_focus_are_width_over_072", () => {
+    // CAM_ONE is a 1920-wide comp with an untouched camera.
+    const cam = _camera("CAM_ONE");
+    const expected = 1920 / 0.72;
+    const zoom = _opt(cam, "ADBE Camera Zoom");
+    const focus = _opt(cam, "ADBE Camera Focus Distance");
+    expect(approx(zoom.value, expected)).toBe(true);
+    expect(approx(focus.value, expected)).toBe(true);
+    // An untouched default is not "modified".
+    expect(zoom.is_modified).toBe(false);
+    expect(focus.is_modified).toBe(false);
+  });
+
+  test("test_aperture_is_constant", () => {
+    const cam = _camera("CAM_ONE");
+    const aperture = _opt(cam, "ADBE Camera Aperture");
+    expect(approx(aperture.value, 25.3093363329584)).toBe(true);
+    expect(aperture.is_modified).toBe(false);
+  });
+
+  test("test_ae26_has_fifteen_options", () => {
+    const cam = _camera("CAM_ONE");
+    const options = cam.__getitem__("ADBE Camera Options Group").properties;
+    expect(len(options)).toBe(15);
+    const names = options.map((p) => p.match_name);
+    expect(names.includes("ADBE Camera Focus Area Width")).toBe(true);
+    expect(names.includes("ADBE Camera Split Blur Level")).toBe(true);
+    // Iris Shape follows the two 2026 additions.
+    expect(names.indexOf("ADBE Iris Shape")).toBe(7);
+  });
+
+  test("test_new_option_metadata_matches_ae", () => {
+    const cam = _camera("CAM_ONE");
+    const focus_area = _opt(cam, "ADBE Camera Focus Area Width");
+    expect(approx(focus_area.value, 0.0)).toBe(true);
+    expect(focus_area.has_min).toBe(true);
+    expect(focus_area.has_max).toBe(false);
+    expect(focus_area.can_set_expression).toBe(false);
+
+    const split_blur = _opt(cam, "ADBE Camera Split Blur Level");
+    expect(approx(Array.from(split_blur.value), [100.0, 100.0])).toBe(true);
+    expect(split_blur.has_max).toBe(false);
+    expect(split_blur.can_set_expression).toBe(false);
+    expect(split_blur.units_text).toBe("percent");
+  });
+
+  test("test_ae25_gate_keeps_thirteen_options", () => {
+    // type.aep is authored by AE 25, which predates the two 2026
+    // additions; min_major=26 gating must keep it at 13 options.
+    const project = parse_project(TYPE_AEP);
+    expect(project._head.ae_version_major).toBe(25);
+    const cam = project.compositions
+      .flatMap((c) => c.layers)
+      .find((ly) => ly instanceof CameraLayer)!;
+    const options = cam.__getitem__("ADBE Camera Options Group").properties;
+    expect(len(options)).toBe(13);
+    const names = options.map((p) => p.match_name);
+    expect(names.includes("ADBE Camera Focus Area Width")).toBe(false);
+    expect(names.includes("ADBE Camera Split Blur Level")).toBe(false);
+  });
+});
+
+/**
+ * Transform-property metadata that AE reports specially for camera and
+ * light layers (probed AE 2026; separate from the Camera Options group).
+ *
+ * - The Z Position separation follower reads isModified True on camera and
+ *   light layers (always positioned in depth) but False on regular layers,
+ *   even though the follower's stored value is a placeholder 0 while the
+ *   leader is unseparated.
+ * - Point of Interest (the camera anchor point) is expressionable only on a
+ *   two-node camera (orient towards POI); a one-node camera's POI is
+ *   inactive and non-expressionable.
+ */
+describe("TestCameraLightTransformMetadata", () => {
+  const GEOMETRY_AEP = SAMPLES_DIR.div("geometry_probe.aep");
+
+  const _z_follower = (layer: any): Property => {
+    const prop = layer.transform.__getitem__("ADBE Position_2");
+    expect(prop instanceof Property).toBe(true);
+    // These probes assume the leader is NOT dimension-separated.
+    const leader = layer.transform.__getitem__("ADBE Position");
+    expect(leader instanceof Property).toBe(true);
+    expect(leader.dimensions_separated).toBe(false);
+    return prop;
+  };
+
+  test("test_camera_z_position_follower_is_modified", () => {
+    for (const comp_name of ["CAM_ONE", "CAM_TWO"]) {
+      const cam = _camera(comp_name);
+      // Compared as [name, value] so a failure names the comp, like the Python message.
+      expect([comp_name, _z_follower(cam).is_modified]).toEqual([comp_name, true]);
+    }
+  });
+
+  test("test_regular_layer_z_follower_not_modified", () => {
+    // Non-regression: a normal 3D layer keeps Z follower isModified False.
+    const project = parse_project(GEOMETRY_AEP);
+    const comp = project.compositions.find((c) => c.name === "PROBE_MAIN")!;
+    const solid = comp.layers.find((ly) => ly.name === "solid_3d")!;
+    expect(_z_follower(solid).is_modified).toBe(false);
+  });
+
+  test("test_two_node_camera_poi_expressionable", () => {
+    const cam = _camera("CAM_TWO");
+    expect(cam._ldta.poi_auto_orient).toBe(true);
+    const poi = cam.transform.__getitem__("ADBE Anchor Point");
+    expect(poi instanceof Property).toBe(true);
+    expect(poi.can_set_expression).toBe(true);
+  });
+
+  test("test_one_node_camera_poi_not_expressionable", () => {
+    const cam = _camera("CAM_ONE");
+    expect(cam._ldta.poi_auto_orient).toBe(false);
+    const poi = cam.transform.__getitem__("ADBE Anchor Point");
+    expect(poi instanceof Property).toBe(true);
+    expect(poi.can_set_expression).toBe(false);
+  });
+});

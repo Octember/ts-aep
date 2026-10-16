@@ -1,0 +1,595 @@
+/**
+ * Keyframe system chunks (lhd3, ldat) and their item types.
+ */
+
+import {
+  AttrsBase,
+  Factory,
+  b,
+  bytes_,
+  concat,
+  define,
+  descriptor,
+  dict_get,
+  int_enum,
+  py_assert,
+  py_bool,
+  range,
+  struct,
+  tkey,
+} from "../../pyrt/index.ts";
+import type { EnumValue, IO } from "../../pyrt/index.ts";
+import { read_bytes, write_bytes } from "./bin_utils.ts";
+import { BitField } from "./bitfield.ts";
+import { Chunk } from "./chunk.ts";
+import {
+  FmtItem,
+  bytes_field,
+  f4_field,
+  f8_field,
+  u1_field,
+  u4_field,
+  u8_field,
+} from "./fmt_field.ts";
+import { register } from "./registry.ts";
+import { OutputModuleSettingsItem, RenderSettingsItem } from "./render_chunks.ts";
+
+// ---------------------------------------------------------------------------
+// LdatItemType enum
+// ---------------------------------------------------------------------------
+
+/** Keyframe / list data item type, derived from lhd3 raw type + size. */
+export const LdatItemType = int_enum("LdatItemType", {
+  unknown: 0,
+  color: 1,
+  three_d_spatial: 2,
+  three_d: 3,
+  two_d_spatial: 4,
+  two_d: 5,
+  one_d: 6,
+  no_value: 7,
+  // 8 is unused
+  orientation: 9,
+  shape: 10,
+  marker: 11,
+  lrdr: 12,
+  litm: 13,
+  gide: 14,
+});
+export type LdatItemType = EnumValue<typeof LdatItemType>;
+
+// Dispatch table: (item_type_raw, item_size) -> LdatItemType
+const _ITEM_TYPE_MAP = new Map<string, LdatItemType>([
+  [tkey(1, 2246), LdatItemType.lrdr],
+  [tkey(1, 128), LdatItemType.litm],
+  [tkey(2, 16), LdatItemType.gide],
+  [tkey(4, 152), LdatItemType.color],
+  [tkey(4, 128), LdatItemType.three_d],
+  [tkey(4, 104), LdatItemType.two_d_spatial],
+  [tkey(4, 88), LdatItemType.two_d],
+  [tkey(4, 80), LdatItemType.orientation],
+  [tkey(4, 64), LdatItemType.no_value],
+  [tkey(4, 48), LdatItemType.one_d],
+  [tkey(4, 16), LdatItemType.marker],
+  [tkey(4, 8), LdatItemType.shape],
+]);
+
+// num_value for multi-dimensional / spatial keyframe types
+const _NUM_VALUE = new Map<number, number>([
+  [LdatItemType.three_d, 3],
+  [LdatItemType.three_d_spatial, 3],
+  [LdatItemType.two_d, 2],
+  [LdatItemType.two_d_spatial, 2],
+  [LdatItemType.one_d, 1],
+]);
+
+// ---------------------------------------------------------------------------
+// Lhd3Chunk - keyframe list header
+// ---------------------------------------------------------------------------
+
+/**
+ * Keyframe / list header. Stores item count, size, and raw type.
+ *
+ * The three `u4` counters after `item_type_raw` (`_count_b`,
+ * `_counter_a`, `_counter_b`) are opaque values AE maintains per list.
+ * Their meaning is list-type dependent: for `LIST:LRdr` they track the
+ * item count (with a floor of 1 when empty), but for `LIST:Gide` they
+ * do not - an empty guide list seeds them to `(1, 1, 2)` and three
+ * guides yields `(2, 1, 4)`, so they are neither a copy of `count` nor
+ * a simple version/id derived from it. They are kept private and set
+ * explicitly by mutation code rather than computed from `count`.
+ */
+export class Lhd3Chunk extends Chunk {
+  declare chunk_type: string;
+  declare _prefix: Uint8Array;
+  declare count: number;
+  declare _count_b: number;
+  declare item_size: number;
+  declare _gap2: Uint8Array;
+  declare item_type_raw: number;
+  declare _counter_a: number;
+  declare _counter_b: number;
+  declare _trailing_pad: Uint8Array | null;
+
+  /** Effective item type derived from raw type and item size. */
+  get item_type(): LdatItemType {
+    return dict_get(_ITEM_TYPE_MAP, tkey(this.item_type_raw, this.item_size), LdatItemType.unknown);
+  }
+}
+define(Lhd3Chunk, {
+  chunk_type: { default: "lhd3" },
+  _prefix: bytes_field(8, { default: b("\x00\xd0\x0b\xee\x00\x00\x00\x00"), repr: false }),
+  count: u4_field(),
+  _count_b: u4_field({ default: 1, repr: false }),
+  item_size: u4_field(),
+  _gap2: bytes_field(3, { default: b("\x00\x00\x00"), repr: false }),
+  item_type_raw: u1_field(),
+  _counter_a: u4_field({ default: 1, repr: false }),
+  _counter_b: u4_field({ default: 2, repr: false }),
+  _trailing_pad: bytes_field(20, { default: bytes_.repeat(b("\x00"), 20), optional: true, repr: false }),
+});
+register("lhd3")(Lhd3Chunk);
+
+// Block sizes for the lhd3 capacity counters, per list-container type. AE
+// keeps a "block allocation" header alongside `count` that it validates on
+// load; mutation code must keep it in sync or AE reports "Invalid read length".
+// Verified against AE-authored samples (scan over 530 sample files):
+//   keyframes (tdbs/list): block 4
+//   guides (Gide/list): block 2
+//   render-queue items (LRdr/list) and output modules (LItm/list): block 1
+export const LHD3_BLOCK_KEYFRAMES = 4;
+export const LHD3_BLOCK_GUIDES = 2;
+export const LHD3_BLOCK_SINGLE = 1;
+
+/**
+ * Set `lhd3.count` and recompute the capacity counters from it.
+ *
+ * AE keeps `_count_b = ceil(count / block)` (minimum 1), `_counter_b =
+ * _count_b * block`, and `_counter_a = _count_b` for single-item blocks
+ * (render queue / output modules) else 1. Count and counters are set in
+ * one step because AE validates them together on load; a count written
+ * without the derived counters makes AE reject the file.
+ */
+export function set_lhd3_count(lhd3: Lhd3Chunk, count: number, block: number): void {
+  lhd3.count = count;
+  const n = Math.max(1, Math.ceil(count / block));
+  lhd3._count_b = n;
+  lhd3._counter_b = n * block;
+  lhd3._counter_a = block === 1 ? n : 1;
+}
+
+// ---------------------------------------------------------------------------
+// Simple item types (not Chunk subclasses)
+// ---------------------------------------------------------------------------
+
+/** A single shape vertex (x, y) in big-endian float32. */
+export class ShapePoint extends FmtItem {
+  declare x: number;
+  declare y: number;
+}
+define(ShapePoint, {
+  x: f4_field(),
+  y: f4_field(),
+});
+
+/** A single composition guide (ruler line). */
+export class GuideItem extends FmtItem {
+  declare orientation_type: number;
+  declare position_type: number;
+  declare position: number;
+}
+define(GuideItem, {
+  orientation_type: u4_field(),
+  position_type: u4_field(),
+  position: f8_field(),
+});
+
+/** Guide container data chunk (8 bytes, all zeros). */
+export class GdtaChunk extends Chunk {
+  declare chunk_type: string;
+  declare data: Uint8Array;
+}
+define(GdtaChunk, {
+  chunk_type: { default: "gdta" },
+  data: { default: bytes_.repeat(b("\x00"), 8) },
+});
+register("gdta")(GdtaChunk);
+
+// ---------------------------------------------------------------------------
+// Keyframe data types
+// ---------------------------------------------------------------------------
+
+/** Keyframe data for valueless properties (e.g. paint stroke). */
+export class KfNoValue extends FmtItem {
+  declare _unknown1: number | bigint;
+  declare _unknown2: number;
+  declare in_speed: number;
+  declare in_influence: number;
+  declare out_speed: number;
+  declare out_influence: number;
+}
+define(KfNoValue, {
+  _unknown1: u8_field(),
+  _unknown2: f8_field(),
+  in_speed: f8_field(),
+  in_influence: f8_field(),
+  out_speed: f8_field(),
+  out_influence: f8_field(),
+});
+
+/**
+ * Keyframe data for color properties: alpha, red, green, blue in
+ * 0-255 units (the model reorders them to RGBA 0-1).
+ */
+export class KfColor extends FmtItem {
+  declare _unknown1: number | bigint;
+  declare _unknown2: number;
+  declare in_speed: number;
+  declare in_influence: number;
+  declare out_speed: number;
+  declare out_influence: number;
+  declare a: number;
+  declare r: number;
+  declare g: number;
+  declare b: number;
+  declare _uf0: number;
+  declare _uf1: number;
+  declare _uf2: number;
+  declare _uf3: number;
+  declare _uf4: number;
+  declare _uf5: number;
+  declare _uf6: number;
+  declare _uf7: number;
+
+  /** The four channels in storage order: alpha, red, green, blue. */
+  get value(): number[] {
+    return [this.a, this.r, this.g, this.b];
+  }
+
+  set value(v: number[]) {
+    [this.a, this.r, this.g, this.b] = v;
+  }
+}
+define(KfColor, {
+  _unknown1: u8_field(),
+  _unknown2: f8_field(),
+  in_speed: f8_field(),
+  in_influence: f8_field(),
+  out_speed: f8_field(),
+  out_influence: f8_field(),
+  a: f8_field(),
+  r: f8_field(),
+  g: f8_field(),
+  b: f8_field(),
+  _uf0: f8_field(),
+  _uf1: f8_field(),
+  _uf2: f8_field(),
+  _uf3: f8_field(),
+  _uf4: f8_field(),
+  _uf5: f8_field(),
+  _uf6: f8_field(),
+  _uf7: f8_field(),
+});
+
+/** Keyframe data for non-spatial multi-dimensional properties. */
+export class KfMultiDimensional extends AttrsBase {
+  declare value: number[];
+  declare in_speed: number[];
+  declare in_influence: number[];
+  declare out_speed: number[];
+  declare out_influence: number[];
+
+  static frombytes(data: Uint8Array, kw: { num_value: number }): KfMultiDimensional {
+    const { num_value } = kw;
+    const count = 5 * num_value;
+    const vals = struct.unpack(">" + "d".repeat(count), data.slice(0, count * 8));
+    const n = num_value;
+    return new this({
+      value: vals.slice(0, n),
+      in_speed: vals.slice(n, 2 * n),
+      in_influence: vals.slice(2 * n, 3 * n),
+      out_speed: vals.slice(3 * n, 4 * n),
+      out_influence: vals.slice(4 * n, 5 * n),
+    });
+  }
+
+  tobytes(): Uint8Array {
+    const all_vals = [
+      ...this.value,
+      ...this.in_speed,
+      ...this.in_influence,
+      ...this.out_speed,
+      ...this.out_influence,
+    ];
+    return struct.pack(">" + "d".repeat(all_vals.length), ...all_vals);
+  }
+}
+define(KfMultiDimensional, {
+  value: { default: Factory(() => []) },
+  in_speed: { default: Factory(() => []) },
+  in_influence: { default: Factory(() => []) },
+  out_speed: { default: Factory(() => []) },
+  out_influence: { default: Factory(() => []) },
+});
+
+/** Keyframe data for spatial properties (position, anchor point). */
+export class KfPosition extends AttrsBase {
+  declare _pad1: Uint8Array;
+  declare _spatial_flags: number;
+  declare _pad2: Uint8Array;
+  declare _unknown_header: number;
+  declare in_speed: number;
+  declare in_influence: number;
+  declare out_speed: number;
+  declare out_influence: number;
+  declare value: number[];
+  declare in_spatial_tangents: number[];
+  declare out_spatial_tangents: number[];
+  declare spatial_auto_bezier: boolean;
+  declare spatial_continuous: boolean;
+
+  static frombytes(data: Uint8Array, kw: { num_value: number }): KfPosition {
+    const { num_value } = kw;
+    const pad1 = data.slice(0, 3);
+    const flags = data[3];
+    const pad2 = data.slice(4, 8);
+    // 5 fixed doubles + 3*num_value array doubles
+    const total_doubles = 5 + 3 * num_value;
+    const vals = struct.unpack(">" + "d".repeat(total_doubles), data.slice(8, 8 + total_doubles * 8));
+    return new this({
+      pad1,
+      spatial_flags: flags,
+      pad2,
+      unknown_header: vals[0],
+      in_speed: vals[1],
+      in_influence: vals[2],
+      out_speed: vals[3],
+      out_influence: vals[4],
+      value: vals.slice(5, 5 + num_value),
+      in_spatial_tangents: vals.slice(5 + num_value, 5 + 2 * num_value),
+      out_spatial_tangents: vals.slice(5 + 2 * num_value, 5 + 3 * num_value),
+    });
+  }
+
+  tobytes(): Uint8Array {
+    const all_vals = [
+      this._unknown_header,
+      this.in_speed,
+      this.in_influence,
+      this.out_speed,
+      this.out_influence,
+      ...this.value,
+      ...this.in_spatial_tangents,
+      ...this.out_spatial_tangents,
+    ];
+    return concat(
+      this._pad1,
+      struct.pack(">B", this._spatial_flags),
+      this._pad2,
+      struct.pack(">" + "d".repeat(all_vals.length), ...all_vals),
+    );
+  }
+}
+define(KfPosition, {
+  _pad1: { default: b("\x00\x00\x00") },
+  _spatial_flags: { default: 0 },
+  _pad2: { default: b("\x00\x00\x00\x00") },
+  _unknown_header: { default: 0.0 },
+  in_speed: { default: 0.0 },
+  in_influence: { default: 0.0 },
+  out_speed: { default: 0.0 },
+  out_influence: { default: 0.0 },
+  value: { default: Factory(() => []) },
+  in_spatial_tangents: { default: Factory(() => []) },
+  out_spatial_tangents: { default: Factory(() => []) },
+});
+descriptor(KfPosition, "spatial_auto_bezier", new BitField("_spatial_flags", 1));
+descriptor(KfPosition, "spatial_continuous", new BitField("_spatial_flags", 0));
+
+// ---------------------------------------------------------------------------
+// LdatItem - generic keyframe with header + typed payload
+// ---------------------------------------------------------------------------
+
+/**
+ * A single keyframe item with 8-byte header and typed payload.
+ *
+ * `time_units` is the keyframe time as a signed 32-bit count of the
+ * comp's `internal_timebase` units per second (e.g. 24576 for 24 fps;
+ * measured on AE 2026 keyframes up to 10000 s).
+ *
+ * Header bytes 6-7 are one big-endian word of key flags: bits 3-5 are
+ * the temporal continuous / auto-bezier / roving flags and bits 6-10 the
+ * label (After Effects stores labels 1 / 5 / 16 as `00 40` / `01 40` /
+ * `04 00`); the other bits are preserved as read.
+ */
+export class LdatItem extends AttrsBase {
+  declare time_units: number;
+  declare in_interpolation_type: number;
+  declare out_interpolation_type: number;
+  declare _key_flags: number;
+  declare kf_data: any;
+  declare _trailing: Uint8Array;
+  declare roving: boolean;
+  declare temporal_auto_bezier: boolean;
+  declare temporal_continuous: boolean;
+
+  /** Label color index (0-16), bits 6-10 of the key flags. */
+  get label(): number {
+    return (this._key_flags >> 6) & 0x1f;
+  }
+
+  set label(value: number) {
+    this._key_flags = (this._key_flags & ~(0x1f << 6)) | ((value & 0x1f) << 6);
+  }
+
+  static frombytes(data: Uint8Array, kw: { item_type: LdatItemType }): LdatItem {
+    const { item_type } = kw;
+    // 8-byte header
+    const [time_units, in_interp, out_interp, key_flags] = struct.unpack(">iBBH", data.slice(0, 8));
+
+    const payload = data.slice(8);
+    const num_value = dict_get(_NUM_VALUE, item_type);
+    let kf_data: any;
+    let trailing: Uint8Array;
+
+    if (item_type === LdatItemType.color) {
+      kf_data = KfColor.frombytes(payload);
+      trailing = payload.slice(144);
+    } else if ([LdatItemType.no_value, LdatItemType.orientation].includes(item_type)) {
+      // An orientation keyframe keeps its angles in the sibling
+      // `otky` container, so its item carries the same valueless
+      // 48-byte ease prefix as a shape or gradient key - measured on
+      // AE 2026: the nine doubles read 0, out-segment duration, in
+      // speed, in influence, out speed, out influence, then padding.
+      // Reading it as a 1-D value item shifted every ease field by
+      // one slot, so `in/out_temporal_ease` reported the duration as
+      // a speed and lost the influence entirely.
+      kf_data = KfNoValue.frombytes(payload);
+      trailing = payload.slice(48);
+    } else if ([LdatItemType.three_d_spatial, LdatItemType.two_d_spatial].includes(item_type)) {
+      py_assert(num_value != null);
+      kf_data = KfPosition.frombytes(payload, { num_value });
+      // prefix(8) + fixed_doubles(5*8) + arrays(3*num_value*8)
+      const expected = 8 + 5 * 8 + 3 * num_value * 8;
+      trailing = payload.slice(expected);
+    } else if (num_value != null) {
+      // three_d, two_d, one_d
+      kf_data = KfMultiDimensional.frombytes(payload, { num_value });
+      const expected = 5 * num_value * 8;
+      trailing = payload.slice(expected);
+    } else {
+      // marker, unknown - raw bytes
+      kf_data = payload;
+      trailing = b("");
+    }
+
+    return new this({
+      time_units,
+      in_interpolation_type: in_interp,
+      out_interpolation_type: out_interp,
+      key_flags,
+      kf_data,
+      trailing,
+    });
+  }
+
+  tobytes(): Uint8Array {
+    const header = struct.pack(
+      ">iBBH",
+      this.time_units,
+      this.in_interpolation_type,
+      this.out_interpolation_type,
+      this._key_flags,
+    );
+    let payload: Uint8Array;
+    if (this.kf_data instanceof Uint8Array) {
+      payload = this.kf_data;
+    } else {
+      payload = this.kf_data.tobytes();
+    }
+    return concat(header, payload, this._trailing);
+  }
+}
+define(LdatItem, {
+  time_units: { default: 0 },
+  in_interpolation_type: { default: 0 },
+  out_interpolation_type: { default: 0 },
+  _key_flags: { default: 0 },
+  kf_data: { default: b("") },
+  _trailing: { default: b("") },
+});
+descriptor(LdatItem, "roving", new BitField("_key_flags", 5));
+descriptor(LdatItem, "temporal_auto_bezier", new BitField("_key_flags", 4));
+descriptor(LdatItem, "temporal_continuous", new BitField("_key_flags", 3));
+
+// ---------------------------------------------------------------------------
+// LdatChunk - registered chunk
+// ---------------------------------------------------------------------------
+
+/** Dispatch item reading by type. */
+function _read_item(data: Uint8Array, item_type: LdatItemType): FmtItem | LdatItem {
+  if (item_type === LdatItemType.lrdr) return RenderSettingsItem.frombytes(data);
+  if (item_type === LdatItemType.litm) return OutputModuleSettingsItem.frombytes(data);
+  if (item_type === LdatItemType.shape) return ShapePoint.frombytes(data);
+  if (item_type === LdatItemType.gide) return GuideItem.frombytes(data);
+  return LdatItem.frombytes(data, { item_type });
+}
+
+/** Keyframe / shape / settings data items. */
+export class LdatChunk extends Chunk {
+  declare chunk_type: string;
+  declare items: any[];
+  declare item_type: LdatItemType;
+  declare item_size: number;
+
+  static read(
+    fp: IO,
+    size: number,
+    kw: {
+      chunk_type?: string;
+      item_type?: LdatItemType;
+      item_size?: number;
+      count?: number;
+      is_spatial?: boolean;
+      [key: string]: any;
+    } = {},
+  ): LdatChunk {
+    let { chunk_type = "", item_type = LdatItemType.unknown, item_size = 0, count = 0, is_spatial = false } = kw;
+    // Spatial promotion: three_d -> three_d_spatial
+    if (item_type === LdatItemType.three_d && is_spatial) {
+      item_type = LdatItemType.three_d_spatial;
+    }
+
+    if (item_size === 0 || count === 0) {
+      const data = read_bytes(fp, size);
+      return new this({
+        chunk_type,
+        data,
+        item_type,
+        item_size,
+      });
+    }
+    const items: any[] = [];
+    for (const _ of range(count)) {
+      const item_data = read_bytes(fp, item_size);
+      items.push(_read_item(item_data, item_type));
+    }
+    const remaining = size - count * item_size;
+    const trailing = remaining > 0 ? read_bytes(fp, remaining) : b("");
+    const instance = new this({
+      chunk_type,
+      items,
+      item_type,
+      item_size,
+    });
+    if (py_bool(trailing)) {
+      instance._trailing = trailing;
+    }
+    return instance;
+  }
+
+  write(fp: IO): number {
+    if (!py_bool(this.items)) {
+      return write_bytes(fp, this.data);
+    }
+    let written = 0;
+    for (const item of this.items) {
+      if (item instanceof Uint8Array) {
+        written += write_bytes(fp, item);
+      } else {
+        written += write_bytes(fp, item.tobytes());
+      }
+    }
+    if (py_bool(this._trailing)) {
+      written += write_bytes(fp, this._trailing);
+    }
+    return written;
+  }
+}
+define(LdatChunk, {
+  chunk_type: { default: "ldat" },
+  items: { default: Factory(() => []) },
+  item_type: { default: LdatItemType.unknown },
+  item_size: { default: 0 },
+});
+register("ldat")(LdatChunk);

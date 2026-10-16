@@ -1,0 +1,470 @@
+/** Tests for FootageItem model parsing. */
+
+import { describe, expect, test } from "bun:test";
+
+import "../../src/py_aep/binary/_register.ts";
+import { AlphaMode, LinearLightMode, parse as parse_aep } from "../../src/py_aep/index.ts";
+import { ListChunk } from "../../src/py_aep/binary/chunk.ts";
+import { Utf8Chunk } from "../../src/py_aep/binary/scalar_chunks.ts";
+import { find_by_type } from "../../src/py_aep/binary/utils.ts";
+import { ColorProfileNotFoundError, default_icc_library, icc_profile_id } from "../../src/py_aep/color/icc.ts";
+import { ImportOptions } from "../../src/py_aep/models/import_options.ts";
+import { UNDEFINED_FRAME, FileSource } from "../../src/py_aep/models/sources/file.ts";
+import { probe_media } from "../../src/py_aep/resolvers/media_probe.ts";
+import { AttributeError, ValueError, Path, b, bytes_, int, py_eq, repr } from "../../src/pyrt/index.ts";
+import { approx, raises, skip } from "../../src/pyrt/pytest.ts";
+
+const __file__ = new Path(import.meta.path);
+const SAMPLES_DIR = __file__.parent.parent.parent.div("samples", "models", "footage");
+const SAMPLES = __file__.parent.parent.parent.div("samples", "models");
+
+function _get_first_footage(aep_path: Path): any {
+  /** Parse an .aep and return the first footage item. */
+  const project = parse_aep(aep_path).project;
+  return project.footages[0];
+}
+
+describe("TestFootageReadOnly", () => {
+  /** All FootageItem fields backed by source delegation are read-only. */
+
+  test("test_width_is_read_only", () => {
+    const footage = _get_first_footage(SAMPLES_DIR.div("solid_sizes.aep"));
+    // TODO(port): getter-only accessor throws a JS TypeError in strict mode, not pyrt AttributeError
+    raises(AttributeError, () => {
+      footage.width = 100;
+    });
+  });
+
+  test("test_height_is_read_only", () => {
+    const footage = _get_first_footage(SAMPLES_DIR.div("solid_sizes.aep"));
+    // TODO(port): getter-only accessor throws a JS TypeError in strict mode, not pyrt AttributeError
+    raises(AttributeError, () => {
+      footage.height = 100;
+    });
+  });
+
+  test("test_duration_is_read_only", () => {
+    const footage = _get_first_footage(SAMPLES_DIR.div("placeholder.aep"));
+    // TODO(port): getter-only accessor throws a JS TypeError in strict mode, not pyrt AttributeError
+    raises(AttributeError, () => {
+      footage.duration = 5.0;
+    });
+  });
+
+  test("test_frame_rate_is_read_only", () => {
+    const footage = _get_first_footage(SAMPLES_DIR.div("footage_misc.aep"));
+    // TODO(port): getter-only accessor throws a JS TypeError in strict mode, not pyrt AttributeError
+    raises(AttributeError, () => {
+      footage.frame_rate = 30.0;
+    });
+  });
+
+  test("test_frame_duration_is_read_only", () => {
+    const footage = _get_first_footage(SAMPLES_DIR.div("placeholder.aep"));
+    // TODO(port): getter-only accessor throws a JS TypeError in strict mode, not pyrt AttributeError
+    raises(AttributeError, () => {
+      footage.frame_duration = 100;
+    });
+  });
+
+  test("test_footage_missing_is_read_only", () => {
+    const footage = _get_first_footage(SAMPLES_DIR.div("footage_missing.aep"));
+    // TODO(port): getter-only accessor throws a JS TypeError in strict mode, not pyrt AttributeError
+    raises(AttributeError, () => {
+      footage.footage_missing = false;
+    });
+  });
+});
+
+describe("TestSequenceFrameBoundsDerivation", () => {
+  /**
+   * AE leaves `sspc.start_frame`/`end_frame` undefined for some image
+   * sequences and stores the real numbers only in the `StVc` filenames.
+   * py_aep derives them on read; it must NOT write them back, or an
+   * untouched parse/save round trip stops being byte-identical (every
+   * EXR-sequence footage in a pre-2019 project was affected).
+   */
+
+  /**
+   * A sequence source whose sspc bounds are undefined and whose
+   * frame numbers live only in an `StVc` list of filenames.
+   */
+  function _sequence_with_stvc(names: string[]): FileSource {
+    const source = FileSource._new(new Path("C:/footage/render/render.0101.exr"), {
+      source_format: "oEXR",
+      width: 1920,
+      height: 1080,
+      duration: 2.0,
+      frame_rate: 24.0,
+      sequence_prefix: "render.",
+      sequence_ext: ".exr",
+      start_frame: 101,
+      end_frame: 148,
+      frame_padding: 4,
+      windows: true,
+    });
+    const sspc = source._sspc;
+    sspc.start_frame = UNDEFINED_FRAME;
+    sspc.end_frame = UNDEFINED_FRAME;
+    source._pin.chunks.push(
+      new ListChunk({
+        chunk_type: "LIST",
+        list_type: "StVc",
+        chunks: names.map((name) => new Utf8Chunk({ value: name })),
+      }),
+    );
+    // Re-wrap so __init__ runs against the doctored chunks.
+    return new FileSource({
+      _pin: source._pin,
+      _sspc: sspc,
+      _opti: source._opti,
+      _linl: source._linl,
+      _clrs: source._clrs,
+    });
+  }
+
+  test("test_bounds_derived_from_stvc_filenames", () => {
+    const source = _sequence_with_stvc(["render.0101.exr", "render.0102.exr", "render.0148.exr"]);
+    expect(source._start_frame).toBe(101);
+    expect(source._end_frame).toBe(148);
+  });
+
+  test("test_derivation_does_not_write_the_chunk", () => {
+    const source = _sequence_with_stvc(["render.0101.exr", "render.0102.exr", "render.0148.exr"]);
+    expect(source._start_frame).toBe(101);
+    expect(source._end_frame).toBe(148);
+    // The chunk keeps AE's undefined sentinel, so a save reproduces the
+    // original bytes.
+    expect(source._sspc.start_frame).toBe(UNDEFINED_FRAME);
+    expect(source._sspc.end_frame).toBe(UNDEFINED_FRAME);
+  });
+
+  test("test_stored_bounds_win_over_derivation", () => {
+    const source = _sequence_with_stvc(["render.0101.exr", "render.0148.exr"]);
+    source._sspc.start_frame = 7;
+    source._sspc.end_frame = 9;
+    expect(py_eq([source._start_frame, source._end_frame], [7, 9])).toBe(true);
+  });
+
+  test("test_undefined_without_stvc_stays_undefined", () => {
+    const source = FileSource._new(new Path("C:/footage/render/render.0101.exr"), {
+      source_format: "oEXR",
+      width: 1920,
+      height: 1080,
+      duration: 2.0,
+      frame_rate: 24.0,
+      sequence_prefix: "render.",
+      sequence_ext: ".exr",
+      start_frame: 101,
+      end_frame: 148,
+      frame_padding: 4,
+      windows: true,
+    });
+    source._sspc.start_frame = UNDEFINED_FRAME;
+    source._sspc.end_frame = UNDEFINED_FRAME;
+    expect(source._start_frame).toBe(UNDEFINED_FRAME);
+    expect(source._end_frame).toBe(UNDEFINED_FRAME);
+  });
+});
+
+describe("TestAlphaModeWrites", () => {
+  /**
+   * Writing `alpha_mode` keeps the `sspc` alpha bytes self-consistent.
+   *
+   * AE pairs the mode byte with bit 0 of the alpha flags and resets the whole
+   * interpretation to straight alpha when it reads a file where the two
+   * disagree (AE 2026).
+   */
+
+  function _png_source(): FileSource {
+    const project = parse_aep(SAMPLES.div("project", "emptier.aep")).project;
+    const item = project.import_file(
+      new ImportOptions(SAMPLES.parent.div("assets", "image_with_alpha.png")),
+    );
+    return item.main_source;
+  }
+
+  test.each([
+    [AlphaMode.STRAIGHT, 0, false],
+    [AlphaMode.PREMULTIPLIED, 1, true],
+    [AlphaMode.IGNORE, 2, false],
+  ])("test_mode_byte_and_flag_bit_agree[%#]", (mode: AlphaMode, raw: number, premultiplied: boolean) => {
+    const source = _png_source();
+    source.alpha_mode = mode;
+    expect(source._sspc.alpha_mode_raw).toBe(raw);
+    expect(source._sspc.premultiplied).toBe(premultiplied);
+    expect(source.alpha_mode).toBe(mode);
+  });
+
+  test("test_ignore_keeps_the_flag_bit", () => {
+    // AE 2026 leaves the bit as it was on Ignore: set after
+    // Premultiplied, clear after Straight (a PNG and an FBX alike).
+    const source = _png_source();
+    source.alpha_mode = AlphaMode.PREMULTIPLIED;
+    source.alpha_mode = AlphaMode.IGNORE;
+    expect(source._sspc.premultiplied).toBe(true);
+    source.alpha_mode = AlphaMode.STRAIGHT;
+    source.alpha_mode = AlphaMode.IGNORE;
+    expect(source._sspc.premultiplied).toBe(false);
+  });
+
+  test("test_rejected_without_an_alpha_channel", () => {
+    const project = parse_aep(SAMPLES.div("project", "emptier.aep")).project;
+    const item = project.import_file(new ImportOptions(SAMPLES.parent.div("assets", "mov_480.mov")));
+    const source = item.main_source;
+    expect(source.has_alpha).toBe(false);
+    raises(
+      ValueError,
+      () => {
+        source.alpha_mode = AlphaMode.PREMULTIPLIED;
+      },
+      "no alpha channel",
+    );
+    // The "no alpha channel" marker survives the rejected write.
+    expect(source._sspc.alpha_mode_raw).toBe(3);
+    expect(source.has_alpha).toBe(false);
+  });
+});
+
+describe("TestSourceModifiedStamp", () => {
+  /**
+   * AE stamps the source's last-modified time and re-reads the media when
+   * it does not match - taking an EXR's size from its data window rather than
+   * the display window AE's importer recorded.
+   */
+
+  test("test_single_file_carries_its_own_mtime", () => {
+    const project = parse_aep(SAMPLES.div("project", "emptier.aep")).project;
+    const path = SAMPLES.parent.div("assets", "new_exr.0002.exr");
+    const item = project.import_file(new ImportOptions(path));
+    // TODO(port): Python st_mtime is a float with ns precision; fs.Stats.mtimeMs is ms-based
+    expect(item.main_source._sspc.source_modified).toBe(int(path.stat().mtimeMs / 1000));
+  });
+
+  test("test_sequence_carries_the_folder_mtime", () => {
+    const project = parse_aep(SAMPLES.div("project", "emptier.aep")).project;
+    const path = SAMPLES.parent.div("assets", "new_exr.0002.exr");
+    const opts = new ImportOptions(path);
+    opts.sequence = true;
+    const item = project.import_file(opts);
+    // TODO(port): Python st_mtime is a float with ns precision; fs.Stats.mtimeMs is ms-based
+    expect(item.main_source._sspc.source_modified).toBe(int(path.parent.stat().mtimeMs / 1000));
+  });
+
+  test("test_unreadable_media_stays_unstamped", () => {
+    const source = FileSource._new(new Path("C:/nowhere/render.0001.exr"), {
+      source_format: "oEXR",
+      width: 64,
+      height: 64,
+      duration: 0.0,
+      frame_rate: 0.0,
+      windows: true,
+    });
+    expect(source._sspc.source_modified).toBe(0);
+  });
+});
+
+/**
+ * Skip unless the named profile is discoverable on this machine.
+ *
+ * An assigned media profile is written by embedding the ICC bytes AE
+ * itself would embed, discovered from the installed Adobe Color dirs. With
+ * no ICC store (a CI runner, any machine without AE) the import records no
+ * profile at all, by design - see `_media_profile_records`.
+ *
+ * Returns false (after `skip`) when the profile is missing; callers `return`
+ * on false, which is the TS spelling of Python's `pytest.skip` aborting the test.
+ */
+function _require_profile(name: string): boolean {
+  try {
+    default_icc_library().bytes_for(name);
+  } catch (e) {
+    if (!(e instanceof ColorProfileNotFoundError)) throw e;
+    skip(`ICC profile ${repr(name)} not installed`);
+    return false;
+  }
+  return true;
+}
+
+describe("TestMediaColorProfileRecord", () => {
+  /**
+   * AE records the profile a file embeds, and assigns sRGB when it embeds
+   * none (AE 2026, measured across PNG, JPEG, TIFF, PSD, EXR, HDR, TGA and
+   * WAV imports).
+   */
+
+  function _import(name: string): FileSource {
+    const project = parse_aep(SAMPLES.div("project", "emptier.aep")).project;
+    const item = project.import_file(new ImportOptions(SAMPLES.parent.div("assets", name)));
+    return item.main_source;
+  }
+
+  test.each([
+    ["image_with_alpha.png", "Embedded"],
+    ["11_progressive.jpg", "Embedded"],
+    ["8bits.tif", "Embedded"],
+    ["8bits.psd", "Embedded"],
+    ["8bits_compressed.png", "sRGB IEC61966-2.1"],
+    ["new_exr.0002.exr", "sRGB IEC61966-2.1"],
+    ["hdr.hdr", "sRGB IEC61966-2.1"],
+    ["tga_32.tga", "sRGB IEC61966-2.1"],
+  ])("test_media_color_space[%#]", (filename: string, expected: string) => {
+    if (expected !== "Embedded") {
+      if (!_require_profile(expected)) return;
+    }
+    expect(_import(filename).media_color_space).toBe(expected);
+  });
+
+  test("test_embedded_profile_is_recorded_by_id", () => {
+    const source = _import("image_with_alpha.png");
+    const epid = find_by_type(source._clrs.chunks, "epid");
+    const blob = probe_media(SAMPLES.parent.div("assets", "image_with_alpha.png")).icc_profile;
+    expect(blob != null).toBe(true);
+    expect(py_eq(epid.data, icc_profile_id(blob))).toBe(true);
+  });
+
+  test("test_quicktime_records_no_profile", () => {
+    /**
+     * A QuickTime/MP4 names its color space (`empd` + "Rec. 709") from
+     * data py_aep cannot read yet, so it records none - which is what AE
+     * writes for an untagged JPEG, and AE fills the name in on open.
+     */
+    const source = _import("mov_480.mov");
+    const clrs = source._clrs;
+    expect(find_by_type(clrs.chunks, "ipws").value).toBe(0);
+    expect(py_eq(find_by_type(clrs.chunks, "apid").data, bytes_.repeat(b("\xff"), 16))).toBe(true);
+    expect(source.media_color_space).toBe("Embedded");
+  });
+
+  test("test_untagged_jpeg_records_no_profile", () => {
+    const source = _import("11_progressive.jpg");
+    expect(source.media_color_space).toBe("Embedded");
+  });
+
+  test.each([
+    ["gif.gif", "Rec.709 Gamma 2.4"], // animated
+    ["mpeg.mpeg", "Rec.709 Gamma 2.4"],
+    ["wmv.wmv", "Rec.709 Gamma 2.4"],
+    ["swf.swf", "Rec.709 Gamma 2.4"],
+    ["sequence_001.gif", "sRGB IEC61966-2.1"], // a still of the same format
+    ["bmp.bmp", "sRGB IEC61966-2.1"],
+  ])("test_video_gets_rec709[%#]", (filename: string, expected: string) => {
+    /**
+     * AE assigns Rec.709 to the video it decodes itself, and sRGB to a
+     * still or an image sequence of the same format.
+     */
+    if (!_require_profile(expected)) return;
+    expect(_import(filename).media_color_space).toBe(expected);
+  });
+
+  test("test_tiff_and_psd_embed_the_catalogued_copy", () => {
+    /**
+     * Their importers embed AE's own copy of the profile, not the
+     * file's bytes - the two differ in the advisory rendering intent.
+     */
+    if (!_require_profile("sRGB IEC61966-2.1")) return;
+    const source = _import("8bits.tif");
+    const blob = probe_media(SAMPLES.parent.div("assets", "8bits.tif")).icc_profile;
+    expect(blob != null).toBe(true);
+    const catalogued = default_icc_library().bytes_for("sRGB IEC61966-2.1");
+    expect(py_eq(blob, catalogued)).toBe(false); // the file's copy differs...
+    expect(py_eq(icc_profile_id(blob), icc_profile_id(catalogued))).toBe(true); // ...but not in id
+    const epid = find_by_type(source._clrs.chunks, "epid");
+    expect(py_eq(epid.data, icc_profile_id(catalogued))).toBe(true);
+  });
+
+  test.each([
+    ["11_progressive.jpg", false, LinearLightMode.OFF],
+    ["bmp.bmp", false, LinearLightMode.OFF],
+    ["gif.gif", false, LinearLightMode.OFF],
+    ["mov_480.mov", false, LinearLightMode.OFF],
+    ["sequence_001.gif", true, LinearLightMode.ON_FOR_32BPC],
+    ["m4a.m4a", false, LinearLightMode.ON_FOR_32BPC],
+    ["image_with_alpha.png", false, LinearLightMode.ON_FOR_32BPC],
+    ["new_exr.0002.exr", false, LinearLightMode.ON_FOR_32BPC],
+  ])(
+    "test_interpret_as_linear_light_default[%#]",
+    (filename: string, sequence: boolean, expected: LinearLightMode) => {
+      /**
+       * AE turns it off for the formats it decodes through its media
+       * importers - but not for an audio-only movie or an image sequence.
+       */
+      const project = parse_aep(SAMPLES.div("project", "emptier.aep")).project;
+      const opts = new ImportOptions(SAMPLES.parent.div("assets", filename));
+      if (sequence) {
+        opts.sequence = true;
+      }
+      const item = project.import_file(opts);
+      expect(item.main_source.interpret_as_linear_light).toBe(expected);
+    },
+  );
+});
+
+describe("TestWritableInterpretation", () => {
+  /** `pixel_aspect` and `conform_frame_rate` write what AE writes. */
+
+  function _import(name: string, sequence = false): any {
+    const project = parse_aep(SAMPLES.div("project", "emptier.aep")).project;
+    const opts = new ImportOptions(SAMPLES.parent.div("assets", name));
+    if (sequence) {
+      opts.sequence = true;
+    }
+    return project.import_file(opts);
+  }
+
+  test("test_pixel_aspect_is_writable", () => {
+    const item = _import("image_with_alpha.png");
+    item.pixel_aspect = 1.5;
+    expect(item.pixel_aspect).toBe(1.5);
+    expect(item.main_source._sspc.pixel_aspect_dividend).toBe(3);
+    expect(item.main_source._sspc.pixel_aspect_divisor).toBe(2);
+  });
+
+  test.each([0.0, -1.0, 0.001, 1000.0])("test_pixel_aspect_bounds[%#]", (value: number) => {
+    /** AE accepts 0.01 to 100. */
+    const item = _import("image_with_alpha.png");
+    raises(ValueError, () => {
+      item.pixel_aspect = value;
+    });
+  });
+
+  test("test_conform_rate_on_a_movie_uses_the_conform_slot", () => {
+    const item = _import("mov_480.mov");
+    item.main_source.conform_frame_rate = 25.0;
+    expect(item.main_source._sspc.conform_frame_rate).toBe(25.0);
+    expect(item.main_source._sspc.native_frame_rate).toBe(30.0);
+    expect(item.main_source.conform_frame_rate).toBe(25.0);
+  });
+
+  test("test_conform_rate_on_a_sequence_uses_the_native_slot", () => {
+    /**
+     * A sequence has no rate of its own: AE keeps the assumed one as the
+     * native rate, leaves the conform slot at 0, and rescales the stored
+     * duration over the new rate.
+     */
+    const item = _import("new_exr.0002.exr", true);
+    const sspc = item.main_source._sspc;
+    expect(approx([sspc.native_frame_rate, sspc.duration], [30.0, 2 / 30])).toBe(true);
+    item.main_source.conform_frame_rate = 25.0;
+    expect(sspc.conform_frame_rate).toBe(0.0);
+    expect(sspc.native_frame_rate).toBe(25.0);
+    expect(approx(sspc.duration, 2 / 25)).toBe(true);
+    expect(item.main_source.conform_frame_rate).toBe(25.0);
+    expect(item.frame_rate).toBe(25.0);
+  });
+
+  test("test_zero_conform_rate_is_ignored_on_a_sequence", () => {
+    const item = _import("new_exr.0002.exr", true);
+    item.main_source.conform_frame_rate = 25.0;
+    item.main_source.conform_frame_rate = 0.0;
+    expect(item.main_source.conform_frame_rate).toBe(25.0);
+  });
+
+  test("test_zero_conform_rate_clears_it_on_a_movie", () => {
+    const item = _import("mov_480.mov");
+    item.main_source.conform_frame_rate = 25.0;
+    item.main_source.conform_frame_rate = 0.0;
+    expect(item.main_source.conform_frame_rate).toBe(0.0);
+    expect(item.frame_rate).toBe(30.0);
+  });
+});

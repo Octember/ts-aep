@@ -1,0 +1,135 @@
+/**
+ * Essential Graphics controller model for After Effects compositions.
+ *
+ * The Essential Graphics panel (EGP) allows properties to be exposed as
+ * controllers in a Motion Graphics template (.mogrt). Each composition
+ * can have an EGP definition stored in a `LIST:CIF3` chunk.
+ */
+
+import { descriptor, repr } from "../../pyrt/index.ts";
+import { ChunkField } from "./descriptors.ts";
+import { validate_name } from "./validators.ts";
+import type { U4Chunk, Utf8Chunk } from "../binary/scalar_chunks.ts";
+
+/**
+ * One node in a controller's source-property path, from root to leaf.
+ *
+ * `prop_index` is After Effects' raw 0-based position of the node within its
+ * parent property group's full (AE-internal) child list, or `null` to match
+ * by name (AE stores `0xFFFFFFFF` for by-name). It does NOT correspond to
+ * py_aep's `property(n)`/`properties[n]` index - e.g. the Fill effect's
+ * `ADBE Fill-0002` leaf has `prop_index=3` but is py_aep child position 1.
+ * (Named `prop_index`, not `index`, to avoid shadowing `tuple.index`.)
+ */
+export class SourcePropertyRef {
+  readonly match_name: string;
+  readonly prop_index: number | null;
+
+  constructor(match_name: string, prop_index: number | null) {
+    this.match_name = match_name;
+    this.prop_index = prop_index;
+  }
+
+  *[Symbol.iterator]() {
+    yield this.match_name;
+    yield this.prop_index;
+  }
+}
+
+/**
+ * A single controller in the Essential Graphics panel.
+ *
+ * Each controller maps to a `LIST:CCtl` chunk inside `LIST:CIF3`.
+ * The controller name is stored in a `LIST:CpS2` localized string
+ * chunk and can be renamed via the `name` attribute.
+ */
+export class EssentialGraphicsController {
+  /** The display name of the controller. Read / Write. */
+  declare name: string;
+
+  /**
+   * The controller type ID. Read-only.
+   *
+   * Known values: 1=Checkbox, 2=Slider, 4=Color, 5=Point,
+   * 6=Text, 8=Comment, 9=MultiDimensional, 10=Group, 13=Dropdown,
+   * 14=Media Replacement.
+   */
+  declare controller_type: number;
+
+  declare _name_utf8: Utf8Chunk;
+  declare _ctyp: U4Chunk;
+  declare uuid: string;
+  /**
+   * The path (root to leaf) to the source-composition property this
+   * controller exposes, as `SourcePropertyRef` nodes. Empty when the
+   * path is not stored. Read-only.
+   */
+  declare source_property_path: SourcePropertyRef[];
+  /**
+   * The item id of the source composition that owns the controlled
+   * property (the `CCId` chunk), or `None` when not stored. Read-only.
+   */
+  declare source_comp_id: number | null;
+  /**
+   * The `layer_id` of the source layer that owns the controlled
+   * property (the `CLId` chunk), or `None` when not stored. Read-only.
+   */
+  declare source_layer_id: number | null;
+
+  constructor(kw: {
+    _name_utf8: Utf8Chunk;
+    _ctyp: U4Chunk;
+    uuid: string;
+    source_property_path: SourcePropertyRef[];
+    source_comp_id?: number | null;
+    source_layer_id?: number | null;
+  }) {
+    const {
+      _name_utf8,
+      _ctyp,
+      uuid,
+      source_property_path,
+      source_comp_id = null,
+      source_layer_id = null,
+    } = kw;
+    this._name_utf8 = _name_utf8;
+    this._ctyp = _ctyp;
+    this.uuid = uuid;
+    /** The unique identifier for this controller. */
+    this.source_property_path = source_property_path;
+    /**
+     * The path (root to leaf) to the source-composition property this
+     * controller exposes, as `SourcePropertyRef` nodes. Empty when the
+     * path is not stored. Read-only.
+     */
+    this.source_comp_id = source_comp_id;
+    /**
+     * The item id of the source composition that owns the controlled
+     * property (the `CCId` chunk), or `None` when not stored. Read-only.
+     */
+    this.source_layer_id = source_layer_id;
+    /**
+     * The `layer_id` of the source layer that owns the controlled
+     * property (the `CLId` chunk), or `None` when not stored. Read-only.
+     */
+  }
+
+  __repr__(): string {
+    return (
+      `EssentialGraphicsController(name=${repr(this.name)},` +
+      ` type=${this.controller_type},` +
+      ` uuid=${repr(this.uuid)})`
+    );
+  }
+}
+
+descriptor(
+  EssentialGraphicsController,
+  "name",
+  new ChunkField<string>("_name_utf8", "value", { validate: validate_name }),
+);
+descriptor(
+  EssentialGraphicsController,
+  "controller_type",
+  new ChunkField<number>("_ctyp", "value", { read_only: true }),
+);

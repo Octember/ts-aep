@@ -1,0 +1,104 @@
+/** Advanced 3D (`ADBE Calder`) render options. */
+
+import { EnvironmentLightShadowResolution } from "../../../enums/index.ts";
+import { ChunkField } from "../../descriptors.ts";
+import {
+  validate_advanced_quality,
+  validate_casting_box_center,
+  validate_casting_box_size,
+  validate_shadow_smoothness,
+} from "../../validators.ts";
+import { RendererOptionsBase } from "./renderer_options_base.ts";
+import { descriptor } from "../../../../pyrt/index.ts";
+import type { AdvancedPrdaChunk } from "../../../binary/misc_chunks.ts";
+
+/**
+ * Options for the Advanced 3D renderer.
+ *
+ * Casting Box Size and Casting Box Center are stored as fractions of the
+ * composition's **raw pixel** dimensions - pixel aspect ratio is not
+ * applied - and are exposed here in the pixel values the Options dialog
+ * shows. Two things worth knowing:
+ *
+ * - Resizing a composition silently rescales these options in pixel
+ *   terms, because the stored fraction does not move. That is After
+ *   Effects' own behaviour.
+ * - Values that cross a save are stored as `float32`, so a pixel value
+ *   read back after saving can differ from the one written by a tiny
+ *   fraction of a pixel.
+ */
+export class AdvancedRendererOptions extends RendererOptionsBase {
+  declare _body: AdvancedPrdaChunk;
+
+  static _SPEC: Map<string, [string, any]> = new Map<string, [string, any]>([
+    ["Quality", ["quality", null]],
+    ["Resolution", ["resolution", EnvironmentLightShadowResolution]],
+    ["Smoothness", ["smoothness", null]],
+    ["Casting Box Size", ["casting_box_size", null]],
+    ["Casting Box Center", ["casting_box_center", null]],
+  ]);
+
+  /** Size of the shadow casting box, in pixels, as shown in the Options
+   * dialog. One dialog control drives all three stored axes, so reads
+   * report the X axis.
+   * Read / Write.
+   */
+  get casting_box_size(): number {
+    return this._body.casting_box_size_x * this._comp.width;
+  }
+
+  set casting_box_size(value: number) {
+    validate_casting_box_size(value);
+    const fraction = value / this._comp.width;
+    this._body.casting_box_size_x = fraction;
+    this._body.casting_box_size_y = fraction;
+    this._body.casting_box_size_z = fraction;
+  }
+
+  /** Centre of the shadow casting box as `[x, y, z]` in pixels, as shown
+   * in the Options dialog. X and Y are offsets from the composition
+   * centre; Z is measured from zero. Read / Write.
+   */
+  get casting_box_center(): number[] {
+    const width = this._comp.width;
+    const height = this._comp.height;
+    return [
+      this._body.casting_box_center_x * width + width / 2,
+      this._body.casting_box_center_y * height + height / 2,
+      this._body.casting_box_center_z * width,
+    ];
+  }
+
+  set casting_box_center(value: number[]) {
+    validate_casting_box_center(value);
+    const width = this._comp.width;
+    const height = this._comp.height;
+    const [x, y, z] = value;
+    this._body.casting_box_center_x = (x - width / 2) / width;
+    this._body.casting_box_center_y = (y - height / 2) / height;
+    this._body.casting_box_center_z = z / width;
+  }
+}
+
+// Descriptors assigned in the class body: `declare` above, installed here.
+
+/** Renderer quality, `1` to `125`. Read / Write. */
+descriptor(
+  AdvancedRendererOptions,
+  "quality",
+  new ChunkField<number>("_body", "quality", { validate: validate_advanced_quality }),
+);
+
+/** Environment light shadow resolution. Read / Write. */
+descriptor(
+  AdvancedRendererOptions,
+  "resolution",
+  ChunkField.enum(EnvironmentLightShadowResolution, "_body", "resolution"),
+);
+
+/** Environment light shadow smoothness, `1` to `20`. Read / Write. */
+descriptor(
+  AdvancedRendererOptions,
+  "smoothness",
+  new ChunkField<number>("_body", "smoothness", { validate: validate_shadow_smoothness }),
+);

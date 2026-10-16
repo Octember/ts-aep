@@ -1,0 +1,733 @@
+import {
+  AttributeError,
+  ValueError,
+  IndexError,
+  descriptor,
+  dict_get,
+  getattr,
+  max,
+  py_assert,
+  py_bool,
+  py_eq,
+  py_or,
+  repr,
+  split,
+} from "../../../pyrt/index.ts";
+import { PropertyType } from "../../enums/index.ts";
+import { get_ae_version_major } from "../../ae_version.ts";
+import { ListChunk, type Chunk } from "../../binary/chunk.ts";
+import { clone_chunk_tree } from "../../binary/mutations.ts";
+import { TDSN_SENTINEL, type TdmnChunk, type TdsbChunk } from "../../binary/property_chunks.ts";
+import { find_by_type, index_by_identity } from "../../binary/utils.ts";
+import { MATCH_NAME_TO_AUTO_NAME } from "../../data/match_names.ts";
+import { ChunkField } from "../descriptors.ts";
+import { validate_bool, validate_name } from "../validators.ts";
+import type { Utf8Chunk } from "../../binary/scalar_chunks.ts";
+import type { MkifChunk } from "../../binary/misc_chunks.ts";
+import type { Layer } from "../layers/layer.ts";
+import type { MaskPropertyGroup } from "./mask_property_group.ts";
+import type { Property } from "./property.ts";
+// Python defers these imports into `_parse_clone` (cycle breakers). They are
+// top-level here, which is the rulebook's rule.
+// TODO(port): property.ts and property_group.ts extend PropertyBase, and this
+// module imports them back (directly and via parsers/). If this module is the
+// first of the cycle to evaluate, `class ... extends PropertyBase` hits the TDZ.
+import { PropertyGroup } from "./property_group.ts";
+import { _parse_mask_atom, parse_property_group } from "../../parsers/property.ts";
+import { parse_property } from "../../parsers/property_value.ts";
+import { parse_effect } from "../../parsers/effect.ts";
+
+// TODO(pyrt): `list.index` / `list.remove` raise ValueError when the item is
+// absent and compare with Python `==`. No pyrt list helper exists yet.
+function list_index<T>(xs: T[], x: unknown): number {
+  const i = xs.findIndex((y) => py_eq(y, x));
+  if (i < 0) throw new ValueError(`${repr(x)} is not in list`);
+  return i;
+}
+
+function list_remove<T>(xs: T[], x: unknown): void {
+  xs.splice(list_index(xs, x), 1);
+}
+
+// Match names of groups that support add/remove/move/duplicate on children.
+// "ADBE Vectors Group" is a nested shape group's own contents.
+export const _INDEXED_GROUP_MATCH_NAMES: ReadonlySet<string> = new Set<string>([
+  "ADBE Effect Parade",
+  "ADBE Mask Parade",
+  "ADBE Effect Mask Parade",
+  "ADBE Text Animators",
+  "ADBE Text Selectors",
+  "ADBE Root Vectors Group",
+  "ADBE Vectors Group",
+]);
+
+// Text animator + selectors expose an enable toggle (canSetEnabled).
+const _TEXT_ANIMATOR_TOGGLEABLE: ReadonlySet<string> = new Set<string>([
+  "ADBE Text Animator",
+  "ADBE Text Selector",
+  "ADBE Text Wiggly Selector",
+  "ADBE Text Expressible Selector",
+]);
+
+function _validate_enabled(value: boolean, obj: PropertyBase): void {
+  validate_bool(value);
+  if (!obj.can_set_enabled) {
+    throw new AttributeError("'enabled' is read-only when 'can_set_enabled' is False.");
+  }
+}
+
+/**
+ * Reassign positional `Mask {i}` fallback names after a mutation.
+ *
+ * The parser numbers mask atoms by position, so a reparse after
+ * remove/move/duplicate would renumber them; keep the in-memory
+ * fallbacks consistent. Explicit user names (stored in tdsn) take
+ * precedence and are unaffected.
+ */
+function _renumber_mask_auto_names(parent: PropertyGroup): void {
+  let i = 1;
+  for (const child of parent._properties) {
+    if (child._is_mask) {
+      child._auto_name = `Mask ${i}`;
+      i += 1;
+    }
+  }
+}
+
+/**
+ * Give a duplicated mask a fresh per-layer id and matching name.
+ *
+ * AE assigns the copy the next free mask id (highest existing + 1) and
+ * names it `'{base} {new_id}'`, where `base` is the source name with any
+ * trailing number stripped (verified in AE 2026: `'Mask 1'` -> id 2
+ * `'Mask 2'`; `'Eyes'` -> id 2 `'Eyes 2'`; with ids `[1, 3]`, `'Mask 1'`
+ * -> id 4 `'Mask 4'`). A plain clone keeps the source's id and name,
+ * colliding with it.
+ */
+function _assign_duplicate_mask_identity(
+  source: PropertyBase,
+  new_mask: PropertyBase,
+  parent: PropertyGroup,
+): void {
+  const siblings: MaskPropertyGroup[] = parent._properties
+    .filter((m) => m._is_mask && m !== new_mask)
+    .map((m) => m as MaskPropertyGroup);
+  const new_id = max(siblings.map((m) => m._mkif.mask_id), null, 0) + 1;
+  (new_mask as MaskPropertyGroup)._mkif.mask_id = new_id;
+  // TODO(port): Python `$` also matches before a trailing newline; JS `$` does not.
+  const base = source.name.replace(/ \p{Nd}+$/u, "");
+  new_mask.name = `${base} ${new_id}`;
+}
+
+/**
+ * Abstract base class for both [Property][] and [PropertyGroup][].
+ *
+ * Info:
+ *     `PropertyBase` is the base class for both [Property][] and
+ *     [PropertyGroup][], so `PropertyBase` attributes and methods are available
+ *     when working with properties and property groups.
+ *
+ * See: https://ae-scripting.docsforadobe.dev/property/propertybase/
+ */
+export class PropertyBase {
+  /** Corresponds to the setting of the eyeball icon. Read / Write. */
+  declare enabled: boolean;
+
+  declare _tdsb: TdsbChunk | null;
+  declare _name_utf8: Utf8Chunk | null;
+  declare _match_name: string;
+  declare _auto_name: string | null;
+  declare _property_depth: number;
+  declare _tdmn: TdmnChunk | null;
+  declare _name: string | null;
+  declare _elided: boolean;
+  declare _is_effect: boolean;
+  declare _is_mask: boolean;
+  declare _parent_property: PropertyGroup | null;
+  declare _property_type: PropertyType;
+
+  constructor(kw: {
+    _tdsb: TdsbChunk | null;
+    _name_utf8?: Utf8Chunk | null;
+    parent_property?: PropertyGroup | null;
+    match_name: string;
+    property_depth: number;
+    auto_name?: string | null;
+  }) {
+    const {
+      _tdsb,
+      _name_utf8 = null,
+      parent_property = null,
+      match_name,
+      property_depth,
+      auto_name = null,
+    } = kw;
+    this._tdsb = _tdsb;
+    this._name_utf8 = _name_utf8;
+    this._match_name = match_name;
+    this._auto_name = auto_name;
+    this._property_depth = property_depth;
+    this._tdmn = null;
+
+    this._name = null;
+
+    this._elided = false;
+    this._is_effect = false;
+    this._is_mask = false;
+    this._parent_property = parent_property;
+    this._property_type = PropertyType.NAMED_GROUP;
+  }
+
+  _ensure_materialized(): void {
+    // No-op on `PropertyBase`. Overridden by `Property` and
+    // `PropertyGroup` to flip synthetic flags on backing chunks on
+    // first user write.
+  }
+
+  /**
+   * The body chunk that follows this property's `tdmn` in the parent.
+   *
+   * `tdbs` for a [Property][], `tdgp` for a [PropertyGroup][].
+   * Overridden by subclasses; `null` on the base.
+   */
+  _chunk_body(): Chunk | null {
+    return null;
+  }
+
+  /** Whether this property's chunks are serialized (not synthetic). */
+  _is_live(): boolean {
+    return this._tdsb == null || !this._tdsb.synthetic;
+  }
+
+  /**
+   * Move this property's `(tdmn, body)` chunks to canonical order.
+   *
+   * Synthesized properties are appended just before the group-end
+   * marker at synthesis time, which does not match After Effects'
+   * canonical property order. When such a property is materialized,
+   * re-anchor its chunk pair right before the nearest following
+   * already-serialized (non-synthetic) sibling, so the written order
+   * is what AE expects. Synthetic siblings (skipped on write) are
+   * ignored as anchors.
+   *
+   * Anchoring uses the sibling's `tdmn` (unique per property) rather
+   * than its body chunk, because separation followers (e.g.
+   * `ADBE Position_0` / `_1`) alias the same body chunk.
+   *
+   * All chunk lookups use object identity, not `==`: attrs gives
+   * chunks structural equality, and an empty group body (e.g. a
+   * text animator's Selectors vs Properties tdgp) is structurally
+   * identical to a sibling's, so `.remove()`/`.index()` would act on
+   * the wrong chunk.
+   */
+  _reposition_canonically(): void {
+    const parent = this._parent_property;
+    if (parent == null) return;
+    const tdgp = getattr(parent, "_tdgp", null) as ListChunk | null;
+    const tdmn = this._tdmn;
+    const body = this._chunk_body();
+    if (tdgp == null || tdmn == null || body == null) return;
+    const chunks = tdgp.chunks;
+    if (!chunks.some((c) => c === tdmn) || !chunks.some((c) => c === body)) return;
+    const siblings = parent._properties;
+    const idx = siblings.findIndex((s) => s === this);
+    if (idx < 0) return;
+    chunks.splice(0, chunks.length, ...chunks.filter((c) => c !== tdmn && c !== body));
+
+    let pos: number | null = null;
+    // Insert right before the nearest following live sibling's tdmn.
+    for (const sib of siblings.slice(idx + 1)) {
+      if (sib._is_live() && sib._tdmn != null) {
+        const sib_pos = chunks.findIndex((c) => c === sib._tdmn);
+        if (sib_pos >= 0) {
+          pos = sib_pos;
+          break;
+        }
+      }
+    }
+    if (pos == null) {
+      // No live following sibling: insert before the group-end marker.
+      pos = chunks.length;
+      for (let i = chunks.length - 1; i >= 0; i--) {
+        const c = chunks[i];
+        if (c.chunk_type === "tdmn" && getattr(c, "value", null) === "ADBE Group End") {
+          pos = i;
+          break;
+        }
+      }
+    }
+    chunks.splice(pos, 0, tdmn);
+    chunks.splice(pos + 1, 0, body);
+  }
+
+  /**
+   * When `True`, the property is selected. Read / Write.
+   *
+   * Note:
+   *     Property selection is stored in the `.aep` binary format but very complex.
+   *     Parsed projects report `False` for now.
+   */
+  get selected(): boolean {
+    return false;
+  }
+
+  /**
+   * A special name for the property used to build unique naming
+   * paths. The match name is not displayed, but you can refer to it
+   * in scripts. Every property has a unique match-name identifier.
+   * Read-only.
+   */
+  get match_name(): string {
+    return this._match_name;
+  }
+
+  /**
+   * The number of levels of parent groups between this property
+   * and the containing layer. The value is 0 for a layer.
+   * Read-only.
+   */
+  get property_depth(): number {
+    return this._property_depth;
+  }
+
+  /**
+   * When `True`, the property is not shown in the UI. An elided
+   * property is still present in the timeline but hidden from view.
+   * Read-only.
+   */
+  get elided(): boolean {
+    return this._elided;
+  }
+
+  /**
+   * When `True`, this property is an effect [PropertyGroup][].
+   * Read-only.
+   */
+  get is_effect(): boolean {
+    return this._is_effect;
+  }
+
+  /**
+   * When `True`, this property is a mask [PropertyGroup][].
+   * Read-only.
+   */
+  get is_mask(): boolean {
+    return this._is_mask;
+  }
+
+  /**
+   * The type of this property. One of `PropertyType.PROPERTY`,
+   * `PropertyType.NAMED_GROUP`, or `PropertyType.INDEXED_GROUP`.
+   * Read-only.
+   */
+  get property_type(): PropertyType {
+    return this._property_type;
+  }
+
+  /**
+   * The parent [PropertyGroup][] of this property, or `None` for
+   * top-level layer property groups. Read-only.
+   */
+  get parent_property(): PropertyGroup | null {
+    return this._parent_property;
+  }
+
+  /** The automatic (display) name derived from `match_name`. */
+  get auto_name(): string {
+    if (this._auto_name != null) return this._auto_name;
+    return dict_get(MATCH_NAME_TO_AUTO_NAME, this.match_name, this.match_name);
+  }
+
+  /**
+   * Display name of the property. Read / Write for a child of an
+   * indexed group (a mask, effect, text animator or shape group);
+   * read-only otherwise.
+   *
+   * Raises:
+   *     ValueError: On write, if the parent is not an indexed group.
+   *         After Effects refuses the same write ("Can not set name
+   *         this property, because parent is not an INDEXED_GROUP").
+   */
+  get name(): string {
+    if (this._name != null) return this._name;
+    if (this._name_utf8 != null) {
+      const text: string = split(this._name_utf8.value, "\0")[0];
+      if (py_bool(text) && text !== TDSN_SENTINEL) return text;
+    }
+    return this.auto_name;
+  }
+
+  set name(value: string) {
+    validate_name(value);
+    // A Layer is a PropertyBase but its name is a layer attribute, not a
+    // property name - `Layer.name` extends this setter and is always
+    // writable.
+    const parent = this._parent_property;
+    if (!("_ldta" in this) && (parent == null || parent.property_type !== PropertyType.INDEXED_GROUP)) {
+      // Materializing a synthetic property just to hold a name AE
+      // would not accept writes a truncated LIST:tdbs (no cdat, no
+      // tdum/tduM) for MARKER and NO_VALUE properties, which makes
+      // AE reject the whole project as damaged.
+      const where = parent == null ? "a root property" : repr(parent.match_name);
+      throw new ValueError(
+        `Cannot set the name of ${repr(this.match_name)}: its parent ` +
+          `(${where}) is not an indexed group. Only masks, effects, ` +
+          `text animators and shape groups can be renamed.`,
+      );
+    }
+
+    this._ensure_materialized();
+    this._name = value;
+    py_assert(this._name_utf8 != null);
+    this._name_utf8.value = value;
+  }
+
+  /** `True` if the name has been explicitly set by the user. Read-only. */
+  get is_name_set(): boolean {
+    if (this._name != null) return true;
+    if (this._name_utf8 != null) {
+      const text: string = split(this._name_utf8.value, "\0")[0];
+      return py_bool(text) && text !== TDSN_SENTINEL;
+    }
+    return false;
+  }
+
+  /** Same as enabled. */
+  get active(): boolean {
+    return this.enabled;
+  }
+
+  /**
+   * The 0-based position of this property within its parent group.
+   *
+   * Returns `None` for layers (property depth 0).
+   *
+   * Warning:
+   *     Unlike ExtendScript (1-based), this uses Python's 0-based
+   *     convention so that `group.properties[prop.property_index]`
+   *     works directly.
+   * Read-only.
+   */
+  get property_index(): number | null {
+    const parent = this.parent_property;
+    if (this.property_depth === 0 || parent == null) return null;
+    return list_index(parent.properties, this as Property | PropertyGroup);
+  }
+
+  /**
+   * `True` if the `enabled` attribute value can be set.
+   *
+   * This is `True` for all layers, effect property groups, shape
+   * vector groups, text path options, and the Layer Styles group
+   * and its individual styles. Read-only.
+   */
+  get can_set_enabled(): boolean {
+    if (this.property_depth === 0) return true;
+    if (this.is_effect) return true;
+    const mn = this.match_name;
+    if (mn === "ADBE Text Path Options") return true;
+    // A text animator and each text selector can be toggled.
+    if (_TEXT_ANIMATOR_TOGGLEABLE.has(mn)) return true;
+    // The Layer Styles group and each individual style (match names
+    // like "dropShadow/enabled") report canSetEnabled only when
+    // applied to the layer. AE writes all ten styles as identical
+    // empty groups, so the only "applied" signal is the enabled
+    // flag: canSetEnabled tracks it exactly (group = any style
+    // enabled). Blending Options ("ADBE Blend Options Group") is
+    // excluded and always reports False.
+    if (mn === "ADBE Layer Styles" || mn.endsWith("/enabled")) return this.enabled;
+    if (
+      mn.startsWith("ADBE Vector") &&
+      ![
+        "ADBE Vectors Group",
+        "ADBE Vector Transform Group",
+        "ADBE Vector Repeater Transform",
+        "ADBE Vector Wiggler Transform",
+        "ADBE Vector Materials Group",
+      ].includes(mn)
+    ) {
+      return [PropertyType.NAMED_GROUP, PropertyType.INDEXED_GROUP].includes(this.property_type);
+    }
+    return false;
+  }
+
+  /**
+   * Walk up the parent_property chain to find the containing layer.
+   *
+   * Returns the Layer object (detected by having `_ldta`), or raises
+   * a ValueError if the property is not attached to a layer.
+   */
+  get _containing_layer(): Layer {
+    let node: PropertyBase | null = this.parent_property;
+    while (node != null) {
+      if ("_ldta" in node) return node as Layer;
+      node = node.parent_property;
+    }
+    throw new ValueError("Property is not attached to a layer");
+  }
+
+  /** Check if this property is inside an effect PropertyGroup. */
+  _is_in_effect(): boolean {
+    let node: PropertyBase | null = this.parent_property;
+    while (node != null) {
+      if (node.is_effect) return true;
+      if ("_ldta" in node) break;
+      node = node.parent_property;
+    }
+    return false;
+  }
+
+  /**
+   * `True` if this property has been changed since its creation.
+   *
+   * A property is considered modified if its value differs from the
+   * default, if it has keyframes, or if an expression is enabled.
+   * A property group is modified if any of its children are modified,
+   * or if it is an indexed group with children (adding items to an
+   * indexed group like Effects or Masks is itself a modification).
+   */
+  get is_modified(): boolean {
+    return false;
+  }
+
+  /**
+   * Validate and return the parent group and its backing tdgp.
+   *
+   * Only children of indexed groups (effects, masks, shape contents,
+   * text animators) can be removed/moved/duplicated.
+   */
+  _can_mutate(): [PropertyGroup, ListChunk] {
+    const parent = this._parent_property;
+    if (parent == null) throw new ValueError("Cannot mutate a root property");
+    if (parent.property_type !== PropertyType.INDEXED_GROUP) {
+      throw new ValueError(`Cannot mutate property in non-indexed group '${parent.match_name}'`);
+    }
+    // Indexed groups always have a backing tdgp.
+    return [parent, parent._tdgp as ListChunk];
+  }
+
+  /**
+   * The LIST chunk in the parent's chunk list backing this property.
+   *
+   * For regular properties this is `_tdbs`, for regular groups `_tdgp`.
+   * For effects (where the model's `_tdgp` is inside a wrapping
+   * `LIST:sspc`), this returns the sspc chunk.
+   */
+  _backing_list_chunk(parent_tdgp: ListChunk): ListChunk {
+    const chunk: ListChunk | null = py_or(getattr(this, "_tdbs", null), getattr(this, "_tdgp", null));
+    py_assert(chunk != null);
+    // Identity check - attrs __eq__ is structural, so .index() / `in`
+    // would give false positives for chunks with identical fields.
+    if (parent_tdgp.chunks.some((c) => c === chunk)) return chunk;
+
+    // Effect case: _tdgp is inside a LIST:sspc wrapper
+    for (const c of parent_tdgp.chunks) {
+      if (c instanceof ListChunk && c.list_type === "sspc" && c.chunks.some((inner) => inner === chunk)) {
+        return c;
+      }
+    }
+
+    return chunk;
+  }
+
+  /**
+   * Find the [start, end) index span of this property's chunks.
+   *
+   * Returns the index range covering the preceding `tdmn` chunk, any
+   * auxiliary chunks between it and the backing LIST chunk (e.g.
+   * `mkif` for masks), and the backing LIST chunk itself. The span
+   * is suitable for slice deletion.
+   */
+  _find_chunk_span(parent_tdgp: ListChunk): [number, number] {
+    const start = index_by_identity(parent_tdgp.chunks, this._tdmn);
+    const backing = this._backing_list_chunk(parent_tdgp);
+    const end = index_by_identity(parent_tdgp.chunks, backing);
+    return [start, end + 1];
+  }
+
+  /**
+   * Remove this property from its parent group.
+   *
+   * Only valid for children of indexed groups (effects, masks, shape
+   * contents, text animators).
+   *
+   * Raises:
+   *     ValueError: If this property is not in an indexed group.
+   */
+  remove(): void {
+    const [parent, parent_tdgp] = this._can_mutate();
+    const [start, end] = this._find_chunk_span(parent_tdgp);
+    parent_tdgp.chunks.splice(start, end - start);
+    list_remove(parent.properties, this as Property | PropertyGroup);
+    if (this._is_mask) _renumber_mask_auto_names(parent);
+  }
+
+  /**
+   * Move this property to a new 0-based index within its parent group.
+   *
+   * Only valid for children of indexed groups.
+   *
+   * Args:
+   *     new_index: The target 0-based position.
+   *
+   * Raises:
+   *     ValueError: If this property is not in an indexed group.
+   *     IndexError: If `new_index` is out of range.
+   */
+  move_to(new_index: number): void {
+    const [parent, parent_tdgp] = this._can_mutate();
+
+    const num_props = parent.properties.length;
+    if (!(0 <= new_index && new_index < num_props)) {
+      throw new IndexError(`Index ${new_index} out of range [0, ${num_props})`);
+    }
+
+    const child = this as Property | PropertyGroup;
+    const current_index = list_index(parent.properties, child);
+    if (current_index === new_index) return;
+
+    // Extract chunk span
+    const [start, end] = this._find_chunk_span(parent_tdgp);
+    const chunk_span = parent_tdgp.chunks.slice(start, end);
+    parent_tdgp.chunks.splice(start, end - start);
+
+    // Remove from model list
+    list_remove(parent.properties, child);
+
+    // Find chunk insertion point: before the target property's span
+    if (new_index >= parent.properties.length) {
+      parent_tdgp.chunks.push(...chunk_span);
+      parent.properties.push(child);
+    } else {
+      const target = parent.properties[new_index];
+      const [target_start] = target._find_chunk_span(parent_tdgp);
+      for (const [i, c] of chunk_span.entries()) {
+        parent_tdgp.chunks.splice(target_start + i, 0, c);
+      }
+      parent.properties.splice(new_index, 0, child);
+    }
+    if (this._is_mask) _renumber_mask_auto_names(parent);
+  }
+
+  /**
+   * Duplicate this property within its parent group.
+   *
+   * The duplicate is inserted immediately after the original.
+   * Only valid for children of indexed groups (see [PropertyType][]).
+   *
+   * Returns:
+   *     The newly created [PropertyBase][].
+   *
+   * Raises:
+   *     ValueError: If this property is not in an indexed group.
+   */
+  duplicate(): PropertyBase {
+    const [parent, parent_tdgp] = this._can_mutate();
+
+    // Clone the full chunk span: tdmn, auxiliary chunks (e.g. mkif
+    // for masks) and the backing LIST chunk.
+    const [start, end] = this._find_chunk_span(parent_tdgp);
+    const cloned = parent_tdgp.chunks.slice(start, end).map((c) => clone_chunk_tree(c));
+
+    // Insert after original in parent's chunk list
+    for (const [i, c] of cloned.entries()) {
+      parent_tdgp.chunks.splice(end + i, 0, c);
+    }
+
+    // Re-parse the cloned chunks into a model
+    const new_prop = this._parse_clone(cloned, parent);
+
+    // Insert in model list after original
+    const model_idx = list_index(parent.properties, this as Property | PropertyGroup);
+    parent.properties.splice(model_idx + 1, 0, new_prop as Property | PropertyGroup);
+
+    if (this._is_mask) {
+      _assign_duplicate_mask_identity(this, new_prop, parent);
+      _renumber_mask_auto_names(parent);
+    }
+    return new_prop;
+  }
+
+  /**
+   * Re-parse cloned chunks into a model instance.
+   *
+   * Uses the parser infrastructure to rebuild the correct model
+   * hierarchy from cloned binary chunks.
+   *
+   * Args:
+   *     cloned: The cloned chunk span - the `tdmn` first, the
+   *         backing LIST chunk last, auxiliary chunks (e.g. `mkif`)
+   *         in between.
+   *     parent: The parent group of the clone.
+   */
+  _parse_clone(cloned: Chunk[], parent: PropertyGroup): PropertyBase {
+    // Determine the composition context
+    const layer = this._containing_layer;
+    const comp = layer.containing_comp;
+
+    // Get effect param defs from the project
+    let effect_param_defs: Map<string, Map<string, Map<string, any>>> = new Map();
+    const project = comp._project;
+    if (project != null) {
+      effect_param_defs = project._effect_param_defs;
+    }
+
+    const tdmn = cloned[0] as TdmnChunk;
+    const list_chunk = cloned.at(-1)! as ListChunk;
+    let result: PropertyBase;
+    if (this._is_mask) {
+      const mkif = find_by_type(cloned, "mkif") as MkifChunk;
+      result = _parse_mask_atom(
+        list_chunk,
+        mkif,
+        this._property_depth,
+        effect_param_defs,
+        comp,
+        tdmn,
+        layer,
+      );
+    } else if (list_chunk.list_type === "tdbs") {
+      result = parse_property(list_chunk, this._match_name, comp, this._property_depth, tdmn);
+    } else if (list_chunk.list_type === "sspc") {
+      result = parse_effect(
+        list_chunk,
+        this._match_name,
+        this._property_depth,
+        effect_param_defs,
+        comp,
+        tdmn,
+        layer,
+      );
+    } else if (list_chunk.list_type === "tdgp") {
+      result = parse_property_group(
+        list_chunk,
+        this._match_name,
+        this._property_depth,
+        effect_param_defs,
+        comp,
+        tdmn,
+        layer,
+      );
+    } else {
+      throw new ValueError(`Unexpected backing chunk type '${list_chunk.list_type}'`);
+    }
+    // clone_chunk_tree strips synthetic chunks, so synthesized children
+    // (e.g. Mask Feather/Opacity) are missing from the clone; re-arm
+    // deferred synthesis to fill them on first access, like a fresh parse.
+    if (result instanceof PropertyGroup) {
+      result._deferred_ae_major = get_ae_version_major(comp);
+    }
+    result._parent_property = parent;
+    return result;
+  }
+}
+
+// ---- Descriptor class attribute (installed after the class, as in Python) ----
+descriptor(
+  PropertyBase,
+  "enabled",
+  ChunkField.bool("_tdsb", "enabled", {
+    default: true,
+    validate: _validate_enabled,
+  }),
+);

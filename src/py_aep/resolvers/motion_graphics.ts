@@ -1,0 +1,379 @@
+/**
+ * Build Essential Graphics (Motion Graphics template) controllers from a
+ * source property or layer.
+ *
+ * The read side (parsing controllers) lives in `parsers/essential_graphics.py`
+ * and `resolvers/essential_properties.py`. This module is the write side: it
+ * classifies a property into an Essential Graphics controller type, builds the
+ * root-to-leaf source-property path, and decides whether a property or layer can
+ * be exposed - shared by `Property`/`AVLayer.add_to_motion_graphics_template`.
+ *
+ * Path shape (the CPrp JSON): each node is `{"index", "matchName"}`. AE resolves
+ * named groups by name (index `0xFFFFFFFF`) and indexed-group children by index.
+ * The index model, verified against AE 2026 output (the `essential_graphics`
+ * fixtures plus a headless run covering masks, shape contents, text animators
+ * and effect topic groups):
+ *
+ * - a child of an INDEXED group is its 0-based position among that group's
+ *   children: a mask atom in the Mask Parade, a shape group in Root Vectors, a
+ *   fill in a nested Vectors Group, a text animator in Text Animators, and an
+ *   effect in the Effect Parade all follow this rule;
+ * - an effect PARAM leaf is the exception: its index is the position in the
+ *   effect's flat `parT` parameter list, where the hidden parameter-group
+ *   header pard occupies slot 0, so visible params start at 1
+ *   (`ADBE Fill-0002` -> 3 after `-0001`/`-0007`; `ADBE Fractal Noise-0010`
+ *   -> 10). Effect TOPIC groups (e.g. Fractal Noise's "Transform") are pure
+ *   UI: both AE's DOM and py_aep keep the params flat, and the stored path
+ *   never contains a topic-group node;
+ * - every other node resolves by name.
+ *
+ * py_aep refuses (reports "not addable") only what it cannot produce
+ * faithfully: an effect param whose parT definitions are unavailable, children
+ * of `ADBE Effect Built In Params`, and by-name nodes whose match name is
+ * ambiguous among siblings - matching how `can_import_as` gates on what py_aep
+ * can actually produce rather than on what After Effects allows.
+ */
+
+import { PropertyType } from "../enums/general.ts";
+import { PropertyControlType, PropertyValueType } from "../enums/property.ts";
+import { CompItem } from "../models/items/composition.ts";
+import { FootageItem } from "../models/items/footage.ts";
+import type { AVLayer } from "../models/layers/av_layer.ts";
+import { Layer } from "../models/layers/layer.ts";
+import type { Property } from "../models/properties/property.ts";
+import type { PropertyGroup } from "../models/properties/property_group.ts";
+import { SolidSource } from "../models/sources/solid.ts";
+import { TextDocument } from "../models/text/text_document.ts";
+import { dict_get, float_repr, py_bool, py_eq, py_or } from "../../pyrt/index.ts";
+
+// AE stores this in a CPrp path node's index to mean "match by name".
+const _BY_NAME_INDEX = 0xffffffff;
+
+const _TEXT_DOCUMENT = "ADBE Text Document";
+
+// Essential Graphics controller type ids (see EssentialGraphicsController).
+export const CONTROLLER_CHECKBOX = 1;
+export const CONTROLLER_SLIDER = 2;
+export const CONTROLLER_COLOR = 4;
+export const CONTROLLER_TEXT = 6;
+
+// json.dumps parity: CPython's ensure_ascii string encoder (lowercase \uXXXX,
+// every char outside printable ASCII escaped, UTF-16 units match CPython's
+// surrogate pairs).
+function _json_str(s: string): string {
+  let out = '"';
+  for (let i = 0; i < s.length; i++) {
+    const ch = s[i];
+    const c = s.charCodeAt(i);
+    if (ch === '"') out += '\\"';
+    else if (ch === "\\") out += "\\\\";
+    else if (c === 0x0a) out += "\\n";
+    else if (c === 0x0d) out += "\\r";
+    else if (c === 0x09) out += "\\t";
+    else if (c === 0x08) out += "\\b";
+    else if (c === 0x0c) out += "\\f";
+    else if (c < 0x20 || c > 0x7e) out += "\\u" + c.toString(16).padStart(4, "0");
+    else out += ch;
+  }
+  return out + '"';
+}
+
+// json.dumps parity: an integer-valued number is an int (exact decimal), any
+// other finite number is float.__repr__, and non-finite floats use the
+// NaN/Infinity spellings.
+function _json_num(x: number): string {
+  if (Number.isNaN(x)) return "NaN";
+  if (x === Infinity) return "Infinity";
+  if (x === -Infinity) return "-Infinity";
+  return Number.isInteger(x) ? BigInt(x).toString() : float_repr(x);
+}
+
+/** The `Layer` that owns `prop`, or `null` if not layer-owned. */
+function _owning_layer(prop: Property): Layer | null {
+  let group: any = prop.parent_property;
+  while (group != null) {
+    if (group instanceof Layer) return group;
+    group = group.parent_property;
+  }
+  return null;
+}
+
+/**
+ * One CPrp path node: a match name plus AE's child index.
+ *
+ * `prop_index` is `null` for by-name resolution (serialized as
+ * `0xFFFFFFFF`); a number is AE's hidden-param-aware child index (see the
+ * module docstring). Named `prop_index`, not `index`, to avoid shadowing
+ * `tuple.index` - mirroring `SourcePropertyRef`.
+ */
+export class PathNode {
+  readonly match_name: string;
+  readonly prop_index: number | null;
+
+  constructor(match_name: string, prop_index: number | null) {
+    this.match_name = match_name;
+    this.prop_index = prop_index;
+  }
+
+  *[Symbol.iterator](): Generator<string | number | null> {
+    yield this.match_name;
+    yield this.prop_index;
+  }
+}
+
+/**
+ * AE's parT index of `param_mn` inside effect `effect_mn`, or `null`.
+ *
+ * The project-level param defs preserve parT order and exclude the hidden
+ * parameter-group header pard (slot 0), so the AE index is `1 + position`
+ * (verified across the essential_graphics fixtures: `ADBE Fill-0002` -> 3,
+ * every `* Control-0001` -> 1).
+ */
+function _effect_param_index(layer: Layer, effect_mn: string, param_mn: string): number | null {
+  const defs: any = dict_get((layer as any).containing_comp._project._effect_param_defs, effect_mn);
+  if (!py_bool(defs)) return null;
+  const keys = [...defs.keys()];
+  if (!keys.includes(param_mn)) return null;
+  return 1 + keys.indexOf(param_mn);
+}
+
+/**
+ * Path for a param sitting DIRECTLY inside an effect, or `null`.
+ *
+ * The effect node carries its 0-based Effect Parade position, the leaf its
+ * parT index; the parade itself resolves by name. Duplicate effect
+ * instances are fine - the index disambiguates them.
+ */
+function _effect_param_path(prop: Property): [PathNode[], Layer] | null {
+  const effect: any = prop.parent_property;
+  if (effect == null || !effect.is_effect) return null;
+  const parade: any = effect.parent_property;
+  if (parade == null || parade.match_name !== "ADBE Effect Parade") return null;
+  const layer: any = parade.parent_property;
+  if (!(layer instanceof Layer)) return null;
+  const effect_index = parade.properties.findIndex((e: any) => e === effect);
+  if (effect_index === -1) return null;
+  const leaf_index = _effect_param_index(layer, effect.match_name, prop.match_name);
+  if (leaf_index == null) return null;
+  return [
+    [
+      new PathNode("ADBE Effect Parade", null),
+      new PathNode(effect.match_name, effect_index),
+      new PathNode(prop.match_name, leaf_index),
+    ],
+    layer,
+  ];
+}
+
+/**
+ * Build the root-to-leaf CPrp path from `prop`'s layer to `prop`.
+ *
+ * Returns `[nodes, layer]` where `nodes` runs from the layer's top-level
+ * group down to `prop`. Per the AE index model (validated against AE 2026
+ * output for masks, shape contents, text animators and effects):
+ *
+ * - a child of an INDEXED group carries its 0-based position among that
+ *   group's children (a mask in the Mask Parade, a shape group in Root
+ *   Vectors, a fill in a Vectors Group, an animator in Text Animators);
+ * - an effect param carries its parT slot instead (hidden header at 0,
+ *   see `_effect_param_path`), so effect subtrees resolve only through
+ *   that dedicated branch;
+ * - every other node resolves by name, refused when the match name is
+ *   not unique among its siblings (defensive: named groups have unique
+ *   children by AE construction, but a written by-name path must be
+ *   provably unambiguous).
+ *
+ * `null` when `prop` is not owned by a layer, an effect node cannot be
+ * indexed, or a by-name node is ambiguous.
+ */
+function _source_property_path(prop: Property): [PathNode[], Layer] | null {
+  const effect_path = _effect_param_path(prop);
+  if (effect_path != null) return effect_path;
+
+  const chain: PathNode[] = [];
+  let node: any = prop as Property | PropertyGroup;
+  let parent: any = prop.parent_property;
+  while (parent != null && !(parent instanceof Layer)) {
+    if (parent.is_effect || parent.match_name === "ADBE Effect Parade") {
+      // Effect subtrees are handled by _effect_param_path only; a
+      // positional index here would miss the hidden header pard.
+      return null;
+    }
+    if (parent.property_type === PropertyType.INDEXED_GROUP) {
+      const idx = parent.properties.findIndex((c: any) => c === node);
+      if (idx === -1) return null;
+      chain.push(new PathNode(node.match_name, idx));
+    } else {
+      if (parent.properties.filter((c: any) => c.match_name === node.match_name).length !== 1) {
+        return null;
+      }
+      chain.push(new PathNode(node.match_name, null));
+    }
+    node = parent;
+    parent = parent.parent_property;
+  }
+  if (!(parent instanceof Layer)) return null;
+  // The layer's top-level group resolves by name too.
+  if (parent.properties.filter((c: any) => c.match_name === node.match_name).length !== 1) {
+    return null;
+  }
+  chain.push(new PathNode(node.match_name, null));
+  return [chain.reverse(), parent];
+}
+
+/** Serialize a CPrp path into AE's JSON (by-name nodes as `0xFFFFFFFF`). */
+function _path_json(nodes: PathNode[]): string {
+  // json.dumps parity: separators (",", ":"), keys "0".."n" in insertion order.
+  const entries = nodes.map((node, i) => {
+    const index = node.prop_index != null ? node.prop_index : _BY_NAME_INDEX;
+    return `${_json_str(String(i))}:{"index":${_json_num(index)},"matchName":${_json_str(node.match_name)}}`;
+  });
+  return `{${entries.join(",")}}`;
+}
+
+/**
+ * Return the Essential Graphics controller type for `prop`, or `null`.
+ *
+ * Supported (per the AE Scripting Guide): Checkbox, Color, single-value
+ * numeric Slider, and Source Text. Classified on `property_value_type`
+ * (the control type is `UNKNOWN` for many transform properties, e.g.
+ * Opacity), with the Checkbox control type distinguishing a boolean from a
+ * plain numeric slider (both are 1-D value types).
+ */
+export function classify_property(prop: Property): number | null {
+  if (prop.match_name === _TEXT_DOCUMENT) return CONTROLLER_TEXT;
+  if (prop.property_value_type === PropertyValueType.COLOR) return CONTROLLER_COLOR;
+  if (prop.property_control_type === PropertyControlType.BOOLEAN) return CONTROLLER_CHECKBOX;
+  if (prop.property_control_type === PropertyControlType.ENUM) {
+    // Dropdown params are 1-D but AE exposes them as a type-13 Dropdown
+    // controller (menu entries included), which py_aep does not build.
+    return null;
+  }
+  if (prop.property_value_type === PropertyValueType.OneD) {
+    // A slider controller is seeded from the property's current value,
+    // so a value-less 1-D property (e.g. `ADBE Layer Source Alternate`)
+    // cannot back one - reporting it addable made
+    // `add_to_motion_graphics_template` raise instead of returning False.
+    if (prop.value == null) return null;
+    return CONTROLLER_SLIDER;
+  }
+  return null;
+}
+
+/**
+ * `true` if `comp` already exposes the same layer property.
+ *
+ * Compares `(match_name, index)` pairs so two instances of the same effect
+ * (identical match names, different parade indices) stay independently
+ * addable.
+ */
+function _already_added(comp: CompItem, layer_id: number, nodes: PathNode[]): boolean {
+  const wanted = nodes.map((node) => [node.match_name, node.prop_index]);
+  for (const ctrl of (comp as any).motion_graphics_controllers) {
+    if (ctrl.source_layer_id !== layer_id) continue;
+    const stored = ctrl.source_property_path.map((ref: any) => [ref.match_name, ref.prop_index]);
+    if (py_eq(stored, wanted)) return true;
+  }
+  return false;
+}
+
+/** Everything `CompItem` needs to add a property controller. */
+export class PropertyControllerPlan {
+  readonly controller_type: number;
+  readonly nodes: PathNode[];
+  readonly path_json: string;
+  readonly layer: Layer;
+
+  constructor(controller_type: number, nodes: PathNode[], path_json: string, layer: Layer) {
+    this.controller_type = controller_type;
+    this.nodes = nodes;
+    this.path_json = path_json;
+    this.layer = layer;
+  }
+
+  *[Symbol.iterator](): Generator<number | PathNode[] | string | Layer> {
+    yield this.controller_type;
+    yield this.nodes;
+    yield this.path_json;
+    yield this.layer;
+  }
+}
+
+/**
+ * Resolve everything needed to add `prop` to `comp`'s EGP, or `null`.
+ *
+ * `null` covers: an unsupported property type, a path py_aep cannot
+ * serialize (see `_source_property_path`), a layer not in `comp`, or a
+ * property already exposed.
+ */
+export function property_controller_plan(prop: Property, comp: CompItem): PropertyControllerPlan | null {
+  const controller_type = classify_property(prop);
+  if (controller_type == null) return null;
+  const resolved = _source_property_path(prop);
+  if (resolved == null) return null;
+  const [nodes, layer] = resolved;
+  if (layer.containing_comp !== comp) return null;
+  if (_already_added(comp, (layer as any)._ldta.layer_id, nodes)) return null;
+  return new PropertyControllerPlan(controller_type, nodes, _path_json(nodes), layer);
+}
+
+/** Whether `prop` can be added to `comp`'s Essential Graphics panel. */
+export function can_add_property(prop: Property, comp: CompItem): boolean {
+  return property_controller_plan(prop, comp) != null;
+}
+
+/**
+ * Build the Source Text controller's font-caps JSON from the property's
+ * current TextDocument (AE 2025 key order).
+ */
+export function font_caps_json(prop: Property): string {
+  const value: any = prop.value;
+  let font: any = "";
+  // Python keeps an int for integer-valued sizes and a float otherwise;
+  // `_json_num` renders both with the same spelling Python's encoder uses.
+  let size: number = 0;
+  if (value instanceof TextDocument) {
+    font = py_or(value.font, "");
+    const fs = value.font_size;
+    if (fs != null) size = fs;
+  }
+  return `{"capPropFontEdit":false,"capPropFontFauxStyleEdit":false,"capPropFontSizeEdit":false,"fontEditValue":${_json_str(String(font))},"fontFSAllCapsValue":false,"fontFSBoldValue":false,"fontFSItalicValue":false,"fontFSSmallCapsValue":false,"fontSizeEditValue":${_json_num(size)}}`;
+}
+
+/**
+ * The fixed CPrp path of a Media Replacement controller.
+ *
+ * AE always targets the layer's `ADBE Layer Source Alternate` leaf (under
+ * Source Options), both nodes by name.
+ */
+export function media_controller_path(): [PathNode[], string] {
+  const nodes = [
+    new PathNode("ADBE Source Options Group", null),
+    new PathNode("ADBE Layer Source Alternate", null),
+  ];
+  return [nodes, _path_json(nodes)];
+}
+
+/**
+ * Whether `layer` can be added to `comp`'s EGP as a Media Replacement.
+ *
+ * Mirrors the eligibility rules of `AVLayer.canAddToMotionGraphicsTemplate`:
+ * the layer must be a Media Replacement layer (has video, not an adjustment
+ * or null layer, source is a footage/comp item that is not a solid), must
+ * live in `comp`, and must not already be exposed.
+ */
+export function can_add_layer(layer: AVLayer, comp: CompItem): boolean {
+  if (layer.containing_comp !== comp) return false;
+  if (!layer.has_video || layer.adjustment_layer || layer.null_layer) return false;
+  const source: any = layer.source;
+  if (source instanceof FootageItem) {
+    if (source.main_source instanceof SolidSource) return false;
+  } else if (!(source instanceof CompItem)) {
+    return false;
+  }
+  // Only an existing MEDIA controller blocks the layer; property
+  // controllers (slider/checkbox/...) on the same layer coexist with a
+  // Media Replacement in AE.
+  const [nodes] = media_controller_path();
+  return !_already_added(comp, (layer as any)._ldta.layer_id, nodes);
+}

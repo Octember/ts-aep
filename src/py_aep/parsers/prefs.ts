@@ -1,0 +1,209 @@
+/**
+ * Generic reader for After Effects preference text files.
+ *
+ * AE persists its preferences as INI-like text files under the user's
+ * AppData directory (e.g.
+ * `~/AppData/Roaming/Adobe/After Effects/26.0/`), one file per
+ * [PREFType][] category:
+ *
+ * - `Adobe After Effects <ver> Prefs.txt` - machine specific
+ * - `... Prefs-indep-general.txt` - machine independent
+ * - `... Prefs-indep-render.txt` - render settings templates
+ * - `... Prefs-indep-output.txt` - output module templates
+ * - `... Prefs-indep-composition.txt` - new-composition presets
+ * - `... Prefs-text.txt` - text style defaults
+ * - `... Prefs-paint.txt` - paint tool defaults
+ *
+ * File format:
+ *
+ * - section headers: `["Section Name"]`
+ * - keys: one tab of indent, `"Key Name" = value`
+ * - values: AE's mixed hex/ASCII encoding - quoted ASCII runs with bare
+ *   hex bytes outside the quotes (e.g. `"HD  "E280A2"  1920x1080"`), or
+ *   raw hex bytes (`01`), or quoted decimal strings (`"30.000000"`)
+ * - long values continue on following lines (double-tab indent, trailing
+ *   backslash); backslashes sit outside quoted runs and decode to nothing
+ *
+ * This module is read-only: py_aep never writes AE preference files.
+ */
+
+import { PREFType } from "../enums/general.ts";
+import {
+  bytes_,
+  decode,
+  dict_get,
+  encode,
+  float,
+  getitem,
+  int,
+  py_bool,
+  rstrip,
+  setdefault,
+  sorted,
+  split,
+  strip,
+  ValueError,
+} from "../../pyrt/index.ts";
+import type { Path } from "../../pyrt/index.ts";
+
+// One glob per preference file category; file names embed the AE version.
+const _PREF_FILE_GLOBS: Map<PREFType, string> = new Map<PREFType, string>([
+  [PREFType.PREF_Type_MACHINE_SPECIFIC, "* Prefs.txt"],
+  [PREFType.PREF_Type_MACHINE_INDEPENDENT, "*Prefs-indep-general.txt"],
+  [PREFType.PREF_Type_MACHINE_INDEPENDENT_RENDER, "*Prefs-indep-render.txt"],
+  [PREFType.PREF_Type_MACHINE_INDEPENDENT_OUTPUT, "*Prefs-indep-output.txt"],
+  [PREFType.PREF_Type_MACHINE_INDEPENDENT_COMPOSITION, "*Prefs-indep-composition.txt"],
+  [PREFType.PREF_Type_MACHINE_SPECIFIC_TEXT, "*Prefs-text.txt"],
+  [PREFType.PREF_Type_MACHINE_SPECIFIC_PAINT, "*Prefs-paint.txt"],
+]);
+
+const _SECTION_RE = /^\["(.*)"\]/;
+const _KEY_RE = /^\t"(.+?)" = (.*)$/;
+
+/** Locate the preference file for `pref_type` under `prefs_dir`. */
+export function find_prefs_file(prefs_dir: Path, pref_type: PREFType): Path | null {
+  // Path ordering in Python compares parts; all matches share one parent, so the string form orders the same.
+  const matches = sorted(prefs_dir.glob(getitem(_PREF_FILE_GLOBS, pref_type)), (p) => p.toString());
+  return py_bool(matches) ? matches[0] : null;
+}
+
+/**
+ * Collapse AE preference continuation lines into logical lines.
+ *
+ * Key lines start with a single tab followed by a quote; continuation
+ * lines are indented further (or start with a tab but no quote) and
+ * are appended to the previous logical line.
+ */
+export function collapse_continuation_lines(text: string): string[] {
+  const lines = split(text, "\n");
+  const result: string[] = [];
+  for (const line of lines) {
+    const stripped = rstrip(line);
+    if (!py_bool(stripped)) continue;
+    // Continuation lines start with tab and contain hex data
+    if (py_bool(result) && stripped.startsWith("\t") && !stripped.startsWith('\t"')) {
+      result[result.length - 1] += strip(stripped);
+    } else {
+      result.push(stripped);
+    }
+  }
+  return result;
+}
+
+/**
+ * Decode a mixed hex/ASCII value from AE preferences.
+ *
+ * The value contains hex digits and quoted ASCII strings like:
+ * `00D00BEE..."Best Settings"0000...`
+ */
+export function parse_hex_value(value: string): Uint8Array {
+  const raw: number[] = [];
+  let i = 0;
+  while (i < value.length) {
+    if (value[i] === '"') {
+      const end = value.indexOf('"', i + 1);
+      if (end < 0) throw new ValueError("substring not found");
+      for (const c of encode(value.slice(i + 1, end), "ascii")) raw.push(c);
+      i = end + 1;
+    } else if ("0123456789ABCDEFabcdef".includes(value[i])) {
+      // TODO(port): pyrt int() also accepts "1_" and non-ASCII digits, which CPython rejects here.
+      raw.push(int(value.slice(i, i + 2), 16));
+      i += 2;
+    } else {
+      i += 1;
+    }
+  }
+  return Uint8Array.from(raw);
+}
+
+/** Parse decimal text into an int when integral, else a float. */
+export function parse_number_text(text: string): number {
+  const stripped = strip(text);
+  try {
+    // TODO(port): int/float distinction - both branches return a JS number, so 30.0 and 30 are indistinguishable.
+    return int(stripped);
+  } catch (e) {
+    if (!(e instanceof ValueError)) throw e;
+    return float(stripped);
+  }
+}
+
+/** Decode a preference value as text (hex escapes become UTF-8). */
+export function decode_pref_string(raw: string): string {
+  return decode(parse_hex_value(raw), "utf-8", "replace");
+}
+
+/**
+ * Decode a preference value as a number.
+ *
+ * Quoted values parse as decimal text (`"30.000000"` -> 30.0,
+ * `"999"` -> 999); unquoted values are raw hex bytes interpreted as a
+ * big-endian unsigned integer (`01` -> 1).
+ *
+ * Raises:
+ *     ValueError: If a quoted value is not numeric text.
+ */
+export function decode_pref_number(raw: string): number {
+  if (raw.includes('"')) return parse_number_text(decode_pref_string(raw));
+  const data = parse_hex_value(raw);
+  // TODO(port): int/float distinction. pyrt int_from_bytes returns a JS number, so values past 2^53 (more than 6 bytes) lose precision.
+  return bytes_.int_from_bytes(data, "big");
+}
+
+/** Decode a preference value as a boolean (`01`, `"1"`, `00`, `"0"`). */
+export function decode_pref_bool(raw: string): boolean {
+  return decode_pref_number(raw) !== 0;
+}
+
+/**
+ * Parsed section/key view of one AE preference text file.
+ *
+ * Values are kept in their raw text form; decode on demand with
+ * `decode_pref_string` / `decode_pref_number` / `decode_pref_bool` or
+ * `parse_hex_value` for binary blobs.
+ */
+export class PrefsFile {
+  declare _sections: Map<string, Map<string, string>>;
+
+  constructor(sections: Map<string, Map<string, string>>) {
+    this._sections = sections;
+  }
+
+  /** Parse preference file text into a `PrefsFile`. */
+  static from_text(text: string): PrefsFile {
+    const sections: Map<string, Map<string, string>> = new Map();
+    let current: Map<string, string> | null = null;
+    for (const line of collapse_continuation_lines(text)) {
+      const section_match = _SECTION_RE.exec(line);
+      if (section_match) {
+        current = setdefault(sections, section_match[1], new Map<string, string>());
+        continue;
+      }
+      const key_match = _KEY_RE.exec(line);
+      if (key_match && current != null) {
+        current.set(key_match[1], key_match[2]);
+      }
+    }
+    return new this(sections);
+  }
+
+  /** Read and parse a preference file from disk. */
+  static from_path(path: Path): PrefsFile {
+    // Python text mode reads with universal newlines: `\r\n` and lone `\r` both become `\n`.
+    const text = decode(path.read_bytes(), "utf-8", "replace").replace(/\r\n?/g, "\n");
+    return this.from_text(text);
+  }
+
+  /** Return the raw text value for `section`/`key`, or None. */
+  get_raw(section: string, key: string): string | null {
+    return dict_get(dict_get(this._sections, section, new Map<string, string>()), key);
+  }
+
+  /**
+   * Return a copy of the raw key -> value mapping for a section
+   * (empty if the section is absent).
+   */
+  section(name: string): Map<string, string> {
+    return new Map(dict_get(this._sections, name, new Map<string, string>()));
+  }
+}

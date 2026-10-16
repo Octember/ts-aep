@@ -1,0 +1,51 @@
+/**
+ * Tests for ViewOptions model parsing using samples from models/view/.
+ *
+ * These tests verify that py_aep correctly reads viewer panel settings
+ * (channels, exposure, zoom, fast preview, toggle flags, etc.) from the
+ * `fips` chunks in the binary AEP format.
+ *
+ * The viewer panel data is accessed via `project.active_viewer`, which
+ * represents the focused Composition/Layer/Footage panel. Each panel has
+ * one or more `View` objects containing `ViewOptions`.
+ */
+
+import { describe, expect, test } from "bun:test";
+import "../../src/py_aep/binary/_register.ts";
+import { Path } from "../../src/pyrt/index.ts";
+import { FastPreviewType, ViewOptions } from "../../src/py_aep/index.ts";
+import { FipsChunk } from "../../src/py_aep/binary/misc_chunks.ts";
+
+// `if TYPE_CHECKING: pass` block dropped (type-only, no runtime effect).
+
+const SAMPLES_DIR = new Path(import.meta.dir).parent.parent.parent.div("samples", "models", "view");
+
+describe("TestViewOptionsWithoutItem", () => {
+  /**
+   * Version-gated fields work when the viewer's item is no AVItem.
+   *
+   * parsers/view.py creates `ViewOptions(_item=None)` for such viewers;
+   * the `min_version` gate must be skipped (write allowed) when no AE
+   * version can be determined, instead of raising TypeError.
+   */
+
+  test("test_set_and_read_gated_fields_with_item_none", () => {
+    const opts = new ViewOptions({ fips: new FipsChunk(), item: null });
+
+    opts.rulers = true;
+    expect(opts.rulers).toBe(true);
+    opts.guides_locked = true;
+    expect(opts.guides_locked).toBe(true);
+    opts.guides_snap = true;
+    expect(opts.guides_snap).toBe(true);
+    opts.guides_visibility = true;
+    expect(opts.guides_visibility).toBe(true);
+  });
+
+  test("test_gated_enum_field_with_item_none", () => {
+    const opts = new ViewOptions({ fips: new FipsChunk(), item: null });
+
+    opts.fast_preview = FastPreviewType.FP_WIREFRAME;
+    expect(opts.fast_preview).toBe(FastPreviewType.FP_WIREFRAME);
+  });
+});

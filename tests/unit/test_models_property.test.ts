@@ -1,0 +1,142 @@
+/** Tests for Property model parsing with strengthened assertions. */
+
+import { describe, expect, test } from "bun:test";
+
+import "../../src/py_aep/binary/_register.ts";
+import { ListChunk } from "../../src/py_aep/binary/chunk.ts";
+import { TdmnChunk, TdsnChunk } from "../../src/py_aep/binary/property_chunks.ts";
+import { PropertyControlType } from "../../src/py_aep/enums/index.ts";
+import { _resolve_effect_value } from "../../src/py_aep/parsers/effect.ts";
+import { parse_property_group } from "../../src/py_aep/parsers/property.ts";
+import { Path, py_eq } from "../../src/pyrt/index.ts";
+
+const SAMPLES_DIR = new Path(import.meta.path).parent.parent.parent.div("samples", "models", "property");
+const BUGS_DIR = new Path(import.meta.path).parent.parent.parent.div("samples", "bugs");
+const LAYER_SAMPLES_DIR = new Path(import.meta.path).parent.parent.parent.div("samples", "models", "layer");
+// TODO(port): Python assigns LAYER_SAMPLES_DIR twice; TS forbids the redeclaration, so the duplicate is dropped (same value).
+const VERSIONS_DIR = new Path(import.meta.path).parent.parent.parent.div("samples", "versions");
+const PROPERTY_SAMPLES_DIR = new Path(import.meta.path).parent.parent.parent.div("samples", "models", "property");
+
+describe("TestResolveEffectValue", () => {
+  /** Tests for _resolve_effect_value pure helper. */
+
+  // Each row: [id] is the pytest param id, kept as a trailing comment.
+  test.each([
+    // enum_default_is_1_based
+    [
+      new Map<string, any>([
+        ["property_control_type", PropertyControlType.ENUM],
+        ["default_value", 1],
+      ]),
+      PropertyControlType.ENUM,
+      [1, 1],
+    ],
+    // enum_default_over_cached_value
+    // S_BlurDirectional Edge Mode: ExtendScript reports 3.
+    [
+      new Map<string, any>([
+        ["property_control_type", PropertyControlType.ENUM],
+        ["default_value", 3],
+        ["last_value", 1],
+        ["nb_options", 3],
+      ]),
+      PropertyControlType.ENUM,
+      [3, 3],
+    ],
+    // enum_cached_value_beyond_choices
+    // OCIO Look Transform: a plug-in-managed id, which
+    // ExtendScript reports.
+    [
+      new Map<string, any>([
+        ["property_control_type", PropertyControlType.ENUM],
+        ["default_value", 1],
+        ["last_value", 459],
+        ["nb_options", 1],
+      ]),
+      PropertyControlType.ENUM,
+      [459, 459],
+    ],
+    // boolean_default_value
+    [
+      new Map<string, any>([
+        ["property_control_type", PropertyControlType.BOOLEAN],
+        ["default_value", 1],
+      ]),
+      PropertyControlType.BOOLEAN,
+      [1, 1],
+    ],
+    // boolean_falls_back_to_last_value
+    [
+      new Map<string, any>([
+        ["property_control_type", PropertyControlType.BOOLEAN],
+        ["last_value", 0],
+      ]),
+      PropertyControlType.BOOLEAN,
+      [0, 0],
+    ],
+    // general_prefers_the_default
+    [
+      new Map<string, any>([
+        ["property_control_type", PropertyControlType.SCALAR],
+        ["last_value", 42.0],
+        ["default_value", 10.0],
+      ]),
+      PropertyControlType.SCALAR,
+      [10.0, 10.0],
+    ],
+    // general_falls_back_to_default
+    [
+      new Map<string, any>([
+        ["property_control_type", PropertyControlType.SCALAR],
+        ["default_value", 10.0],
+      ]),
+      PropertyControlType.SCALAR,
+      [10.0, 10.0],
+    ],
+    // general_no_values_returns_none
+    [
+      new Map<string, any>([["property_control_type", PropertyControlType.SCALAR]]),
+      PropertyControlType.SCALAR,
+      [null, null],
+    ],
+    // general_last_value_only_without_a_default
+    [
+      new Map<string, any>([
+        ["property_control_type", PropertyControlType.SCALAR],
+        ["last_value", 7.0],
+      ]),
+      PropertyControlType.SCALAR,
+      [7.0, 7.0],
+    ],
+  ])("test_resolve_effect_value[%#]", (param_def: Map<string, any>, control_type: PropertyControlType, expected: any) => {
+    const result = _resolve_effect_value("TEST-0001", param_def, control_type);
+    expect(py_eq(result, expected)).toBe(true);
+  });
+});
+
+describe("TestTdsnWithoutUtf8", () => {
+  /**
+   * A tdsn missing its Utf8 child degrades to the auto-name.
+   *
+   * Regression: `TdsnChunk.utf8` raised ValueError, escaping
+   * `parse_property_group`'s ChunkNotFoundError handler and failing
+   * the whole parse instead of falling back to the auto-name.
+   */
+
+  test("test_property_group_falls_back_to_auto_name", () => {
+    const tdgp = new ListChunk({
+      list_type: "tdgp",
+      chunks: [new TdsnChunk({ chunks: [] })], // no Utf8 child
+    });
+    const group = parse_property_group(
+      tdgp,
+      "ADBE Transform Group",
+      1,
+      new Map(),
+      null as any,
+      new TdmnChunk({ value: "ADBE Transform Group" }),
+    );
+    expect(group._name_utf8 == null).toBe(true);
+    expect(group.name).toBe("Transform");
+  });
+});

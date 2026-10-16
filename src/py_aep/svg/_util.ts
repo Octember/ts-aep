@@ -1,0 +1,131 @@
+/**
+ * Shared low-level helpers for the SVG reader package.
+ */
+
+import { dict_get, float, py_bool, strip } from "../../pyrt/index.ts";
+
+// TODO(port): Python `re` `\d` matches every Unicode decimal digit; JS `\d` is
+// ASCII-only. Python's `float()` accepts the non-ASCII digits too, so inputs
+// with them would parse in Python and fail here. Real SVG input is ASCII.
+
+/**
+ * An SVG/CSS number token: optional sign, decimal or integer, optional exponent.
+ * Python `re.match` anchors at the start of the string; `^` is the JS equivalent.
+ */
+export const NUMBER_RE = /^[-+]?(?:\d*\.\d+|\d+\.?)(?:[eE][-+]?\d+)?/;
+/** The same token allowing a trailing `%` (CSS color / ratio values). */
+export const NUMBER_PCT_RE = /^[-+]?(?:\d*\.\d+|\d+\.?)(?:[eE][-+]?\d+)?%?/;
+/** A length: a number and an optional unit or `%`. */
+const _LENGTH_RE = /^([-+]?(?:\d*\.\d+|\d+\.?)(?:[eE][-+]?\d+)?)\s*(%|[A-Za-z]+)?/;
+/** CSS absolute units in user units (px): CSS Values 3 fixes 1in = 96px. */
+const _ABSOLUTE_UNITS = new Map<string, number>([
+  ["px", 1.0],
+  ["in", 96.0],
+  ["cm", 96.0 / 2.54],
+  ["mm", 96.0 / 25.4],
+  ["q", 96.0 / 101.6],
+  ["pt", 96.0 / 72.0],
+  ["pc", 16.0],
+]);
+// A Map, not a plain object: the unit is arbitrary input, and a plain object
+// would answer `constructor` / `toString` as if they were units.
+/** The CSS initial font size (`medium`), the `em` reference by default. */
+export const DEFAULT_FONT_SIZE = 16.0;
+
+/**
+ * What relative SVG lengths resolve against: the nearest viewport's
+ * size in user units (its viewBox) and the element's font size.
+ */
+export class LengthContext {
+  readonly width: number;
+  readonly height: number;
+  readonly font_size: number;
+
+  constructor(width: number, height: number, font_size: number = DEFAULT_FONT_SIZE) {
+    this.width = width;
+    this.height = height;
+    this.font_size = font_size;
+  }
+
+  *[Symbol.iterator](): Generator<number> {
+    yield this.width;
+    yield this.height;
+    yield this.font_size;
+  }
+
+  /**
+   * The normalized diagonal a percentage of no particular axis (a
+   * radius, a stroke width) refers to: `sqrt((w^2 + h^2) / 2)`.
+   */
+  get diagonal(): number {
+    // TODO(port): CPython 3.12 math.hypot uses its own correctly-rounded
+    // accumulation; V8 Math.hypot may differ in the last ulp.
+    return Math.hypot(this.width, this.height) / Math.sqrt(2.0);
+  }
+}
+
+/**
+ * Strip an XML namespace, e.g. `{http://...}rect` -> `rect`.
+ */
+export function local_name(tag: string): string {
+  return tag.split("}").at(-1)!;
+}
+
+/**
+ * Clamp a float to the `[0.0, 1.0]` range.
+ */
+export function clamp01(value: number): number {
+  return value < 0.0 ? 0.0 : (value > 1.0 ? 1.0 : value);
+}
+
+/**
+ * Leading numeric value of `text`, ignoring a unit suffix (e.g.
+ * `"40px"` -> `40.0`); `default` when absent or non-numeric.
+ */
+export function parse_number(text: string | null, default_: number = 0.0): number {
+  if (!py_bool(text)) return default_;
+  const m = NUMBER_RE.exec(strip(text!));
+  return m ? float(m[0]) : default_;
+}
+
+/**
+ * An SVG length in user units: CSS absolute units (`mm`, `pt`, `in`,
+ * ...) at 96 px per inch, `em` / `ex` from `font_size`, a percentage of
+ * `percent_of` (the bare number when `null`); a unitless number or an
+ * unknown unit is taken as px. `default` when absent or non-numeric.
+ */
+export function parse_length(
+  text: string | null,
+  default_: number = 0.0,
+  percent_of: number | null = null,
+  font_size: number = DEFAULT_FONT_SIZE,
+): number {
+  if (!py_bool(text)) return default_;
+  const m = _LENGTH_RE.exec(strip(text!));
+  if (m == null) return default_;
+  const value = float(m[1]);
+  const unit = (m[2] ?? "").toLowerCase();
+  if (unit === "%") {
+    return percent_of != null ? (value * percent_of) / 100.0 : value;
+  }
+  if (unit === "em") {
+    return value * font_size;
+  }
+  if (unit === "ex") {
+    return (value * font_size) / 2.0;
+  }
+  return value * dict_get(_ABSOLUTE_UNITS, unit, 1.0);
+}
+
+/**
+ * CSS ratio (`0.5` or `50%`) clamped to `[0, 1]`; `default` when the
+ * value is absent or non-numeric (e.g. the keyword `inherit`).
+ */
+export function parse_ratio(text: string | null, default_: number): number {
+  if (text == null) return default_;
+  text = strip(text);
+  const m = NUMBER_RE.exec(text);
+  if (m == null) return default_;
+  const val = float(m[0]);
+  return clamp01(text.endsWith("%") ? val / 100.0 : val);
+}

@@ -1,0 +1,130 @@
+/**
+ * Footage imported into an OCIO-managed project takes the color space After
+ * Effects assigns new files: the config's file rules in order (a rule's color
+ * space recorded as a direct pick), or, for a config without file rules, its
+ * `default` role (recorded as a role pick). Any profile the file embeds stays
+ * recorded as its source profile.
+ *
+ * `ocio_input_<config>.aep` are AE 2026 imports of five stills into
+ * `py_aep.new()` projects set to ACES 1.2, ACES 1.3 CG v1.0 and the sergb.ocio
+ * studio config (`EXR` rule -> `scene_linear`, `Default` rule -> `default`).
+ *
+ * A replace keeps the space the source had - a rule's pick or one the user
+ * assigned - while a proxy is a new file and gets the rules' pick.
+ * `ocio_replace_sergb.aep` is AE 2026 replacing PNG and EXR footage in a sergb
+ * project (`scripts/jsx/generate_ocio_replace_sample.jsx`): its `py_*` items
+ * were imported by py_aep (`py_pick` then set to `ACEScg yo`), its `ae_*` items
+ * by After Effects.
+ */
+
+import { expect, test } from "bun:test";
+import { b, getitem, Path, py_bool, py_eq, repr, sorted, str } from "../../src/pyrt/index.ts";
+import { skip } from "../../src/pyrt/pytest.ts";
+import { new as new_, parse as parse_aep } from "../../src/py_aep/index.ts";
+import "../../src/py_aep/binary/_register.ts";
+import { find_by_list_type } from "../../src/py_aep/binary/utils.ts";
+import { resolve_ocio_config } from "../../src/py_aep/color/ocio.ts";
+import { ColorManagementSystem } from "../../src/py_aep/enums/index.ts";
+import { ImportOptions } from "../../src/py_aep/models/import_options.ts";
+
+const SAMPLES = new Path(import.meta.dir, "..", "..", "samples");
+const IMPORT_DIR = SAMPLES.div("models", "import");
+const SERGB = SAMPLES.div("models", "output_module", "output_color_space_ocio", "sergb.ocio");
+const ASSETS = SAMPLES.div("assets");
+const FILES = new Map<string, Path>([
+  ["rgb_full.exr", ASSETS.div("exr", "rgb_full.exr")],
+  ["11_progressive.jpg", ASSETS.div("11_progressive.jpg")],
+  ["image_with_alpha.png", ASSETS.div("image_with_alpha.png")],
+  ["tga_24.tga", ASSETS.div("tga_24.tga")],
+  ["8bits.tif", ASSETS.div("8bits.tif")],
+]);
+const CONFIGS = new Map<string, string>([
+  ["aces12", "ACES 1.2"],
+  ["aces13cg", "ACES 1.3 CG v1.0"],
+  ["sergb", str(SERGB)],
+]);
+
+/**
+ * The CLRS record, the embedded profile's bytes left out: py embeds the
+ * sRGB copy installed on this machine for a TIFF, which can differ from
+ * After Effects' copy in the advisory rendering-intent byte.
+ */
+function _clrs(source: any): [string, Uint8Array][] {
+  const clrs = find_by_list_type(source._pin.chunks, "CLRS");
+  const record: [string, Uint8Array][] = [];
+  let marker = "";
+  for (const chunk of clrs.chunks) {
+    let data = chunk.tobytes();
+    if (chunk.chunk_type === "Utf8" && ["mcsp", "Mcsp"].includes(marker) && py_bool(data)) {
+      data = b("<embedded>");
+    }
+    record.push([chunk.chunk_type, data]);
+    marker = chunk.chunk_type;
+  }
+  return record;
+}
+
+const IMPORT_ROWS: [string, string][] = sorted([...CONFIGS.keys()]).flatMap((tag) =>
+  sorted([...FILES.keys()]).map((name): [string, string] => [tag, name]),
+);
+
+/** Parametrized over `tag` and `name` (cartesian product, as stacked pytest decorators). */
+test.each(IMPORT_ROWS)("test_import_records_the_ocio_input_space[%#]", (tag, name) => {
+  const config = getitem(CONFIGS, tag);
+  if (resolve_ocio_config(config) == null) {
+    return skip(`OCIO config ${repr(config)} is not installed`);
+  }
+  const ae = parse_aep(IMPORT_DIR.div(`ocio_input_${tag}.aep`)).project.footages.find(
+    (item: any) => item.name === name,
+  )!;
+  const project = new_().project;
+  project.color_management_system = ColorManagementSystem.OCIO;
+  project.ocio_configuration_file = config;
+  const ours = project.import_file(new ImportOptions(getitem(FILES, name)));
+  expect(py_eq(_clrs(ours.main_source), _clrs(ae.main_source))).toBe(true);
+});
+
+const PNG = getitem(FILES, "image_with_alpha.png");
+const EXR = getitem(FILES, "rgb_full.exr");
+
+/** Parametrized over `name`, `first`, `assigned` and `second`. */
+test.each([
+  ["py_pick", PNG, "ACEScg yo", EXR],
+  ["py_dflt", PNG, null, EXR],
+  ["ae_png_to_exr", PNG, null, EXR],
+  ["ae_exr_to_png", EXR, null, PNG],
+] as [string, Path, string | null, Path][])(
+  "test_replace_keeps_the_ocio_input_space[%#]",
+  (name, first, assigned, second) => {
+    if (resolve_ocio_config(str(SERGB)) == null) {
+      return skip("sergb.ocio is not resolvable");
+    }
+    const ae = parse_aep(IMPORT_DIR.div("ocio_replace_sergb.aep")).project.footages.find(
+      (item: any) => item.name === name,
+    )!;
+    const project = new_().project;
+    project.color_management_system = ColorManagementSystem.OCIO;
+    project.ocio_configuration_file = str(SERGB);
+    const ours = project.import_file(new ImportOptions(first));
+    if (assigned != null) {
+      ours.main_source.media_color_space = assigned;
+    }
+    ours.replace(second);
+    expect(py_eq(_clrs(ours.main_source), _clrs(ae.main_source))).toBe(true);
+  },
+);
+
+test("test_proxy_takes_the_rules_pick", () => {
+  if (resolve_ocio_config(str(SERGB)) == null) {
+    return skip("sergb.ocio is not resolvable");
+  }
+  const ae = parse_aep(IMPORT_DIR.div("ocio_replace_sergb.aep")).project.footages.find(
+    (item: any) => item.name === "ae_png_proxy_exr",
+  )!;
+  const project = new_().project;
+  project.color_management_system = ColorManagementSystem.OCIO;
+  project.ocio_configuration_file = str(SERGB);
+  const ours = project.import_file(new ImportOptions(PNG));
+  ours.set_proxy(EXR);
+  expect(py_eq(_clrs(ours.proxy_source), _clrs(ae.proxy_source))).toBe(true);
+});

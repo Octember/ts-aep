@@ -1,0 +1,265 @@
+/**
+ * Descriptors for COS-dict-backed model fields.
+ *
+ * Each descriptor reads from / writes to a COS dict stored on the model
+ * instance, so that accessing a model attribute lazily extracts the value
+ * from the underlying COS data.  After every `__set__`, the model's
+ * `_propagate_cos()` hook is called to re-serialize the COS dict back
+ * to the btdk chunk's `binary_data`.
+ *
+ * This module mirrors the role of
+ * `models.descriptors.ChunkField` but operates on nested Python dicts
+ * (COS parsed data) instead of binary chunk fields.
+ */
+
+import {
+  AttributeError,
+  IndexError,
+  KeyError,
+  TypeError_,
+  ValueError,
+  dict_get,
+  float,
+  getattr,
+  int,
+  py_bool,
+  repr,
+  round,
+} from "../../pyrt/index.ts";
+import { get_ae_version_major } from "../ae_version.ts";
+
+const _SENTINEL: unique symbol = Symbol("_SENTINEL");
+
+// TODO(port): Python `obj.__dict__` (instance-dict overrides) has no pyrt shim;
+// keep the overrides in a side table keyed by instance.
+const INSTANCE_DICT = new WeakMap<object, Map<string, any>>();
+
+function instance_dict(obj: object): Map<string, any> {
+  let d = INSTANCE_DICT.get(obj);
+  if (!d) INSTANCE_DICT.set(obj, (d = new Map()));
+  return d;
+}
+
+/**
+ * Read `key` from a COS dict with the descriptors' fault-tolerant
+ * fallback: a missing key, or a `transform` that raises, yields
+ * `default`. Shared by `CosField.__get__` and the range models'
+ * mixed-value resolution.
+ */
+export function _extract(
+  d: Map<string, any>,
+  key: string,
+  transform: ((x: any) => any) | null,
+  default_: any,
+): any {
+  const raw = dict_get(d, key, _SENTINEL);
+  if (raw === _SENTINEL) return default_;
+  if (transform != null) {
+    try {
+      return transform(raw);
+    } catch (e) {
+      // TODO(port): a native JS TypeError raised by a transform is also treated as Python TypeError here.
+      if (
+        !(
+          e instanceof TypeError_ ||
+          e instanceof TypeError ||
+          e instanceof ValueError ||
+          e instanceof KeyError ||
+          e instanceof IndexError
+        )
+      ) {
+        throw e;
+      }
+      return default_;
+    }
+  }
+  return raw;
+}
+
+/**
+ * Descriptor that proxies a single key on a COS dict.
+ *
+ * The dict is retrieved from the model instance via `getattr(obj,
+ * dict_attr)`.  When the dict is `None` the descriptor returns
+ * `default` (which defaults to `None`).
+ *
+ * Unlike `ChunkField`, this descriptor is scalar-only: `reverse`
+ * always returns a single value written to one dict key.
+ *
+ * Args:
+ *   dict_attr: Name of the model attribute holding the COS sub-dict
+ *     (e.g. `"_char_style"`).
+ *   key: String key into that dict (e.g. `"1"` for font_size).
+ *   transform: Optional callable applied when *getting* (COS value
+ *     -> user-facing value).
+ *   reverse: 1-arg callable applied when *setting* (user-facing ->
+ *     COS value). Always returns a scalar.
+ *   read_only: When `True`, the field cannot be set.
+ *   validate: Optional callable called with the user-facing value
+ *     before any `reverse` transform.
+ *   default: Value returned when the dict is `None` or the key is
+ *     absent. Defaults to `None`.
+ *   min_version: Minimum AE major version required to *set* this
+ *     field. Writes to an older file raise `AttributeError`;
+ *     reads are always allowed. Mirrors
+ *     `models.descriptors.ChunkField`.
+ */
+export class CosField<T> {
+  declare dict_attr: string;
+  declare key: string;
+  declare transform: ((x: any) => any) | null;
+  declare reverse: ((x: any) => any) | null;
+  declare read_only: boolean;
+  declare validate: ((value: any, obj: any) => void) | null;
+  declare default: any;
+  declare min_version: number | null;
+  declare public_name: string;
+
+  constructor(
+    dict_attr: string,
+    key: string,
+    kw: {
+      transform?: ((x: any) => any) | null;
+      reverse?: ((x: any) => any) | null;
+      read_only?: boolean;
+      validate?: ((value: any, obj: any) => void) | null;
+      default?: any;
+      min_version?: number | null;
+    } = {},
+  ) {
+    const {
+      transform = null,
+      reverse = null,
+      read_only = false,
+      validate = null,
+      default: default_ = null,
+      min_version = null,
+    } = kw;
+    this.dict_attr = dict_attr;
+    this.key = key;
+    this.transform = transform;
+    this.reverse = reverse;
+    this.read_only = read_only;
+    this.validate = validate;
+    this.default = default_;
+    this.min_version = min_version;
+  }
+
+  __set_name__(owner: Function, name: string): void {
+    this.public_name = name;
+  }
+
+  __get__(obj: any, objtype?: Function): any {
+    if (obj == null) return this;
+    // Instance-dict overrides (set by parser or user when no dict)
+    const idict = instance_dict(obj);
+    if (idict.has(this.public_name)) return idict.get(this.public_name);
+    const d: Map<string, any> | null = getattr(obj, this.dict_attr);
+    if (d == null) return this.default;
+    return _extract(d, this.key, this.transform, this.default);
+  }
+
+  /**
+   * Raise if this field cannot be written to `obj` - read-only, or
+   * the file predates the field's `min_version`.
+   */
+  _check_writable(obj: any): void {
+    if (this.read_only) {
+      throw new AttributeError(`${repr(this.public_name)} is read-only.`);
+    }
+    if (this.min_version != null) {
+      if (get_ae_version_major(obj) < this.min_version) {
+        throw new AttributeError(
+          `${repr(this.public_name)} requires AE ${this.min_version}+ file format.`,
+        );
+      }
+    }
+  }
+
+  /**
+   * Validate a non-`None` user value and reverse-transform it to
+   * the form stored in the COS dict.
+   */
+  _coerce(obj: any, value: any): any {
+    if (this.validate != null) this.validate(value, obj);
+    if (this.reverse != null) return this.reverse(value);
+    return value;
+  }
+
+  __set__(obj: any, value: any): void {
+    this._check_writable(obj);
+    // Clear any instance-dict override
+    instance_dict(obj).delete(this.public_name);
+    const d: Map<string, any> | null = getattr(obj, this.dict_attr);
+    if (d == null) {
+      // No backing dict - store as instance override
+      instance_dict(obj).set(this.public_name, value);
+      return;
+    }
+    // `None` clears the key (an optional field is being unset); there is
+    // no value to validate in that case.
+    if (value == null) {
+      d.delete(this.key);
+    } else {
+      d.set(this.key, this._coerce(obj, value));
+    }
+    const propagate = "_propagate_cos" in obj ? obj._propagate_cos : null;
+    if (propagate != null) propagate.call(obj);
+  }
+
+  /**
+   * Create a CosField for boolean flags.
+   *
+   * Bakes in `transform=bool` and `reverse=bool` so call sites only
+   * need the dict attribute and key.
+   */
+  // TODO(port): Python raises TypeError when kwargs repeat transform/reverse; here kwargs silently win.
+  static bool(dict_attr: string, key: string, kwargs: Record<string, any> = {}): CosField<boolean | null> {
+    return new this(dict_attr, key, { transform: py_bool, reverse: py_bool, ...kwargs });
+  }
+
+  /**
+   * Create a CosField for IntEnum-backed fields.
+   *
+   * Auto-detects `from_binary`/`to_binary` on the enum class,
+   * mirroring `ChunkField.enum`. If the enum has a `from_binary`
+   * classmethod it is used as `transform`; otherwise the class
+   * itself is used. If the enum has a `to_binary` method it is used
+   * as `reverse`; otherwise `int` is used.
+   */
+  static enum<T>(enum_cls: any, dict_attr: string, key: string, kwargs: Record<string, any> = {}): CosField<T> {
+    // TODO(port): py_aep enum objects are not classes; the fallback `enum_cls` (a callable in Python) is `enum_cls.of`.
+    if (!("transform" in kwargs)) {
+      kwargs.transform = "from_binary" in enum_cls ? enum_cls.from_binary.bind(enum_cls) : enum_cls.of;
+    }
+    if (!("reverse" in kwargs)) {
+      kwargs.reverse = "to_binary" in enum_cls ? enum_cls.to_binary.bind(enum_cls) : int;
+    }
+    return new this(dict_attr, key, kwargs);
+  }
+
+  /**
+   * Create a CosField that coerces to float in both directions.
+   *
+   * The write-side coercion matters for byte fidelity: AE stores
+   * these keys as floats, and an `int` passed by a caller would
+   * serialize without the decimal marker.
+   */
+  static float<T>(dict_attr: string, key: string, kwargs: Record<string, any> = {}): CosField<number | null> {
+    if (!("reverse" in kwargs)) kwargs.reverse = float;
+    return new this(dict_attr, key, { transform: float, ...kwargs });
+  }
+
+  /**
+   * Create a CosField for integer-stored keys.
+   *
+   * Coerces to `int` on read and rounds to the nearest integer on
+   * write. AE stores these keys as integers; a real-typed value is
+   * misread at 16.16 scale (stored `50.0` read back as `3276800`,
+   * probed AE 2026), so the write-side coercion matters for fidelity.
+   */
+  static int<T>(dict_attr: string, key: string, kwargs: Record<string, any> = {}): CosField<number | null> {
+    if (!("reverse" in kwargs)) kwargs.reverse = round;
+    return new this(dict_attr, key, { transform: int, ...kwargs });
+  }
+}

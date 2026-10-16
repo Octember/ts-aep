@@ -1,0 +1,414 @@
+// Port of py_aep/models/layers/parametric_mesh_layer.py
+
+import { LayerType, ParametricMeshType } from "../../enums/index.ts";
+import { _PARAMETRIC_MESH_ACTIVE_GROUPS } from "../../synthesis/property.ts";
+import {
+  AttributeError,
+  descriptor,
+  descriptors_of,
+  dict_get,
+  getattr,
+  round,
+  str,
+} from "../../../pyrt/index.ts";
+import { ChunkField } from "../descriptors.ts";
+import { label_index } from "../preferences.ts";
+import { AVLayer } from "./av_layer.ts";
+import type { CompItem } from "../items/composition.ts";
+import type { Property } from "../properties/property.ts";
+import type { PropertyGroup } from "../properties/property_group.ts";
+
+/**
+ * `type(None)` is NoneType, which is never `None` itself. Keeps the
+ * `type(old) is not cls` check below true when an option is unset and no
+ * class maps to the mesh type.
+ */
+const NoneType = Symbol("NoneType");
+
+function _type_of(x: any): any {
+  return x == null ? NoneType : x.constructor;
+}
+
+/**
+ * The ParametricMeshLayer object represents a parametric mesh layer within a composition.
+ *
+ * Example:
+ *     ```python
+ *     from py_aep import parse
+ *
+ *     app = parse("project.aep")
+ *     comp = app.project.compositions[0]
+ *     mesh = comp.parametric_mesh_layers[0]
+ *     print(mesh.name)
+ *     ```
+ *
+ * Info:
+ *     `ParametricMeshLayer` is a subclass of [AVLayer][] object. All methods and
+ *     attributes of [AVLayer][] are available when working with `ParametricMeshLayer`.
+ *
+ * Note:
+ *     This functionality was added in After Effects 26.0
+ *
+ * See: https://ae-scripting.docsforadobe.dev/layer/parametricmeshlayer/
+ */
+export class ParametricMeshLayer extends AVLayer {
+  // TODO(port): Python reads this class attribute through `self`; AVLayer
+  // reads `this._auto_name` on instances (av_layer.ts), which will not see a
+  // static. That reader needs `(this.constructor as any)._auto_name`.
+  static _auto_name: string = "Mesh Layer";
+
+  /** For a parametric mesh layer, its mesh type. Read / write. */
+  declare parametric_mesh_type: ParametricMeshType;
+
+  /** The ParametricMeshOptions object represents the options for a parametric mesh layer. */
+  declare parametric_mesh_options: ParametricMeshOptions;
+
+  /** The ParametricBevelOptions object represents the bevel options for a parametric mesh layer. */
+  declare parametric_bevel_options: ParametricBevelOptions;
+
+  constructor(...args: any[]) {
+    super(...(args as [any]));
+    this._update_options();
+  }
+
+  static _new(kw: {
+    name: string;
+    layer_id: number;
+    duration: number;
+    containing_comp: CompItem;
+    mesh_type: ParametricMeshType;
+    effect_param_defs?: Map<string, any> | null;
+  }): ParametricMeshLayer {
+    const { name, layer_id, duration, containing_comp, mesh_type, effect_param_defs = null } = kw;
+    const layer = super._new({
+      name,
+      layer_id,
+      duration,
+      containing_comp,
+      effect_param_defs,
+    }) as ParametricMeshLayer;
+    layer._ldta.layer_type = LayerType.PARAMETRIC_MESH;
+    layer._ldta.label = label_index(containing_comp._project._preferences, "Parametrics Label Index", 9);
+    layer._ldta.three_d_layer = true;
+    layer._ldta.collapse_transformation = true;
+    // AE writes flags2=0x83 for mesh layers: effects are not applicable.
+    layer._ldta.effects_active = false;
+    // AE expresses the layer's time fields in the comp's internal
+    // timebase (e.g. 23976 for 29.97 fps), not a reduced rational.
+    const time_base = containing_comp._cdta.internal_timebase;
+    layer._ldta.start_time_divisor = time_base;
+    layer._ldta.in_point_divisor = time_base;
+    layer._ldta.out_point_dividend = round(duration * time_base);
+    layer._ldta.out_point_divisor = time_base;
+    layer.parametric_mesh_type = mesh_type;
+    // AE writes the active mesh type's option/bevel groups expanded
+    // (tdsb=1) while the other mesh groups stay collapsed (tdsb=3, the
+    // synthesized default). Override the active groups before the layer
+    // is materialized so the written tdsb matches AE.
+    const active_groups = dict_get(_PARAMETRIC_MESH_ACTIVE_GROUPS, ParametricMeshType.to_binary(mesh_type), []);
+    for (const child of layer.properties) {
+      if (active_groups.includes(child.match_name) && child._tdsb != null) {
+        child._tdsb._enable_flags = 1;
+      }
+    }
+    return layer;
+  }
+
+  /** Update the parametric mesh options from the layer's current state. */
+  _update_options(): void {
+    const options_cls = dict_get(OPTION_TYPES, this._ldta.light_and_mesh_type);
+    const old_options = getattr(this, "parametric_mesh_options", null);
+    if (_type_of(old_options) !== options_cls) {
+      try {
+        delete (this as any).parametric_mesh_options;
+      } catch (e) {
+        if (!(e instanceof AttributeError)) throw e;
+      }
+      if (options_cls != null) {
+        this.parametric_mesh_options = new options_cls(this);
+      }
+    }
+
+    const bevel_cls = dict_get(BEVEL_OPTION_TYPES, this._ldta.light_and_mesh_type);
+    const old_bevel = getattr(this, "parametric_bevel_options", null);
+    if (_type_of(old_bevel) !== bevel_cls) {
+      try {
+        delete (this as any).parametric_bevel_options;
+      } catch (e) {
+        if (!(e instanceof AttributeError)) throw e;
+      }
+      if (bevel_cls != null) {
+        this.parametric_bevel_options = new bevel_cls(this);
+      }
+    }
+  }
+
+  /**
+   * `False` for Parametric Mesh layers: collapse transformation is
+   * forced on and cannot be changed. Read-only.
+   */
+  get can_set_collapse_transformation(): boolean {
+    return false;
+  }
+
+  /** `False` for Parametric Mesh layers (time remapping is not supported). Read-only. */
+  get can_set_time_remap_enabled(): boolean {
+    return false;
+  }
+}
+
+// Class-body `ChunkField` assignment in Python, installed as a descriptor.
+descriptor(
+  ParametricMeshLayer,
+  "parametric_mesh_type",
+  ChunkField.enum(ParametricMeshType, "_ldta", "light_and_mesh_type", {
+    post_set: (obj: ParametricMeshLayer) => obj._update_options(),
+  }),
+);
+
+// Keyed by the raw ldta value (0-5, `ParametricMeshType.to_binary()`) so
+// unknown mesh types from newer AE versions look up as None instead of raising.
+export const OPTION_TYPES: Map<number, typeof ParametricMeshOptions> = new Map();
+export const BEVEL_OPTION_TYPES: Map<number, typeof ParametricBevelOptions> = new Map();
+
+/** Decorator that registers a ParametricMeshOptions subclass for one mesh_type. */
+export function register(mesh_type: ParametricMeshType) {
+  function decorator<M extends typeof ParametricMeshOptions>(cls: M): M {
+    OPTION_TYPES.set(ParametricMeshType.to_binary(mesh_type), cls);
+    return cls;
+  }
+  return decorator;
+}
+
+/** Decorator that registers a ParametricBevelOptions subclass for one mesh_type. */
+export function register_bevel(mesh_type: ParametricMeshType) {
+  function decorator<B extends typeof ParametricBevelOptions>(cls: B): B {
+    BEVEL_OPTION_TYPES.set(ParametricMeshType.to_binary(mesh_type), cls);
+    return cls;
+  }
+  return decorator;
+}
+
+/**
+ * Descriptor for a parametric mesh layer property.
+ *
+ * Args:
+ *     property_name: Name of the property in the parametric mesh options group.
+ */
+export class ParaMeshField<T extends number | boolean = number> {
+  declare _property_name: string;
+
+  constructor(property_name: string) {
+    this._property_name = property_name;
+  }
+
+  __get__(obj: ParametricMeshOptions | ParametricBevelOptions | null, objtype: Function): T {
+    if (obj == null) return this as any;
+    const value = obj._properties(this._property_name).value;
+    return value as T;
+  }
+
+  __set__(obj: ParametricMeshOptions | ParametricBevelOptions, value: T): void {
+    obj._properties(this._property_name).value = value;
+  }
+}
+
+/**
+ * The ParametricMeshOptions object represents the options for a parametric mesh layer.
+ *
+ * Info:
+ *     This functionality was added in After Effects 26.0
+ */
+export class ParametricMeshOptions {
+  // Annotation-only in Python; each subclass sets its own value.
+  static _match_name: string;
+
+  declare _layer: ParametricMeshLayer;
+  declare _group: PropertyGroup | null;
+
+  constructor(layer: ParametricMeshLayer) {
+    this._layer = layer;
+    this._group = null;
+  }
+
+  _properties(name: string): Property {
+    if (this._group == null) {
+      this._group = this._layer.property((this.constructor as typeof ParametricMeshOptions)._match_name) as PropertyGroup;
+    }
+    return this._group.property(name) as Property;
+  }
+
+  __repr__(): string {
+    const result = new Map<string, any>();
+    // TODO(port): descriptors_of walks the MRO; Python's vars(cls) is the
+    // class's own dict. Same result here because no base class declares
+    // descriptors.
+    for (const [name] of descriptors_of(this.constructor)) {
+      result.set(name, getattr(this, name));
+    }
+    // TODO(port): int/float distinction. f"{value}" prints float 1.0 as "1.0";
+    // str() of an integer-valued number prints "1".
+    const formatted = [...result].map(([key, value]) => `${key}=${str(value)}`).join(", ");
+    return `<${Object.getPrototypeOf(this.constructor).name}(${formatted})>`;
+  }
+}
+
+export class CubeMeshOptions extends ParametricMeshOptions {
+  static _match_name = "ADBE CubeMeshOptionsSGrp";
+
+  declare width: number;
+  declare height: number;
+  declare depth: number;
+  declare smoothing_angle: number;
+}
+descriptor(CubeMeshOptions, "width", new ParaMeshField<number>("Width"));
+descriptor(CubeMeshOptions, "height", new ParaMeshField<number>("Height"));
+descriptor(CubeMeshOptions, "depth", new ParaMeshField<number>("Depth"));
+descriptor(CubeMeshOptions, "smoothing_angle", new ParaMeshField<number>("Smoothing Angle"));
+register(ParametricMeshType.CUBE)(CubeMeshOptions);
+
+export class SphereMeshOptions extends ParametricMeshOptions {
+  static _match_name = "ADBE SphereMeshOptionsSGrp";
+
+  declare radius: number;
+  declare sides: number;
+  declare slice_caps: boolean;
+  declare slice_start: number;
+  declare slice_end: number;
+  declare smoothing_angle: number;
+}
+descriptor(SphereMeshOptions, "radius", new ParaMeshField<number>("Radius"));
+descriptor(SphereMeshOptions, "sides", new ParaMeshField<number>("Sides"));
+descriptor(SphereMeshOptions, "slice_caps", new ParaMeshField<boolean>("Slice Caps"));
+descriptor(SphereMeshOptions, "slice_start", new ParaMeshField<number>("Slice Start"));
+descriptor(SphereMeshOptions, "slice_end", new ParaMeshField<number>("Slice End"));
+descriptor(SphereMeshOptions, "smoothing_angle", new ParaMeshField<number>("Smoothing Angle"));
+register(ParametricMeshType.SPHERE)(SphereMeshOptions);
+
+export class PlaneMeshOptions extends ParametricMeshOptions {
+  static _match_name = "ADBE PlaneMeshOptionsSGrp";
+
+  declare width: number;
+  declare length: number;
+  declare corner_radius: number;
+  declare corner_sides: number;
+}
+descriptor(PlaneMeshOptions, "width", new ParaMeshField<number>("Width"));
+descriptor(PlaneMeshOptions, "length", new ParaMeshField<number>("Length"));
+descriptor(PlaneMeshOptions, "corner_radius", new ParaMeshField<number>("Corner Radius"));
+descriptor(PlaneMeshOptions, "corner_sides", new ParaMeshField<number>("Corner Sides"));
+register(ParametricMeshType.PLANE)(PlaneMeshOptions);
+
+export class TorusMeshOptions extends ParametricMeshOptions {
+  static _match_name = "ADBE TorusMeshOptionsSGrp";
+
+  declare ring_radius: number;
+  declare pipe_radius: number;
+  declare ring_sides: number;
+  declare pipe_sides: number;
+  declare caps: boolean;
+  declare slice_start: number;
+  declare slice_end: number;
+  declare smoothing_angle: number;
+}
+descriptor(TorusMeshOptions, "ring_radius", new ParaMeshField<number>("Ring Radius"));
+descriptor(TorusMeshOptions, "pipe_radius", new ParaMeshField<number>("Pipe Radius"));
+descriptor(TorusMeshOptions, "ring_sides", new ParaMeshField<number>("Ring Sides"));
+descriptor(TorusMeshOptions, "pipe_sides", new ParaMeshField<number>("Pipe Sides"));
+descriptor(TorusMeshOptions, "caps", new ParaMeshField<boolean>("Caps"));
+descriptor(TorusMeshOptions, "slice_start", new ParaMeshField<number>("Slice Start"));
+descriptor(TorusMeshOptions, "slice_end", new ParaMeshField<number>("Slice End"));
+descriptor(TorusMeshOptions, "smoothing_angle", new ParaMeshField<number>("Smoothing Angle"));
+register(ParametricMeshType.TORUS)(TorusMeshOptions);
+
+export class ConeMeshOptions extends ParametricMeshOptions {
+  static _match_name = "ADBE ConeMeshOptionsSGrp";
+
+  declare top_radius: number;
+  declare bottom_radius: number;
+  declare height: number;
+  declare sides: number;
+  declare top_cap: boolean;
+  declare bottom_cap: boolean;
+  declare slice_caps: boolean;
+  declare slice_start: number;
+  declare slice_end: number;
+  declare smoothing_angle: number;
+}
+descriptor(ConeMeshOptions, "top_radius", new ParaMeshField<number>("Top Radius"));
+descriptor(ConeMeshOptions, "bottom_radius", new ParaMeshField<number>("Bottom Radius"));
+descriptor(ConeMeshOptions, "height", new ParaMeshField<number>("Height"));
+descriptor(ConeMeshOptions, "sides", new ParaMeshField<number>("Sides"));
+descriptor(ConeMeshOptions, "top_cap", new ParaMeshField<boolean>("Top Cap"));
+descriptor(ConeMeshOptions, "bottom_cap", new ParaMeshField<boolean>("Bottom Cap"));
+descriptor(ConeMeshOptions, "slice_caps", new ParaMeshField<boolean>("Slice Caps"));
+descriptor(ConeMeshOptions, "slice_start", new ParaMeshField<number>("Slice Start"));
+descriptor(ConeMeshOptions, "slice_end", new ParaMeshField<number>("Slice End"));
+descriptor(ConeMeshOptions, "smoothing_angle", new ParaMeshField<number>("Smoothing Angle"));
+register(ParametricMeshType.CONE)(ConeMeshOptions);
+
+export class CylinderMeshOptions extends ParametricMeshOptions {
+  static _match_name = "ADBE CylinderMeshOptionsSGrp";
+
+  declare radius: number;
+  declare height: number;
+  declare sides: number;
+  declare top_cap: boolean;
+  declare bottom_cap: boolean;
+  declare slice_caps: boolean;
+  declare slice_start: number;
+  declare slice_end: number;
+  declare smoothing_angle: number;
+}
+descriptor(CylinderMeshOptions, "radius", new ParaMeshField<number>("Radius"));
+descriptor(CylinderMeshOptions, "height", new ParaMeshField<number>("Height"));
+descriptor(CylinderMeshOptions, "sides", new ParaMeshField<number>("Sides"));
+descriptor(CylinderMeshOptions, "top_cap", new ParaMeshField<boolean>("Top Cap"));
+descriptor(CylinderMeshOptions, "bottom_cap", new ParaMeshField<boolean>("Bottom Cap"));
+descriptor(CylinderMeshOptions, "slice_caps", new ParaMeshField<boolean>("Slice Caps"));
+descriptor(CylinderMeshOptions, "slice_start", new ParaMeshField<number>("Slice Start"));
+descriptor(CylinderMeshOptions, "slice_end", new ParaMeshField<number>("Slice End"));
+descriptor(CylinderMeshOptions, "smoothing_angle", new ParaMeshField<number>("Smoothing Angle"));
+register(ParametricMeshType.CYLINDER)(CylinderMeshOptions);
+
+/**
+ * The ParametricBevelOptions object represents the bevel options for a parametric mesh layer.
+ *
+ * Info:
+ *     This functionality was added in After Effects 26.0
+ */
+export class ParametricBevelOptions extends ParametricMeshOptions {}
+
+export class CubeBevelOptions extends ParametricBevelOptions {
+  static _match_name = "ADBE CubeBevelOptionsSGrp";
+
+  declare radius: number;
+  declare sides: number;
+}
+descriptor(CubeBevelOptions, "radius", new ParaMeshField<number>("Radius"));
+descriptor(CubeBevelOptions, "sides", new ParaMeshField<number>("Sides"));
+register_bevel(ParametricMeshType.CUBE)(CubeBevelOptions);
+
+export class ConeBevelOptions extends ParametricBevelOptions {
+  static _match_name = "ADBE ConeBevelBevelSGrp";
+
+  declare top_radius: number;
+  declare top_sides: number;
+  declare bottom_radius: number;
+  declare bottom_sides: number;
+}
+descriptor(ConeBevelOptions, "top_radius", new ParaMeshField<number>("Top Radius"));
+descriptor(ConeBevelOptions, "top_sides", new ParaMeshField<number>("Top Sides"));
+descriptor(ConeBevelOptions, "bottom_radius", new ParaMeshField<number>("Bottom Radius"));
+descriptor(ConeBevelOptions, "bottom_sides", new ParaMeshField<number>("Bottom Sides"));
+register_bevel(ParametricMeshType.CONE)(ConeBevelOptions);
+
+export class CylinderBevelOptions extends ParametricBevelOptions {
+  static _match_name = "ADBE CylinderBevelOptionsSGrp";
+
+  declare radius: number;
+  declare sides: number;
+}
+descriptor(CylinderBevelOptions, "radius", new ParaMeshField<number>("Radius"));
+descriptor(CylinderBevelOptions, "sides", new ParaMeshField<number>("Sides"));
+register_bevel(ParametricMeshType.CYLINDER)(CylinderBevelOptions);

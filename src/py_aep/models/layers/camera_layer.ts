@@ -1,0 +1,108 @@
+import { len, float, round } from "../../../pyrt/index.ts";
+import { LdtaChunk } from "../../binary/layer_chunks.ts";
+import { LayerType } from "../../enums/index.ts";
+import { default_camera_zoom } from "../../resolvers/transform.ts";
+import { label_index } from "../preferences.ts";
+import { Layer } from "./layer.ts";
+import type { CompItem } from "../items/composition.ts";
+import type { Property } from "../properties/property.ts";
+import type { PropertyGroup } from "../properties/property_group.ts";
+
+/**
+ * The CameraLayer object represents a camera layer within a composition.
+ *
+ * Example:
+ *     ```python
+ *     from py_aep import parse
+ *
+ *     app = parse("project.aep")
+ *     comp = app.project.compositions[0]
+ *     camera = comp.camera_layers[0]
+ *     print(camera.name)
+ *     ```
+ *
+ * Info:
+ *     `CameraLayer` is a subclass of [Layer][] object. All methods and
+ *     attributes of [Layer][] are available when working with `CameraLayer`.
+ *
+ * See: https://ae-scripting.docsforadobe.dev/layer/cameralayer/
+ */
+export class CameraLayer extends Layer {
+  static _auto_name: string = "Camera";
+  static _fov_rad: number = (39.5978 * Math.PI) / 180;
+  // AE's default 50mm camera: zoom = width / 0.72 exactly
+  // (2 * tan(fov/2) rounds to 0.72; AE uses the exact ratio).
+  static _zoom_dividend: number = 0.72;
+
+  /** Always `True`: a camera / light layer only exists in 3D space.
+   * Read-only. */
+  get is_3d(): boolean {
+    return true;
+  }
+
+  static _LIVE_DEFAULTS: ReadonlyArray<readonly [string, string]> = [
+    ["ADBE Transform Group", "ADBE Position"],
+    ["ADBE Camera Options Group", "ADBE Camera Zoom"],
+    ["ADBE Camera Options Group", "ADBE Camera Focus Distance"],
+  ];
+
+  /**
+   * AE's default Position: the camera's Zoom in front of the comp centre.
+   *
+   * It follows the Zoom at the layer's own time 0, pre-expression: AE
+   * leaves a Position still there out of the file and places the camera
+   * from that Zoom on open (measured on AE 2026, also after the Zoom was
+   * keyframed or given an expression, and on a layer started, trimmed or
+   * stretched away from the comp's time 0).
+   */
+  _default_position(): number[] {
+    const comp = this.containing_comp;
+    const options = this.__getitem__("ADBE Camera Options Group") as PropertyGroup;
+    const zoom = options.__getitem__("ADBE Camera Zoom") as Property;
+    // The layer's time 0 is the comp time it starts at.
+    const z = float(zoom.value_at_time(this.start_time) as number);
+    return [comp.width / 2.0, comp.height / 2.0, -z];
+  }
+
+  /** AE's default Zoom and Focus Distance: the comp's 50mm-lens zoom. */
+  _default_zoom(): number {
+    const comp = this.containing_comp;
+    // AE rounds the zoom to 8 decimals before storing it.
+    return round(default_camera_zoom(comp.width, comp.pixel_aspect), 8);
+  }
+
+  static _new(kw: {
+    name: string;
+    layer_id: number;
+    duration: number;
+    containing_comp: CompItem;
+    effect_param_defs?: Record<string, Record<string, Record<string, any>>> | null;
+  }): CameraLayer {
+    const {
+      name,
+      layer_id,
+      duration,
+      containing_comp,
+      effect_param_defs = null,
+    } = kw;
+    const ldta = new LdtaChunk({
+      layer_id,
+      label: label_index(
+        containing_comp._project._preferences,
+        "Camera Label Index 2",
+        4,
+      ),
+      layer_type: LayerType.CAMERA,
+      layer_flags_2: 0x01,
+      layer_name: len(name) > 31 ? Array.from(name).slice(0, 31).join("") : name,
+    });
+    ldta.out_point = duration;
+    ldta.three_d_layer = true;
+    return super._new({
+      ldta,
+      name,
+      containing_comp,
+      effect_param_defs,
+    }) as CameraLayer;
+  }
+}

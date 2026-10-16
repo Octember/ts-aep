@@ -1,0 +1,54 @@
+// Main entry point for parsing After Effects project files.
+// `from __future__ import annotations`, `TYPE_CHECKING` blocks and `cast(...)`
+// are dropped: annotations are types only, and `cast` becomes `as`.
+
+import type { ListChunk } from "../binary/chunk.ts";
+import type { HeadChunk } from "../binary/item_chunks.ts";
+import { find_by_type } from "../binary/utils.ts";
+import { Application } from "../models/application.ts";
+import { _suppress_materialization } from "../models/descriptors.ts";
+import { FolderItem } from "../models/items/folder.ts";
+import type { Project } from "../models/project.ts";
+import type { Viewer } from "../models/viewer/viewer.ts";
+
+/** Recursively collect viewers from a folder and its subfolders. */
+function* _collect_viewers(folder: FolderItem): Generator<Viewer> {
+  yield* folder._viewers;
+  for (const item of folder.items) {
+    if (item instanceof FolderItem) {
+      yield* _collect_viewers(item);
+    }
+  }
+}
+
+/**
+ * Build an [Application][] from the parsed RIFX data and project.
+ *
+ * Args:
+ *     rifx: The parsed binary RIFX root chunk.
+ *     project: The already-parsed [Project][].
+ */
+export const parse_app = _suppress_materialization()(function parse_app(
+  rifx: ListChunk,
+  project: Project,
+): Application {
+  const root_chunks = rifx.chunks;
+  const head_chunk = find_by_type(root_chunks, "head") as HeadChunk;
+
+  // Collect viewer panels from the folder tree (parsed during parse_folder)
+  const viewers = _collect_viewers(project.root_folder);
+  // `next((v for v in viewers if v.active), None)`
+  let active_viewer: Viewer | null = null;
+  for (const v of viewers) {
+    if (v.active) {
+      active_viewer = v;
+      break;
+    }
+  }
+
+  return new Application({
+    _head: head_chunk,
+    project,
+    active_viewer,
+  });
+});

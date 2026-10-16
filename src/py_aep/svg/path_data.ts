@@ -1,0 +1,394 @@
+/**
+ * SVG path `d` attribute parser.
+ *
+ * Parses a path data string into subpaths of cubic bezier segments. Every
+ * segment is represented as `(x0, y0, x1, y1, x2, y2, x3, y3)` so straight
+ * lines, quadratics, and arcs all reduce to a single uniform form that the
+ * shape converter turns into After Effects vertices + tangents.
+ */
+
+import { NUMBER_RE } from "./_util.ts";
+import { UnsupportedSVGError } from "./errors.ts";
+import {
+  float,
+  int,
+  islower,
+  isspace,
+  len,
+  max,
+  min,
+  mod,
+  py_bool,
+  py_eq,
+  radians,
+  range,
+  repr,
+} from "../../pyrt/index.ts";
+
+/** A cubic segment: start, control 1, control 2, end. */
+export type CubicSeg = [number, number, number, number, number, number, number, number];
+
+/** A run of cubic segments from one `M ... [Z]` group. */
+export class RawSubpath {
+  readonly segments: CubicSeg[];
+  readonly closed: boolean;
+
+  constructor(segments: CubicSeg[], closed: boolean) {
+    this.segments = segments;
+    this.closed = closed;
+  }
+
+  *[Symbol.iterator]() {
+    yield this.segments;
+    yield this.closed;
+  }
+}
+
+const _COMMANDS = new Set("MmLlHhVvCcSsQqTtAaZz");
+const _CMD_RE = /^[MmLlHhVvCcSsQqTtAaZz]/;
+// Argument count per command (per coordinate-set repetition).
+const _ARGC: Record<string, number> = { M: 2, L: 2, H: 1, V: 1, C: 6, S: 4, Q: 4, T: 2, A: 7 };
+// Sticky copy of NUMBER_RE: Python's `NUMBER_RE.match(d, i)` anchors at `i`.
+const _NUMBER_AT = new RegExp(NUMBER_RE.source, "y");
+
+function _tokenize(d: string): string[] {
+  /**
+   * Split a path `d` string into command and argument tokens.
+   *
+   * The elliptical-arc large-arc-flag and sweep-flag are single-character
+   * flags (`0`/`1`) in the W3C path grammar, so they may be written with no
+   * separator from each other or the following coordinate (e.g.
+   * `A5 5 0 11 0,10`). A context-free scan would misread `11` as the single
+   * number 11; this scanner tracks the active command and per-repetition
+   * argument index and peels off exactly one flag character at the two flag
+   * positions of an `A`/`a` command. Every other token matches the same
+   * number grammar as before, so non-arc paths tokenize identically.
+   */
+  const tokens: string[] = [];
+  // Python indexes code points; `i` is the UTF-16 offset of the current code
+  // point and advances by its width, so the scan visits the same characters.
+  let i = 0;
+  let cmd = "";
+  let arg = 0;
+  while (i < d.length) {
+    const c = String.fromCodePoint(d.codePointAt(i)!);
+    if (c === "," || isspace(c)) {
+      i += c.length;
+      continue;
+    }
+    if (_CMD_RE.test(c)) {
+      tokens.push(c);
+      cmd = c === "Z" || c === "z" ? "" : c;
+      arg = 0;
+      i += c.length;
+      continue;
+    }
+    const argc = _ARGC[cmd.toUpperCase()] ?? 0;
+    // large-arc-flag (index 3) and sweep-flag (index 4) of each arc
+    // repetition are single chars; peel one off so `11`/`110` split.
+    if (cmd.toUpperCase() === "A" && argc !== 0 && [3, 4].includes(mod(arg, argc)) && (c === "0" || c === "1")) {
+      tokens.push(c);
+      arg += 1;
+      i += c.length;
+      continue;
+    }
+    _NUMBER_AT.lastIndex = i;
+    const m = _NUMBER_AT.exec(d);
+    if (m && m[0]) {
+      tokens.push(m[0]);
+      if (argc !== 0) arg += 1;
+      i = _NUMBER_AT.lastIndex;
+      continue;
+    }
+    // Unrecognized character: skip it, matching the prior findall scan
+    // which silently ignored anything outside the command/number grammar.
+    i += c.length;
+  }
+  return tokens;
+}
+
+/**
+ * Parse an SVG path `d` string into cubic-bezier subpaths.
+ *
+ * @param d The path data string.
+ * @returns Subpaths in document order; each holds cubic segments and a
+ *   closed flag.
+ * @throws UnsupportedSVGError For malformed data or unknown commands.
+ */
+export function parse_path(d: string): RawSubpath[] {
+  const tokens = _tokenize(d);
+  const parser = new _PathParser(tokens);
+  return parser.run();
+}
+
+class _PathParser {
+  _tokens: string[];
+  _i: number;
+  cx: number;
+  cy: number;
+  sx: number;
+  sy: number;
+  _prev_cmd: string;
+  // Last cubic control point (for S) and quadratic control (for T).
+  _prev_cubic_ctrl: [number, number] | null;
+  _prev_quad_ctrl: [number, number] | null;
+  _segs: CubicSeg[];
+  _subpaths: RawSubpath[];
+
+  constructor(tokens: string[]) {
+    this._tokens = tokens;
+    this._i = 0;
+    this.cx = 0.0;
+    this.cy = 0.0;
+    this.sx = 0.0;
+    this.sy = 0.0;
+    this._prev_cmd = "";
+    this._prev_cubic_ctrl = null;
+    this._prev_quad_ctrl = null;
+    this._segs = [];
+    this._subpaths = [];
+  }
+
+  run(): RawSubpath[] {
+    let cmd = "";
+    while (this._i < len(this._tokens)) {
+      const tok = this._tokens[this._i];
+      if (_COMMANDS.has(tok)) {
+        cmd = tok;
+        this._i += 1;
+        if (cmd === "Z" || cmd === "z") {
+          this._close();
+          cmd = "";
+          continue;
+        }
+      } else if (cmd === "") {
+        throw new UnsupportedSVGError(`Path data starts with a number: ${repr(tok)}`);
+      } else {
+        // Implicit repeat: a subsequent M/m becomes L/l.
+        if (cmd === "M") {
+          cmd = "L";
+        } else if (cmd === "m") {
+          cmd = "l";
+        }
+      }
+      this._exec(cmd);
+    }
+    this._flush(false);
+    return this._subpaths;
+  }
+
+  _read_args(n: number): number[] {
+    const args: number[] = [];
+    for (const _ of range(n)) {
+      if (this._i >= len(this._tokens) || _COMMANDS.has(this._tokens[this._i])) {
+        throw new UnsupportedSVGError("Path data ended mid-command");
+      }
+      args.push(float(this._tokens[this._i]));
+      this._i += 1;
+    }
+    return args;
+  }
+
+  _flush(closed: boolean): void {
+    if (py_bool(this._segs)) {
+      this._subpaths.push(new RawSubpath(this._segs, closed));
+      this._segs = [];
+    }
+  }
+
+  _close(): void {
+    if (py_bool(this._segs)) {
+      // Add the closing straight segment back to the subpath start.
+      if (!py_eq([this.cx, this.cy], [this.sx, this.sy])) {
+        this._segs.push([this.cx, this.cy, this.cx, this.cy, this.sx, this.sy, this.sx, this.sy]);
+      }
+      this._subpaths.push(new RawSubpath(this._segs, true));
+      this._segs = [];
+    }
+    this.cx = this.sx;
+    this.cy = this.sy;
+    this._prev_cubic_ctrl = null;
+    this._prev_quad_ctrl = null;
+    this._prev_cmd = "Z";
+  }
+
+  _line_to(x: number, y: number): void {
+    this._segs.push([this.cx, this.cy, this.cx, this.cy, x, y, x, y]);
+    this.cx = x;
+    this.cy = y;
+  }
+
+  _cubic_to(x1: number, y1: number, x2: number, y2: number, x: number, y: number): void {
+    this._segs.push([this.cx, this.cy, x1, y1, x2, y2, x, y]);
+    this._prev_cubic_ctrl = [x2, y2];
+    this.cx = x;
+    this.cy = y;
+  }
+
+  _quad_to(qx: number, qy: number, x: number, y: number): void {
+    // Elevate quadratic to cubic.
+    const c1x = this.cx + (2.0 / 3.0) * (qx - this.cx);
+    const c1y = this.cy + (2.0 / 3.0) * (qy - this.cy);
+    const c2x = x + (2.0 / 3.0) * (qx - x);
+    const c2y = y + (2.0 / 3.0) * (qy - y);
+    this._segs.push([this.cx, this.cy, c1x, c1y, c2x, c2y, x, y]);
+    this._prev_quad_ctrl = [qx, qy];
+    this.cx = x;
+    this.cy = y;
+  }
+
+  _exec(cmd: string): void {
+    // flat command dispatch
+    const rel = islower(cmd);
+    const up = cmd.toUpperCase();
+    const a = this._read_args(_ARGC[up]);
+    const [ox, oy] = rel ? [this.cx, this.cy] : [0.0, 0.0];
+
+    if (up === "M") {
+      this._flush(false);
+      this.cx = a[0] + ox;
+      this.cy = a[1] + oy;
+      this.sx = this.cx;
+      this.sy = this.cy;
+    } else if (up === "L") {
+      this._line_to(a[0] + ox, a[1] + oy);
+    } else if (up === "H") {
+      this._line_to(a[0] + (rel ? this.cx : 0.0), this.cy);
+    } else if (up === "V") {
+      this._line_to(this.cx, a[0] + (rel ? this.cy : 0.0));
+    } else if (up === "C") {
+      this._cubic_to(a[0] + ox, a[1] + oy, a[2] + ox, a[3] + oy, a[4] + ox, a[5] + oy);
+    } else if (up === "S") {
+      let rx: number, ry: number;
+      if (["C", "S"].includes(this._prev_cmd) && this._prev_cubic_ctrl != null) {
+        rx = 2 * this.cx - this._prev_cubic_ctrl[0];
+        ry = 2 * this.cy - this._prev_cubic_ctrl[1];
+      } else {
+        rx = this.cx;
+        ry = this.cy;
+      }
+      this._cubic_to(rx, ry, a[0] + ox, a[1] + oy, a[2] + ox, a[3] + oy);
+    } else if (up === "Q") {
+      this._quad_to(a[0] + ox, a[1] + oy, a[2] + ox, a[3] + oy);
+    } else if (up === "T") {
+      let qx: number, qy: number;
+      if (["Q", "T"].includes(this._prev_cmd) && this._prev_quad_ctrl != null) {
+        qx = 2 * this.cx - this._prev_quad_ctrl[0];
+        qy = 2 * this.cy - this._prev_quad_ctrl[1];
+      } else {
+        qx = this.cx;
+        qy = this.cy;
+      }
+      this._quad_to(qx, qy, a[0] + ox, a[1] + oy);
+    } else if (up === "A") {
+      this._arc_to(a[0], a[1], a[2], a[3] !== 0, a[4] !== 0, a[5] + ox, a[6] + oy);
+    }
+
+    if (up !== "C" && up !== "S") {
+      this._prev_cubic_ctrl = null;
+    }
+    if (up !== "Q" && up !== "T") {
+      this._prev_quad_ctrl = null;
+    }
+    this._prev_cmd = up;
+  }
+
+  _arc_to(
+    rx: number,
+    ry: number,
+    phi_deg: number,
+    large: boolean,
+    sweep: boolean,
+    x: number,
+    y: number,
+  ): void {
+    /** Convert an SVG elliptical arc to cubic segments (W3C algorithm). */
+    const x1 = this.cx;
+    const y1 = this.cy;
+    if (rx === 0 || ry === 0) {
+      this._line_to(x, y);
+      return;
+    }
+    rx = Math.abs(rx);
+    ry = Math.abs(ry);
+    const phi = radians(mod(phi_deg, 360.0));
+    const cos_p = Math.cos(phi);
+    const sin_p = Math.sin(phi);
+    const dx = (x1 - x) / 2.0;
+    const dy = (y1 - y) / 2.0;
+    const x1p = cos_p * dx + sin_p * dy;
+    const y1p = -sin_p * dx + cos_p * dy;
+    // Correct out-of-range radii. hypot of the ratios, not a sum of
+    // squares over rx * rx: a tiny radius (1e-200) would underflow the
+    // square to 0.
+    // TODO(port): CPython math.hypot is correctly rounded (3.10+); Math.hypot may differ by 1 ulp.
+    const s = Math.hypot(x1p / rx, y1p / ry);
+    let co: number;
+    if (s > 1) {
+      // The scaled ellipse just reaches the end point, so its centre is
+      // the chord midpoint. The square root below would instead read a
+      // rounding remainder (1e-16) as an offset and shift the centre.
+      rx = rx * s;
+      ry = ry * s;
+      co = 0.0;
+    } else {
+      const num = rx * rx * ry * ry - rx * rx * y1p * y1p - ry * ry * x1p * x1p;
+      const den = rx * rx * y1p * y1p + ry * ry * x1p * x1p;
+      co = den !== 0 ? Math.sqrt(max([0.0, num / den])) : 0.0;
+    }
+    if (large === sweep) {
+      co = -co;
+    }
+    const cxp = (co * rx * y1p) / ry;
+    const cyp = (-co * ry * x1p) / rx;
+    const cx_ = cos_p * cxp - sin_p * cyp + (x1 + x) / 2.0;
+    const cy_ = sin_p * cxp + cos_p * cyp + (y1 + y) / 2.0;
+
+    const angle = (ux: number, uy: number, vx: number, vy: number): number => {
+      const dot = ux * vx + uy * vy;
+      const ln = Math.hypot(ux, uy) * Math.hypot(vx, vy);
+      const ang = py_bool(ln) ? Math.acos(max([-1.0, min([1.0, dot / ln])])) : 0.0;
+      return (ux * vy - uy * vx) < 0 ? -ang : ang;
+    };
+
+    const theta1 = angle(1, 0, (x1p - cxp) / rx, (y1p - cyp) / ry);
+    let dtheta = angle((x1p - cxp) / rx, (y1p - cyp) / ry, (-x1p - cxp) / rx, (-y1p - cyp) / ry);
+    if (!sweep && dtheta > 0) {
+      dtheta -= 2 * Math.PI;
+    } else if (sweep && dtheta < 0) {
+      dtheta += 2 * Math.PI;
+    }
+
+    const n_segs = max([1, int(Math.ceil(Math.abs(dtheta) / (Math.PI / 2.0)))]);
+    const delta = dtheta / n_segs;
+    const t = (4.0 / 3.0) * Math.tan(delta / 4.0);
+    let theta = theta1;
+    for (const i of range(n_segs)) {
+      const cos1 = Math.cos(theta);
+      const sin1 = Math.sin(theta);
+      const cos2 = Math.cos(theta + delta);
+      const sin2 = Math.sin(theta + delta);
+      let ep_x: number, ep_y: number;
+      if (i === n_segs - 1) {
+        // The arc ends on the given end point, not on its evaluation.
+        ep_x = x;
+        ep_y = y;
+      } else {
+        ep_x = cos_p * rx * cos2 - sin_p * ry * sin2 + cx_;
+        ep_y = sin_p * rx * cos2 + cos_p * ry * sin2 + cy_;
+      }
+      const d1x = -rx * sin1;
+      const d1y = ry * cos1;
+      const d2x = -rx * sin2;
+      const d2y = ry * cos2;
+      const c1x = this.cx + t * (cos_p * d1x - sin_p * d1y);
+      const c1y = this.cy + t * (sin_p * d1x + cos_p * d1y);
+      const c2x = ep_x - t * (cos_p * d2x - sin_p * d2y);
+      const c2y = ep_y - t * (sin_p * d2x + cos_p * d2y);
+      this._segs.push([this.cx, this.cy, c1x, c1y, c2x, c2y, ep_x, ep_y]);
+      this.cx = ep_x;
+      this.cy = ep_y;
+      theta += delta;
+    }
+  }
+}

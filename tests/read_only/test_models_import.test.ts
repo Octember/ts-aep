@@ -1,0 +1,49 @@
+/** Tests for media-file probing and file-source creation via import_file. */
+
+import { describe, test } from "bun:test";
+import { ImportAsType, parse as parse_aep } from "../../src/py_aep/index.ts";
+import { ImportOptions } from "../../src/py_aep/models/import_options.ts";
+import { Path, ValueError } from "../../src/pyrt/index.ts";
+import { raises } from "../../src/pyrt/pytest.ts";
+
+// Python: Path(__file__).parent.parent.parent / "samples" / ...
+const ASSETS = new Path(import.meta.path).parent.parent.parent.div("samples", "assets");
+const BASE = new Path(import.meta.path).parent.parent.parent.div("samples", "models", "folder", "folder.aep");
+const IMPORT_DIR = new Path(import.meta.path).parent.parent.parent.div("samples", "models", "import");
+
+describe("TestImportFileErrors", () => {
+  /** Validation and error handling. */
+
+  test("test_non_footage_import_type_raises", () => {
+    const project = parse_aep(BASE).project;
+    const opts = new ImportOptions(ASSETS.div("image_with_alpha.png"));
+    opts.import_as = ImportAsType.PROJECT;
+    raises(ValueError, () => project.import_file(opts), "PROJECT import");
+  });
+
+  test("test_comp_import_unsupported_format_raises", () => {
+    const project = parse_aep(BASE).project;
+    const opts = new ImportOptions(ASSETS.div("image_with_alpha.png"));
+    opts.import_as = ImportAsType.COMP;
+    raises(ValueError, () => project.import_file(opts), "COMP import");
+  });
+
+  test("test_eps_cropped_layers_not_implemented", () => {
+    const project = parse_aep(BASE).project;
+    const opts = new ImportOptions(ASSETS.div("eps.eps"));
+    opts.import_as = ImportAsType.COMP_CROPPED_LAYERS;
+    raises(ValueError, () => project.import_file(opts), "COMP_CROPPED_LAYERS");
+  });
+
+  test("test_unsupported_format_raises", () => {
+    const project = parse_aep(BASE).project;
+    raises(ValueError, () => project.import_file(new ImportOptions(ASSETS.div("config.ocio"))), "Unsupported");
+  });
+
+  test("test_deferred_format_rejected_early_with_value_error", () => {
+    // .c4d import is deferred; import must fail with a clear ValueError
+    // naming the extension, not NotImplementedError mid-probe.
+    const project = parse_aep(BASE).project;
+    raises(ValueError, () => project.import_file(new ImportOptions(ASSETS.div("c4d.c4d"))), "\\.c4d");
+  });
+});
