@@ -207,7 +207,7 @@ export let _ps_index: Map<string, [Path, number, string | null]> | null = null;
 export function* _iter_faces(path: Path): Generator<[number, any]> {
   let fonts: any[];
   try {
-    const opened: any = fontkit.openSync(path.toString());
+    const opened: any = fontkit.create(host.fs.readFileSync(path.toString()) as any);
     if (path.suffix.toLowerCase() === ".ttc") {
       fonts = [...opened.fonts];
     } else {

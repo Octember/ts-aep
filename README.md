@@ -24,13 +24,72 @@ Against upstream at the pinned commit, on the same machine:
 
 ## Use
 
+The library runs unchanged in Node 22.3+, Bun, browsers and Cloudflare Workers.
+The API is py-aep's: `parse(path)` and `Project.save(path)` take paths. All
+host access goes through `src/pyrt/host.ts`: Node and Bun use their own
+`node:fs`, `node:path` and `node:os` (via `process.getBuiltinModule`); hosts
+without them get an in-memory file system and POSIX paths.
+
+### Node / Bun
+
+```ts
+import * as py_aep from "./src/py_aep/index.ts";
+
+const app = py_aep.parse("project.aep");
+app.project.save("copy.aep");
+```
+
+### Browsers and Workers
+
+Build a bundle, then move bytes in and out of `memfs` around the usual calls:
+
+```bash
+bun build src/py_aep/index.ts --target=browser --outdir=dist/browser
+```
+
+```ts
+import * as py_aep from "./dist/browser/index.js";
+
+py_aep.memfs.write("/in.aep", new Uint8Array(await (await fetch(url)).arrayBuffer()));
+py_aep.parse("/in.aep").project.save("/out.aep");
+const saved: Uint8Array = py_aep.memfs.read("/out.aep");
+```
+
+`memfs` also has `exists`, `list`, `remove` and `clear`. Footage, fonts, ICC
+profiles or OCIO configs a project refers to are only found if you write them
+into `memfs` at the paths the project expects. `use_memory_fs()` forces the
+in-memory backend where `node:fs` exists too; `fs_backend()` reports which one
+is active.
+
+Host caveats:
+
+- Text recomposition shapes with harfbuzz (wasm). In a browser, serve
+  `node_modules/harfbuzzjs/hb.wasm` next to the bundle's `index.js`. Where it
+  cannot load, the library still loads and only shaping raises (the console
+  shows emscripten's abort message once).
+- Cloudflare Workers refuse to compile wasm from fetched bytes, so shaping is
+  unavailable there; everything else works. With the `nodejs_compat` flag,
+  `process.getBuiltinModule("node:fs")` returns Workers' own virtual fs (only
+  `/tmp` is writable, per request); call `use_memory_fs()` to use `memfs`
+  instead. Parse and save are synchronous and CPU-bound: large projects can hit
+  the Workers CPU-time limit.
+- Without a host, `platform` is `"browser"`, so a new project's default
+  platform is macOS (as on any non-Windows host), `tmpdir()` is `/tmp`,
+  `homedir()` is `/` and the environment is empty.
+
+Smoke checks: `bun tools/browser-smoke/run.ts [N]` runs the bundle with
+`process` hidden (memory fs, POSIX paths) over N samples and checks saves are
+byte-identical; `tools/browser-smoke/index.html` does the same in a real
+browser (instructions in the file).
+
+### Development
+
 ```bash
 bun install
 tools/fetch-samples.sh   # upstream checkout + LFS samples (~240 MB)
 bun test
+bun tools/gen_deferred_modules.ts --check   # the deferred-import hub is current
 ```
-
-Requires Bun (or Node 22+ for `require()` of ESM, used by `pyrt/deferred.ts`).
 
 ## License
 

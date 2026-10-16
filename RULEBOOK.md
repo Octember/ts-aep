@@ -29,10 +29,14 @@ translating** and use them; do not reimplement anything they provide. Never edit
   under the identical name (other agents translate those files in parallel to the same rules).
 - Deferred imports inside functions (`from .x import Y` indented inside a def — Python's cycle
   breaker) → **not** a top-level import: declare at module level
-  `const _x = deferred<typeof import("./x.ts")>(import.meta.url, "./x.ts");` (pyrt) and use
-  `_x().Y` at the original use sites; add `import type { Y } from "./x.ts";` if `Y` is also used as
-  a type. A top-level import would let a subclass module (`class M extends Base`) evaluate before
-  `Base` exists (TDZ). `if TYPE_CHECKING:` imports → `import type`. Python's end-of-module
+  `const _x = deferred<typeof import("./x.ts")>("py_aep/a/x");` (pyrt; the key is the target's
+  path relative to `src`, without `.ts`) and use `_x().Y` at the original use sites; add
+  `import type { Y } from "./x.ts";` if `Y` is also used as a type. Then run
+  `bun tools/gen_deferred_modules.ts`, which regenerates the hub `src/py_aep/_modules.ts` that
+  statically imports and registers every deferred target (`py_aep/index.ts` imports it last;
+  `--check` fails on a stale hub or a wrong key). A top-level import would let a subclass module
+  (`class M extends Base`) evaluate before `Base` exists (TDZ). `if TYPE_CHECKING:` imports →
+  `import type`. Python's end-of-module
   "import for registration side effects" lines in `binary/chunk.py` become the separate module
   `src/py_aep/binary/_register.ts`, which imports `./chunk.ts` and every `*_chunks.ts`, and any
   module whose code needs all chunk types registered (`models/project.ts`, `py_aep/index.ts`,
@@ -46,14 +50,22 @@ translating** and use them; do not reimplement anything they provide. Never edit
   `uharfbuzz` → `harfbuzzjs`, `yaml` → `yaml` (npm). Where parity with the Python library is not
   certain, translate faithfully anyway and add `// TODO(port): <specific parity risk>`.
 - Stdlib: `struct` → `pyrt struct`; `io.BytesIO` → `pyrt BytesIO`; `pathlib.Path` →
-  `pyrt Path` (`p / "x"` → `p.div("x")`); `os.path` → `node:path`; files → `node:fs`;
-  `os.environ` → `process.env`; `sys.platform` → `"darwin"|"win32"|"linux"` via
-  `process.platform`; `math.*` → `Math.*` except helpers in `pyrt/num.ts`
-  (`isclose`, `copysign`, `fsum`, `radians`, `degrees`); `zlib` → `node:zlib`
-  (`inflateSync`, `deflateSync`, `inflateRawSync`; `decompressobj().decompress(x, max)` →
-  `inflateSync(x, { maxOutputLength: max })` with a TODO if semantics differ); `hashlib.md5` →
-  `node:crypto` `createHash("md5")`; `base64` → `Buffer.from(...).toString("base64")` /
-  `new Uint8Array(Buffer.from(s, "base64"))`; `json` → `JSON` (see §7);
+  `pyrt Path` (`p / "x"` → `p.div("x")`). **`src/` never touches the host directly**: no
+  `node:` imports, no `Buffer`, no `require`/`createRequire`, and no `process` outside the
+  `cli/` entry points (argv, exit codes, stdio). Everything
+  host-specific goes through `pyrt/host.ts` (`import * as host from ".../pyrt/host.ts"`):
+  files → `host.fs` (the sync `node:fs` subset: `readFileSync`, `writeFileSync`, `statSync`,
+  `openSync`/`readSync`/`writeSync`/`closeSync`, `readdirSync`, …; Node/Bun's own `node:fs`, or
+  the in-memory fs in browsers/Workers); `os.path` → `host.path`; `os.environ` → `host.env`;
+  `sys.platform` → `host.platform` (`"darwin"|"win32"|"linux"`, `"browser"` without a host);
+  `Path.home()` / `tempfile` dirs → `host.homedir()` / `host.tmpdir()`. `math.*` → `Math.*`
+  except helpers in `pyrt/num.ts` (`isclose`, `copysign`, `fsum`, `radians`, `degrees`);
+  `zlib` → `pyrt/zlib.ts` over fflate (`zlib.decompress`, `zlib.decompressobj().decompress(x,
+  max_length)`, `zlib.error`, `gzip_decompress`); `hashlib.md5(x).digest()` → `md5(x)`
+  (`pyrt/md5.ts`); `base64.b64encode/b64decode` → `pyrt/base64.ts` (CPython's non-strict
+  decode, `binascii.Error`); `uuid.uuid4()` / `.bytes` → `uuid4()` / `uuid4_bytes()`
+  (`pyrt/uuid.ts`); a latin-1 string view of bytes → `bytes_.latin1_str` / `latin1_bytes`;
+  fonts → `fontkit.create(host.fs.readFileSync(p))` (never `fontkit.openSync`); `json` → `JSON` (see §7);
   `warnings.warn` → `pyrt warn`; `logging.getLogger(__name__)` → a module const
   `const logger = { debug() {}, info() {}, warning: (m: string) => warn(m) }` (keep call sites);
   `functools.lru_cache` → `pyrt lru_cache`; `copy.deepcopy`/`copy.copy` → `pyrt deepcopy`/`copy`;

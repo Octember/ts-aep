@@ -1,0 +1,41 @@
+<!doctype html>
+<meta charset="utf-8" />
+<title>ts-aep browser smoke</title>
+<!--
+  Build the bundle, serve the repo root, open this page:
+    bun build src/py_aep/index.ts --target=browser --outdir=dist/browser
+    python3 -m http.server 8000      # from the repo root
+    http://localhost:8000/tools/browser-smoke/index.html?samples=samples/bugs/outputmodule_path.aep,...
+  The page fetches each sample into memfs, parses, saves, and checks the
+  saved bytes equal the input. Without ?samples it runs a small default set.
+-->
+<pre id="out">running…</pre>
+<script type="module">
+  import * as py_aep from "../../dist/browser/index.js";
+  import { smoke } from "./smoke.js";
+
+  const out = document.getElementById("out");
+  const lines = [];
+  const log = (s) => {
+    lines.push(s);
+    out.textContent = lines.join("\n");
+  };
+  const param = new URLSearchParams(location.search).get("samples");
+  const samples = param
+    ? param.split(",")
+    : [
+        "samples/bugs/29.97_fps_time_scale_3.125.aep",
+        "samples/bugs/outputmodule_path.aep",
+        "samples/bugs/windows-1250_decoding_error.aep",
+      ];
+  const fetch_bytes = async (name) => {
+    const r = await fetch(`../../${name}`);
+    if (!r.ok) throw new Error(`fetch ${name}: ${r.status}`);
+    return new Uint8Array(await r.arrayBuffer());
+  };
+  const result = await smoke(py_aep, fetch_bytes, samples, log);
+  log("");
+  log(JSON.stringify(result, null, 2));
+  document.title = result.identical === result.total ? "PASS" : "FAIL";
+  window.smokeResult = result;
+</script>

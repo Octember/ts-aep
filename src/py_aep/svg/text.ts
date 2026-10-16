@@ -13,6 +13,7 @@
 
 // TODO(port): fontTools TTFont → fontkit 2.0.4 (already a dependency). Parity risk: fontkit addresses glyphs by id, not name.
 import * as fontkit from "fontkit";
+import * as host from "../../pyrt/host.ts";
 import { type CubicSeg, RawSubpath } from "./path_data.ts";
 import { cubics_to_subpath } from "./shapes.ts";
 import { Affine } from "./transform.ts";
@@ -82,7 +83,7 @@ export function _load_font(path: Path, font_number = 0): any {
   let font = dict_get(_font_cache, key);
   if (font == null) {
     // TODO(port): TTFont(lazy=True) has no fontkit equivalent; openSync reads the whole file. A .ttc resolves its face through `.fonts`.
-    const opened: any = fontkit.openSync(fspath(path));
+    const opened: any = fontkit.create(host.fs.readFileSync(fspath(path)) as any);
     font = opened.fonts ? opened.fonts[font_number] : opened;
     _font_cache.set(key, font);
   }
