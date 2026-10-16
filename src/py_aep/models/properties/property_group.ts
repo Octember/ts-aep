@@ -445,6 +445,9 @@ export function _derive_layer_styles_enabled(
  * See: https://ae-scripting.docsforadobe.dev/property/propertygroup/
  */
 export class PropertyGroup extends PropertyBase {
+  /** Child properties by attribute name, resolved through `__getattr__` (Python's dynamic `group.child_name`). */
+  [key: string]: any;
+
   /**
    * The child list as stored, WITHOUT running deferred child synthesis.
    *
