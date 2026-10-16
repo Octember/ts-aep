@@ -565,9 +565,6 @@ export class PropertyGroup extends PropertyBase {
     this._deferred_ae_major = null;
 
     this._properties = properties;
-    for (const child of this._properties) {
-      child._parent_property = this;
-    }
 
     if (_INDEXED_GROUP_MATCH_NAMES.has(match_name)) {
       this._property_type = PropertyType.INDEXED_GROUP;
@@ -585,7 +582,12 @@ export class PropertyGroup extends PropertyBase {
     ) {
       this._elided = true;
     }
-    return py_object(this);
+    // Children must point at the proxy (Python's `self`), not the raw target.
+    const self = py_object(this);
+    for (const child of self._properties) {
+      child._parent_property = self;
+    }
+    return self;
   }
 
   /** The automatic (display) name derived from `match_name`. */

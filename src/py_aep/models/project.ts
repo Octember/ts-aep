@@ -7,7 +7,7 @@ import { randomUUID } from "node:crypto";
 import { fromstring, tostring } from "../../pyrt/etree.ts";
 import { ae_writes, requires_version } from "../ae_version.ts";
 import { to_f4, truncate_utf8 } from "../binary/bin_utils.ts";
-import { write_aep } from "../binary/chunk.ts";
+import { write_aep as _write_aep } from "../binary/chunk.ts";
 import type { Chunk } from "../binary/chunk.ts";
 import { ListChunk } from "../binary/chunk.ts";
 import { build_ai_layer_opti_data, build_psd_flattened_opti_data, build_text_opti_data } from "../binary/footage_chunks.ts";
@@ -97,6 +97,13 @@ import {
   deferred,
 } from "../../pyrt/index.ts";
 import type { PathLike } from "../../pyrt/index.ts";
+
+/**
+ * Mutable module globals: ESM exports are read-only, so names that Python
+ * tests replace with `monkeypatch.setattr(project_mod, name, ...)` are read
+ * through this holder instead.
+ */
+export const module_globals: { write_aep: typeof _write_aep } = { write_aep: _write_aep };
 
 const _effect = deferred<typeof import("../parsers/effect.ts")>(import.meta.url, "../parsers/effect.ts");
 const _templates = deferred<typeof import("../parsers/templates.ts")>(import.meta.url, "../parsers/templates.ts");
@@ -2221,7 +2228,7 @@ export class Project {
       const fd = fs.openSync(tmp_path.path, "wx");
       try {
         const buf = new BytesIO();
-        write_aep(buf, this._rifx, this._xmp);
+        module_globals.write_aep(buf, this._rifx, this._xmp);
         fs.writeSync(fd, buf.getvalue());
       } finally {
         fs.closeSync(fd);

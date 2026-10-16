@@ -387,7 +387,7 @@ export function _compare_fields(
       const exp_val = expected.get(exp_key);
       if (exp_val instanceof Map && py_bool(dict_get(exp_val, "_undefined"))) continue;
       if (class_name) result.compared_fields.add(`${class_name}.${parsed_key}`);
-      const parsed_val = get_enum_value(dict_get(parsed, parsed_key));
+      const parsed_val = get_enum_value(parsed.get(parsed_key) ?? null);
       if (!compare_values(exp_val, parsed_val)) {
         result.add_diff(`${path}.${exp_key}`, exp_val, parsed_val, category);
       }

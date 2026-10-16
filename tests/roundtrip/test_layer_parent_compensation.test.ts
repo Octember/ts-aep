@@ -21,7 +21,7 @@ function _world_delta(before: any, after: any): number {
   const deltas: number[] = [];
   for (const row of range(4)) {
     for (const col of range(4)) {
-      deltas.push(Math.abs(before[row][col] - after[row][col]));
+      deltas.push(Math.abs(before.__getitem__(row)[col] - after.__getitem__(row)[col]));
     }
   }
   return max(deltas);

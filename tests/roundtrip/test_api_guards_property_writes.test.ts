@@ -107,7 +107,7 @@ describe("TestPropertyNameGuard", () => {
     const out = tmp_path.div("mask_rename.aep");
     app.project.save(out);
     const names = parse_aep(out).project.compositions.flatMap((comp: any) =>
-      comp.layers.flatMap((layer: any) => py_or(layer.masks, []).map((mask: any) => mask.name)),
+      comp.layers.flatMap((layer: any) => [...py_or(layer.masks, [])].map((mask: any) => mask.name)),
     );
     expect(py_bool(names) && names.every((name: string) => name === "Kept Mask")).toBe(true);
   });
@@ -131,7 +131,7 @@ describe("TestPropertyNameGuard", () => {
     const out = tmp_path.div("effect_rename.aep");
     app.project.save(out);
     const names = parse_aep(out).project.compositions.flatMap((comp: any) =>
-      comp.layers.flatMap((layer: any) => py_or(layer.effects, [])),
+      comp.layers.flatMap((layer: any) => [...py_or(layer.effects, [])]),
     ).map((fx: any) => fx.name);
     expect(names.includes("Renamed Effect")).toBe(true);
   });

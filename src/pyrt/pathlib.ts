@@ -15,6 +15,11 @@ export class Path {
     return this.path;
   }
 
+  /** `PurePath.__eq__`: equal when same flavour and same normalised path. */
+  __eq__(other: unknown): boolean {
+    return other instanceof Path && other.path === this.path;
+  }
+
   /** `p / "child"` */
   div(...parts: (string | Path)[]): Path {
     return new Path(this.path, ...parts.map(String));

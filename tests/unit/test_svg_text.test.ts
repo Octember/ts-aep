@@ -6,7 +6,7 @@
  * independent. Reader-level tests monkeypatch font resolution for determinism.
  */
 
-import { describe, expect, test } from "bun:test";
+import { afterEach, describe, expect, test } from "bun:test";
 
 import { approx, make_tmp_path, warns } from "../../src/pyrt/pytest.ts";
 import { NotImplementedError, Path, py_eq } from "../../src/pyrt/index.ts";
@@ -15,15 +15,22 @@ import { read_svg } from "../../src/py_aep/svg/index.ts";
 import { parse_path } from "../../src/py_aep/svg/path_data.ts";
 import { TextRun, _glyphs, outline_runs, outline_text_path } from "../../src/py_aep/svg/text.ts";
 import { IDENTITY } from "../../src/py_aep/svg/transform.ts";
-import { FontBuilder, TTGlyphPen } from "../_fontbuilder.ts";
+import { FontBuilder, TTGlyphPen, saveTTC } from "../_fontbuilder.ts";
 import * as fonts_mod from "../../src/py_aep/svg/fonts.ts";
 
-// TODO(pyrt): `monkeypatch.setattr` - ESM module bindings are read-only, so
-// `resolve_font` inside svg/reader.ts and `_font_dirs` / `_index` inside
-// svg/fonts.ts cannot be swapped from a test. No shim exists.
-const monkeypatch_setattr = (_obj: unknown, _name: string, _value: unknown): void => {
-  throw new NotImplementedError("monkeypatch.setattr");
+// `monkeypatch.setattr`: ESM bindings are read-only, so patched names route through
+// the setter hooks exported by svg/reader.ts and svg/fonts.ts; restored after each test.
+const monkeypatch_setattr = (obj: unknown, name: string, value: any): void => {
+  if (obj === reader_mod && name === "resolve_font") reader_mod._set_resolve_font(value);
+  else if (obj === fonts_mod && name === "_font_dirs") fonts_mod._set_font_dirs(value);
+  else if (obj === fonts_mod && name === "_index") fonts_mod._set_index(value);
+  else throw new NotImplementedError(`monkeypatch.setattr ${name}`);
 };
+afterEach(() => {
+  reader_mod._set_resolve_font(null);
+  fonts_mod._set_font_dirs(null);
+  fonts_mod._set_index(null);
+});
 
 function _build_test_font(path: Path): void {
   const box = (x0: number, y0: number, x1: number, y1: number) => {
@@ -369,18 +376,26 @@ test("test_resolve_font_finds_ttc_secondary_face", () => {
   // collection must be discoverable, and resolve to that exact face index.
   const tmp_path = make_tmp_path();
 
-  // TODO(port): FontBuilder / TTGlyphPen (fontTools) have no fontkit equivalent.
-  const build_face = (family: string): any => {
-    throw new NotImplementedError("fontTools FontBuilder");
-  };
-
-  // TODO(port): fontTools TTCollection (.ttc writer) has no fontkit equivalent.
-  const save_ttc = (_path: Path, _faces: any[]): void => {
-    throw new NotImplementedError("fontTools TTCollection.save");
+  const build_face = (family: string): Uint8Array => {
+    const pen = new TTGlyphPen();
+    pen.moveTo([0, 0]);
+    pen.lineTo([100, 0]);
+    pen.lineTo([100, 100]);
+    pen.closePath();
+    const fb = new FontBuilder(1000, { isTTF: true });
+    fb.setupGlyphOrder([".notdef", "A"]);
+    fb.setupCharacterMap({ 0x41: "A" });
+    fb.setupGlyf({ ".notdef": new TTGlyphPen().glyph(), A: pen.glyph() });
+    fb.setupHorizontalMetrics({ ".notdef": [600, 0], A: [600, 0] });
+    fb.setupHorizontalHeader({ ascent: 800, descent: -200 });
+    fb.setupNameTable({ familyName: family, styleName: "Regular" });
+    fb.setupOS2();
+    fb.setupPost();
+    return fb.build();
   };
 
   const ttc = tmp_path.div("combo.ttc");
-  save_ttc(ttc, [build_face("PrimaryFam"), build_face("SecondaryFam")]);
+  saveTTC(String(ttc), [build_face("PrimaryFam"), build_face("SecondaryFam")]);
 
   monkeypatch_setattr(fonts_mod, "_font_dirs", () => [tmp_path]);
   monkeypatch_setattr(fonts_mod, "_index", null);

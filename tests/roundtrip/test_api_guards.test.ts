@@ -14,10 +14,13 @@ import { get_comp } from "../conftest.ts";
 
 const SAMPLES_DIR = new Path(import.meta.dir, "..", "..", "samples", "models");
 
-// TODO(port): `monkeypatch.setattr` - ESM module bindings are read-only, so
-// `write_aep` inside models/project.ts cannot be swapped from a test. No shim exists.
-const monkeypatch_setattr = (_obj: unknown, _name: string, _value: unknown): void => {
-  throw new NotImplementedError("monkeypatch.setattr");
+// `monkeypatch.setattr` on a mutable holder (project_mod.module_globals); returns the undo.
+const monkeypatch_setattr = (obj: any, name: string, value: unknown): (() => void) => {
+  const old = obj[name];
+  obj[name] = value;
+  return () => {
+    obj[name] = old;
+  };
 };
 
 /** Test class TestValueSetterOnKeyframedProperty. */
@@ -524,9 +527,13 @@ describe("TestAtomicSave", () => {
       throw new RuntimeError("simulated write failure");
     };
 
-    monkeypatch_setattr(project_mod, "write_aep", boom);
+    const undo = monkeypatch_setattr(project_mod.module_globals, "write_aep", boom);
     const target = tmp_path.div("out.aep");
-    raises(RuntimeError, () => app.project.save(target));
+    try {
+      raises(RuntimeError, () => app.project.save(target));
+    } finally {
+      undo();
+    }
     expect(target.exists()).toBe(false);
     expect(tmp_path.iterdir().length).toBe(0);
   });

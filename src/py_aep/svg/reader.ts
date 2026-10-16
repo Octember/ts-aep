@@ -13,7 +13,19 @@ import { DEFAULT_FONT_SIZE, LengthContext, local_name, parse_length, parse_numbe
 import { parse_color } from "./colors.ts";
 import { canvas, viewport_transform } from "./document.ts";
 import { UnsupportedSVGError } from "./errors.ts";
-import { resolve_font } from "./fonts.ts";
+import { resolve_font as _resolve_font_impl } from "./fonts.ts";
+/**
+ * `monkeypatch.setattr(reader, "resolve_font", fn)` hook: ESM exports are
+ * read-only, so the Python module-global lookup goes through this holder.
+ */
+export let _resolve_font_override: typeof _resolve_font_impl | null = null;
+export function _set_resolve_font(fn: typeof _resolve_font_impl | null): void {
+  _resolve_font_override = fn;
+}
+function resolve_font(...args: Parameters<typeof _resolve_font_impl>): ReturnType<typeof _resolve_font_impl> {
+  return (_resolve_font_override ?? _resolve_font_impl)(...args);
+}
+
 import { type GradientDef, collect_gradients, resolve_gradient } from "./gradients.ts";
 import { type RawSubpath, cubics_to_subpath, element_subpaths } from "./shapes.ts";
 import { type CssRule, parse_css, resolve_properties } from "./style.ts";

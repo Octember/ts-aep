@@ -226,3 +226,33 @@ export class FontBuilder {
     writeFileSync(path, this.build());
   }
 }
+
+/** Stand-in for `TTCollection.save`: concatenates sfnt fonts behind a `ttcf` header, rebasing table offsets. */
+export function saveTTC(path: string, fonts: Uint8Array[]): void {
+  const headerLen = 12 + 4 * fonts.length;
+  const parts: Uint8Array[] = [];
+  const offsets: number[] = [];
+  let pos = headerLen;
+  for (const f of fonts) {
+    const copy = pad4(f).slice();
+    const dv = new DataView(copy.buffer);
+    const numTables = dv.getUint16(4);
+    for (let i = 0; i < numTables; i++) {
+      const rec = 12 + i * 16 + 8;
+      dv.setUint32(rec, dv.getUint32(rec) + pos);
+    }
+    offsets.push(pos);
+    parts.push(copy);
+    pos += copy.length;
+  }
+  const h = new W().tag("ttcf").u32(0x00010000).u32(fonts.length);
+  for (const o of offsets) h.u32(o);
+  const out = new Uint8Array(pos);
+  out.set(h.done(), 0);
+  let at = headerLen;
+  for (const p of parts) {
+    out.set(p, at);
+    at += p.length;
+  }
+  writeFileSync(path, out);
+}
