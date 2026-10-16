@@ -338,9 +338,21 @@ export class MaskPropertyGroup extends PropertyGroup {
     // reach the saved file.
     const existing = this._properties.find((c) => c.match_name === "ADBE Mask Shape") ?? null;
     if (existing != null) {
-      // TODO(port): Python `existing.__dict__.update(...)` writes raw instance
-      // attributes and skips data descriptors; Object.assign goes through setters.
+      // `existing.__dict__.update(mask_path.__dict__)`: plain own attributes, plus the
+      // ChunkField override Map that stands in for `__dict__` (non-enumerable, so
+      // Object.assign alone would skip it).
+      // TODO(pyrt): no shim for `obj.__dict__`; see descriptors.ts instance dict.
       Object.assign(existing, mask_path);
+      const src_dict = (mask_path as any).__dict__;
+      if (src_dict instanceof Map) {
+        if (!Object.prototype.hasOwnProperty.call(existing, "__dict__")) {
+          Object.defineProperty(existing, "__dict__", {
+            value: new Map<string, any>(),
+            enumerable: false,
+          });
+        }
+        for (const [k, v] of src_dict) (existing as any).__dict__.set(k, v);
+      }
       (existing as Property)._link_keyframes();
     } else {
       this._properties.splice(0, 0, mask_path);

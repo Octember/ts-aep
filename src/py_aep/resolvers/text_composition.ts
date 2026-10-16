@@ -36,6 +36,7 @@
 import fontkit from "fontkit";
 import type { Path } from "../../pyrt/index.ts";
 import {
+  at,
   contains,
   dict_get,
   enumerate,
@@ -44,7 +45,6 @@ import {
   islower,
   len,
   max,
-  min,
   OSError,
   py_bool,
   py_eq,
@@ -85,6 +85,14 @@ const _SMALL_CAPS_SCALE = 0.7;
 const _RTL_BIDI_SCRIPT =
   /[\p{Script=Hebrew}\p{Script=Arabic}\p{Script=Syriac}\p{Script=Thaana}\p{Script=Nko}\p{Script=Samaritan}\p{Script=Mandaic}\p{Script=Adlam}]/u;
 
+// The font index is process-lifetime, so an indexed file can vanish
+// (CoreSync eviction, uninstall) before its first shaping; those opens
+// must refuse, not leak OS/HarfBuzz errors into innocuous reads.
+const _FONT_OPEN_ERRORS: any[] = [OSError];
+if (hb != null && "HarfBuzzError" in hb) {
+  _FONT_OPEN_ERRORS.push(hb.HarfBuzzError);
+}
+
 function _bidirectional_is_rtl(char: string): boolean {
   return _RTL_BIDI_SCRIPT.test(char);
 }
@@ -100,8 +108,7 @@ function _is_combining(char: string): boolean {
  * `OSError` instances; the `code` check stands in for Python's OSError.
  */
 function _is_font_open_error(exc: unknown): boolean {
-  if (exc instanceof OSError) return true;
-  if (hb != null && hb.HarfBuzzError != null && exc instanceof hb.HarfBuzzError) return true;
+  if (_FONT_OPEN_ERRORS.some((cls) => exc instanceof cls)) return true;
   return exc instanceof Error && "code" in exc;
 }
 
@@ -228,7 +235,7 @@ export function _check_envelope(doc: TextDocument, raw: string): void {
     );
   }
   const orientation = cos_get(doc._cos_data, "0", "8", "0", 0, "0", "2", "1");
-  if (!contains([null, 0], orientation)) {
+  if (!(orientation == null || py_eq(orientation, 0))) {
     throw new CompositionUnsupported("vertical text");
   }
   if (contains(py_or(cos_get(doc._doc, "0"), new Map()), "8")) {
@@ -254,7 +261,7 @@ export function _check_envelope(doc: TextDocument, raw: string): void {
     if (char === "\t") {
       throw new CompositionUnsupported("tab characters");
     }
-    if (char === " ") {
+    if (char === "\u00a0") {
       throw new CompositionUnsupported("no-break spaces");
     }
     if (code > 0xffff) {
@@ -324,7 +331,10 @@ export function _char_styles(doc: TextDocument, raw: string): _CharStyle[] {
     if (!(typeof index === "number" && Number.isInteger(index)) || !(0 <= index && index < len(fonts))) {
       throw new CompositionUnsupported("unresolvable font reference");
     }
-    out.push(...Array<_CharStyle>(end - start).fill(new _CharStyle(fonts[index], style)));
+    const char_style = new _CharStyle(fonts[index], style);
+    for (let k = 0; k < end - start; k++) {
+      out.push(char_style);
+    }
   }
   if (len(out) !== len(raw)) {
     throw new CompositionUnsupported("style runs do not cover the text");
@@ -395,7 +405,9 @@ export function _advances(text: string, styles: _CharStyle[], offset: number): n
     while (j < len(text) && styles[offset + j].stretch_key() === key) {
       j += 1;
     }
-    out.push(..._shape_stretch(text.slice(i, j), styles[offset + i]));
+    for (const advance of _shape_stretch(text.slice(i, j), styles[offset + i])) {
+      out.push(advance);
+    }
     i = j;
   }
   return out;
@@ -527,7 +539,7 @@ export function compose_lines(doc: TextDocument): ComposedLines {
   const baselines: number[] = [];
   let y = 0.0;
   for (const [line_no, [start, end]] of enumerate(spans)) {
-    const line_styles = py_or(styles.slice(start, min(end, len(styles))), [styles.at(-1)!]);
+    const line_styles = py_or(styles.slice(start, Math.min(end, len(styles))), [at(styles, -1)]);
     if (line_no === 0) {
       y += max(
         line_styles.map(

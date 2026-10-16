@@ -17,6 +17,8 @@ import {
   range,
   struct,
   tkey,
+  ValueError,
+  at,
 } from "../../pyrt/index.ts";
 import type { EnumValue, IO } from "../../pyrt/index.ts";
 import { read_bytes, write_bytes } from "./bin_utils.ts";
@@ -247,6 +249,8 @@ export class KfColor extends FmtItem {
   }
 
   set value(v: number[]) {
+    if (v.length > 4) throw new ValueError("too many values to unpack (expected 4)");
+    if (v.length < 4) throw new ValueError(`not enough values to unpack (expected 4, got ${v.length})`);
     [this.a, this.r, this.g, this.b] = v;
   }
 }
@@ -331,7 +335,7 @@ export class KfPosition extends AttrsBase {
   static frombytes(data: Uint8Array, kw: { num_value: number }): KfPosition {
     const { num_value } = kw;
     const pad1 = data.slice(0, 3);
-    const flags = data[3];
+    const flags = at(data, 3);
     const pad2 = data.slice(4, 8);
     // 5 fixed doubles + 3*num_value array doubles
     const total_doubles = 5 + 3 * num_value;

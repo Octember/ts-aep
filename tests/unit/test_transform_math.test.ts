@@ -484,12 +484,10 @@ describe("TestGimbalLock", () => {
     [90.0, 270.0],
     [-90.0, 90.0],
   ];
-  const match_rows: [number, number, number][] = gamma_rows.flatMap((gamma) =>
-    parent_composed_rows.map(([parent_y, composed_y]): [number, number, number] => [
-      gamma,
-      parent_y,
-      composed_y,
-    ]),
+  // pytest stacks parametrize decorators with the top one (gamma) varying fastest.
+  const match_rows: [number, number, number][] = parent_composed_rows.flatMap(
+    ([parent_y, composed_y]) =>
+      gamma_rows.map((gamma): [number, number, number] => [gamma, parent_y, composed_y]),
   );
 
   test.each(match_rows)("test_matches_after_effects[%#]", (gamma, parent_y, composed_y) => {
@@ -501,11 +499,9 @@ describe("TestGimbalLock", () => {
     ).toBe(true);
   });
 
-  const reconstruct_rows: [number, number][] = [0.0, 45.0, 137.0, 300.0].flatMap(
-    (gamma): [number, number][] => [
-      [gamma, 90.0],
-      [gamma, -90.0],
-    ],
+  const reconstruct_rows: [number, number][] = [90.0, -90.0].flatMap(
+    (parent_y): [number, number][] =>
+      [0.0, 45.0, 137.0, 300.0].map((gamma): [number, number] => [gamma, parent_y]),
   );
 
   test.each(reconstruct_rows)("test_reconstructs_the_rotation[%#]", (gamma, parent_y) => {

@@ -33,7 +33,7 @@ import {
 } from "../../pyrt/index.ts";
 import { Chunk } from "./chunk.ts";
 
-type _StructInfo = [
+export type _StructInfo = [
   string,
   readonly Attribute[],
   Map<number, string>,
@@ -46,7 +46,7 @@ type _StructInfo = [
   number,
 ];
 
-const _UNSET = Symbol("_UNSET");
+export const _UNSET = Symbol("_UNSET");
 
 /** The text of a fixed-size string field, read up to its first NUL,
  * that also keeps the field's raw bytes when non-zero bytes follow the
@@ -91,7 +91,7 @@ export function _fixed_str_converter(encoding: string, size: number): (value: an
   return convert;
 }
 
-type FmtFieldOptions = {
+export type FmtFieldOptions = {
   default?: any;
   repr?: boolean;
   encoding?: string | null;
@@ -243,7 +243,7 @@ export function bool_field(kw: FmtFieldOptions = {}): FieldSpec {
   return fmt_field("B", { ...kw, coerce: py_bool });
 }
 
-function _struct_info_uncached(cls: Function): _StructInfo | null {
+export function _struct_info_uncached(cls: Function): _StructInfo | null {
   /** Derive struct layout metadata for a chunk class.
    *
    * Returns a 10-tuple `(fmt, data_fields, encodings,
@@ -346,14 +346,14 @@ function _struct_info_uncached(cls: Function): _StructInfo | null {
 // attrs `@define` sets `__hash__ = None` in class stubs, so type objects
 // fail lru_cache's `Hashable` parameter check even though they are always
 // hashable at runtime. The cast restores the precise signature for callers.
-const _struct_info: (cls: Function) => _StructInfo | null = lru_cache(_struct_info_uncached);
+export const _struct_info: (cls: Function) => _StructInfo | null = lru_cache(_struct_info_uncached);
 
 /** Convert attrs field name to init parameter name.
  *
  * attrs strips the leading underscore from private field names for
  * the `__init__` signature: `_trailing` -> `trailing=`.
  */
-function _init_name(name: string): string {
+export function _init_name(name: string): string {
   return name.startsWith("_") ? lstrip(name, "_") : name;
 }
 

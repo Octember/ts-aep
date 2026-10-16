@@ -28,7 +28,7 @@ import "../../src/py_aep/binary/_register.ts";
 import { Property } from "../../src/py_aep/index.ts";
 import { get_first_layer, load_expected, parse_project } from "../conftest.ts";
 
-const SAMPLES_DIR = new Path(import.meta.dir).parent.parent.parent.div("samples").div("models").div("property");
+const SAMPLES_DIR = new Path(import.meta.path).parent.parent.parent.div("samples").div("models").div("property");
 const VAT_DIR = SAMPLES_DIR.div("value_at_time");
 
 // Maps matchName -> function to find the property from a parsed layer

@@ -82,7 +82,7 @@ descriptor(
   Viewer,
   "type",
   ChunkField.enum<ViewerType>(ViewerType, "_fitt", "value", {
-    transform: ViewerType.from_string,
+    transform: (v: any) => ViewerType.from_string(v),
     read_only: true,
   }),
 );

@@ -24,7 +24,7 @@ import {
   tkey,
 } from "../../../pyrt/index.ts";
 import type { CompPreset } from "../../parsers/comp_presets.ts";
-import type { Preferences } from "../preferences/index.ts";
+import type { Preferences } from "../preferences.ts";
 
 // TODO(pyrt): py_enum members are plain numbers and carry no owning class, so
 // `isinstance(value, IntEnum)` cannot be answered. This placeholder answers
@@ -36,10 +36,9 @@ const IntEnum = {
   },
 };
 
-// TODO(pyrt): enum `label` has no pyrt accessor. Expects the enum object to
-// expose `label_of(member)`.
+// Python `member.label` property; the enum objects expose it as `E.label(member)`.
 function enum_label(enum_class: any, member: any): string {
-  return enum_class.label_of(member);
+  return enum_class.label(member);
 }
 
 // TODO(pyrt): `type(x).__name__` has no pyrt shim. Covers the builtin types
@@ -57,7 +56,8 @@ function py_type_name(value: any): string {
 
 // TODO(pyrt): `repr()` of a dict (Map) is not in pyrt. Formats `{k!r: v!r, ...}`.
 function repr_map(m: Map<unknown, unknown>): string {
-  return "{" + [...m].map(([k, v]) => `${repr(k)}: ${repr(v)}`).join(", ") + "}";
+  const r = (x: unknown): string => (x instanceof Map ? repr_map(x) : repr(x));
+  return "{" + [...m].map(([k, v]) => `${r(k)}: ${r(v)}`).join(", ") + "}";
 }
 
 // TODO(pyrt): Python's Mapping `.items()` protocol. dicts are Maps; SettingsView
@@ -137,10 +137,81 @@ export class SettingsView {
     return contains(this._specs, key);
   }
 
-  // TODO(pyrt): MutableMapping mixin. Only `items()` is provided, because
-  // `__repr__` and `__eq__` need it.
+  // -- MutableMapping mixin methods (inherited in Python) -----------------
+
+  keys(): string[] {
+    return [...this._specs.keys()];
+  }
+
   items(): Array<[string, any]> {
     return [...this._specs.keys()].map((key): [string, any] => [key, this.__getitem__(key)]);
+  }
+
+  values(): any[] {
+    return this.items().map(([, v]) => v);
+  }
+
+  get(key: string, default_: any = null): any {
+    try {
+      return this.__getitem__(key);
+    } catch (e) {
+      if (!(e instanceof KeyError)) throw e;
+      return default_;
+    }
+  }
+
+  update(other: Map<string, any> | SettingsView | Iterable<[string, any]> = [], kwargs: Record<string, any> = {}): void {
+    if (other instanceof Map || other instanceof SettingsView) {
+      for (const [k, v] of mapping_items(other)) this.__setitem__(k, v);
+    } else {
+      for (const [k, v] of other) this.__setitem__(k, v);
+    }
+    for (const [k, v] of Object.entries(kwargs)) this.__setitem__(k, v);
+  }
+
+  setdefault(key: string, default_: any = null): any {
+    try {
+      return this.__getitem__(key);
+    } catch (e) {
+      if (!(e instanceof KeyError)) throw e;
+      this.__setitem__(key, default_);
+      return default_;
+    }
+  }
+
+  pop(key: string, ...default_: [any?]): any {
+    let value: any;
+    try {
+      value = this.__getitem__(key);
+    } catch (e) {
+      if (!(e instanceof KeyError)) throw e;
+      if (default_.length) return default_[0];
+      throw e;
+    }
+    this.__delitem__(key);
+    return value;
+  }
+
+  popitem(): [string, any] {
+    const it = this._specs.keys().next();
+    if (it.done) throw new KeyError("");
+    const key = it.value;
+    const value = this.__getitem__(key);
+    this.__delitem__(key);
+    return [key, value];
+  }
+
+  clear(): void {
+    // TODO(port): Python's MutableMapping.clear() loops popitem() until KeyError;
+    // popitem raises TypeError here (delete is unsupported), as in Python.
+    for (;;) {
+      try {
+        this.popitem();
+      } catch (e) {
+        if (e instanceof KeyError) return;
+        throw e;
+      }
+    }
   }
 
   __repr__(): string {

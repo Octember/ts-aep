@@ -7,7 +7,7 @@
  */
 
 import { describe, expect, test } from "bun:test";
-import { BytesIO, bytes_, getattr, Path, py_eq, repr, round } from "../../src/pyrt/index.ts";
+import { at, BytesIO, bytes_, getattr, Path, py_eq, repr, round, StopIteration, ValueError } from "../../src/pyrt/index.ts";
 import { approx, make_tmp_path } from "../../src/pyrt/pytest.ts";
 import { parse as parse_aep } from "../../src/py_aep/index.ts";
 import "../../src/py_aep/binary/_register.ts";
@@ -34,7 +34,7 @@ function _find_comp_item(rifx: any, comp_name: string): Chunk {
   for (const ch of recursive_find(fold.chunks, null, "Item")) {
     const utf8: any = find_by_type(ch.chunks, "Utf8");
     const idta: any = find_by_type(ch.chunks, "idta");
-    if (utf8.value === comp_name && idta.item_type === 4) {
+    if (String(utf8.value) === comp_name && idta.item_type === 4) {
       return ch;
     }
   }
@@ -73,7 +73,7 @@ describe("TestNewLayerSkeleton", () => {
     const layer: any = _top_layer(rifx, "type_null");
     const tdgp = find_by_list_type(layer.chunks, "tdgp");
     const stream = _match_name_stream(tdgp);
-    expect(stream.at(-1)!).toBe("ADBE Group End");
+    expect(String(at(stream, -1))).toBe("ADBE Group End");
   });
 
   test("test_no_zero_time_base_written", () => {
@@ -97,9 +97,10 @@ describe("TestNewLayerSkeleton", () => {
     const layer: any = _top_layer(rifx, "type_null");
     const tdgp: any = find_by_list_type(layer.chunks, "tdgp");
     const idx = tdgp.chunks.findIndex(
-      (c: any) => c.chunk_type === "tdmn" && c.value === "ADBE Time Remapping",
+      (c: any) => c.chunk_type === "tdmn" && String(c.value) === "ADBE Time Remapping",
     );
-    const tdbs: any = tdgp.chunks[idx + 1];
+    if (idx < 0) throw new StopIteration();
+    const tdbs: any = at(tdgp.chunks, idx + 1);
     const kinds = tdbs.chunks.map((c: any) => getattr(c, "list_type", c.chunk_type));
     expect(kinds).toContain("cdat");
     expect(kinds).toContain("tdum");
@@ -114,9 +115,10 @@ describe("TestNewLayerSkeleton", () => {
     const layer: any = _top_layer(rifx, "type_null");
     const tdgp: any = find_by_list_type(layer.chunks, "tdgp");
     const idx = tdgp.chunks.findIndex(
-      (c: any) => c.chunk_type === "tdmn" && c.value === "ADBE Layer Overrides",
+      (c: any) => c.chunk_type === "tdmn" && String(c.value) === "ADBE Layer Overrides",
     );
-    const nxt: any = tdgp.chunks[idx + 1];
+    if (idx < 0) throw new StopIteration();
+    const nxt: any = at(tdgp.chunks, idx + 1);
     expect(getattr(nxt, "list_type", null)).toBe("OvG2");
   });
 
@@ -128,14 +130,15 @@ describe("TestNewLayerSkeleton", () => {
     const layer: any = _top_layer(rifx, "type_null");
     const root: any = find_by_list_type(layer.chunks, "tdgp");
     const idx = root.chunks.findIndex(
-      (c: any) => c.chunk_type === "tdmn" && c.value === "ADBE Source Options Group",
+      (c: any) => c.chunk_type === "tdmn" && String(c.value) === "ADBE Source Options Group",
     );
-    const inner: any = root.chunks[idx + 1];
+    if (idx < 0) throw new StopIteration();
+    const inner: any = at(root.chunks, idx + 1);
     const kinds = inner.chunks.map((c: any) => getattr(c, "list_type", c.chunk_type));
-    // TODO(port): Python list.index raises ValueError when absent; indexOf returns -1.
     const j = kinds.indexOf("blsv");
-    expect(kinds[j + 1]).toBe("blsi");
-    const tdbs: any = inner.chunks[j + 2];
+    if (j < 0) throw new ValueError("'blsv' is not in list");
+    expect(at(kinds, j + 1)).toBe("blsi");
+    const tdbs: any = at(inner.chunks, j + 2);
     const cdat: any = find_by_type(tdbs.chunks, "cdat");
     expect(cdat.values.length).toBe(0); // 4-zero-byte no-value marker
   });
@@ -149,7 +152,7 @@ describe("TestNewLayerSkeleton", () => {
     const tdgp = find_by_list_type(layer.chunks, "tdgp");
     const stream = _match_name_stream(tdgp);
     for (const omitted of ["ADBE MTrackers", "ADBE Mask Parade", "ADBE Effect Parade"]) {
-      expect(stream).not.toContain(omitted);
+      expect(stream.some((v: any) => String(v) === omitted)).toBe(false);
     }
   });
 
@@ -161,13 +164,15 @@ describe("TestNewLayerSkeleton", () => {
     const layer: any = _top_layer(rifx, "type_null");
     const root: any = find_by_list_type(layer.chunks, "tdgp");
     const idx = root.chunks.findIndex(
-      (c: any) => c.chunk_type === "tdmn" && c.value === "ADBE Transform Group",
+      (c: any) => c.chunk_type === "tdmn" && String(c.value) === "ADBE Transform Group",
     );
-    const transform: any = root.chunks[idx + 1];
+    if (idx < 0) throw new StopIteration();
+    const transform: any = at(root.chunks, idx + 1);
     const j = transform.chunks.findIndex(
-      (c: any) => c.chunk_type === "tdmn" && c.value === "ADBE Orientation",
+      (c: any) => c.chunk_type === "tdmn" && String(c.value) === "ADBE Orientation",
     );
-    const wrapper: any = transform.chunks[j + 1];
+    if (j < 0) throw new StopIteration();
+    const wrapper: any = at(transform.chunks, j + 1);
     expect(getattr(wrapper, "list_type", null)).toBe("otst");
   });
 

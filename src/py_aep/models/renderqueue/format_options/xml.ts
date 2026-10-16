@@ -63,7 +63,7 @@ const _XML_TERMINATOR = concat(b("\n"), _XML_NULS);
  * An empty element with NO attributes; AE expands these (`<ParamName></ParamName>`)
  * while self-closing the ones that have attributes (`<Foo ObjectRef="1"/>`).
  */
-const _EMPTY_ELEMENT_RE = /<([A-Za-z_][\w.-]*)\/>/g;
+const _EMPTY_ELEMENT_RE = /<([A-Za-z_][\p{L}\p{N}_.-]*)\/>/gu;
 
 // XML param -> rules key: params whose writes are gated by the module's
 // format rules (and whose changes re-clamp dependents, see
@@ -183,7 +183,7 @@ function _xml_fromstring(text: string): ETElement {
     if (m[3] !== undefined) {
       const elem = new ETElement(m[3]);
       for (const a of (m[4] ?? "").matchAll(_XML_ATTR)) {
-        const raw = (a[2] ?? a[3]).replace(/[\t\n\r]/g, " ");
+        const raw = _xml_newlines(a[2] ?? a[3]).replace(/[\t\n]/g, " ");
         elem.attrib.set(a[1], _xml_unescape(raw));
       }
       if (stack.length > 0) {
@@ -453,7 +453,7 @@ export class ParamsDict extends Map<string, string> {
 
   popitem(): [string, string] {
     const keys = [...this.keys()];
-    if (keys.length === 0) throw new KeyError("popitem(): dictionary is empty");
+    if (keys.length === 0) throw new KeyError(repr("popitem(): dictionary is empty"));
     const key = keys[keys.length - 1];
     const value = this.get(key) as string;
     super.delete(key);
@@ -620,9 +620,8 @@ export class XmlFormatOptions extends FormatOptionsBase {
   _set_enum_param(key: string, value: any, enum_cls: any = null): void {
     if (value == null) return;
     // TODO(port): int/float distinction. Python `isinstance(2.0, int)` is False,
-    // but JS cannot tell `2.0` from `2`. Python `bool` is an int subclass, so
-    // `True` is accepted there and rejected here.
-    if (!(typeof value === "number" && Number.isInteger(value))) {
+    // but JS cannot tell `2.0` from `2`.
+    if (!((typeof value === "number" && Number.isInteger(value)) || typeof value === "boolean")) {
       throw new TypeError_(`expected an int or IntEnum for ${repr(key)}, got ${_py_type_name(value)}`);
     }
     // int() normalizes IntEnum members so str() yields the numeric form.
@@ -780,7 +779,8 @@ export class XmlFormatOptions extends FormatOptionsBase {
     if (value == null) return;
     _validate_number({ min: 1 / _ADOBE_TICKS_PER_SECOND })(value);
     const ticks = round(_ADOBE_TICKS_PER_SECOND / value);
-    this._set_param("ADBEVideoFPS", str(ticks));
+    // BigInt keeps Python's exact int spelling for ticks >= 1e21.
+    this._set_param("ADBEVideoFPS", BigInt(ticks).toString());
   }
 
   /**

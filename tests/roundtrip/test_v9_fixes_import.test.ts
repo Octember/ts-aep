@@ -242,14 +242,14 @@ test.each([
   }
   for (const item of items) {
     const [name, pin] = getitem(before, item.id);
-    expect(item.name).toBe(name);
+    expect(py_eq(item.name, name)).toBe(true);
     expect(py_eq(_pin_bytes(item.main_source), pin)).toBe(true);
   }
   const out = tmp_path.div("reloaded.aep");
   project.save(out);
   const reparsed = parse_project_fresh(out);
   for (const item of items) {
-    expect(getitem(reparsed.items, item.id).name).toBe(getitem(before, item.id)[0]);
+    expect(py_eq(getitem(reparsed.items, item.id).name, getitem(before, item.id)[0])).toBe(true);
   }
 });
 
@@ -330,7 +330,7 @@ test.each([[ImportAsType.COMP], [ImportAsType.COMP_CROPPED_LAYERS]])("test_hidde
     _psd_record("hidden", [4, 4, 12, 12], { hidden: true, lyid: 3 }),
   ]);
   const comp = _import(_project(), path, { import_as: how });
-  const enabled = new Map(comp.layers.map((layer: any) => [layer.name, layer.enabled] as const));
+  const enabled = new Map(comp.layers.map((layer: any) => [String(layer.name), layer.enabled] as const));
   expect(py_eq(enabled, new Map([["hidden", false], ["visible", true]]))).toBe(true);
 });
 
@@ -345,7 +345,7 @@ test.each([[ImportAsType.COMP], [ImportAsType.COMP_CROPPED_LAYERS]])("test_hidde
     _psd_record("top visible", [8, 8, 16, 16], { lyid: 13 }),
   ]);
   const comp = _import(_project(), path, { import_as: how });
-  const layers = new Map(comp.layers.map((layer: any) => [layer.name, layer] as const));
+  const layers = new Map(comp.layers.map((layer: any) => [String(layer.name), layer] as const));
   expect(getitem(layers, "top visible").enabled).toBe(true);
   const group = getitem(layers, "hidden group");
   expect(group.enabled).toBe(false);
@@ -364,7 +364,7 @@ test("test_layer_ids_without_lyid_number_from_two", () => {
   _import(project, path, { import_as: ImportAsType.COMP });
   const ids = new Map(
     _layer_footage(project, path.name).map(
-      (item) => [item.main_source.layer_name, item.main_source._sspc.layer_id] as const,
+      (item) => [String(item.main_source.layer_name), item.main_source._sspc.layer_id] as const,
     ),
   );
   expect(py_eq(ids, new Map([["a", 2], ["b", 3]]))).toBe(true);
@@ -394,9 +394,9 @@ test("test_long_photoshop_layer_name_is_cut_to_255_bytes", () => {
   const name = "été 日本 " + "x".repeat(300);
   const path = _psd(tmp_path.div("long.psd"), 16, [_psd_record(name, [0, 0, 8, 8], { lyid: 2 })]);
   const comp = _import(_project(), path, { import_as: ImportAsType.COMP });
-  const layer_name = comp.layers[0].name;
+  const layer_name = String(comp.layers[0].name);
   expect(len(encode(layer_name, "utf-8"))).toBe(255);
-  expect(name.startsWith(layer_name)).toBe(true);
+  expect(name.startsWith(String(layer_name))).toBe(true);
 });
 
 test("test_background_layer_is_named_background", () => {
@@ -405,7 +405,7 @@ test("test_background_layer_is_named_background", () => {
   const asset = ASSETS.div("depth", "psd_rgb8_bg_layer.psd");
   expect(list_layers(asset).at(-1)).toBe("Background");
   const comp = _import(_project(), asset, { import_as: ImportAsType.COMP });
-  expect(py_eq(comp.layers.map((layer: any) => layer.name), ["Layer 1", "Background"])).toBe(true);
+  expect(py_eq(comp.layers.map((layer: any) => String(layer.name)), ["Layer 1", "Background"])).toBe(true);
 });
 
 // --- C9: empty content box at Layer Size -------------------------------
@@ -427,7 +427,7 @@ test("test_replace_current_value_keeps_an_empty_cropped_layer", () => {
   _import(project, ASSETS.div("grouped_layers.psd"), {
     import_as: ImportAsType.COMP_CROPPED_LAYERS,
   });
-  const item = project.footages.find((f: any) => f.name === "hue/sat adj/grouped_layers.psd");
+  const item = project.footages.find((f: any) => String(f.name) === "hue/sat adj/grouped_layers.psd");
   item.replace(ASSETS.div("grouped_layers.psd"), CURRENT_VALUE);
   expect(py_eq([item.width, item.height], [80, 60])).toBe(true);
 });
@@ -454,10 +454,10 @@ test.each([
   const folder = _frames(tmp_path.div("seq"), names);
   const project = _project();
   const item = _import(project, folder.div(names[pick]), { sequence: true });
-  expect(item.name).toBe(expected);
+  expect(py_eq(item.name, expected)).toBe(true);
   const out = tmp_path.div("seq.aep");
   project.save(out);
-  expect(getitem(parse_project_fresh(out).items, item.id).name).toBe(expected);
+  expect(py_eq(getitem(parse_project_fresh(out).items, item.id).name, expected)).toBe(true);
 });
 
 test("test_huge_frame_range_with_a_fractional_rate_saves", () => {
@@ -564,7 +564,7 @@ test.each([
   // AE 2026 records the profile by name only and interprets the footage in
   // the working space (Adobe CMS project, AE's import of the same file).
   const clrs = _clrs(_import(_project(ADOBE_BASE), ASSETS.div(asset)).main_source);
-  expect(getitem(clrs, "empd")).toBe(name);
+  expect(py_eq(getitem(clrs, "empd"), name)).toBe(true);
   expect(getitem(clrs, "ipws")).toBe(1);
   expect(py_eq(getitem(clrs, "epid"), getitem(clrs, "apid"))).toBe(true);
   expect(py_eq(getitem(clrs, "apid"), _UNSET)).toBe(true);
@@ -612,7 +612,7 @@ test.each([
   // AE 2026 imports HEIC with Interpret As Linear Light off on both
   // platforms (these fixtures, and a scripted import on Windows).
   const truth = new Map(
-    parse_aep(fixture).project.footages.map((f: any) => [f.name, f.main_source] as const),
+    parse_aep(fixture).project.footages.map((f: any) => [String(f.name), f.main_source] as const),
   );
   const project = parse_aep(fixture, { platform }).project;
   const ours = _import(project, ASSETS.div(asset)).main_source;

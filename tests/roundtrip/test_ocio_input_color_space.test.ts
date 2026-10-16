@@ -18,7 +18,7 @@
  */
 
 import { expect, test } from "bun:test";
-import { b, getitem, Path, py_bool, py_eq, repr, sorted, str } from "../../src/pyrt/index.ts";
+import { b, getitem, Path, py_bool, py_eq, repr, sorted, StopIteration, str } from "../../src/pyrt/index.ts";
 import { skip } from "../../src/pyrt/pytest.ts";
 import { new as new_, parse as parse_aep } from "../../src/py_aep/index.ts";
 import "../../src/py_aep/binary/_register.ts";
@@ -43,6 +43,14 @@ const CONFIGS = new Map<string, string>([
   ["aces13cg", "ACES 1.3 CG v1.0"],
   ["sergb", str(SERGB)],
 ]);
+
+// TODO(pyrt): `next(gen)` - throws StopIteration on a miss like Python.
+function next_<T>(items: Iterable<T>, pred: (item: T) => boolean): T {
+  for (const item of items) {
+    if (pred(item)) return item;
+  }
+  throw new StopIteration();
+}
 
 /**
  * The CLRS record, the embedded profile's bytes left out: py embeds the
@@ -74,9 +82,10 @@ test.each(IMPORT_ROWS)("test_import_records_the_ocio_input_space[%#]", (tag, nam
   if (resolve_ocio_config(config) == null) {
     return skip(`OCIO config ${repr(config)} is not installed`);
   }
-  const ae = parse_aep(IMPORT_DIR.div(`ocio_input_${tag}.aep`)).project.footages.find(
+  const ae = next_(
+    parse_aep(IMPORT_DIR.div(`ocio_input_${tag}.aep`)).project.footages,
     (item: any) => item.name === name,
-  )!;
+  );
   const project = new_().project;
   project.color_management_system = ColorManagementSystem.OCIO;
   project.ocio_configuration_file = config;
@@ -99,9 +108,10 @@ test.each([
     if (resolve_ocio_config(str(SERGB)) == null) {
       return skip("sergb.ocio is not resolvable");
     }
-    const ae = parse_aep(IMPORT_DIR.div("ocio_replace_sergb.aep")).project.footages.find(
+    const ae = next_(
+      parse_aep(IMPORT_DIR.div("ocio_replace_sergb.aep")).project.footages,
       (item: any) => item.name === name,
-    )!;
+    );
     const project = new_().project;
     project.color_management_system = ColorManagementSystem.OCIO;
     project.ocio_configuration_file = str(SERGB);
@@ -118,9 +128,10 @@ test("test_proxy_takes_the_rules_pick", () => {
   if (resolve_ocio_config(str(SERGB)) == null) {
     return skip("sergb.ocio is not resolvable");
   }
-  const ae = parse_aep(IMPORT_DIR.div("ocio_replace_sergb.aep")).project.footages.find(
+  const ae = next_(
+    parse_aep(IMPORT_DIR.div("ocio_replace_sergb.aep")).project.footages,
     (item: any) => item.name === "ae_png_proxy_exr",
-  )!;
+  );
   const project = new_().project;
   project.color_management_system = ColorManagementSystem.OCIO;
   project.ocio_configuration_file = str(SERGB);

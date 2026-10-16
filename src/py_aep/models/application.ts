@@ -110,8 +110,12 @@ export class Application {
   declare is_beta: boolean;
 
   /** The name of the application. Always "After Effects". Read-only. */
-  // TODO(port): Python reads `app_name` on instances (`app.app_name`); as a static member it is only reachable on the class, so instance reads (including in `__repr__`) go through the constructor.
   static app_name: string = "After Effects";
+
+  /** Instance-level read of the class attribute (`app.app_name` in Python). */
+  get app_name(): string {
+    return (this.constructor as typeof Application).app_name;
+  }
 
   declare _head: HeadChunk;
   declare _project: Project;
@@ -134,7 +138,7 @@ export class Application {
   }
 
   __repr__(): string {
-    return `Application(version=${repr(this.version)}, build_number=${repr(this.build_number)}, app_name=${repr((this.constructor as typeof Application).app_name)})`;
+    return `Application(version=${repr(this.version)}, build_number=${repr(this.build_number)}, app_name=${repr(this.app_name)})`;
   }
 
   /** The project that is currently loaded. Read-only. */

@@ -56,7 +56,7 @@ export function _write_value(buf: BytesIO, value: any, kw: { top_level?: boolean
     // Must come before int check since bool is a subclass of int
     _space(buf);
     buf.write(value ? b("true") : b("false"));
-  } else if (typeof value === "number" && Number.isInteger(value)) {
+  } else if (typeof value === "bigint" || (typeof value === "number" && Number.isInteger(value) && !Object.is(value, -0))) {
     // TODO(port): int/float distinction — a Python float with an integral value (9.0) lands here
     // and is written as "9", not "9.0", because JS has one number type. Same for ints beyond 2^53.
     _space(buf);

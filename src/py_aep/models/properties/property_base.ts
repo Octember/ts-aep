@@ -114,8 +114,8 @@ function _assign_duplicate_mask_identity(
     .map((m) => m as MaskPropertyGroup);
   const new_id = max(siblings.map((m) => m._mkif.mask_id), null, 0) + 1;
   (new_mask as MaskPropertyGroup)._mkif.mask_id = new_id;
-  // TODO(port): Python `$` also matches before a trailing newline; JS `$` does not.
-  const base = source.name.replace(/ \p{Nd}+$/u, "");
+  // Python `$` also matches before a trailing newline; the lookahead mirrors that.
+  const base = source.name.replace(/ \p{Nd}+(?=\n?$)/u, "");
   new_mask.name = `${base} ${new_id}`;
 }
 
@@ -250,7 +250,7 @@ export class PropertyBase {
       pos = chunks.length;
       for (let i = chunks.length - 1; i >= 0; i--) {
         const c = chunks[i];
-        if (c.chunk_type === "tdmn" && getattr(c, "value", null) === "ADBE Group End") {
+        if (c.chunk_type === "tdmn" && py_eq(getattr(c, "value", null), "ADBE Group End")) {
           pos = i;
           break;
         }

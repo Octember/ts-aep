@@ -6,7 +6,7 @@ import { ChunkField } from "../descriptors.ts";
 import { label_index } from "../preferences.ts";
 import { AVLayer } from "./av_layer.ts";
 import { _UNDEFINED_ID, Layer, _no_source_id } from "./layer.ts";
-import { AttributeError, ValueError, descriptor, dict_get, len, py_cmp } from "../../../pyrt/index.ts";
+import { AttributeError, ValueError, descriptor, dict_get, py_cmp } from "../../../pyrt/index.ts";
 import type { CompItem } from "../items/composition.ts";
 
 function _require_environment_lights(comp: CompItem, what: string): void {
@@ -97,7 +97,8 @@ export class LightLayer extends Layer {
       light_type = 1,
       effect_param_defs = null,
     } = kw;
-    const layer_name = len(name) > 31 ? Array.from(name).slice(0, 31).join("") : name;
+    const name_cps = Array.from(name);
+    const layer_name = name_cps.length > 31 ? name_cps.slice(0, 31).join("") : name;
     const ldta = new LdtaChunk({
       layer_id: layer_id,
       source_id: _no_source_id(containing_comp),

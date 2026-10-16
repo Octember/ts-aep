@@ -40,10 +40,12 @@ const DECODES: [string, string, any][] = [
   ["quicktime/base", "resolution", null],
 ];
 
-test.each(DECODES)("test_decode[%#]", (sample: string, attr: string, expected: any) => {
-  const project = parse_project_fresh(FORMAT_DIR.div(`${sample}.aep`));
-  expect(getattr(_fo(project), attr)).toBe(expected);
-});
+for (const [sample, attr, expected] of DECODES) {
+  test(`test_decode[${sample}-${attr}]`, () => {
+    const project = parse_project_fresh(FORMAT_DIR.div(`${sample}.aep`));
+    expect(getattr(_fo(project), attr)).toBe(expected);
+  });
+}
 
 const WRITES: [string, string, any][] = [
   ["mp3/base", "bitrate", 320],
@@ -52,15 +54,17 @@ const WRITES: [string, string, any][] = [
   ["h.264/base", "level", 32],
 ];
 
-test.each(WRITES)("test_write_survives_roundtrip[%#]", (sample: string, attr: string, value: any) => {
-  const tmp_path = make_tmp_path();
-  const project = parse_project_fresh(FORMAT_DIR.div(`${sample}.aep`));
-  (_fo(project) as any)[attr] = value;
-  expect(getattr(_fo(project), attr)).toBe(value);
-  project.save(tmp_path.div("out.aep"));
-  const reparsed = parse_project_fresh(tmp_path.div("out.aep"));
-  expect(getattr(_fo(reparsed), attr)).toBe(value);
-});
+for (const [sample, attr, value] of WRITES) {
+  test(`test_write_survives_roundtrip[${sample}-${attr}]`, () => {
+    const tmp_path = make_tmp_path();
+    const project = parse_project_fresh(FORMAT_DIR.div(`${sample}.aep`));
+    (_fo(project) as any)[attr] = value;
+    expect(getattr(_fo(project), attr)).toBe(value);
+    project.save(tmp_path.div("out.aep"));
+    const reparsed = parse_project_fresh(tmp_path.div("out.aep"));
+    expect(getattr(_fo(reparsed), attr)).toBe(value);
+  });
+}
 
 test("test_scalar_write_rejects_non_int", () => {
   const project = parse_project_fresh(FORMAT_DIR.div("mp3", "base.aep"));

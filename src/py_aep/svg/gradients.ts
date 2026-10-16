@@ -162,20 +162,24 @@ export function resolve_gradient(
   const bw = max_x - min_x, bh = max_y - min_y;
   const [vp_w, vp_h] = viewport;
   const gt = parse_transform(gd.attr("gradientTransform", ""));
-  // Coordinates are fractions of the (already absolute) bounding box,
-  // and gradientTransform applies in that unit space (SVG 1.1 13.2):
-  // absolute = bbox . gradientTransform . point. AE 2026 maps them so
-  // (`rotate(90)` turns a left-to-right gradient top-to-bottom, and
-  // `r="0.25"` on an 80 x 40 box is a 20 x 10 ellipse).
-  //
-  // The CTM maps user coordinates to absolute; percentages refer to
-  // the viewport (a radius to its normalized diagonal).
-  const base = object_bbox
-    ? new Affine(bw, undefined, undefined, bh, min_x, min_y).multiply(gt)
-    : ctm.multiply(gt);
-  const span_x = object_bbox ? 1.0 : vp_w;
-  const span_y = object_bbox ? 1.0 : vp_h;
-  const span_r = object_bbox ? 1.0 : new LengthContext(vp_w, vp_h).diagonal;
+  let base: Affine;
+  let span_x: number, span_y: number, span_r: number;
+  if (object_bbox) {
+    // Coordinates are fractions of the (already absolute) bounding box,
+    // and gradientTransform applies in that unit space (SVG 1.1 13.2):
+    // absolute = bbox . gradientTransform . point. AE 2026 maps them so
+    // (`rotate(90)` turns a left-to-right gradient top-to-bottom, and
+    // `r="0.25"` on an 80 x 40 box is a 20 x 10 ellipse).
+    base = new Affine(bw, undefined, undefined, bh, min_x, min_y).multiply(gt);
+    span_x = span_y = span_r = 1.0;
+  } else {
+    // The CTM maps user coordinates to absolute; percentages refer to
+    // the viewport (a radius to its normalized diagonal).
+    base = ctm.multiply(gt);
+    span_x = vp_w;
+    span_y = vp_h;
+    span_r = new LengthContext(vp_w, vp_h).diagonal;
+  }
 
   if (gd.kind === "linear") {
     const x1 = _coord(gd.attr("x1", "0%"), span_x);

@@ -35,8 +35,11 @@ export class RendererOptionsBase extends SettingsView {
     super(null as any, (new.target as typeof RendererOptionsBase)._SPEC);
     this._body = body;
     this._comp = comp;
-    (this as any)._owner = this;
-    return py_object(this);
+    // Python's owner is the (possibly proxied) instance itself, so writes via
+    // the mapping side go through `__setattr__` as well.
+    const self = py_object(this);
+    object_setattr(self, "_owner", self);
+    return self;
   }
 
   __setattr__(name: string, value: any): void {

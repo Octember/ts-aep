@@ -42,8 +42,9 @@ function _import(file: Path, kw: { alphabetical: boolean }): [Project, FootageIt
 function _reparsed(project: Project, item: FootageItem, tmp_path: Path): FootageItem {
   const out = tmp_path.div("sequence.aep");
   project.save(out);
-  // TODO(port): Python `next(...)` with no default raises StopIteration; `find` returns undefined here.
-  return parse_aep(out).project.footages.find((f) => f.id === item.id) as FootageItem;
+  const found = parse_aep(out).project.footages.find((f) => f.id === item.id);
+  if (found === undefined) throw new Error("StopIteration");
+  return found as FootageItem;
 }
 
 class TestAlphabeticalSequence {

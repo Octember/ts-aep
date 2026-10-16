@@ -126,7 +126,7 @@ function _compare(py_val: any, expected: any, attr: string): string | null {
   if (attr === "fontObject") {
     const expected_name = typeof expected === "string" ? at(split(expected, ":", 1), 1) : null;
     const actual_name = py_val != null ? py_val.post_script_name : null;
-    if (actual_name === expected_name) return null;
+    if (py_eq(actual_name, expected_name)) return null;
     return `${attr}: expected ${repr(expected_name)}, got ${repr(actual_name)}`;
   }
   if (attr === "text") {
@@ -148,6 +148,11 @@ function _compare(py_val: any, expected: any, attr: string): string | null {
   // bools, ints, IntEnums (IntEnum == int holds for ExtendScript values)
   if (py_eq(py_val, expected)) return null;
   return `${attr}: expected ${repr(expected)}, got ${repr(py_val)}`;
+}
+
+/** Python dict equality: py_eq cannot compare plain records, so lift them to Maps. */
+function _as_dict(d: any): any {
+  return d instanceof Map ? d : new Map(Object.entries(d));
 }
 
 // Module-scoped fixtures from the Python file, as lazily cached module state.
@@ -248,14 +253,14 @@ describe("TestRangeBoundaries", () => {
     for (const [idx_s, entry] of Object.entries(layer_probe.paragraphCharacterIndexesAt)) {
       if ((entry as any).ok) {
         expect(
-          py_eq(doc.paragraph_character_indexes_at(int(idx_s)), (entry as any).value),
+          py_eq(_as_dict(doc.paragraph_character_indexes_at(int(idx_s))), _as_dict((entry as any).value)),
         ).toBe(true);
       }
     }
     for (const [idx_s, entry] of Object.entries(layer_probe.composedLineCharacterIndexesAt)) {
       if ((entry as any).ok) {
         expect(
-          py_eq(doc.composed_line_character_indexes_at(int(idx_s)), (entry as any).value),
+          py_eq(_as_dict(doc.composed_line_character_indexes_at(int(idx_s))), _as_dict((entry as any).value)),
         ).toBe(true);
       }
     }

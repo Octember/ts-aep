@@ -10,7 +10,7 @@
 // are only used in annotations, so they are `import type`.
 
 import { describe, expect, test } from "bun:test";
-import { len, Path, str } from "../../src/pyrt/index.ts";
+import { len, Path, StopIteration, str } from "../../src/pyrt/index.ts";
 import "../../src/py_aep/binary/_register.ts";
 import { parse as parse_aep } from "../../src/py_aep/index.ts";
 import type { Application } from "../../src/py_aep/index.ts";
@@ -32,9 +32,11 @@ function _prop(
 ): Property {
   const { comp = 0, layer = 0 } = kw;
   const lay = app.project.compositions[comp].layers[layer];
-  // TODO(port): Python `next(gen)` with no default raises StopIteration when
-  // nothing matches; `find` returns undefined here instead.
-  return lay.transform.find((p: Property) => p.match_name === match_name)!;
+  // `next(gen)` without a default raises StopIteration when nothing matches.
+  for (const p of lay.transform) {
+    if (p.match_name === match_name) return p as Property;
+  }
+  throw new StopIteration();
 }
 
 describe("TestNearestKeyIndex", () => {

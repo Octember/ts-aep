@@ -23,9 +23,9 @@ import { SolidSource } from "../../src/py_aep/models/sources/solid.ts";
 import { getitem, Path, py_assert, py_eq, sorted } from "../../src/pyrt/index.ts";
 import { make_tmp_path } from "../../src/pyrt/pytest.ts";
 
-// `Path(__file__).parent.parent.parent / "samples"`: `import.meta.dir` is the
-// directory of this file (tests/roundtrip), so two `..` reach the package root.
-const SAMPLES = new Path(import.meta.dir, "..", "..", "samples");
+// `Path(__file__).parent.parent.parent / "samples"`: `import.meta.dir` is already
+// the directory of this file (tests/roundtrip), so two `.parent` reach the package root.
+const SAMPLES = new Path(import.meta.dir).parent.parent.div("samples");
 const ASSETS = SAMPLES.div("assets");
 const IMPORT_DIR = SAMPLES.div("models", "import");
 

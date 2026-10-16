@@ -25,9 +25,18 @@ import {
   _suppress_materialization,
 } from "../../src/py_aep/models/descriptors.ts";
 
-// TODO(port): `obj.__dict__` (the Python instance dict that ChunkField reads for
-// parse-time overrides) is used directly in these tests. Translated as a `Map`
-// named `__dict__` on model instances; confirm models/descriptors.ts provides it.
+/**
+ * `obj.__dict__`: the per-instance attribute dict ChunkField reads parse-time
+ * overrides from. Same non-enumerable Map that models/descriptors.ts creates
+ * lazily, so it must be created here before a test touches it.
+ */
+// TODO(pyrt): no shim for `obj.__dict__`; mirrors instance_dict in models/descriptors.ts.
+function instance_dict(obj: any): Map<string, any> {
+  if (!Object.prototype.hasOwnProperty.call(obj, "__dict__")) {
+    Object.defineProperty(obj, "__dict__", { value: new Map<string, any>(), enumerable: false });
+  }
+  return obj.__dict__;
+}
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -258,7 +267,7 @@ describe("TestChunkFieldDictOverride", () => {
   test("test_dict_override_beats_body", () => {
     const body = new _FakeBody({ width: 100 });
     const model = new _ReadOnlyModel(body);
-    model.__dict__.set("width", 999);
+    instance_dict(model).set("width", 999);
     expect(model.width).toBe(999);
   });
 
@@ -266,7 +275,7 @@ describe("TestChunkFieldDictOverride", () => {
     const body = new _FakeBody({ name: "from_body" });
     new _FakeParent(body);
     const model = new _DirectModel(body);
-    model.__dict__.set("name", "override");
+    instance_dict(model).set("name", "override");
     expect(model.name).toBe("override");
     const token = _materialization_allowed.set(true);
     try {
@@ -274,7 +283,7 @@ describe("TestChunkFieldDictOverride", () => {
     } finally {
       _materialization_allowed.reset(token);
     }
-    expect(model.__dict__.has("name")).toBe(false);
+    expect(instance_dict(model).has("name")).toBe(false);
     expect(model.name).toBe("written");
   });
 });
@@ -299,7 +308,7 @@ describe("TestChunkFieldDefault", () => {
       _materialization_allowed.reset(token);
     }
     expect(model.name).toBe("stored");
-    expect(model.__dict__.get("name")).toBe("stored");
+    expect(instance_dict(model).get("name")).toBe("stored");
   });
 });
 
@@ -324,9 +333,7 @@ describe("TestChunkFieldSuppressMaterialization", () => {
     const body = new _FakeBody({ name: "old" });
     new _FakeParent(body);
     const model = new _DirectModel(body);
-    // TODO(port): `with _suppress_materialization():` translated as a callback
-    // scope; confirm the models/descriptors.ts shape.
-    _suppress_materialization(() => {
+    _suppress_materialization().run(() => {
       raises(RuntimeError, () => {
         model.name = "new";
       }, "during parsing");
@@ -534,7 +541,7 @@ describe("TestChunkFieldBool", () => {
     const token = _materialization_allowed.set(true);
     try {
       raises(TypeError_, () => {
-        model.flag = bad;
+        model.flag = bad as any;
       }, "expected a bool");
     } finally {
       _materialization_allowed.reset(token);

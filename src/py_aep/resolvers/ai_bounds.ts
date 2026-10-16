@@ -59,6 +59,7 @@ import {
   getattr,
   int,
   mod,
+  num_str,
   py_or,
   py_eq,
   setdefault,
@@ -77,10 +78,10 @@ type Segment = [string, ...Pt[]];
 type Metrics = [Map<number, number>, number, number, number, boolean];
 
 /** Uniform expansion applied to a filled path or a shading, in points. */
-const FILL_PAD = 0.25;
+export const FILL_PAD = 0.25;
 
 /** Largest value the `opti` artwork box can store (signed big-endian 16.16). */
-const FIXED_MAX = (2 ** 31 - 1) / 65536.0;
+export const FIXED_MAX = (2 ** 31 - 1) / 65536.0;
 
 /**
  * The box After Effects stores for a layer with no artwork: a `1/65536`
@@ -156,14 +157,13 @@ const _ROOT_RE = /\/Root[ \t\r\n]+(\d+)[ \t\r\n]+\d+[ \t\r\n]+R/g;
 // `\s` here is bytes-`\s` ([ \t\n\r\f\v]), not JS `\s`, so a 0xA0 byte is not whitespace.
 const _INLINE_IMAGE_END = /[ \t\n\r\f\v\x00]EI[ \t\n\r\f\v\x00]|[ \t\n\r\f\v\x00]EI$/g;
 
-/**
- * A content-stream colour-space operator: `/CS0 cs` (fill) or `/CS0 CS`
- * (stroke).
- */
-const _COLOR_SPACE_OP_RE = /\/([^ \t\n\r\f\v\/\[\]()<>{}%]+)[ \t\n\r\f\v]+(?:cs|CS)\b/g;
-
 // --------------------------------------------------------------------------
 // geometry
+
+/** `str(x)` for a content-stream operand: every number there is a Python float (`1.0`). */
+function _operand_str(x: any): string {
+  return typeof x === "number" ? num_str(x, true) : str(x);
+}
 
 /**
  * Two-argument `min`/`max` as Python spells them: keep the first operand unless
@@ -397,7 +397,7 @@ class _Document {
       }
       try {
         // TODO(port): zlib.decompress -> inflateSync; the error text differs from CPython's zlib.error message.
-        body = inflateSync(body);
+        body = new Uint8Array(inflateSync(body));
       } catch (exc) {
         throw Object.assign(this._reject(`corrupt content stream (${exc})`), { cause: exc });
       }
@@ -691,7 +691,7 @@ function _read_dict(data: Uint8Array, pos: number): [Map<string, any>, number] {
     const [value, next] = sub;
     pos = next;
     if (key == null) {
-      key = str(value);
+      key = _operand_str(value);
     } else {
       out.set(key, value);
       key = null;
@@ -915,13 +915,13 @@ class _Measurer {
   }
 
   _resource(resources: any, category: string, name: any): any {
-    return this._doc.get(this._doc.get(resources, category), str(name));
+    return this._doc.get(this._doc.get(resources, category), _operand_str(name));
   }
 
   _resource_ref(resources: any, category: string, name: any): any {
     const table = _as_dict(this._doc.resolve(this._doc.get(resources, category)));
     if (table == null) return null;
-    return dict_get(table, str(name));
+    return dict_get(table, _operand_str(name));
   }
 
   run(content: Uint8Array, resources: any): void {
@@ -1290,6 +1290,12 @@ export function read_ai_layer_bounds(file: PathLike, data: Uint8Array | null = n
     measurer.boxes.has(layer.object_number) ? measurer.boxes.get(layer.object_number)!.box() : null,
   );
 }
+
+/**
+ * A content-stream colour-space operator: `/CS0 cs` (fill) or `/CS0 CS`
+ * (stroke).
+ */
+const _COLOR_SPACE_OP_RE = /\/([^ \t\n\r\f\v\/\[\]()<>{}%]+)[ \t\n\r\f\v]+(?:cs|CS)\b/g;
 
 /**
  * Return the ICC profile After Effects records for an Illustrator/PDF

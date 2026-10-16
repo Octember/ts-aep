@@ -65,7 +65,30 @@ function repr_field(x: any): string {
     return `{${[...x].map(([k, v]) => `${repr_field(k)}: ${repr_field(v)}`).join(", ")}}`;
   }
   if (Array.isArray(x)) return `[${x.map((y) => repr_field(y)).join(", ")}]`;
+  if (x instanceof Uint8Array) return repr_bytes(x);
   return repr(x);
+}
+
+// CPython `repr(bytes)`: double quotes when the content has `'` but no `"`.
+function repr_bytes(x: Uint8Array): string {
+  let has_single = false;
+  let has_double = false;
+  for (const c of x) {
+    if (c === 0x27) has_single = true;
+    else if (c === 0x22) has_double = true;
+  }
+  const quote = has_single && !has_double ? 0x22 : 0x27;
+  let s = "";
+  for (const c of x) {
+    if (c === quote || c === 0x5c) s += "\\" + String.fromCharCode(c);
+    else if (c === 0x09) s += "\\t";
+    else if (c === 0x0a) s += "\\n";
+    else if (c === 0x0d) s += "\\r";
+    else if (c >= 0x20 && c < 0x7f) s += String.fromCharCode(c);
+    else s += "\\x" + c.toString(16).padStart(2, "0");
+  }
+  const q = String.fromCharCode(quote);
+  return `b${q}${s}${q}`;
 }
 
 // `str(member)` / `repr(member)` for an Enum member.
@@ -304,7 +327,7 @@ export class Stream {
   }
 
   __repr__(): string {
-    return `Stream(dictionary=${repr_field(this.dictionary)}, data=${repr(this.data)})`;
+    return `Stream(dictionary=${repr_field(this.dictionary)}, data=${repr_bytes(this.data)})`;
   }
 
   __eq__(other: any): boolean {
@@ -524,8 +547,8 @@ export class CosParser {
   }
 
   raise_lex(token: Uint8Array, exp: Uint8Array | null = null): never {
-    let msg = `Unknown COS token ${repr(token)}`;
-    if (exp != null) msg += `, expected ${repr(exp)}`;
+    let msg = `Unknown COS token ${repr_bytes(token)}`;
+    if (exp != null) msg += `, expected ${repr_bytes(exp)}`;
     throw new SyntaxError_(msg);
   }
 
@@ -583,7 +606,8 @@ export class CosParser {
     }
     // TODO(port): Python ints are unbounded; values past 2**53 lose precision as a JS number.
     // TODO(port): on a bare sign, Python's int(b"+") message shows b'+', pyrt's shows '+'.
-    return new Token(TokenType.Number, int(head));
+    // `+ 0` turns int("-0") from -0 into 0 like Python.
+    return new Token(TokenType.Number, int(head) + 0);
   }
 
   lex_num_fract(char: Uint8Array | null, head: string): Token {
@@ -635,7 +659,7 @@ export class CosParser {
     } else if (kw === "xref") {
       return new Token(TokenType.Eof);
     } else {
-      throw new SyntaxError_(`Unknown keyword ${repr(b(kw))}`);
+      throw new SyntaxError_(`Unknown keyword ${repr_bytes(b(kw))}`);
     }
   }
 
@@ -797,7 +821,7 @@ export class CosParser {
       } else if (bytes_eq(char, b(">"))) {
         break;
       } else if (!isspace_b(char)) {
-        throw new SyntaxError_(`Invalid character in hex string: ${repr(char)}`);
+        throw new SyntaxError_(`Invalid character in hex string: ${repr_bytes(char)}`);
       }
     }
 

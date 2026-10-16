@@ -29,6 +29,7 @@ import {
   py_eq,
   repr,
   round,
+  StopIteration,
   sum,
   zip,
 } from "../../src/pyrt/index.ts";
@@ -157,7 +158,8 @@ function _cases(): [string, string, string, string][] {
  */
 function _expected_frames(base: string, comp_name: string, layer_name: string, match_name: string): any[] {
   const data = load_expected(VAT_DIR, `${base}_value_at_time`);
-  const comp_data = data.comps.find((c) => c.name === comp_name)!;
+  const comp_data = data.comps.find((c) => c.name === comp_name);
+  if (comp_data === undefined) throw new StopIteration();
   const layers = comp_data.layers.filter((ly) => ly.name === layer_name);
   py_assert(
     len(layers) === 1,
@@ -308,7 +310,7 @@ describe("TestShapeInterpolationEdges", () => {
     const left = new Shape([[0.0, 0.0], [10.0, 0.0], [10.0, 10.0]]);
     const right = new Shape([[0.0, 0.0], [10.0, 0.0], [10.0, 10.0], [0.0, 10.0], [-5.0, 5.0]]);
     const blended = interpolate_shapes(left, right, 0.0);
-    expect(blended).not.toBeNull();
+    expect(blended != null).toBe(true);
     // At progress 0 the blend IS the resampled left path: the same
     // outline, two extra vertices, and still straight.
     expect(
@@ -335,7 +337,7 @@ describe("TestShapeInterpolationEdges", () => {
     );
     const right = new Shape([[0.0, 0.0], [50.0, 0.0], [100.0, 0.0]], undefined, undefined, { closed: false });
     const blended = interpolate_shapes(left, right, 0.0);
-    expect(blended).not.toBeNull();
+    expect(blended != null).toBe(true);
     expect(py_eq(blended.vertices, [[0.0, 0.0], [50.0, 0.0], [100.0, 0.0]])).toBe(true);
     expect(py_eq(blended.out_tangents[0], [20.0, 0.0])).toBe(true);
     expect(py_eq(blended.in_tangents[2], [-20.0, 0.0])).toBe(true);
@@ -349,7 +351,7 @@ describe("TestShapeInterpolationEdges", () => {
     const left = new Shape([[0.0, 0.0], [10.0, 0.0]], undefined, undefined, { closed: false });
     const right = new Shape([[0.0, 0.0], [10.0, 0.0]], undefined, undefined, { closed: true });
     const blended = interpolate_shapes(left, right, 0.5);
-    expect(blended).not.toBeNull();
+    expect(blended != null).toBe(true);
     expect(blended.closed).toBe(false);
   });
 });

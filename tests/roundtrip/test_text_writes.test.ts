@@ -213,11 +213,15 @@ describe("TestScalarWrites", () => {
     raises(ValueError, () => {
       doc.character_range(0, 5).font_size = 0;
     });
-    // TODO(port): Python raises AttributeError on assignment to a getter-only
-    // property; in strict-mode JS the same assignment throws TypeError unless
-    // CharacterRange defines a __setattr__ that raises AttributeError.
+    // Python raises AttributeError on assignment to a getter-only property;
+    // strict-mode JS throws TypeError instead, so map it back.
     raises(AttributeError, () => {
-      doc.character_range(0, 5).font_object = null;
+      try {
+        doc.character_range(0, 5).font_object = null;
+      } catch (e) {
+        if (e instanceof TypeError) throw new AttributeError(e.message);
+        throw e;
+      }
     });
   });
 });
@@ -273,7 +277,9 @@ describe("TestColorFontLeadingWrites", () => {
     const [_app, doc] = _base_doc();
     doc.character_range(2, 6).fill_color = [1, 0, 0];
     expect(approx(doc.character_range(2, 6).fill_color, [1.0, 0.0, 0.0])).toBe(true);
-    expect(approx(doc.character_range(0, 2).fill_color, [1.0, 0.0, 0.0])).toBe(false);
+    const other_fill = doc.character_range(0, 2).fill_color;
+    // `None != approx(...)` is True in Python; pyrt approx cannot take null.
+    expect(other_fill != null && approx(other_fill, [1.0, 0.0, 0.0])).toBe(false);
     doc.character_range(2, 6).fill_color = null;
     // Cleared paint: the gated read has applyFill runs but no color.
     expect(doc.character_range(2, 6).fill_color == null).toBe(true);

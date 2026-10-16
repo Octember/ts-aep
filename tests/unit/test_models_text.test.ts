@@ -1,28 +1,52 @@
-/** Tests for TextDocument and FontObject model parsing and roundtrip. */
-
-import { describe, expect, test } from "bun:test";
+import { afterEach, describe, expect, mock, test } from "bun:test";
 
 import "../../src/py_aep/binary/_register.ts";
 import { raises } from "../../src/pyrt/pytest.ts";
-import { AssertionError_, NotImplementedError, Path, PyException, RuntimeError, b } from "../../src/pyrt/index.ts";
+import { AssertionError_, Path, RuntimeError, b } from "../../src/pyrt/index.ts";
 import { PropertyValueType } from "../../src/py_aep/enums/index.ts";
 import * as specialized_properties from "../../src/py_aep/parsers/specialized_properties.ts";
+import { SyntaxError_ } from "../../src/py_aep/cos/cos.ts";
 
 const SAMPLES_DIR = new Path(import.meta.path).parent.parent.parent.div("samples", "models", "layer");
 
-// TODO(pyrt): `monkeypatch.setattr` - ESM module bindings are read-only, so
-// `find_by_list_type`, `parse_property`, `CosParser` and `parse_btdk_cos` inside
-// parsers/specialized_properties.ts cannot be swapped from a test. No shim exists.
-const monkeypatch_setattr = (_obj: unknown, _name: string, _value: unknown): void => {
-  throw new NotImplementedError("monkeypatch.setattr");
+// TODO(port): `monkeypatch.setattr(specialized_properties, name, value)` - ESM namespace
+// bindings are read-only, so the name is patched in the module that defines it via bun's
+// `mock.module` (live bindings update in already-imported modules) and restored by `undo`.
+const PATCH_MODULES: Record<string, string> = {
+  find_by_list_type: "../../src/py_aep/binary/utils.ts",
+  parse_property: "../../src/py_aep/parsers/property_value.ts",
+  CosParser: "../../src/py_aep/cos/index.ts",
+  parse_btdk_cos: "../../src/py_aep/parsers/text.ts",
 };
+const REAL_MODULES = new Map<string, any>();
+for (const path of Object.values(PATCH_MODULES)) {
+  REAL_MODULES.set(path, { ...(await import(path)) });
+}
 
-// TODO(pyrt): Python's builtin `SyntaxError` has no pyrt shim; a local stand-in
-// keeps the fake COS parser's error type distinct from RuntimeError.
-class SyntaxError_ extends PyException {}
+class MonkeyPatch {
+  private readonly patched = new Map<string, Record<string, unknown>>();
+
+  setattr(_obj: unknown, name: string, value: unknown): void {
+    const path = PATCH_MODULES[name];
+    const overrides = this.patched.get(path) ?? {};
+    overrides[name] = value;
+    this.patched.set(path, overrides);
+    mock.module(path, () => ({ ...REAL_MODULES.get(path), ...overrides }));
+  }
+
+  undo(): void {
+    for (const path of this.patched.keys()) {
+      mock.module(path, () => ({ ...REAL_MODULES.get(path) }));
+    }
+    this.patched.clear();
+  }
+}
 
 describe("TestParseTextDocument", () => {
   /** Unit tests for Source Text property parsing fallbacks. */
+
+  const monkeypatch = new MonkeyPatch();
+  afterEach(() => monkeypatch.undo());
 
   test("test_ignores_malformed_cos_payload", () => {
     /** Malformed COS data should keep the property but skip the value. */
@@ -50,9 +74,9 @@ describe("TestParseTextDocument", () => {
       }
     }
 
-    monkeypatch_setattr(specialized_properties, "find_by_list_type", fake_find_by_list_type);
-    monkeypatch_setattr(specialized_properties, "parse_property", (..._kwargs: any[]) => prop);
-    monkeypatch_setattr(specialized_properties, "CosParser", BrokenCosParser);
+    monkeypatch.setattr(specialized_properties, "find_by_list_type", fake_find_by_list_type);
+    monkeypatch.setattr(specialized_properties, "parse_property", (..._kwargs: any[]) => prop);
+    monkeypatch.setattr(specialized_properties, "CosParser", BrokenCosParser);
 
     const result = specialized_properties.parse_text_document(
       root_chunk,
@@ -88,8 +112,8 @@ describe("TestParseTextDocument", () => {
     class ValidCosParser {
       constructor(..._args: any[]) {}
 
-      parse(): Record<string, any> {
-        return {};
+      parse(): Map<string, any> {
+        return new Map<string, any>();
       }
     }
 
@@ -97,10 +121,10 @@ describe("TestParseTextDocument", () => {
       throw new RuntimeError("boom");
     };
 
-    monkeypatch_setattr(specialized_properties, "find_by_list_type", fake_find_by_list_type);
-    monkeypatch_setattr(specialized_properties, "parse_property", (..._kwargs: any[]) => prop);
-    monkeypatch_setattr(specialized_properties, "CosParser", ValidCosParser);
-    monkeypatch_setattr(specialized_properties, "parse_btdk_cos", raise_runtime_error);
+    monkeypatch.setattr(specialized_properties, "find_by_list_type", fake_find_by_list_type);
+    monkeypatch.setattr(specialized_properties, "parse_property", (..._kwargs: any[]) => prop);
+    monkeypatch.setattr(specialized_properties, "CosParser", ValidCosParser);
+    monkeypatch.setattr(specialized_properties, "parse_btdk_cos", raise_runtime_error);
 
     raises(
       RuntimeError,

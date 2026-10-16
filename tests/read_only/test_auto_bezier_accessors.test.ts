@@ -42,14 +42,14 @@ function* _json_properties(document: any): Generator<[string, string, any]> {
     }
   };
 
-  for (const item of document.items ?? []) {
+  for (const item of "items" in document ? document.items : []) {
     for (const layer of py_or(item.layers ?? null, [])) {
       const found: any[] = [];
       for (const group of py_or(layer.properties ?? null, [])) {
         walk(group, found);
       }
       for (const prop of found) {
-        yield [item.name ?? "", layer.name ?? "", prop];
+        yield ["name" in item ? item.name : "", "name" in layer ? layer.name : "", prop];
       }
     }
   }
@@ -79,12 +79,12 @@ test.each(["ae2018", "ae2022", "ae2023", "ae2026"])(
       const keys = py_or(json_prop.keyframes ?? null, []);
       if (keys.length !== prop.keyframes.length) continue;
       for (const [json_key, keyframe] of zip(keys, prop.keyframes)) {
-        if (json_key.spatialAutoBezier) {
+        if (py_bool(json_key.spatialAutoBezier ?? null)) {
           compared += 1;
           expect(approx(keyframe.in_spatial_tangent, json_key.inSpatialTangent, { abs: 0.001 })).toBe(true);
           expect(approx(keyframe.out_spatial_tangent, json_key.outSpatialTangent, { abs: 0.001 })).toBe(true);
         }
-        if (json_key.temporalAutoBezier) {
+        if (py_bool(json_key.temporalAutoBezier ?? null)) {
           compared += 1;
           for (const [ease, json_ease] of zip(keyframe.in_temporal_ease, json_key.inTemporalEase)) {
             expect(approx(ease.speed, json_ease.speed, { abs: 0.001 })).toBe(true);

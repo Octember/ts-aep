@@ -70,6 +70,9 @@ import { validate_string } from "../validators.ts";
 import { _PROPERTY_MIN_MAX } from "./overrides.ts";
 import { Property, _values_equal, _vf_tag_from_str } from "./property.ts";
 import { _INDEXED_GROUP_MATCH_NAMES, PropertyBase } from "./property_base.ts";
+// TODO(port): Python imports MaskPropertyGroup inside `_add_mask_atom` (cycle
+// breaker). mask_property_group.ts does `extends PropertyGroup`, so if this module
+// is the first of the cycle to evaluate, that `extends` hits the TDZ.
 import { MaskPropertyGroup } from "./mask_property_group.ts";
 import { match_effect_definition, parse_effect } from "../../parsers/effect.ts";
 import { parse_property_group } from "../../parsers/property.ts";
@@ -79,12 +82,12 @@ import { parse_property_group } from "../../parsers/property.ts";
 // group's own contents carries lock-flag 0x04, like the Root Vectors Group.
 // Enable-flags is 1 (enabled) except the Materials Group, which AE writes
 // as 3 (enabled + collapsed) - matching its default-collapsed UI state.
-const _STROKE_SUBGROUPS: ReadonlyArray<readonly [string, number, number]> = [
+export const _STROKE_SUBGROUPS: ReadonlyArray<readonly [string, number, number]> = [
   ["ADBE Vector Stroke Dashes", 0, 1],
   ["ADBE Vector Stroke Taper", 0, 1],
   ["ADBE Vector Stroke Wave", 0, 1],
 ];
-const _VECTOR_SUBGROUPS = new Map<string, ReadonlyArray<readonly [string, number, number]>>([
+export const _VECTOR_SUBGROUPS = new Map<string, ReadonlyArray<readonly [string, number, number]>>([
   [
     "ADBE Vector Group",
     [
@@ -101,7 +104,7 @@ const _VECTOR_SUBGROUPS = new Map<string, ReadonlyArray<readonly [string, number
 
 // AE's creation names for shape elements, where they differ from the
 // auto-name table ("Rectangle Path 1" vs auto-name "Rectangle").
-const _VECTOR_CREATION_NAMES = new Map<string, string>([
+export const _VECTOR_CREATION_NAMES = new Map<string, string>([
   ["ADBE Vector Shape - Rect", "Rectangle Path"],
   ["ADBE Vector Shape - Ellipse", "Ellipse Path"],
   ["ADBE Vector Shape - Star", "Polystar Path"],
@@ -109,7 +112,7 @@ const _VECTOR_CREATION_NAMES = new Map<string, string>([
 
 // Per-type creation-name base for text selectors. The Range Selector
 // also carries an empty Advanced subgroup in binary.
-const _TEXT_SELECTOR_NAMES = new Map<string, string>([
+export const _TEXT_SELECTOR_NAMES = new Map<string, string>([
   ["ADBE Text Selector", "Range Selector"],
   ["ADBE Text Wiggly Selector", "Wiggly Selector"],
   ["ADBE Text Expressible Selector", "Expression Selector"],
@@ -120,7 +123,7 @@ const _TEXT_SELECTOR_NAMES = new Map<string, string>([
 // its EfdG definition, and an AE 15 project's stored 1 on resave). Without
 // the atom AE loads the instance with the Legacy engine: Puppet Engine reads 1
 // and the Advanced-only parameters are hidden.
-const _PUPPET_ENGINE_VERSION = bytes_.int_to_bytes(2, 4, "big");
+export const _PUPPET_ENGINE_VERSION = bytes_.int_to_bytes(2, 4, "big");
 
 // TODO(pyrt): `type(x).__name__` has no shim; this covers the types the
 // error messages in this file can see.
@@ -135,14 +138,22 @@ function type_name(x: any): string {
   return x?.constructor?.name ?? "object";
 }
 
-// TODO(pyrt): `obj.__dict__[name] = value` has no shim. An own data property
-// shadows the prototype accessor, which is what the Python write does for the
-// plain attributes this file stores that way.
-function instance_dict_set(obj: any, name: string, value: any): void {
-  Object.defineProperty(obj, name, { value, writable: true, enumerable: true, configurable: true });
+// TODO(pyrt): no shim for `obj.__dict__`; the same non-enumerable Map per
+// instance that `ChunkField` (descriptors.ts) reads its overrides from. Both
+// names this file writes (`enabled`, `_color`) are `ChunkField`s, whose
+// `__get__` consults this Map first and whose `__set__` pops from it.
+function instance_dict(obj: any): Map<string, any> {
+  if (!Object.prototype.hasOwnProperty.call(obj, "__dict__")) {
+    Object.defineProperty(obj, "__dict__", { value: new Map<string, any>(), enumerable: false });
+  }
+  return obj.__dict__;
 }
 
-function _baked_effect_def(name: string): [string, string, ListChunk] | null {
+function instance_dict_set(obj: any, name: string, value: any): void {
+  instance_dict(obj).set(name, value);
+}
+
+export function _baked_effect_def(name: string): [string, string, ListChunk] | null {
   /**
    * Resolve `name` against the baked built-in effect templates.
    *
@@ -168,7 +179,7 @@ function _baked_effect_def(name: string): [string, string, ListChunk] | null {
   return [match_name, display, sspc];
 }
 
-function _insert_before_group_end(tdgp: ListChunk, chunk: any): void {
+export function _insert_before_group_end(tdgp: ListChunk, chunk: any): void {
   /**
    * Insert *chunk* before the 'ADBE Group End' tdmn in *tdgp*.
    *
@@ -184,7 +195,7 @@ function _insert_before_group_end(tdgp: ListChunk, chunk: any): void {
   tdgp.chunks.push(chunk);
 }
 
-function _effect_tdgp(sspc: ListChunk): ListChunk | null {
+export function _effect_tdgp(sspc: ListChunk): ListChunk | null {
   /** The instance `tdgp` (param container) inside an effect sspc. */
   try {
     return find_by_list_type(sspc.chunks, "tdgp");
@@ -194,7 +205,7 @@ function _effect_tdgp(sspc: ListChunk): ListChunk | null {
   }
 }
 
-function _set_effect_instance_name(sspc: ListChunk, name: string): void {
+export function _set_effect_instance_name(sspc: ListChunk, name: string): void {
   /** Replace the instance display name (tdsn) in a cloned effect sspc. */
   const tdgp = _effect_tdgp(sspc);
   if (tdgp == null) return;
@@ -209,9 +220,9 @@ function _set_effect_instance_name(sspc: ListChunk, name: string): void {
 // A sibling mask name the next "Mask N" counts: "Mask" (number 1) or "Mask"
 // plus 1 to 6 ASCII digits (AE 2026 ignores 7-digit numbers, other digit
 // sets and any other spacing).
-const _NUMBERED_MASK = /^Mask(?: ([0-9]{1,6}))?$/;
+export const _NUMBERED_MASK = /^Mask(?: ([0-9]{1,6}))?$/;
 
-function _next_mask_name(names: Iterable<string>): string {
+export function _next_mask_name(names: Iterable<string>): string {
   /**
    * The name AE 2026 gives a new mask beside masks named `names`: one past
    * the highest number, keeping the zero padding of the first name holding
@@ -232,7 +243,7 @@ function _next_mask_name(names: Iterable<string>): string {
   return `Mask ${String(highest + 1).padStart(width, "0")}`;
 }
 
-function _reset_to_default_values(group: PropertyGroup): void {
+export function _reset_to_default_values(group: PropertyGroup): void {
   /**
    * Reset every value leaf of a freshly cloned effect to its default.
    *
@@ -272,7 +283,7 @@ function _reset_to_default_values(group: PropertyGroup): void {
   }
 }
 
-function _reorder_and_fill(
+export function _reorder_and_fill(
   container: PropertyGroup,
   specs: ReadonlyArray<PropSpec | GroupSpec>,
   child_depth: number,
@@ -384,7 +395,7 @@ function _reorder_and_fill(
   for (const child of ordered) child._parent_property = container;
 }
 
-function _apply_bounds(prop: Property): void {
+export function _apply_bounds(prop: Property): void {
   /** Apply min/max override from `_PROPERTY_MIN_MAX` if one exists. */
   const bounds = dict_get(_PROPERTY_MIN_MAX, prop.match_name);
   if (bounds != null) {
@@ -393,7 +404,7 @@ function _apply_bounds(prop: Property): void {
   }
 }
 
-function _derive_layer_styles_enabled(
+export function _derive_layer_styles_enabled(
   group: PropertyGroup,
   ae_major: number,
   kw: { synthesize_subgroups: boolean },
@@ -706,7 +717,9 @@ export class PropertyGroup extends PropertyBase {
     if (this.match_name !== "ADBE Camera Options Group") return null;
     let zoom: number;
     try {
-      zoom = (this._containing_layer as any)._default_zoom();
+      // `None._default_zoom` / a layer without it is an AttributeError in Python.
+      const layer = this._containing_layer as any;
+      zoom = getattr(layer, "_default_zoom").call(layer);
     } catch (e) {
       if (e instanceof ValueError || e instanceof AttributeError) return null;
       throw e;
@@ -773,6 +786,10 @@ export class PropertyGroup extends PropertyBase {
     // (`_ldta`, `_chunk`, ...). Answering it without the child scan
     // keeps parent-chain probes like `hasattr(node, "_ldta")` O(1)
     // instead of deriving every sibling's display name.
+    // TODO(pyrt): Python's implicit dunder lookups (`__bool__`, `__eq__`, ...)
+    // bypass `__getattr__`; pyrt probes them as plain property reads on the
+    // `py_object` proxy, so a miss must be `undefined`, not an AttributeError.
+    if (name.startsWith("__") && name.endsWith("__")) return undefined as any;
     if (name.startsWith("_")) throw new AttributeError(name);
     // Avoid infinite recursion during __init__ (before
     // `properties` has been set on the instance).
@@ -805,7 +822,8 @@ export class PropertyGroup extends PropertyBase {
     if (
       !name.startsWith("_") &&
       !(name in this.constructor.prototype) &&
-      !Object.prototype.hasOwnProperty.call(this, name)
+      !Object.prototype.hasOwnProperty.call(this, name) &&
+      !instance_dict(this).has(name)
     ) {
       throw new AttributeError(
         `'${this.constructor.name}' has no attribute '${name}' to set; ` +
@@ -966,7 +984,7 @@ export class PropertyGroup extends PropertyBase {
    */
   add_variable_font_axis(axis_tag: string, font_file: string | null = null): Property {
     validate_string(axis_tag);
-    if (len(axis_tag) !== 4) {
+    if (Array.from(axis_tag).length !== 4) {
       throw new ValueError("axis_tag must be a 4-character tag (e.g. 'wght').");
     }
     if (this.match_name !== "ADBE Text Animator Properties") {

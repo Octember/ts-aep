@@ -5,11 +5,12 @@
  */
 
 import { expect, test } from "bun:test";
-import { CosParser, SyntaxError_, TokenType } from "../../src/py_aep/cos/cos.ts";
+import { CosParser } from "../../src/py_aep/cos/index.ts";
+import { TokenType } from "../../src/py_aep/cos/cos.ts";
 import { UnsupportedAiLayersError, read_ai_layers } from "../../src/py_aep/resolvers/ai_layers.ts";
 import { probe_media } from "../../src/py_aep/resolvers/media_probe.ts";
 import { UnsupportedPsdLayersError, read_psd_layers } from "../../src/py_aep/resolvers/psd_layers.ts";
-import { BytesIO, Path, ValueError, b, bytes_, concat, py_eq, sorted, struct } from "../../src/pyrt/index.ts";
+import { BytesIO, Path, SyntaxError_, ValueError, b, bytes_, concat, py_eq, sorted, struct } from "../../src/pyrt/index.ts";
 import { make_tmp_path, raises } from "../../src/pyrt/pytest.ts";
 
 // Python: Path(__file__).parent.parent.parent / "samples" / "assets" (file is in tests/unit).
@@ -60,7 +61,7 @@ const _TRUNCATED: Map<string, Uint8Array> = new Map<string, Uint8Array>([
   ["exr_magic_only.exr", ASSETS.div("exr").div("rgb_full.exr").read_bytes().slice(0, 4)],
 ]);
 
-test.each(sorted(Array.from(_TRUNCATED.keys())))("test_truncated_media_raises_value_error[%#]", (name: string) => {
+test.each(sorted(Array.from(_TRUNCATED.keys())).map((n) => [n]))("test_truncated_media_raises_value_error[%#]", (name: string) => {
   const tmp_path = make_tmp_path();
   const path = tmp_path.div(name);
   path.write_bytes(_TRUNCATED.get(name)!);
@@ -147,7 +148,7 @@ test("test_cos_lexer_stops_at_end_of_data", () => {
   expect(Array.isArray(result) || result instanceof SyntaxError_).toBe(true);
 });
 
-test.each([null, 10_000_100])("test_cos_stream_is_read_in_blocks[%#]", (max_pos: number | null) => {
+test.each([[null], [10_000_100]])("test_cos_stream_is_read_in_blocks[%#]", (max_pos: number | null) => {
   // A 0.5 MB embedded ICC profile took seconds to lex byte by byte, which
   // the import's colour-profile lookup now does for every .ai/.pdf.
   const body = concat(bytes_.repeat(b("x"), 3_000_000), b("endstrea"), bytes_.repeat(b("y"), 1000));
@@ -161,8 +162,8 @@ test.each([null, 10_000_100])("test_cos_stream_is_read_in_blocks[%#]", (max_pos:
 });
 
 test.each([
-  b("%PDF-1.5\n1 0 obj\n<</OCProperties<</D<</Order 8 0 R/"),
-  b('%PDF-1.5\n1 0 obj\n<</OCProperties<</D "x>>>>\n'),
+  [b("%PDF-1.5\n1 0 obj\n<</OCProperties<</D<</Order 8 0 R/")],
+  [b('%PDF-1.5\n1 0 obj\n<</OCProperties<</D "x>>>>\n')],
 ])("test_malformed_ai_layers_raise_documented_error[%#]", (data: Uint8Array) => {
   const tmp_path = make_tmp_path();
   const path = tmp_path.div("bad.ai");

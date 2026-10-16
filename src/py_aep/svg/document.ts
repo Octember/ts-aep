@@ -1,15 +1,15 @@
 /** SVG root parsing: canvas size and the viewBox origin transform. */
 
 import { dict_get, float, min, max, py_bool, py_eq, py_or, split } from "../../pyrt/index.ts";
-import { parse_length } from "./_util.ts";
+import { NUMBER_RE, parse_length } from "./_util.ts";
 import { Affine } from "./transform.ts";
 
 // TODO(port): xml.etree.ElementTree.Element has no pyrt shim yet; typed as any.
 type Element = any;
 
-// Python `NUMBER_RE.findall(value)`: the unanchored, global form of `NUMBER_RE` in _util.ts.
+// Python `NUMBER_RE.findall(value)`: the unanchored, global form of the (`^`-anchored) `NUMBER_RE` in _util.ts.
 // TODO(port): CPython's `\d` also matches non-ASCII decimal digits; this uses ASCII `\d`.
-const NUMBER_FINDALL_RE = /[-+]?(?:\d*\.\d+|\d+\.?)(?:[eE][-+]?\d+)?/g;
+const NUMBER_FINDALL_RE = new RegExp(NUMBER_RE.source.slice(1), "g");
 
 // TYPE_CHECKING-only alias in Python.
 type ViewBox = readonly [number, number, number, number];

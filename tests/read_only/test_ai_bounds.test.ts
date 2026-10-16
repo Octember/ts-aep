@@ -56,14 +56,17 @@ const QUANTUM = 1 / 65536;
 const TOLERANCE = 3 * QUANTUM;
 
 /** After Effects' own artwork box and footage size, per layer name. */
-// TODO(port): pyrt `lru_cache` keys by argument identity while Python's `Path` hashes by value,
-// so each fresh `ASSETS.div(...)` / `IMPORT_DIR.div(...)` call re-measures. Results are identical, only slower.
-const _ae_layer_boxes = lru_cache((aep: Path): Map<string, [number[], number, number]> =>
-  ai_layer_opti_boxes(parse_project(aep)),
+// `lru_cache` keys by argument identity while Python's `Path` hashes by value, so the cache is keyed on the path string.
+const _ae_layer_boxes_cached = lru_cache((aep: string): Map<string, [number[], number, number]> =>
+  ai_layer_opti_boxes(parse_project(new Path(aep))),
 );
+function _ae_layer_boxes(aep: Path): Map<string, [number[], number, number]> {
+  return _ae_layer_boxes_cached(String(aep));
+}
 
 /** Every layer's measured box, read and measured once per file. */
-const _measured = lru_cache((path: Path): Map<string, number[] | null> => {
+const _measured_cached = lru_cache((path_: string): Map<string, number[] | null> => {
+  const path = new Path(path_);
   const data = path.read_bytes();
   // Python wraps both reads in `warnings.catch_warnings()` with `simplefilter("ignore", UserWarning)`.
   // TODO(pyrt): no catch_warnings / simplefilter shim; emulated by restoring the captured-warnings length afterwards.
@@ -78,6 +81,9 @@ const _measured = lru_cache((path: Path): Map<string, number[] | null> => {
   }
   return new Map(zip(names, bounds));
 });
+function _measured(path: Path): Map<string, number[] | null> {
+  return _measured_cached(String(path));
+}
 
 function _probe_layers(): string[] {
   return [..._ae_layer_boxes(PROBE_AEP).keys()];

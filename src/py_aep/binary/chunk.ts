@@ -24,6 +24,7 @@ import {
   field,
   floordiv,
   getattr,
+  hasattr,
   len,
   py_bool,
   py_eq,
@@ -549,7 +550,7 @@ export class ContainerChunk extends Chunk {
     const encoded = encode(cls._legacy_string(value), "UTF-8", "surrogateescape");
     const size = py_or(len(this.data), dict_get(_LEGACY_FIXED_BUFFERS, this.chunk_type));
     if (!_LEGACY_FIXED_BUFFERS.has(this.chunk_type) || size == null) {
-      return concat_nul(encoded);
+      return bytes_.concat(encoded, b("\x00"));
     }
     if (len(encoded) + 1 > size) {
       throw new ValueError(
@@ -589,11 +590,6 @@ export const _legacy_names = new ContextVar<boolean>("_legacy_names", { default:
  * Set by `write_aep` while writing a project older than `LEGACY_NAME_FORMAT`,
  * so name containers py_aep built are written as bare strings too.
  */
-
-/** `bytes + b"\x00"` */
-function concat_nul(data: Uint8Array): Uint8Array {
-  return bytes_.concat(data, b("\x00"));
-}
 
 /** The NUL-terminated string at the start of a legacy body. */
 export function _legacy_text(data: Uint8Array): string {
@@ -681,7 +677,7 @@ export function _resolve_ldat_context(siblings: Chunk[], ctx: ReadContext): Reco
     ctx.parent_siblings.length > 2
   ) {
     const tdb4_sibling: any = ctx.parent_siblings[2];
-    if ("is_spatial" in tdb4_sibling) {
+    if (hasattr(tdb4_sibling, "is_spatial")) {
       result.is_spatial = tdb4_sibling.is_spatial;
     }
   }
@@ -691,7 +687,7 @@ export function _resolve_ldat_context(siblings: Chunk[], ctx: ReadContext): Reco
 export function _resolve_tdum_context(siblings: Chunk[], ctx: ReadContext): Record<string, any> {
   if (siblings.length > 2) {
     const tdb4: any = siblings[2];
-    if ("color" in tdb4 && "integer" in tdb4) {
+    if (hasattr(tdb4, "color") && hasattr(tdb4, "integer")) {
       return { is_color: tdb4.color, is_integer: tdb4.integer };
     }
   }

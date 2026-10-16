@@ -274,6 +274,7 @@ export function _set_transform_defaults(layer: Layer, ae_major: number): void {
   }
 }
 
+/** One component of the vector `source` returns, read on each call. */
 export function _component(source: () => number[], dim: number): () => number {
   return () => source()[dim];
 }

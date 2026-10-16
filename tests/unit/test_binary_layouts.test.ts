@@ -4,6 +4,7 @@
  */
 
 import { describe, expect, test } from "bun:test";
+import "../../src/py_aep/binary/_register.ts";
 import type { Chunk } from "../../src/py_aep/binary/chunk.ts";
 import { CsctChunk } from "../../src/py_aep/binary/composition_chunks.ts";
 import { LdtaChunk } from "../../src/py_aep/binary/layer_chunks.ts";

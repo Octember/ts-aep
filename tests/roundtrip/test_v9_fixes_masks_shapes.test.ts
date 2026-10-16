@@ -15,6 +15,7 @@ import {
   AttributeError,
   len,
   Path,
+  py_bool,
   py_eq,
   round,
   TypeError_,
@@ -42,8 +43,8 @@ function _solid_mask(width = 200, height = 100): any[] {
 function _reparse_mask(app: py_aep.Application, tmp_path: Path): any {
   const path = tmp_path.div("out.aep");
   app.project.save(path);
-  const comp = parse(path).project.compositions.find((c) => c.name === "C")!;
-  return comp.layers.find((lyr) => lyr.name === "S")!.masks.properties[0];
+  const comp = parse(path).project.compositions.find((c) => String(c.name) === "C")!;
+  return comp.layers.find((lyr) => String(lyr.name) === "S")!.masks.properties[0];
 }
 
 function _tensions(path_prop: any): number[][] {
@@ -78,7 +79,7 @@ describe("TestRotoBezierTensions", () => {
     mask.roto_bezier = true;
     const reread = _reparse_mask(app, tmp_path);
     const path = reread.property("ADBE Mask Shape");
-    expect(reread.roto_bezier).toBe(true);
+    expect(py_bool(reread.roto_bezier)).toBe(true);
     expect(py_eq(_tensions(path), [[1.0, 1.0, 1.0]])).toBe(true);
     expect(py_eq(_round(path.value.in_tangents), ZERO3)).toBe(true);
     expect(py_eq(_round(path.value.out_tangents), ZERO3)).toBe(true);
@@ -162,7 +163,7 @@ describe("TestRotoBezierTensions", () => {
     mask.roto_bezier = false;
     const reread = _reparse_mask(app, tmp_path);
     const path = reread.property("ADBE Mask Shape");
-    expect(reread.roto_bezier).toBe(false);
+    expect(py_bool(reread.roto_bezier)).toBe(false);
     expect(py_eq(_tensions(path), [[]])).toBe(true);
     expect(
       py_eq(_round(path.value.in_tangents), [
@@ -205,7 +206,7 @@ describe("TestMaskNaming", () => {
     for (const name of existing.slice(1)) {
       solid.masks.add_property("ADBE Mask Atom").name = name;
     }
-    expect(solid.masks.add_property("ADBE Mask Atom").name).toBe(expected);
+    expect(String(solid.masks.add_property("ADBE Mask Atom").name)).toBe(expected);
   });
 });
 
@@ -369,7 +370,7 @@ describe("TestShapeCopies", () => {
     const path = tmp_path.div("copy.aep");
     app.project.save(path);
     const comp = parse(path).project.compositions[0];
-    const b2 = comp.layers.find((lyr) => lyr.name === "B")!;
+    const b2 = comp.layers.find((lyr) => String(lyr.name) === "B")!;
     expect(
       py_eq(
         _round(b2.masks.properties[0].property("ADBE Mask Shape").value.vertices),
@@ -448,7 +449,7 @@ describe("TestGroupAttributeWrites", () => {
     expect(py_eq(project_bytes(app.project), before)).toBe(true);
     if (attr === "position") {
       // Attribute access still reaches the child property.
-      expect(group.position.match_name).toBe("ADBE Position");
+      expect(String(group.position.match_name)).toBe("ADBE Position");
     }
   });
 });
@@ -457,7 +458,7 @@ describe("TestNewLayerMatchNames", () => {
   test("test_text_and_shape_layers", () => {
     const app = py_aep.new();
     const comp = app.project.root_folder.add_comp("C", 400, 300, 1.0, 5.0, 24.0);
-    expect(comp.add_text("x").match_name).toBe("ADBE Text Layer");
-    expect(comp.add_shape().match_name).toBe("ADBE Vector Layer");
+    expect(String(comp.add_text("x").match_name)).toBe("ADBE Text Layer");
+    expect(String(comp.add_shape().match_name)).toBe("ADBE Vector Layer");
   });
 });

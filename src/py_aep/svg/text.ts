@@ -201,7 +201,13 @@ function _glyphs(font: any, text: string): [(number | null)[], number[], number,
   // the "unresolved font is skipped" behaviour rather than crashing read_svg.
   // TODO(port): fontkit has no getBestCmap(); the internal cmap processor is used instead.
   // Its lookup returns 0 for unmapped code points, which is reported as null here.
-  const cmap: any = font._cmapProcessor;
+  let cmap: any = null;
+  try {
+    cmap = font._cmapProcessor;
+  } catch {
+    // fontkit throws when no supported cmap subtable exists (fontTools: getBestCmap() is None).
+    cmap = null;
+  }
   // TODO(port): getGlyphSet() → the fontkit font itself; glyphs are addressed by id, not name.
   const glyph_set = font;
   const units_per_em = font.unitsPerEm;
@@ -216,11 +222,11 @@ function _glyphs(font: any, text: string): [(number | null)[], number[], number,
   return [names, advances, units_per_em, glyph_set];
 }
 
+/** Advance width of a run's text in user units (incl. letter-spacing). */
 function _advance_width(
   run: TextRun,
   glyphs: [(number | null)[], number[], number, any],
 ): number {
-  /** Advance width of a run's text in user units (incl. letter-spacing). */
   const [, advances, units_per_em] = glyphs;
   const scale = run.font_size / units_per_em;
   return sum(advances) * scale + run.letter_spacing * Array.from(run.text).length;

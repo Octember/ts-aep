@@ -8,6 +8,7 @@
  * do not touch the binary layer.
  */
 
+import { py_eq } from "../../pyrt/index.ts";
 import type { Shape } from "../models/properties/shape.ts";
 import type { PsdLayerStyles } from "../resolvers/psd_styles.ts";
 
@@ -141,6 +142,11 @@ export class LayerSpec {
     this.depth = depth;
   }
 
+  /** NamedTuple equality: field-wise. */
+  __eq__(other: any): boolean {
+    return other instanceof LayerSpec && py_eq([...this], [...other]);
+  }
+
   *[Symbol.iterator](): Generator<any> {
     yield this.name;
     yield this.opti_data;
@@ -211,6 +217,11 @@ export class LayerGroupSpec {
     this.layer_name = layer_name;
     this.collapsed = collapsed;
     this.enabled = enabled;
+  }
+
+  /** NamedTuple equality: field-wise. */
+  __eq__(other: any): boolean {
+    return other instanceof LayerGroupSpec && py_eq([...this], [...other]);
   }
 
   *[Symbol.iterator](): Generator<any> {

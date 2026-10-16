@@ -141,7 +141,9 @@ const _JOIN: Map<string, number> = new Map([
   ["bevel", 3],
 ]);
 // Python `re.match` anchors at the start of the string, hence the `^`.
-const _URL_RE = /^url\(\s*#([^)\s]+)\s*\)/;
+// `\s` is spelled out: CPython's str `\s` matches \x1c-\x1f and \x85 but not \ufeff.
+const _PY_WS = "\\t\\n\\v\\f\\r\\x1c-\\x1f \\x85\\xa0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000";
+const _URL_RE = new RegExp(`^url\\([${_PY_WS}]*#([^)${_PY_WS}]+)[${_PY_WS}]*\\)`);
 
 /**
  * Parse an SVG file into a flattened {@link SvgDocument}.
@@ -696,9 +698,8 @@ class _Reader {
     // SVG requires a miter limit >= 1 (AE's Miter Limit too); AE 2026
     // imports a smaller one clamped to 1.
     const miter = max([1.0, parse_number(dict_get(style, "stroke-miterlimit", "4"))]);
-    // TODO(port): Python `\s` also matches \x1c-\x1f; JS `\s` does not.
     const dashes = strip(py_or(dict_get(style, "stroke-dasharray"), ""))
-      .split(/[,\s]+/)
+      .split(new RegExp(`[,${_PY_WS}]+`))
       .filter((t) => py_bool(t) && t !== "none")
       .map((t) => parse_number(t) * ctm.mean_scale);
     return new StrokeStyle(paint, width, cap, join, miter, dashes);
@@ -718,8 +719,7 @@ function _bbox(subpaths: Subpath[]): Bbox {
   return [min(xs), min(ys), max(xs), max(ys)];
 }
 
-// TODO(port): Python `\s` also matches \x1c-\x1f; JS `\s` does not.
-const _WS_RE = /\s+/g;
+const _WS_RE = new RegExp(`[${_PY_WS}]+`, "g");
 
 /**
  * Collapse internal whitespace runs (incl. newlines/tabs) to one space.

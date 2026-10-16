@@ -4,7 +4,7 @@ import { ChunkNotFoundError, find_by_list_type, find_by_type } from "../binary/u
 import { FileSource } from "../models/sources/file.ts";
 import { PlaceholderSource } from "../models/sources/placeholder.ts";
 import { SolidSource } from "../models/sources/solid.ts";
-import { getattr, py_bool } from "../../pyrt/index.ts";
+import { getattr, hasattr, py_bool } from "../../pyrt/index.ts";
 import type { ListChunk } from "../binary/chunk.ts";
 
 /**
@@ -38,7 +38,7 @@ export function parse_source(
 
   const asset_type = getattr(opti_chunk, "asset_type", "");
 
-  if (!py_bool(asset_type) && "placeholder_name" in opti_chunk) {
+  if (!py_bool(asset_type) && hasattr(opti_chunk, "placeholder_name")) {
     return new PlaceholderSource({
       _sspc: sspc_chunk,
       _opti: opti_chunk,

@@ -18,7 +18,8 @@ import { FipsChunk } from "../../src/py_aep/binary/misc_chunks.ts";
 
 // `if TYPE_CHECKING: pass` block dropped (type-only, no runtime effect).
 
-const SAMPLES_DIR = new Path(import.meta.dir).parent.parent.parent.div("samples", "models", "view");
+// Python: Path(__file__).parent.parent.parent; import.meta.dir is already the file's parent.
+const SAMPLES_DIR = new Path(import.meta.dir).parent.parent.div("samples", "models", "view");
 
 describe("TestViewOptionsWithoutItem", () => {
   /**
@@ -30,7 +31,7 @@ describe("TestViewOptionsWithoutItem", () => {
    */
 
   test("test_set_and_read_gated_fields_with_item_none", () => {
-    const opts = new ViewOptions({ fips: new FipsChunk(), item: null });
+    const opts = new ViewOptions({ _fips: new FipsChunk(), _item: null });
 
     opts.rulers = true;
     expect(opts.rulers).toBe(true);
@@ -43,7 +44,7 @@ describe("TestViewOptionsWithoutItem", () => {
   });
 
   test("test_gated_enum_field_with_item_none", () => {
-    const opts = new ViewOptions({ fips: new FipsChunk(), item: null });
+    const opts = new ViewOptions({ _fips: new FipsChunk(), _item: null });
 
     opts.fast_preview = FastPreviewType.FP_WIREFRAME;
     expect(opts.fast_preview).toBe(FastPreviewType.FP_WIREFRAME);

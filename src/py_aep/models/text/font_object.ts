@@ -1,11 +1,20 @@
 /** Font object model for After Effects text layers. */
 
-import { descriptor, split, str } from "../../../pyrt/index.ts";
+import { TypeError_, descriptor, split, str } from "../../../pyrt/index.ts";
 import { CosField } from "../../cos/descriptors.ts";
 
 /** Decode the COS design vector (16.16 fixed-point ints) to floats. */
 function _design_vector_from_cos(raw: number[]): number[] {
-  return raw.map((v) => v / 65536.0);
+  if (raw == null || typeof (raw as any)[Symbol.iterator] !== "function") {
+    throw new TypeError_("object is not iterable");
+  }
+  return Array.from(raw, (v: any) => {
+    // Python `str / float` raises TypeError (JS would yield NaN)
+    if (typeof v !== "number" && typeof v !== "boolean") {
+      throw new TypeError_("unsupported operand type(s) for /");
+    }
+    return v / 65536.0;
+  });
 }
 
 /**

@@ -10,7 +10,7 @@
 
 import { describe, expect, test } from "bun:test";
 import { createHash } from "node:crypto";
-import { and, b, bytes_, bytes_eq, decode, len, Path, py_bool, py_eq, struct } from "../../src/pyrt/index.ts";
+import { and, b, bytes_, bytes_eq, decode, len, Path, py_bool, py_eq, StopIteration, struct } from "../../src/pyrt/index.ts";
 import { make_tmp_path } from "../../src/pyrt/pytest.ts";
 import { ImportOptions, parse } from "../../src/py_aep/index.ts";
 import "../../src/py_aep/binary/_register.ts";
@@ -132,9 +132,11 @@ describe("TestTdb4KeyFlagsByte", () => {
     const tmp_path = make_tmp_path();
     const source = SAMPLES.div("models", "property", "effect_point_speed.aep");
     const data = new Uint8Array(source.read_bytes());
-    const target = _leaves(new Uint8Array(data), b("Layr"))
+    const targets = _leaves(new Uint8Array(data), b("Layr"))
       .filter(([ctype, body]) => ctype === "tdb4" && data[body + 0x4F] === 1)
-      .map(([, body]) => body + 0x4F)[0];
+      .map(([, body]) => body + 0x4F);
+    if (targets.length === 0) throw new StopIteration(); // next() on an empty generator
+    const target = targets[0];
     data[target] = 0x07;
     const patched = tmp_path.div("patched.aep");
     patched.write_bytes(new Uint8Array(data));

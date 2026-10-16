@@ -20,8 +20,9 @@ import { Path, ValueError, int, repr, type PathLike } from "../../pyrt/index.ts"
 
 // Pattern to match trailing digits in a filename stem (e.g. "frame001").
 // Python's `\d` matches any Unicode decimal digit, which is what `\p{Nd}` matches.
-// TODO(port): Python's `$` also matches before a trailing "\n"; JS's `$` does not.
-const _NUMBERED_RE = /(\p{Nd}+)$/u;
+// Python's `$` also matches before a trailing "\n"; JS's `$` does not, hence the lookahead.
+// TODO(port): pyrt `int()` only parses ASCII digits, Python's `int()` accepts any Unicode Nd.
+const _NUMBERED_RE = /(\p{Nd}+)(?=\n?$)/u;
 
 /** Type of the `CURRENT_VALUE` sentinel. */
 class _CurrentValue {

@@ -26,10 +26,9 @@ describe("TestRenderOptionEnums", () => {
   });
 
   test("test_shadow_map_resolution_labels", () => {
-    // TODO(port): Python `member.label` is a property on the enum; the py_enum shim has no
-    // label helper, so this assumes the generated enum exposes `label_of(member)` (like `name_of`).
-    expect(ShadowMapResolution.label_of(ShadowMapResolution.COMP_SIZE)).toBe("Comp Size");
-    expect(ShadowMapResolution.label_of(ShadowMapResolution.RES_750)).toBe("750");
+    // `member.label` is a method taking the member in the TS enum (see enums/renderer_options.ts).
+    expect(ShadowMapResolution.label(ShadowMapResolution.COMP_SIZE)).toBe("Comp Size");
+    expect(ShadowMapResolution.label(ShadowMapResolution.RES_750)).toBe("750");
   });
 
   test("test_environment_light_shadow_resolution", () => {
@@ -39,9 +38,8 @@ describe("TestRenderOptionEnums", () => {
   });
 
   test("test_environment_light_shadow_resolution_labels", () => {
-    // TODO(port): see test_shadow_map_resolution_labels; `label` is assumed to be `label_of`.
-    expect(EnvironmentLightShadowResolution.label_of(EnvironmentLightShadowResolution.HALF)).toBe("Half (2MB)");
-    expect(EnvironmentLightShadowResolution.label_of(EnvironmentLightShadowResolution.DOUBLE)).toBe("Double (128MB)");
+    expect(EnvironmentLightShadowResolution.label(EnvironmentLightShadowResolution.HALF)).toBe("Half (2MB)");
+    expect(EnvironmentLightShadowResolution.label(EnvironmentLightShadowResolution.DOUBLE)).toBe("Double (128MB)");
   });
 });
 

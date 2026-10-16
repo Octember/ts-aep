@@ -19,6 +19,7 @@ import { approx, raises, skip } from "../../src/pyrt/pytest.ts";
 import {
   NotImplementedError,
   Path,
+  StopIteration,
   TypeError_,
   ValueError,
   float,
@@ -72,7 +73,7 @@ function _skip_unless_fonts_match(layer: any): boolean {
   }
   const document = layer.text.__getitem__("ADBE Text Document").value;
   for (const font of document._fonts) {
-    if (font_version_string(font.post_script_name) !== font.version) {
+    if (!py_eq(font_version_string(font.post_script_name), font.version)) {
       skip(`${font.post_script_name} not installed at the fixture's version`);
       return true;
     }
@@ -80,16 +81,25 @@ function _skip_unless_fonts_match(layer: any): boolean {
   return false;
 }
 
+// `str(list_of_floats)` for assertion messages (POINTS are all floats).
+function _pt_repr(pt: number[]): string {
+  return `[${pt.map(float_repr).join(", ")}]`;
+}
+
 function _fixture(name: string): any {
   return JSON.parse(SAMPLES_DIR.div(name).read_text("utf-8"));
 }
 
 function _probe_comp(project: any): any {
-  return project.compositions.find((c: any) => c.name === "PROBE_MAIN")!;
+  const found = project.compositions.find((c: any) => py_eq(c.name, "PROBE_MAIN"));
+  if (found === undefined) throw new StopIteration();
+  return found;
 }
 
 function _layer(comp: any, name: string): any {
-  return comp.layers.find((ly: any) => ly.name === name)!;
+  const found = comp.layers.find((ly: any) => py_eq(ly.name, name));
+  if (found === undefined) throw new StopIteration();
+  return found;
 }
 
 describe("TestPointConversions", () => {
@@ -109,7 +119,7 @@ describe("TestPointConversions", () => {
           const got = layer.source_point_to_comp(pt, time_val);
           py_assert(
             approx(got, want["value"], { abs: 5e-3 }),
-            `${layer_name} s2c ${repr(pt)} @ ${float_repr(time_val)}`,
+            `${layer_name} s2c ${_pt_repr(pt)} @ ${float_repr(time_val)}`,
           );
         }
         const want_c2s = (entry as any)["c2s"][pi];
@@ -117,7 +127,7 @@ describe("TestPointConversions", () => {
           const got = layer.comp_point_to_source(pt, time_val);
           py_assert(
             approx(got, want_c2s["value"], { abs: 5e-3 }),
-            `${layer_name} c2s ${repr(pt)} @ ${float_repr(time_val)}`,
+            `${layer_name} c2s ${_pt_repr(pt)} @ ${float_repr(time_val)}`,
           );
         }
       }
@@ -161,7 +171,7 @@ describe("TestPointConversionsUnderCameras", () => {
   ])("test_rig_matches_ae[%#]", (comp_name, fixture_key) => {
     const expected = _fixture("camera_rigs_probe.json")[fixture_key]["conv"];
     const project = parse_project(CAMERAS_AEP);
-    const comp = project.compositions.find((c: any) => c.name === comp_name);
+    const comp = project.compositions.find((c: any) => py_eq(c.name, comp_name));
     const layer = _layer(comp, "target3d");
     for (const [time_key, entry] of Object.entries(expected)) {
       const time_val = float((time_key as string).slice(1));
@@ -171,7 +181,7 @@ describe("TestPointConversionsUnderCameras", () => {
           const got = layer.source_point_to_comp(pt, time_val);
           py_assert(
             approx(got, want["value"], { abs: 5e-3 }),
-            `${comp_name} s2c ${repr(pt)} @ ${float_repr(time_val)}`,
+            `${comp_name} s2c ${_pt_repr(pt)} @ ${float_repr(time_val)}`,
           );
         }
         const want_c2s = (entry as any)["c2s"][pi];
@@ -179,7 +189,7 @@ describe("TestPointConversionsUnderCameras", () => {
           const got = layer.comp_point_to_source(pt, time_val);
           py_assert(
             approx(got, want_c2s["value"], { abs: 5e-3 }),
-            `${comp_name} c2s ${repr(pt)} @ ${float_repr(time_val)}`,
+            `${comp_name} c2s ${_pt_repr(pt)} @ ${float_repr(time_val)}`,
           );
         }
       }
@@ -371,7 +381,7 @@ describe("TestShapeSourceRect", () => {
   // `@pytest.fixture(scope="class") def comp` - parsed once, on first use.
   let _comp: any;
   function comp_fixture(): any {
-    _comp ??= parse_project(SHAPES_AEP).compositions.find((c: any) => c.name === "SHAPE_RECTS");
+    _comp ??= parse_project(SHAPES_AEP).compositions.find((c: any) => py_eq(c.name, "SHAPE_RECTS"));
     return _comp;
   }
 
@@ -413,7 +423,7 @@ describe("TestAutoOrientPointConversions", () => {
 
   let _comps: Map<string, any> | undefined;
   function comps_fixture(): Map<string, any> {
-    _comps ??= new Map(parse_project(AUTO_ORIENT_AEP).compositions.map((comp: any) => [comp.name, comp]));
+    _comps ??= new Map(parse_project(AUTO_ORIENT_AEP).compositions.map((comp: any) => [String(comp.name), comp]));
     return _comps;
   }
 
@@ -451,7 +461,7 @@ describe("TestTextSourceRect", () => {
 
   let _comp: any;
   function comp_fixture(): any {
-    _comp ??= parse_project(TEXT_INK_AEP).compositions.find((c: any) => c.name === "TEXT_INK");
+    _comp ??= parse_project(TEXT_INK_AEP).compositions.find((c: any) => py_eq(c.name, "TEXT_INK"));
     return _comp;
   }
 

@@ -81,6 +81,8 @@ function decode_text(raw: string): string {
 
 // TODO(pyrt): ElementTree.fromstring shim missing (see the Element note above).
 function fromstring(text: string): Element {
+  // expat normalizes \r\n and lone \r to \n in character data
+  text = text.replace(/\r\n?/g, "\n");
   let pos = 0;
   const stack: Element[] = [];
   let root: Element | null = null;
@@ -162,7 +164,8 @@ function fromstring(text: string): Element {
  * @returns Parsed gradient data, or null if parsing fails.
  */
 export function parse_gradient_xml(utf8: Utf8Chunk): Gradient | null {
-  const xml_text = utf8.value;
+  // String(): the value may be a `_NulTailStr` (String object), whose truthiness py_bool cannot see.
+  const xml_text = String(utf8.value);
   if (!py_bool(xml_text)) return null;
   let root: Element;
   try {

@@ -10,7 +10,7 @@
 import "../binary/_register.ts";
 import { ListChunk, read_aep } from "../binary/chunk.ts";
 import type { Chunk } from "../binary/chunk.ts";
-import { BytesIO, bytes_, floordiv, format, getitem, len, py_bool, range, str } from "../../pyrt/index.ts";
+import { BytesIO, bytes_, floordiv, format, getitem, len, py_bool, range, str, ValueError } from "../../pyrt/index.ts";
 import type { Path } from "../../pyrt/index.ts";
 
 /**
@@ -182,6 +182,7 @@ export function format_hex_dump(data: Uint8Array, bytes_per_line = 16): string {
   const lines: string[] = [];
   const mid = floordiv(bytes_per_line, 2);
 
+  if (bytes_per_line === 0) throw new ValueError("range() arg 3 must not be zero");
   for (const i of range(0, len(data), bytes_per_line)) {
     const chunk = bytes_.slice(data, i, i + bytes_per_line);
 

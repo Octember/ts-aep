@@ -92,9 +92,27 @@ export function get_ae_version_major(obj: any): number {
   if (head != null) {
     return int(head.ae_version_major);
   }
-  // TODO(port): Python's type(obj).__name__ prints "NoneType" for None; the
-  // `?? "NoneType"` covers null/undefined only, not other Python primitives.
-  throw new TypeError_(`Cannot determine AE version from ${obj?.constructor?.name ?? "NoneType"}`);
+  // type(obj).__name__
+  const type_name =
+    obj == null
+      ? "NoneType"
+      : typeof obj === "boolean"
+        ? "bool"
+        : typeof obj === "number" || typeof obj === "bigint"
+          ? // TODO(port): int/float distinction
+            Number.isInteger(Number(obj)) ? "int" : "float"
+          : typeof obj === "string"
+            ? "str"
+            : obj instanceof Uint8Array
+              ? "bytes"
+              : Array.isArray(obj)
+                ? "list"
+                : obj instanceof Map
+                  ? "dict"
+                  : obj instanceof Set
+                    ? "set"
+                    : obj.constructor?.name;
+  throw new TypeError_(`Cannot determine AE version from ${type_name}`);
 }
 
 /**

@@ -10,7 +10,6 @@ import {
   getitem,
   Path,
   py_eq,
-  str,
 } from "../../src/pyrt/index.ts";
 import { make_tmp_path, skip } from "../../src/pyrt/pytest.ts";
 import { FileSource, FootageItem, ImportOptions, parse as parse_aep } from "../../src/py_aep/index.ts";
@@ -110,7 +109,7 @@ describe("TestSaveFillsCounts", () => {
     const tmp_path = make_tmp_path();
     const project = parse_aep(SAMPLES.div("models", "renderqueue", "render_settings.aep")).project;
     const om = get_rqi(project, "base").output_modules[0];
-    om.file_template = str(tmp_path.div("renders")) + nodepath.sep + "out.[fileExtension]";
+    om.file_template = fspath(tmp_path.div("renders")) + nodepath.sep + "out.[fileExtension]";
     const out = tmp_path.div("proj", "p.aep");
     project.save(out);
     const data = get_rqi(parse_aep(out).project, "base").output_modules[0]._alas_data;
@@ -133,7 +132,7 @@ describe("TestPathStyleFollowsPlatform", () => {
       ["sequence", tmp_path.div("media", "seq")],
     ] as const) {
       const data = parse_alas_data(getitem(sources, kind)._pin.chunks);
-      expect(getitem(data, "fullpath")).toBe(platform_path(str(host), { windows }));
+      expect(getitem(data, "fullpath")).toBe(platform_path(fspath(host), { windows }));
       expect(getitem(data, "platform")).toBe(windows ? 1 : 2);
     }
   });
@@ -152,7 +151,7 @@ describe("TestPathStyleFollowsPlatform", () => {
 
   test("test_reload_reads_the_host_file", () => {
     const tmp_path = make_tmp_path();
-    if (process.platform === "win32" && !str(tmp_path).toUpperCase().startsWith("C:")) {
+    if (process.platform === "win32" && !fspath(tmp_path).toUpperCase().startsWith("C:")) {
       return skip("only the system drive maps back to a macOS path");
     }
     const source = getitem(_sources(_project_with_media(tmp_path, OTHER)), "file");

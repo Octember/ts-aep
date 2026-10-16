@@ -234,7 +234,7 @@ describe("TestColors", () => {
   });
 
   test("test_none_is_none", () => {
-    expect(parse_color("none")).toBe(null);
+    expect(parse_color("none") == null).toBe(true);
   });
 
   test("test_currentcolor", () => {
@@ -508,7 +508,7 @@ describe("TestReadSvgFeatures", () => {
     const paint = read_svg(svg).drawables[0].fill;
     expect(paint instanceof GradientPaint).toBe(true);
     expect(py_eq(paint.scale, [100.0, 100.0])).toBe(true);
-    expect(paint.rotation).toBe(0.0);
+    expect(paint.rotation === 0.0).toBe(true);
   });
 
   test("test_deeply_nested_groups_raise_clean_error", () => {

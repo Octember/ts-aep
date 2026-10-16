@@ -63,11 +63,11 @@ export class AiLayer {
 
 // The leading `\b` skips every `endobj`: a header needs whitespace before
 // the keyword anyway.
-const _OBJ_KEYWORD_RE = /\bobj\b/g;
-const _OBJ_HEADER_RE = /(\d+)[ \t\r\n]+(\d+)[ \t\r\n]+$/;
+export const _OBJ_KEYWORD_RE = /\bobj\b/g;
+export const _OBJ_HEADER_RE = /(\d+)[ \t\r\n]+(\d+)[ \t\r\n]+$/;
 // How far before an `obj` keyword its `N G` header may start: far longer
 // than any header a PDF writer emits.
-const _OBJ_HEADER_WINDOW = 64;
+export const _OBJ_HEADER_WINDOW = 64;
 
 /**
  * Latin-1 text with one character per byte, so regex match offsets are the
@@ -92,7 +92,7 @@ function is_malformed(exc: unknown): boolean {
  * pattern led by the header's digits would be tried at every digit in the
  * file's content streams, tens of times slower on a large document.
  */
-function _object_offsets(data: Uint8Array): Map<number, number> {
+export function _object_offsets(data: Uint8Array): Map<number, number> {
   const offsets = new Map<number, number>();
   const text = latin1(data);
   for (const keyword of text.matchAll(_OBJ_KEYWORD_RE)) {
@@ -112,7 +112,7 @@ function _object_offsets(data: Uint8Array): Map<number, number> {
  * Raises:
  *     UnsupportedAiLayersError: If the object is malformed or truncated.
  */
-function _parse_object_at(data: Uint8Array, offset: number): any {
+export function _parse_object_at(data: Uint8Array, offset: number): any {
   const parser = new CosParser(new BytesIO(bytes_.slice(data, offset)));
   try {
     parser.lex();
@@ -128,7 +128,7 @@ function _parse_object_at(data: Uint8Array, offset: number): any {
 }
 
 /** Follow an indirect reference to its object; pass other values through. */
-function _resolve(value: any, data: Uint8Array, offsets: Map<number, number>): any {
+export function _resolve(value: any, data: Uint8Array, offsets: Map<number, number>): any {
   if (value instanceof IndirectReference) {
     const offset = dict_get(offsets, value.object_number);
     return offset == null ? null : _parse_object_at(data, offset);
@@ -139,7 +139,7 @@ function _resolve(value: any, data: Uint8Array, offsets: Map<number, number>): a
 /** Collect the OCG object numbers a `/D` `/Order` (or `/OFF`) tree
  * references, depth first, each once.
  */
-function _order_object_numbers(value: any, out: number[]): number[] {
+export function _order_object_numbers(value: any, out: number[]): number[] {
   if (Array.isArray(value)) {
     for (const entry of value) {
       _order_object_numbers(entry, out);
@@ -271,7 +271,7 @@ export function read_ai_layers(
   return read_ai_layer_ocgs(file, data).map((layer) => layer.name);
 }
 
-const _STREAM_RE = /stream\r?\n([\s\S]*?)\r?\nendstream/g;
+export const _STREAM_RE = /stream\r?\n([\s\S]*?)\r?\nendstream/g;
 
 // TODO(port): zlib.error parity. Node's inflateSync throws for any corrupt
 // stream, so every inflate failure is treated as Python's zlib.error here.
@@ -289,7 +289,7 @@ function inflate_or_null(body: string): Uint8Array | null {
  * profile (`acsp` signature at offset 36). `null` when the file is not
  * PDF-compatible or has no embedded profile.
  */
-function _find_ai_icc(file: PathLike, data: Uint8Array | null = null): Uint8Array | null {
+export function _find_ai_icc(file: PathLike, data: Uint8Array | null = null): Uint8Array | null {
   if (data == null) data = new Path(file).read_bytes();
   if (!bytes_.startswith(data, b("%PDF"))) return null;
   for (const match of latin1(data).matchAll(_STREAM_RE)) {

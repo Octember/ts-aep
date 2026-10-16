@@ -78,8 +78,7 @@ describe("TestTimebaseRule", () => {
 /** The float32 time ratio AE stores for `displayStartTime = value`. */
 function _f32_ratio(value: number): [number, number] {
   const frac = new Fraction(struct.unpack(">f", struct.pack(">f", value))[0]);
-  // TODO(pyrt): Fraction exposes bigint `n` / `d` only; numerator/denominator getters are missing.
-  return [Number(frac.n), Number(frac.d)];
+  return [frac.numerator, frac.denominator];
 }
 
 function _cdta(rate: number): CdtaChunk {

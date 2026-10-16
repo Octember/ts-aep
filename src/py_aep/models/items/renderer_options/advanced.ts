@@ -38,6 +38,15 @@ export class AdvancedRendererOptions extends RendererOptionsBase {
     ["Casting Box Center", ["casting_box_center", null]],
   ]);
 
+  /** Renderer quality, `1` to `125`. Read / Write. */
+  declare quality: number;
+
+  /** Environment light shadow resolution. Read / Write. */
+  declare resolution: EnvironmentLightShadowResolution;
+
+  /** Environment light shadow smoothness, `1` to `20`. Read / Write. */
+  declare smoothness: number;
+
   /** Size of the shadow casting box, in pixels, as shown in the Options
    * dialog. One dialog control drives all three stored axes, so reads
    * report the X axis.

@@ -1,6 +1,7 @@
 // `from __future__ import annotations` and the `typing` imports are dropped:
 // annotations are TypeScript types only.
 import {
+  TypeError_,
   ValueError,
   descriptor,
   dict_get,
@@ -177,7 +178,13 @@ export class PngFormatOptions extends FormatOptionsBase {
   get color_primaries(): Hdr10ColorPrimaries | number {
     const raw = dict_get(this._hdr10_meta, "displayPrimaries");
     if (raw == null) return Hdr10ColorPrimaries.P3_D65;
-    return enum_or_raw((v: any) => Hdr10ColorPrimaries.of(int(v)))(raw);
+    return enum_or_raw((v: any) => {
+      // Python `int(v)` raises TypeError for a list / dict; pyrt `int` would not.
+      if (typeof v !== "number" && typeof v !== "string" && typeof v !== "boolean") {
+        throw new TypeError_(`int() argument must be a string, a bytes-like object or a real number, not '${Array.isArray(v) ? "list" : "dict"}'`);
+      }
+      return Hdr10ColorPrimaries.of(int(v));
+    })(raw);
   }
 
   set color_primaries(value: Hdr10ColorPrimaries) {

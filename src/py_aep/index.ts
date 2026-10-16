@@ -4,7 +4,6 @@
 // registration imports at the end of binary/chunk.py).
 import "./binary/_register.ts";
 
-import * as fs from "node:fs";
 import { BytesIO, Path, fspath, py_bool, type PathLike } from "../pyrt/index.ts";
 import {
   AlphaMode,
@@ -213,7 +212,7 @@ function parse(
   const file_path = fspath(aep_file_path);
   const prefs_path = py_bool(ae_preferences_dir) ? new Path(ae_preferences_dir) : null;
   // `with open(file_path, "rb") as f:`
-  const f = new BytesIO(fs.readFileSync(file_path));
+  const f = new BytesIO(new Path(file_path).read_bytes());
   const [rifx, xmp] = read_aep(f, { defer_list_types: _DEFERRED_LIST_TYPES });
   const project = parse_project(rifx, xmp, file_path, prefs_path);
   if (platform != null) {

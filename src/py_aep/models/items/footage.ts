@@ -25,6 +25,7 @@ import {
   Path,
   TypeError_,
   ValueError,
+  hasattr,
   py_assert,
   py_bool,
   repr,
@@ -259,8 +260,8 @@ export class FootageItem extends AVItem {
 
   /** The footage file path if its source is a [FileSource][], else `None`. */
   get file(): string | null {
-    if ("file" in this._main_source) {
-      return this._main_source.file;
+    if (hasattr(this._main_source, "file")) {
+      return (this._main_source as any).file;
     }
     return null;
   }

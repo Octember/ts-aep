@@ -53,7 +53,7 @@ describe("TestCompMarkerLabel", () => {
     const expected = load_expected(SAMPLES_DIR, "comp_marker");
     const marker_json = get_comp_marker_from_json_by_name(expected, "label_0");
     const marker = get_first_comp_marker(parse_project(SAMPLES_DIR.div("comp_marker.aep")), "label_0");
-    expect(marker.label.value).toBe(marker_json["label"]);
+    expect(marker.label).toBe(marker_json["label"]);
     expect(marker_json["label"]).toBe(0);
   });
 
@@ -61,7 +61,7 @@ describe("TestCompMarkerLabel", () => {
     const expected = load_expected(SAMPLES_DIR, "comp_marker");
     const marker_json = get_comp_marker_from_json_by_name(expected, "label_3");
     const marker = get_first_comp_marker(parse_project(SAMPLES_DIR.div("comp_marker.aep")), "label_3");
-    expect(marker.label.value).toBe(marker_json["label"]);
+    expect(marker.label).toBe(marker_json["label"]);
     expect(marker_json["label"]).toBe(3);
   });
 
@@ -69,7 +69,7 @@ describe("TestCompMarkerLabel", () => {
     const expected = load_expected(SAMPLES_DIR, "comp_marker");
     const marker_json = get_comp_marker_from_json_by_name(expected, "label_8");
     const marker = get_first_comp_marker(parse_project(SAMPLES_DIR.div("comp_marker.aep")), "label_8");
-    expect(marker.label.value).toBe(marker_json["label"]);
+    expect(marker.label).toBe(marker_json["label"]);
     expect(marker_json["label"]).toBe(8);
   });
 });

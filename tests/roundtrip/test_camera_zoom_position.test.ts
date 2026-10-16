@@ -25,7 +25,7 @@ const SAMPLES_DIR = new Path(import.meta.dir).parent.parent.div("samples", "mode
 const SAMPLE = SAMPLES_DIR.div("camera_default_position.aep");
 
 function _camera(project: Project): CameraLayer {
-  const camera = get_comp(project, "zoom_1000").layers[0];
+  const camera = get_comp(project, "zoom_1000").layers[0] as CameraLayer;
   expect(camera instanceof CameraLayer).toBe(true);
   return camera;
 }
@@ -114,16 +114,16 @@ describe("TestZoomChange", () => {
     // its first key.
     const tmp_path = make_tmp_path();
     const project = parse_project_fresh(SAMPLE);
-    const camera = get_comp(project, "zoom_keyed").layers[0];
+    const camera = get_comp(project, "zoom_keyed").layers[0] as CameraLayer;
     expect(camera instanceof CameraLayer).toBe(true);
     camera.start_time = -1;
-    expect(_positioncamera.is_modified).toBe(false);
+    expect(_position(camera).is_modified).toBe(false);
 
     const out = tmp_path.div("out.aep");
     project.save(out);
-    const reopened = get_comp(parse_aep(out).project, "zoom_keyed").layers[0];
+    const reopened = get_comp(parse_aep(out).project, "zoom_keyed").layers[0] as CameraLayer;
     expect(reopened instanceof CameraLayer).toBe(true);
-    const position = _positionreopened;
+    const position = _position(reopened);
 
     expect(position._tdsb != null).toBe(true);
     expect(position._tdsb!.synthetic).toBe(true);

@@ -95,8 +95,11 @@ export function icc_profile_description(data: Uint8Array): string | null {
         const s_offset = bytes_.int_from_bytes(bytes_.slice(data, rec_off + 8, rec_off + 12), "big");
         const abs_off = tag_offset + s_offset;
         const end = Math.min(abs_off + s_len, len(data));
-        // TODO(port): pyrt decode() drops a trailing odd byte under errors="replace"; CPython emits U+FFFD for it.
-        return rstrip(decode(bytes_.slice(data, abs_off, end), "utf-16-be", "replace"), "\x00");
+        const raw16 = bytes_.slice(data, abs_off, end);
+        // pyrt decode() drops a trailing odd byte under errors="replace"; CPython emits U+FFFD for it.
+        // TODO(port): lone surrogates are not replaced by pyrt decode() either.
+        const text16 = decode(raw16, "utf-16-be", "replace") + (len(raw16) % 2 === 1 ? "\uFFFD" : "");
+        return rstrip(text16, "\x00");
       }
     }
     offset += 12;
@@ -197,9 +200,8 @@ export class IccProfileLibrary {
           try {
             data = f.read_bytes();
           } catch (e) {
-            // TODO(port): pyrt Path.read_bytes rethrows non-ENOENT Node errors (EACCES, EISDIR, ...)
-            // without wrapping them in OSError, so this `except OSError` misses them.
-            if (!(e instanceof OSError)) throw e;
+            // pyrt Path.read_bytes rethrows non-ENOENT Node errors (EACCES, EISDIR, ...) unwrapped.
+            if (!(e instanceof OSError || typeof (e as any)?.code === "string")) throw e;
             continue;
           }
           if (len(data) < 132 || !bytes_eq(bytes_.slice(data, 36, 40), b("acsp"))) continue;

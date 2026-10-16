@@ -2,14 +2,14 @@
 
 import { expect, test } from "bun:test";
 import { approx } from "../../src/pyrt/pytest.ts";
-import { Path, len, py_eq } from "../../src/pyrt/index.ts";
+import { Path, StopIteration, hasattr, len, py_eq } from "../../src/pyrt/index.ts";
 import "../../src/py_aep/binary/_register.ts";
 import { parse } from "../../src/py_aep/index.ts";
 import { Gradient } from "../../src/py_aep/models/properties/gradient.ts";
 
 // Python's SAMPLE is cwd-relative ("samples/..."); resolved from this file so
 // the test does not depend on where bun is started.
-const SAMPLE = new Path(import.meta.dir).parent.parent.parent.div("samples", "models", "property", "gradient.aep");
+const SAMPLE = new Path(import.meta.dir).parent.parent.div("samples", "models", "property", "gradient.aep");
 const SAMPLE_XML = `<prop.map version="4">
   <prop.list>
     <prop.pair>
@@ -211,8 +211,10 @@ const DEFAULT_AE_GRADIENT_XML =
 /** `@pytest.fixture()` gradient_comp: each test calls this in place of taking the fixture as a parameter. */
 function gradient_comp_fixture(): any {
   const app = parse(SAMPLE);
-  // TODO(port): Python `next(gen)` raises StopIteration when nothing matches; `find` returns undefined instead.
-  return Array.from(app.project.items.values()).find((v: any) => "layers" in v);
+  for (const v of app.project.items.values()) {
+    if (hasattr(v, "layers")) return v;
+  }
+  throw new StopIteration();
 }
 
 test("test_g_fill_gradient_colors", () => {

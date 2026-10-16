@@ -109,6 +109,7 @@ class _NaturalSpline {
     const h = xs[i + 1] - xs[i];
     const u = (xs[i + 1] - x) / h;
     const v = 1.0 - u;
+    // TODO(port): V8's `**` may differ from C `pow` in the last ulp (u**3, v**3).
     const cubic = (u ** 3 - u) * m[i] + (v ** 3 - v) * m[i + 1];
     return u * ys[i] + v * ys[i + 1] + (cubic * h * h) / 6.0;
   }

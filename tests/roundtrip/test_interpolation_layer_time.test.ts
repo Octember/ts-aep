@@ -79,10 +79,10 @@ class TestStretchedLayerEaseTimeBase {
     opacity.set_value_at_time(2.0, 100.0);
     _bezier_both_sides(opacity);
     opacity.keyframes[0].out_temporal_ease = [
-      new KeyframeEase({ speed: 60.0, influence: 50.0 }),
+      new KeyframeEase(60.0, 50.0),
     ];
     opacity.keyframes[1].in_temporal_ease = [
-      new KeyframeEase({ speed: 20.0, influence: 75.0 }),
+      new KeyframeEase(20.0, 75.0),
     ];
     layer.stretch = stretch;
     return [app, opacity];
@@ -179,10 +179,10 @@ class TestRovingRedistributionUnderStretch {
     }
     _bezier_both_sides(position);
     position.keyframes[0].out_temporal_ease = [
-      new KeyframeEase({ speed: 120.0, influence: 40.0 }),
+      new KeyframeEase(120.0, 40.0),
     ];
     position.keyframes[3].in_temporal_ease = [
-      new KeyframeEase({ speed: 80.0, influence: 65.0 }),
+      new KeyframeEase(80.0, 65.0),
     ];
     return [app, position];
   }
@@ -214,10 +214,10 @@ class TestInertScaleDimension {
     scale.set_value_at_time(2.0, [200.0, 100.0, 100.0]);
     _bezier_both_sides(scale);
     scale.keyframes[0].out_temporal_ease = Array<KeyframeEase>(3).fill(
-      new KeyframeEase({ speed: 60.0, influence: 50.0 }),
+      new KeyframeEase(60.0, 50.0),
     );
     scale.keyframes[1].in_temporal_ease = Array<KeyframeEase>(3).fill(
-      new KeyframeEase({ speed: 20.0, influence: 75.0 }),
+      new KeyframeEase(20.0, 75.0),
     );
     return scale;
   }
@@ -245,10 +245,10 @@ class TestColourUsesOneSharedProgress {
     colour.set_value_at_time(0.0, [1.0, 0.0, 0.0, 1.0]);
     colour.set_value_at_time(2.0, [0.0, 0.0, 1.0, 1.0]);
     colour.keyframes[0].out_temporal_ease = [
-      new KeyframeEase({ speed: 0.5, influence: 45.0 }),
+      new KeyframeEase(0.5, 45.0),
     ];
     colour.keyframes[1].in_temporal_ease = [
-      new KeyframeEase({ speed: 0.2, influence: 70.0 }),
+      new KeyframeEase(0.2, 70.0),
     ];
     _bezier_both_sides(colour);
     return colour;
@@ -328,7 +328,7 @@ describe("TestLinearOutSideKeepsTheNextEase", () => {
     opacity.set_value_at_time(2.0, 100.0);
     opacity.keyframes[1].in_interpolation_type = KeyframeInterpolationType.BEZIER;
     opacity.keyframes[1].in_temporal_ease = [
-      new KeyframeEase({ speed: 0.0, influence: 90.0 }),
+      new KeyframeEase(0.0, 90.0),
     ];
     opacity.keyframes[0].out_interpolation_type = KeyframeInterpolationType.LINEAR;
 

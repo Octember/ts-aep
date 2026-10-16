@@ -87,7 +87,7 @@ export class OutputModuleTemplate {
 function _extract_section_value(lines: string[], key: string): Uint8Array | null {
   for (const [i, line] of enumerate(lines)) {
     if (!line.includes(key)) continue;
-    const m = new RegExp('^\\s*"' + _re_escape(key) + '"\\s*=\\s*(.+)').exec(line);
+    const m = new RegExp('^\\s*"' + _re_escape(key) + '"\\s*=\\s*([^\\n]+)').exec(line);
     if (!m) continue;
     const value_parts: string[] = [strip(m[1])];
     for (let j = i + 1; j < lines.length; j++) {
@@ -273,7 +273,7 @@ function _parse_id_hex_section(text: string, section: string, id_prefix: string)
   let current_value = "";
   let in_section = false;
   // TODO(port): Python `\d` matches Unicode decimal digits; JS `\d` is ASCII only.
-  const entry_re = new RegExp('^\\s*"' + _re_escape(id_prefix) + ' ID #\\s*(\\d+)"\\s*=\\s*(.+)');
+  const entry_re = new RegExp('^\\s*"' + _re_escape(id_prefix) + ' ID #\\s*(\\d+)"\\s*=\\s*([^\\n]+)');
 
   // Python `nonlocal current_idx`: the closure writes the enclosing `let`.
   function _flush(): void {
@@ -319,7 +319,8 @@ function _parse_id_hex_section(text: string, section: string, id_prefix: string)
 function _extract_template_names(lines: string[]): Map<number, string> {
   const names = new Map<number, string>();
   for (const line of lines) {
-    const m = /^\s*"Output Module Spec Strings Name #?(\d+)"\s*=\s*"(.*)"/.exec(line);
+    // TODO(port): Python `\d` matches Unicode decimal digits; JS `\d` is ASCII only.
+    const m = /^\s*"Output Module Spec Strings Name #?(\d+)"\s*=\s*"([^\n]*)"/.exec(line);
     if (m) {
       const idx = int(m[1]);
       names.set(idx, m[2]);

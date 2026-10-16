@@ -54,7 +54,7 @@ export function read_design_axes(font_file: _PathLike, font_number: number = 0):
   const font: any = opened.fonts != null ? opened.fonts[font_number] : opened;
   try {
     if (!("fvar" in font.directory.tables)) {
-      throw new ValueError(`${font_file} is not a variable font (it has no fvar table).`);
+      throw new ValueError(`${str(font_file)} is not a variable font (it has no fvar table).`);
     }
     const name_table = "name" in font.directory.tables ? font.name : null;
     const axes: FontDesignAxis[] = [];

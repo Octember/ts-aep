@@ -41,7 +41,7 @@ describe("TestNewEmpty", () => {
     expect(app.build_number).toBe(67);
     expect(proj.num_items).toBe(1); // only the root folder
     expect(proj.root_folder.name).toBe("root");
-    expect(py_eq([...proj.items], [0])).toBe(true);
+    expect(py_eq([...proj.items.keys()], [0])).toBe(true);
     expect(proj._head.next_item_id).toBe(1);
     expect(proj.revision).toBe(1);
   });

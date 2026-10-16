@@ -1,3 +1,4 @@
+import { ValueError } from "../../../pyrt/index.ts";
 import type { ViewOptions } from "./view_options.ts";
 import type { Viewer } from "./viewer.ts";
 
@@ -34,9 +35,7 @@ export class View {
    * `set_active()` or by setting `viewer.active_view_index`.
    */
   get active(): boolean {
-    // TODO(port): Python list.index raises ValueError when the view is absent;
-    // indexOf returns -1 instead. View has no __eq__, so identity matches.
-    return this._viewer.active_view_index === this._viewer.views.indexOf(this);
+    return this._viewer.active_view_index === this._index();
   }
 
   /**
@@ -48,9 +47,14 @@ export class View {
    * dimensions.
    */
   set_active(): void {
-    // TODO(port): Python list.index raises ValueError when the view is absent;
-    // indexOf returns -1 instead.
-    this._viewer.active_view_index = this._viewer.views.indexOf(this);
+    this._viewer.active_view_index = this._index();
+  }
+
+  /** list.index(self) parity: View has no __eq__, so identity; raises ValueError when absent. */
+  private _index(): number {
+    const i = this._viewer.views.indexOf(this);
+    if (i < 0) throw new ValueError("<View object> is not in list");
+    return i;
   }
 
   /** Options object for this View. Read-only. */

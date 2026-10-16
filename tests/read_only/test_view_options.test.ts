@@ -20,7 +20,7 @@ import { parse_app } from "../conftest.ts";
 // `from __future__ import annotations` and the `TYPE_CHECKING: pass` block are
 // Python-only and dropped.
 
-const SAMPLES_DIR = new Path(import.meta.dir).parent.parent.parent.div("samples", "models", "view");
+const SAMPLES_DIR = new Path(import.meta.path).parent.parent.parent.div("samples", "models", "view");
 
 /** Parse a project and return the ViewOptions of the active viewer's first view. */
 function _get_active_view_options(aep_path: Path): ViewOptions {

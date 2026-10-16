@@ -34,7 +34,7 @@ import { ChunkField } from "../descriptors.ts";
 import { Guide } from "../guide.ts";
 import { validate_name, validate_string } from "../validators.ts";
 import type { Project } from "../project.ts";
-import { FolderItem } from "./folder.ts";
+import type { FolderItem } from "./folder.ts";
 
 // TODO(pyrt): list.remove shim. Python compares with `==` (Item.__eq__ is by
 // id), so the match uses py_eq rather than identity.
@@ -181,7 +181,11 @@ export class Item {
   set parent_folder(value: FolderItem | null) {
     const old_parent = this._parent_folder;
     if (old_parent == null) throw new ValueError("Cannot move the root folder");
-    if (!(value instanceof FolderItem)) throw new TypeError_("parent_folder must be a FolderItem");
+    // TODO(port): Python's deferred `isinstance(value, FolderItem)`. A runtime import of
+    // ./folder.ts here would make folder.ts (extends Item) evaluate before Item exists
+    // when item.ts loads first, so FolderItem is recognised structurally: it is the only
+    // Item subclass owning `_children_container`.
+    if (!(value instanceof Item && "_children_container" in value)) throw new TypeError_("parent_folder must be a FolderItem");
     if (value === old_parent) return;
     // A folder cannot become its own descendant. Walking up from the
     // target also covers value is self and value under the root.

@@ -33,6 +33,7 @@ import {
   format,
   getattr,
   getitem,
+  hasattr,
   int,
   max,
   py_bool,
@@ -232,7 +233,7 @@ export function _chunk_floats(chunk: any): number[] | null {
   }
   if (ct === "ldat") {
     const items = chunk.items;
-    if (py_bool(items) && items.every((i: any) => "x" in i && "y" in i)) {
+    if (py_bool(items) && items.every((i: any) => hasattr(i, "x") && hasattr(i, "y"))) {
       return items.flatMap((i: any) => [i.x, i.y]);
     }
   }
@@ -267,7 +268,10 @@ export const _FLOAT_TAG_RE = /<float>([^<]*)<\/float>/g;
  * them; AE and py_aep round an 8-bit colour to adjacent float32 values.
  */
 export function _gradient_xml_only_float_diff(s1: any, s2: any): boolean {
-  if (typeof s1 !== "string" || typeof s2 !== "string") return false;
+  // `_NulTailStr` (a str subclass) arrives as a String object.
+  if (!(typeof s1 === "string" || s1 instanceof String) || !(typeof s2 === "string" || s2 instanceof String)) return false;
+  s1 = String(s1);
+  s2 = String(s2);
   if (!s1.includes("<prop.map") || !s1.includes("<float>")) return false;
   const f1 = Array.from(s1.matchAll(_FLOAT_TAG_RE), (m) => m[1]);
   const f2 = Array.from(s2.matchAll(_FLOAT_TAG_RE), (m) => m[1]);

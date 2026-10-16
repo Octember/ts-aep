@@ -418,7 +418,7 @@ export function _reclass_override_leaves(group: PropertyGroup): void {
  *     composition: The parent composition.
  *     tdmn: The TDMN chunk for this property group.
  */
-export const parse_property_group = _suppress_materialization()(function parse_property_group(
+export const parse_property_group = _suppress_materialization().decorate(function parse_property_group(
   tdgp_chunk: ListChunk,
   group_match_name: string,
   property_depth: number,
@@ -484,7 +484,7 @@ export const parse_property_group = _suppress_materialization()(function parse_p
  *     composition: The parent composition.
  *     tdmn: The TDMN chunk for this mask atom.
  */
-export const _parse_mask_atom = _suppress_materialization()(function _parse_mask_atom(
+export const _parse_mask_atom = _suppress_materialization().decorate(function _parse_mask_atom(
   tdgp_chunk: ListChunk,
   mkif_chunk: MkifChunk,
   property_depth: number,

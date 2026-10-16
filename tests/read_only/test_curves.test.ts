@@ -32,7 +32,7 @@ import { Property } from "../../src/py_aep/models/properties/property.ts";
 import { get_comp_from_json_by_name, load_expected, parse_project } from "../conftest.ts";
 
 // Python: Path(__file__).parent.parent.parent / "samples" / "models" / "property"
-const SAMPLES_DIR = new Path(import.meta.dir).parent.parent.parent.div("samples", "models", "property");
+const SAMPLES_DIR = new Path(import.meta.path).parent.parent.parent.div("samples", "models", "property");
 
 function _curves_property(layer_name: string): Property {
   const project = parse_project(SAMPLES_DIR.div("curves.aep"));
@@ -84,7 +84,8 @@ test("test_untouched_curves_equal_the_parT_default", () => {
   const prop = _curves_property("untouched");
   py_assert(prop._default_arbp != null);
   py_assert(prop._arbs != null);
-  // TODO(port): Python's `(arbp,) = ...` also raises ValueError on a length mismatch; JS destructuring does not.
+  // `(arbp,) = ...` raises ValueError on a length mismatch.
+  if (len(prop._arbs.chunks) !== 1) throw new ValueError("not exactly one value to unpack");
   const [arbp] = prop._arbs.chunks;
   expect(bytes_eq(arbp.data, prop._default_arbp.data)).toBe(true);
 });
@@ -155,7 +156,9 @@ test("test_keyed_curves_decode_each_key", () => {
 
 test("test_keyed_curves_at_a_time", () => {
   const prop = _curves_property("keyed");
-  const [first, second, last] = prop.keyframes.map((kf) => kf.value);
+  const unpacked = prop.keyframes.map((kf) => kf.value);
+  if (len(unpacked) !== 3) throw new ValueError("not exactly 3 values to unpack");
+  const [first, second, last] = unpacked;
   expect(first instanceof Curves).toBe(true);
   expect(second instanceof Curves).toBe(true);
   expect(last instanceof Curves).toBe(true);

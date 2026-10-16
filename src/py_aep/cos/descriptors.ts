@@ -76,6 +76,17 @@ export function _extract(
   return raw;
 }
 
+// TODO(pyrt): pyrt int() maps null/arrays/Maps to 0 where Python's int() raises TypeError,
+// which `_extract` must turn into the default. Guard the argument type here.
+function _int_float_guard(fn: (x: any) => number): (x: any) => number {
+  return (x: any) => {
+    if (typeof x !== "number" && typeof x !== "string" && typeof x !== "boolean" && typeof x !== "bigint") {
+      throw new TypeError_(`argument must be a string or a real number, not '${x?.constructor?.name ?? "NoneType"}'`);
+    }
+    return fn(x);
+  };
+}
+
 /**
  * Descriptor that proxies a single key on a COS dict.
  *
@@ -203,7 +214,7 @@ export class CosField<T> {
     } else {
       d.set(this.key, this._coerce(obj, value));
     }
-    const propagate = "_propagate_cos" in obj ? obj._propagate_cos : null;
+    const propagate = getattr(obj, "_propagate_cos", null);
     if (propagate != null) propagate.call(obj);
   }
 
@@ -229,6 +240,7 @@ export class CosField<T> {
    */
   static enum<T>(enum_cls: any, dict_attr: string, key: string, kwargs: Record<string, any> = {}): CosField<T> {
     // TODO(port): py_aep enum objects are not classes; the fallback `enum_cls` (a callable in Python) is `enum_cls.of`.
+    kwargs = { ...kwargs };
     if (!("transform" in kwargs)) {
       kwargs.transform = "from_binary" in enum_cls ? enum_cls.from_binary.bind(enum_cls) : enum_cls.of;
     }
@@ -246,8 +258,11 @@ export class CosField<T> {
    * serialize without the decimal marker.
    */
   static float<T>(dict_attr: string, key: string, kwargs: Record<string, any> = {}): CosField<number | null> {
+    kwargs = { ...kwargs };
     if (!("reverse" in kwargs)) kwargs.reverse = float;
-    return new this(dict_attr, key, { transform: float, ...kwargs });
+    // TODO(port): Python raises TypeError when kwargs repeat transform; here kwargs silently win.
+    // TODO(pyrt): pyrt float() accepts only str/number/bool; Python float(None) raises TypeError (caught natively by _extract).
+    return new this(dict_attr, key, { transform: _int_float_guard(float), ...kwargs });
   }
 
   /**
@@ -259,7 +274,9 @@ export class CosField<T> {
    * probed AE 2026), so the write-side coercion matters for fidelity.
    */
   static int<T>(dict_attr: string, key: string, kwargs: Record<string, any> = {}): CosField<number | null> {
+    kwargs = { ...kwargs };
     if (!("reverse" in kwargs)) kwargs.reverse = round;
-    return new this(dict_attr, key, { transform: int, ...kwargs });
+    // TODO(port): Python raises TypeError when kwargs repeat transform; here kwargs silently win.
+    return new this(dict_attr, key, { transform: _int_float_guard(int), ...kwargs });
   }
 }

@@ -12,7 +12,19 @@ import {
 } from "../../src/py_aep/cli/validate.ts";
 import { BlendingMode } from "../../src/py_aep/enums/index.ts";
 import "../../src/py_aep/binary/_register.ts";
-import { Path, contains, dict_get, len, py_bool, py_eq } from "../../src/pyrt/index.ts";
+import { Path, contains, dict_get, getitem, len, py_bool, py_eq } from "../../src/pyrt/index.ts";
+
+/**
+ * TODO(port): `load_expected` returns plain JSON objects, but cli/validate.ts works on
+ * dicts as Maps (rulebook §3), so convert recursively before handing JSON to it.
+ */
+function _json_to_dicts(x: any): any {
+  if (Array.isArray(x)) return x.map(_json_to_dicts);
+  if (x !== null && typeof x === "object" && !(x instanceof Map)) {
+    return new Map(Object.entries(x).map(([k, v]) => [k, _json_to_dicts(v)]));
+  }
+  return x;
+}
 
 // `Path(__file__).parent.parent.parent / "samples"` from the Python file: the
 // file's directory is `import.meta.dir`, so two `.parent` reach the package root.
@@ -58,7 +70,9 @@ describe("TestCompareProjectLevel", () => {
     const aep_path = SAMPLES_DIR.div("models", "composition", "bgColor_custom.aep");
     const project = parse_project(aep_path);
     const parsed = to_dict(project);
-    const expected = load_expected(SAMPLES_DIR.div("models", "composition"), "bgColor_custom");
+    const expected = _json_to_dicts(
+      load_expected(SAMPLES_DIR.div("models", "composition"), "bgColor_custom"),
+    );
     const result = new ValidationResult();
     compare_project_level(expected, parsed, result);
     // Project-level fields should match (or have no differences)
@@ -81,11 +95,13 @@ describe("TestCompareLayer", () => {
     const aep_path = SAMPLES_DIR.div("models", "layer", "enabled_false.aep");
     const project = parse_project(aep_path);
     const parsed = to_dict(project);
-    const expected = load_expected(SAMPLES_DIR.div("models", "layer"), "enabled_false");
+    const expected = _json_to_dicts(
+      load_expected(SAMPLES_DIR.div("models", "layer"), "enabled_false"),
+    );
     // Find matching comp and layers
-    for (const item of expected.items) {
-      if ("layers" in item && len(item.layers) > 0) {
-        const exp_layer = item.layers[0];
+    for (const item of getitem(expected, "items")) {
+      if (contains(item, "layers") && len(getitem(item, "layers")) > 0) {
+        const exp_layer = getitem(item, "layers")[0];
         // Get parsed comp layers
         const parsed_comps = dict_get(parsed, "_compositions", []);
         if (py_bool(parsed_comps)) {

@@ -10,12 +10,25 @@
 import { describe, expect, test } from "bun:test";
 import { AttributeError, AssertionError_, Path, py_assert, py_eq, repr, RuntimeError } from "../../src/pyrt/index.ts";
 import { make_tmp_path, raises } from "../../src/pyrt/pytest.ts";
+import "../../src/py_aep/binary/_register.ts";
 import { parse as parse_aep } from "../../src/py_aep/index.ts";
 import type { Layer } from "../../src/py_aep/models/layers/layer.ts";
 import { Property } from "../../src/py_aep/models/properties/property.ts";
 import { PropertyGroup } from "../../src/py_aep/models/properties/property_group.ts";
 import { _suppress_materialization } from "../../src/py_aep/models/descriptors.ts";
 import { get_first_layer } from "../helpers.ts";
+
+/**
+ * `obj.__dict__`: the per-instance attribute dict ChunkField reads parse-time
+ * overrides from. Same non-enumerable Map that models/descriptors.ts creates lazily.
+ */
+// TODO(pyrt): no shim for `obj.__dict__`; mirrors instance_dict in models/descriptors.ts.
+function instance_dict(obj: any): Map<string, any> {
+  if (!Object.prototype.hasOwnProperty.call(obj, "__dict__")) {
+    Object.defineProperty(obj, "__dict__", { value: new Map<string, any>(), enumerable: false });
+  }
+  return obj.__dict__;
+}
 
 const SAMPLES_DIR = new Path(import.meta.path).parent.parent.parent.div("samples");
 const PROPERTY_DIR = SAMPLES_DIR.div("models", "property");
@@ -215,10 +228,9 @@ describe("TestParseTimeWriteGuard", () => {
     const opacity = _find_property(layer, "ADBE Opacity");
     expect(opacity != null).toBe(true);
 
-    // TODO(port): `obj.__dict__` is the per-instance Map shim from models/descriptors.ts.
     _suppress_materialization().run(() => {
-      (opacity as any).__dict__.set("enabled", false);
-      expect((opacity as any).__dict__.get("enabled")).toBe(false);
+      instance_dict(opacity).set("enabled", false);
+      expect(instance_dict(opacity).get("enabled")).toBe(false);
     });
   });
 });

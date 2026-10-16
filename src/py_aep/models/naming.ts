@@ -1,12 +1,41 @@
 /** Name generation and incrementing utilities for project items. */
 
-import { int, isdigit, rstrip } from "../../pyrt/index.ts";
+import { ValueError, rstrip } from "../../pyrt/index.ts";
+
+// pyrt isdigit is Nd-only; Python str.isdigit() also accepts superscripts, subscripts and
+// circled digits (which then make int() raise ValueError).
+// TODO(port): non-Nd isdigit characters beyond these common ranges (e.g. U+1F100..) are not covered
+const _NON_ND_DIGIT_RE = /[\u00B2\u00B3\u00B9\u2070\u2074-\u2079\u2080-\u2089\u2460-\u2468\u2474-\u247C\u2488-\u2490\u24EA\u24F5-\u24FD\u24FF\u2776-\u277E\u2780-\u2788\u278A-\u2792]/u;
+const _ND_RE = /^\p{Nd}$/u;
+
+function isdigit(s: string): boolean {
+  if (s.length === 0) return false;
+  for (const ch of s) {
+    if (!_ND_RE.test(ch) && !_NON_ND_DIGIT_RE.test(ch)) return false;
+  }
+  return true;
+}
+
+/** `int(tail)` for a str that passed isdigit(): Unicode Nd digits, arbitrary precision. */
+function _int_digits(tail: string): bigint {
+  const cps = Array.from(tail);
+  let out = "";
+  for (const ch of cps) {
+    if (!_ND_RE.test(ch)) throw new ValueError(`invalid literal for int() with base 10: '${tail}'`);
+    // Nd digits come in contiguous 0-9 runs starting at a zero.
+    const cp = ch.codePointAt(0)!;
+    let start = cp;
+    while (_ND_RE.test(String.fromCodePoint(start - 1))) start--;
+    out += String((cp - start) % 10);
+  }
+  return BigInt(out);
+}
 
 // Python `\d` on str patterns matches Unicode Nd digits, hence \p{Nd}. Python `$`
 // also matches before one trailing "\n", hence the lookahead.
 const _TRAILING_NUMBER_RE = /(\p{Nd}+)(?=\n?$)/u;
 
-function _next_suffix(prefix: string, existing_names: Set<string>): number {
+function _next_suffix(prefix: string, existing_names: Set<string>): number | bigint {
   /**
    * Return the next available numeric suffix for `{prefix}{N}`.
    *
@@ -14,21 +43,23 @@ function _next_suffix(prefix: string, existing_names: Set<string>): number {
    * If any name matches `prefix` (with or without a digit suffix),
    * suffix 1 is skipped - returns at least 2.
    */
-  let max_suffix = 0;
+  let max_suffix = 0n;
   for (const name of existing_names) {
     if (name.startsWith(prefix)) {
       const tail = name.slice(prefix.length);
       if (isdigit(tail)) {
-        const n = int(tail);
-        max_suffix = Math.max(max_suffix, n > 0 ? n : 1);
+        const n = _int_digits(tail);
+        const m = n > 0n ? n : 1n;
+        max_suffix = m > max_suffix ? m : max_suffix;
       } else {
-        max_suffix = Math.max(max_suffix, 1);
+        max_suffix = 1n > max_suffix ? 1n : max_suffix;
       }
     } else if (name === rstrip(prefix)) {
-      max_suffix = Math.max(max_suffix, 1);
+      max_suffix = 1n > max_suffix ? 1n : max_suffix;
     }
   }
-  return max_suffix + 1;
+  const result = max_suffix + 1n;
+  return result <= BigInt(Number.MAX_SAFE_INTEGER) ? Number(result) : result;
 }
 
 export function auto_name(name: string, existing_names: Set<string>): string {

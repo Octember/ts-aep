@@ -102,7 +102,7 @@ describe("TestRoundtripText", () => {
     project.save(out);
 
     const [_project2, doc2] = _get_text_document(out, "type_text");
-    expect(doc2.text).toBe("Modified");
+    expect(py_eq(doc2.text, "Modified")).toBe(true);
   });
 });
 
@@ -243,7 +243,7 @@ describe("TestRegisterFont", () => {
     project.save(out);
 
     const [_project2, doc2] = _get_text_document(out, "type_text");
-    expect(doc2.font).toBe("Arial-BoldMT");
+    expect(py_eq(doc2.font, "Arial-BoldMT")).toBe(true);
   });
 });
 

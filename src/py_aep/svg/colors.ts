@@ -177,7 +177,9 @@ const _HSL_RE = /^hsla?\(([^)]*)\)/i;
 // does not, so a token like "٥" is skipped here. Only matters if _util's regex is ASCII.
 function findall(re: RegExp, s: string): string[] {
   const flags = re.flags.includes("g") ? re.flags : re.flags + "g";
-  return Array.from(s.matchAll(new RegExp(re.source, flags)), (m) => m[0]);
+  // _util.ts anchors its patterns with `^` (re.match emulation); findall scans, so drop the anchor.
+  const source = re.source.startsWith("^") ? re.source.slice(1) : re.source;
+  return Array.from(s.matchAll(new RegExp(source, flags)), (m) => m[0]);
 }
 
 function _component(token: string, scale: number = 255.0): number {
@@ -233,6 +235,10 @@ function _parse_hex(h: string): Rgba | null {
   let b: number;
   let a: number;
   try {
+    // TODO(pyrt): pyrt int() strips every "_"; Python only allows "_" between digits, so "_1"/"1_" must raise.
+    for (let i = 0; i < 8; i += 2) {
+      if (cps[i] === "_" || cps[i + 1] === "_") throw new ValueError("invalid literal for int() with base 16");
+    }
     r = int(cps.slice(0, 2).join(""), 16) / 255.0;
     g = int(cps.slice(2, 4).join(""), 16) / 255.0;
     b = int(cps.slice(4, 6).join(""), 16) / 255.0;

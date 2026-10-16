@@ -157,7 +157,7 @@ describe("TestWorkingSpaceNone", () => {
     expect(app.project.working_space).toBe("None");
     expect(bytes_eq(app.project._cpid.data, cpid)).toBe(true);
     expect(bytes_eq(cpid, bytes_.repeat(b("\xff"), 16))).toBe(true);
-    expect(app.project._ws_utf8 != null && app.project._ws_utf8.value === "{}").toBe(true);
+    expect(app.project._ws_utf8 != null && String(app.project._ws_utf8.value) === "{}").toBe(true);
     expect(utf8 == null).toBe(true);
     const path = tmp_path.div("ws.aep");
     app.project.save(path);

@@ -29,6 +29,7 @@ import {
   RuntimeError,
   dict_get,
   enumerate,
+  float_repr,
   format,
   getattr,
   int,
@@ -319,7 +320,15 @@ export function build_output_module_node(om: OutputModule): Node {
  * TODO(pyrt): pyrt `repr`/`str` do not handle a Map (Python dict) yet.
  */
 function dict_repr(d: Map<any, any>): string {
-  return "{" + [...d].map(([k, v]) => `${repr(k)}: ${repr(v)}`).join(", ") + "}";
+  return "{" + [...d].map(([k, v]) => `${repr(k)}: ${attr_repr(k, v)}`).join(", ") + "}";
+}
+
+/**
+ * `repr(v)` for an attrs value. TODO(port): int/float distinction - `frame_rate`
+ * is always a Python float (`24.0`), so it is spelled via float_repr.
+ */
+function attr_repr(k: string, v: any): string {
+  return k === "frame_rate" && typeof v === "number" ? float_repr(v) : repr(v);
 }
 
 /** Output as ASCII tree. */
@@ -414,11 +423,11 @@ export function format_dot(node: Node, output: TextIO, max_depth: number | null 
     const color = dict_get(colors, n.type, "#cccccc");
 
     // Build label
-    const name = escape_dot(n.name);
+    const name = escape_dot(str(n.name));
     const attrs = n.attrs;
     const attrs_lines: string[] = [];
     for (const [k, v] of attrs) {
-      if (v != null) attrs_lines.push(`${k}: ${escape_dot(str(v))}`);
+      if (v != null) attrs_lines.push(`${k}: ${escape_dot(k === "frame_rate" && typeof v === "number" ? float_repr(v) : str(v))}`);
     }
 
     let label: string;
@@ -465,7 +474,7 @@ export function format_mermaid(node: Node, output: TextIO, max_depth: number | n
     if (max_depth != null && depth > max_depth) return "";
 
     const nid = get_node_id();
-    const name = escape_mermaid(n.name);
+    const name = escape_mermaid(str(n.name));
     const node_type = n.type;
 
     // Different shapes for different types
@@ -545,7 +554,7 @@ function json_str(s: string): string {
   return out + '"';
 }
 
-function json_dumps(obj: any, indent: number, level: number = 0): string {
+function json_dumps(obj: any, indent: number, level: number = 0, is_float: boolean = false): string {
   const pad = (n: number): string => " ".repeat(indent * n);
   if (obj == null) return "null";
   if (obj === true) return "true";
@@ -555,7 +564,7 @@ function json_dumps(obj: any, indent: number, level: number = 0): string {
     if (Number.isNaN(obj)) return "NaN";
     if (obj === Infinity) return "Infinity";
     if (obj === -Infinity) return "-Infinity";
-    return num_str(obj);
+    return num_str(obj, is_float || !Number.isInteger(obj));
   }
   if (typeof obj === "bigint") return obj.toString();
   if (Array.isArray(obj)) {
@@ -571,7 +580,7 @@ function json_dumps(obj: any, indent: number, level: number = 0): string {
         : null;
   if (entries) {
     if (entries.length === 0) return "{}";
-    const items = entries.map(([k, v]) => pad(level + 1) + json_str(k) + ": " + json_dumps(v, indent, level + 1));
+    const items = entries.map(([k, v]) => pad(level + 1) + json_str(k) + ": " + json_dumps(v, indent, level + 1, k === "frame_rate"));
     return "{\n" + items.join(",\n") + "\n" + pad(level) + "}";
   }
   // default=str
@@ -729,9 +738,17 @@ export function main(): number {
 
   // Output using context manager (get_output): a file when --output is given, else stdout.
   const output_path = py_bool(args.output) ? new Path(args.output as string) : null;
-  const fd = output_path ? fs.openSync(output_path.path, "w") : null;
-  const output: TextIO =
-    fd != null ? { write: (s: string) => fs.writeSync(fd, s) } : { write: (s: string) => process.stdout.write(s) };
+
+  // @contextlib.contextmanager: returns [output, close] (the `with` enter/exit pair).
+  function get_output(): [TextIO, () => void] {
+    if (output_path) {
+      const fd = fs.openSync(output_path.path, "w");
+      return [{ write: (s: string) => fs.writeSync(fd, s) }, () => fs.closeSync(fd)];
+    }
+    return [{ write: (s: string) => process.stdout.write(s) }, () => {}];
+  }
+
+  const [output, close_output] = get_output();
   try {
     if (args.format === "text") {
       format_text(root_node, output, undefined, undefined, args.depth);
@@ -743,7 +760,7 @@ export function main(): number {
       format_json(root_node, output, args.depth);
     }
   } finally {
-    if (fd != null) fs.closeSync(fd);
+    close_output();
   }
 
   return 0;

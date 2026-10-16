@@ -765,7 +765,11 @@ export class RenderQueueItem {
     if (format_ === GetSettingsFormat.NUMBER) {
       return settings_to_number(this.settings);
     }
-    throw new ValueError(`Unsupported format: ${repr(format_)}`);
+    // Python's repr of an IntEnum member is `<GetSettingsFormat.X: n>` (members are plain numbers here).
+    const format_repr = GetSettingsFormat.has(format_)
+      ? `<GetSettingsFormat.${GetSettingsFormat.name_of(format_)}: ${format_}>`
+      : repr(format_);
+    throw new ValueError(`Unsupported format: ${format_repr}`);
   }
 
   /**

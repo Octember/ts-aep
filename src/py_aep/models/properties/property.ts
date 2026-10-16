@@ -15,7 +15,7 @@ import { UNITS_TEXT_MAP } from "../../data/units.ts";
 import { can_add_property } from "../../resolvers/motion_graphics.ts";
 import { resolve_essential_property_source, resolve_essential_property_controller } from "../../resolvers/essential_properties.ts";
 import { _USE_VALUE, PropSpec } from "../../synthesis/property.ts";
-import { ChunkField, descriptor } from "../descriptors.ts";
+import { ChunkField } from "../descriptors.ts";
 import { TextDocument } from "../text/text_document.ts";
 import { _validate_number, validate_bool, validate_enum, validate_f8, validate_name, validate_number, validate_sequence, validate_text } from "../validators.ts";
 import { AVItem } from "../items/av_item.ts";
@@ -25,15 +25,17 @@ import { CompItem } from "../items/composition.ts";
 import { AVLayer } from "../layers/av_layer.ts";
 import { Project } from "../project.ts";
 import { Curves } from "./curves.ts";
+import type { Gradient } from "./gradient.ts";
 import { Keyframe, _check_time_units, _timebase_units } from "./keyframe.ts";
 import { KeyframeEase } from "./keyframe_ease.ts";
+import type { MarkerValue } from "./marker.ts";
 import { _ALWAYS_MODIFIED, _CANVARY_OVERRIDES, _ISSPATIAL_OVERRIDES, _NAME_OVERRIDES, _PLACEHOLDER_UNBOUNDED, _UNBOUNDED_MATCH_NAMES } from "./overrides.ts";
 import { _EMPTY_CDAT_PAD, GRADIENT_KIND, MARKER_KIND, ORIENTATION_KIND, SHAPE_KIND, TEXT_KIND, type ParallelKind } from "./parallel.ts";
 import { PropertyBase } from "./property_base.ts";
 import { Shape } from "./shape.ts";
 import { _insert_before_group_end, type PropertyGroup } from "./property_group.ts";
 import { type MaskPropertyGroup } from "./mask_property_group.ts";
-import { deepcopy, dict_get, getitem, isclose, py_bool, py_eq, py_or, py_and, sorted, warn, int, round, floordiv, TypeError_, ValueError, KeyError, IndexError, AttributeError, NotImplementedError, py_assert, contains, repr, hasattr, getattr, min, max, range, enumerate, zip, len, float, lshift, rshift, and, or, b } from "../../../pyrt/index.ts";
+import { deepcopy, dict_get, getitem, isclose, py_bool, py_eq, py_or, py_and, sorted, warn, int, round, floordiv, TypeError_, ValueError, KeyError, IndexError, AttributeError, NotImplementedError, py_assert, contains, repr, hasattr, getattr, min, max, range, enumerate, zip, len, float, lshift, rshift, and, or, b, descriptor } from "../../../pyrt/index.ts";
 
 // TODO(pyrt): `list_mul` is Python `[x] * n` for a list; no pyrt shim exists.
 export function list_mul<T>(xs: T[], n: number): T[] {

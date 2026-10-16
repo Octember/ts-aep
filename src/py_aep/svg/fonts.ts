@@ -28,21 +28,21 @@ function home(): Path {
   return new Path(homedir());
 }
 
-const _FONT_SUFFIXES: readonly string[] = [".ttf", ".otf", ".ttc"];
+export const _FONT_SUFFIXES: readonly string[] = [".ttf", ".otf", ".ttc"];
 
 /**
  * family (lowercased) -> {subfamily (lowercased): (font file path, face index)}
  * The face index addresses a face within a TrueType Collection (.ttc); it is
  * 0 for a single-face .ttf/.otf.
  */
-let _index: Map<string, Map<string, [Path, number]>> | null = null;
+export let _index: Map<string, Map<string, [Path, number]>> | null = null;
 
 /**
  * CSS generic families mapped to concrete fonts to try, in order. Used when a
  * requested family is not installed (an unknown family falls back to the
  * sans-serif chain, as a user agent would).
  */
-const _GENERIC_FALLBACKS = new Map<string, readonly string[]>([
+export const _GENERIC_FALLBACKS = new Map<string, readonly string[]>([
   [
     "sans-serif",
     [
@@ -85,8 +85,23 @@ const _GENERIC_FALLBACKS = new Map<string, readonly string[]>([
   ["ui-sans-serif", ["segoe ui", "arial", "helvetica", "dejavu sans"]],
 ]);
 
+/**
+ * TODO(port): pytest `monkeypatch.setattr(fonts_mod, "_font_dirs"/"_index", ...)`
+ * cannot rebind ESM exports; tests use these hooks instead.
+ */
+export function _set_font_dirs(fn: (() => Path[]) | null): void {
+  _font_dirs_override = fn;
+}
+export function _set_index(v: Map<string, Map<string, [Path, number]>> | null): void {
+  _index = v;
+}
+let _font_dirs_override: (() => Path[]) | null = null;
+
 /** The standard OS font directories that exist on this machine. */
-function _font_dirs(): Path[] {
+export function _font_dirs(): Path[] {
+  if (_font_dirs_override != null) {
+    return _font_dirs_override();
+  }
   const dirs: Path[] = [];
   if (process.platform === "win32") {
     const windir = process.env.WINDIR ?? "C:\\Windows";
@@ -127,7 +142,17 @@ const NAME_KEYS = new Map<number, string>([
  * TODO(port): fontTools `getDebugName` falls back across name records and
  * languages; fontkit `getName(key)` reads the English record only.
  */
-function _name(font: any, ...ids: number[]): string | null {
+export function _name(font: any, ...ids: number[]): string | null {
+  // `table = font.get("name"); if table is None: return None`
+  let table: any;
+  try {
+    table = font.name;
+  } catch (e) {
+    table = null;
+  }
+  if (table == null) {
+    return null;
+  }
   for (const nid of ids) {
     const value = font.getName(NAME_KEYS.get(nid));
     if (py_bool(value)) {
@@ -142,7 +167,7 @@ function _name(font: any, ...ids: number[]): string | null {
  * Activated Adobe fonts live here as suffix-less OpenType files; AE
  * resolves text-layer fonts against them.
  */
-function _adobe_font_dirs(): Path[] {
+export function _adobe_font_dirs(): Path[] {
   const dirs: Path[] = [];
   if (process.platform === "win32") {
     const appdata = process.env.APPDATA;
@@ -171,7 +196,7 @@ function _adobe_font_dirs(): Path[] {
  * PostScript name (name ID 6, lowercased) ->
  * (font file path, face index, version string from name ID 5 or None).
  */
-let _ps_index: Map<string, [Path, number, string | null]> | null = null;
+export let _ps_index: Map<string, [Path, number, string | null]> | null = null;
 
 /**
  * Yield `(face index, opened font)` for each face in a font file,
@@ -179,7 +204,7 @@ let _ps_index: Map<string, [Path, number, string | null]> | null = null;
  *
  * Corrupt/unsupported files yield nothing rather than fail discovery.
  */
-function* _iter_faces(path: Path): Generator<[number, any]> {
+export function* _iter_faces(path: Path): Generator<[number, any]> {
   let fonts: any[];
   try {
     const opened: any = fontkit.openSync(path.toString());
@@ -201,7 +226,7 @@ function* _iter_faces(path: Path): Generator<[number, any]> {
   }
 }
 
-function _index_postscript(
+export function _index_postscript(
   path: Path,
   idx: Map<string, [Path, number, string | null]>,
 ): void {
@@ -230,7 +255,7 @@ function _index_postscript(
  * Yield every font file under the OS font directories. Both index
  * builders (`_build_index`, `_postscript_index`) walk the same tree.
  */
-function* _walk_font_files(): Generator<Path> {
+export function* _walk_font_files(): Generator<Path> {
   for (const directory of _font_dirs()) {
     // TODO(port): pyrt rglob sorts entries by name; CPython's rglob follows
     // filesystem (scandir) order. The order decides which duplicate font wins.
@@ -246,7 +271,7 @@ function* _walk_font_files(): Generator<Path> {
  * The lazily built, cached PostScript-name index (one walk over the
  * OS and Adobe CoreSync font directories).
  */
-function _postscript_index(): Map<string, [Path, number, string | null]> {
+export function _postscript_index(): Map<string, [Path, number, string | null]> {
   if (_ps_index == null) {
     const idx = new Map<string, [Path, number, string | null]>();
     for (const path of _walk_font_files()) {
@@ -305,7 +330,7 @@ export function font_version_string(post_script_name: string): string | null {
   return entry[2];
 }
 
-function _index_file(
+export function _index_file(
   path: Path,
   idx: Map<string, Map<string, [Path, number]>>,
 ): void {
@@ -327,7 +352,7 @@ function _index_file(
   }
 }
 
-function _build_index(): Map<string, Map<string, [Path, number]>> {
+export function _build_index(): Map<string, Map<string, [Path, number]>> {
   const idx = new Map<string, Map<string, [Path, number]>>();
   for (const path of _walk_font_files()) {
     _index_file(path, idx);
@@ -336,7 +361,7 @@ function _build_index(): Map<string, Map<string, [Path, number]>> {
 }
 
 /** Choose the closest available face for the requested weight/style. */
-function _pick(
+export function _pick(
   styles: Map<string, [Path, number]>,
   bold: boolean,
   italic: boolean,

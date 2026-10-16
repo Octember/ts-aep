@@ -118,7 +118,7 @@ describe("TestCanAddProperty", () => {
     // (AE 2026 headless run), so the path is unambiguous and addable.
     const project = parse_project_fresh(EG_DIR.parent.div("property", "mask_add.aep"));
     const comp = project.compositions[0];
-    const mask = comp.layers[0].masks[0];
+    const mask = comp.layers[0].masks.__getitem__(0);
     const mask_opacity = next(mask.properties, (p: any) => p.match_name === "ADBE Mask Opacity");
     expect(mask_opacity.property_value_type).toBe(PropertyValueType.OneD);
     expect(mask_opacity.can_add_to_motion_graphics_template(comp)).toBe(true);
@@ -237,7 +237,7 @@ class TestEffectParamPaths {
     for (const cctl of _cif3_cctls(comp)) {
       const cps2 = next(cctl.chunks, (c: any) => getattr(c, "list_type", "") === "CpS2");
       const name = next(cps2.chunks, (c: any) => c.chunk_type === "Utf8").value;
-      if (name !== ctrl_name) continue;
+      if (!py_eq(name, ctrl_name)) continue;
       const cprp = next(cctl.chunks, (c: any) => getattr(c, "list_type", "") === "CPrp");
       return next(cprp.chunks, (c: any) => c.chunk_type === "Utf8").value;
     }
@@ -394,7 +394,7 @@ describe("TestIndexedGroupControllers", () => {
     const project = parse_project_fresh(TestIndexedGroupControllers.FIXTURE);
     const comp = TestIndexedGroupControllers._comp(project);
     const solid = next(comp.layers, (lyr: any) => py_bool(lyr.masks));
-    const expansion = next(solid.masks[1].properties, (p: any) => p.match_name === "ADBE Mask Offset");
+    const expansion = next(solid.masks.__getitem__(1).properties, (p: any) => p.match_name === "ADBE Mask Offset");
     expect(expansion.can_add_to_motion_graphics_template(comp)).toBe(true);
     expect(expansion.add_to_motion_graphics_template_as(comp, "Mask2 Expansion")).toBe(true);
     const out = tmp_path.div("indexed.aep");

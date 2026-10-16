@@ -57,8 +57,9 @@ const _PREF_FILE_GLOBS: Map<PREFType, string> = new Map<PREFType, string>([
   [PREFType.PREF_Type_MACHINE_SPECIFIC_PAINT, "*Prefs-paint.txt"],
 ]);
 
-const _SECTION_RE = /^\["(.*)"\]/;
-const _KEY_RE = /^\t"(.+?)" = (.*)$/;
+// Python's `.` matches everything except "\n" (JS `.` also excludes "\r", U+2028, U+2029), so use [^\n].
+const _SECTION_RE = /^\["([^\n]*)"\]/;
+const _KEY_RE = /^\t"([^\n]+?)" = ([^\n]*)$/;
 
 /** Locate the preference file for `pref_type` under `prefs_dir`. */
 export function find_prefs_file(prefs_dir: Path, pref_type: PREFType): Path | null {
@@ -106,8 +107,10 @@ export function parse_hex_value(value: string): Uint8Array {
       for (const c of encode(value.slice(i + 1, end), "ascii")) raw.push(c);
       i = end + 1;
     } else if ("0123456789ABCDEFabcdef".includes(value[i])) {
-      // TODO(port): pyrt int() also accepts "1_" and non-ASCII digits, which CPython rejects here.
-      raw.push(int(value.slice(i, i + 2), 16));
+      const pair = value.slice(i, i + 2);
+      // pyrt int() strips underscores, which CPython rejects for "A_".
+      if (pair.includes("_")) throw new ValueError(`invalid literal for int() with base 16: '${pair}'`);
+      raw.push(int(pair, 16));
       i += 2;
     } else {
       i += 1;
@@ -121,7 +124,7 @@ export function parse_number_text(text: string): number {
   const stripped = strip(text);
   try {
     // TODO(port): int/float distinction - both branches return a JS number, so 30.0 and 30 are indistinguishable.
-    return int(stripped);
+    return int(stripped) + 0; // + 0 normalizes pyrt's -0 for "-0"
   } catch (e) {
     if (!(e instanceof ValueError)) throw e;
     return float(stripped);

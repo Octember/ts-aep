@@ -29,7 +29,7 @@ const CAMERA_SAMPLE = SAMPLES_DIR.div("camera_default_position.aep");
 const LIGHT_SAMPLE = SAMPLES_DIR.div("light_default_position.aep");
 
 function _prop(layer: Layer, group: string, match_name: string): Property {
-  const prop = layer.__getitem__(group).__getitem__(match_name);
+  const prop = (layer.__getitem__(group) as any).__getitem__(match_name);
   expect(prop instanceof Property).toBe(true);
   return prop as Property;
 }

@@ -58,7 +58,7 @@ export function roto_bezier_tangents(
   const loop_stop = closed ? count : count - 1;
   for (let i = loop_start; i < loop_stop; i++) {
     const [vx, vy] = points[i];
-    const [px, py] = points[i - 1];
+    const [px, py] = points.at(i - 1)!;
     const [nx, ny] = points[mod(i + 1, count)];
     // TODO(port): CPython 3.12 math.hypot uses a different accumulation than
     // V8 Math.hypot; the last bit may differ.

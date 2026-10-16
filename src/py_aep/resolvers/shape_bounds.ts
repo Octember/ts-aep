@@ -35,6 +35,7 @@
 import { Affine, IDENTITY } from "../svg/transform.ts";
 import {
   NotImplementedError,
+  ZeroDivisionError,
   float,
   float_repr,
   getitem,
@@ -262,6 +263,9 @@ function _polystar_path(item: PropertyGroup, time: number): _Path {
     ? _value(item, "ADBE Vector Star Inner Roundess", time) / 100
     : outer_round;
   const count = star ? points * 2 : points;
+  if (points === 0) {
+    throw new ZeroDivisionError("float division by zero");
+  }
   const handle = _KAPPA * Math.sin(Math.PI / points);
   let angle = -Math.PI / 2 + radians(_value(item, "ADBE Vector Star Rotation", time));
   const vertices: _Point[] = [];

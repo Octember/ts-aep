@@ -1,12 +1,12 @@
 /** Tests for Application model. */
 
+import "../../src/py_aep/binary/_register.ts";
 import { describe, expect, test } from "bun:test";
 import { fileURLToPath } from "node:url";
 
 import { Path, py_eq, ValueError } from "../../src/pyrt/index.ts";
 import { make_tmp_path, raises } from "../../src/pyrt/pytest.ts";
 import { parse as parse_aep } from "../../src/py_aep/index.ts";
-import "../../src/py_aep/binary/_register.ts";
 
 const SAMPLE = new Path(fileURLToPath(import.meta.url))
   .resolve()

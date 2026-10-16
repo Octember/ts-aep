@@ -84,7 +84,8 @@ function _close(a: any, b: any, tol: number): boolean {
 function _rect(layer: any, time: number): number[] {
   try {
     const r = layer.source_rect_at_time(time, false);
-    return [getitem(r, "left"), getitem(r, "top"), getitem(r, "width"), getitem(r, "height")];
+    // source_rect_at_time returns a fixed-key record (plain object), not a Map.
+    return [r.left, r.top, r.width, r.height];
   } catch (exc) {
     if (!(exc instanceof NotImplementedError)) throw exc;
     // TODO(port): pytest.skip() raises and aborts the calling test; the shim

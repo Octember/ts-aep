@@ -1,6 +1,7 @@
 /** Tests for media-file probing and file-source creation via import_file. */
 
 import { describe, test } from "bun:test";
+import "../../src/py_aep/binary/_register.ts";
 import { ImportAsType, parse as parse_aep } from "../../src/py_aep/index.ts";
 import { ImportOptions } from "../../src/py_aep/models/import_options.ts";
 import { Path, ValueError } from "../../src/pyrt/index.ts";

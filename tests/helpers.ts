@@ -133,14 +133,15 @@ export function project_bytes(project: Project): Uint8Array {
   return buf.getvalue();
 }
 
-const _load_expected_cached = lru_cache((samples_dir: Path, sample_name: string): any => {
-  const json_path = samples_dir.div(`${sample_name}.json`);
+// Python `Path` hashes by value; `lru_cache` here keys by identity, so key on the path string.
+const _load_expected_cached = lru_cache((samples_dir: string, sample_name: string): any => {
+  const json_path = new Path(samples_dir).div(`${sample_name}.json`);
   return JSON.parse(decode(json_path.read_bytes(), "utf-8"));
 });
 
 /** Load the expected JSON for a sample. */
 export function load_expected(samples_dir: Path, sample_name: string): any {
-  return _load_expected_cached(samples_dir, sample_name);
+  return _load_expected_cached(String(samples_dir), sample_name);
 }
 
 /** Get all .aep stems in a samples directory. */
@@ -245,7 +246,7 @@ export function get_comp_from_json_by_name(expected: any, name: string): any {
 /** Get first layer from a named composition in JSON. */
 export function get_layer_from_json_by_comp(expected: any, comp_name: string): any {
   const comp = get_comp_from_json_by_name(expected, comp_name);
-  if (_json_truthy(comp) && "layers" in comp && len(comp.layers) > 0) {
+  if (_json_truthy(comp) && "layers" in comp && py_bool(comp.layers)) {
     return comp.layers[0];
   }
   return {};

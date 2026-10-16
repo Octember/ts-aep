@@ -46,7 +46,7 @@ function _first_mask(): MaskPropertyGroup {
     for (const layer of comp.layers) {
       const masks = getattr(layer, "masks", null);
       if (py_bool(masks) && len(masks) > 0) {
-        return masks[0];
+        return masks.__getitem__(0);
       }
     }
   }
@@ -92,27 +92,27 @@ const CASES: [string, () => any, string][] = [
   ],
 ];
 
-// TODO(port): pytest `ids=_IDS` has no bun:test equivalent in test.each; the
-// case ids are kept here but test names fall back to the `[%#]` row index.
 const _IDS = CASES.map((c) => c[0]);
 const _PARAMS = CASES.map((c): [() => any, string] => [c[1], c[2]]);
+// pytest `ids=_IDS`: the id is prepended to each row so `%s` renders it in the test name.
+const _ROWS = _PARAMS.map((p, i): [string, () => any, string] => [_IDS[i], p[0], p[1]]);
 
 describe("TestStrictBool", () => {
-  test.each(_PARAMS)("test_rejects_non_bool_string[%#]", (factory: () => any, attr: string) => {
+  test.each(_ROWS)("test_rejects_non_bool_string[%s]", (_id: string, factory: () => any, attr: string) => {
     const obj = factory();
     raises(TypeError_, () => {
       (obj as any)[attr] = "no";
     });
   });
 
-  test.each(_PARAMS)("test_rejects_bare_int[%#]", (factory: () => any, attr: string) => {
+  test.each(_ROWS)("test_rejects_bare_int[%s]", (_id: string, factory: () => any, attr: string) => {
     const obj = factory();
     raises(TypeError_, () => {
       (obj as any)[attr] = 1;
     });
   });
 
-  test.each(_PARAMS)("test_accepts_true_and_false[%#]", (factory: () => any, attr: string) => {
+  test.each(_ROWS)("test_accepts_true_and_false[%s]", (_id: string, factory: () => any, attr: string) => {
     const obj = factory();
     (obj as any)[attr] = true;
     expect(getattr(obj, attr)).toBe(true);

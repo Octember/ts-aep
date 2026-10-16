@@ -5,7 +5,7 @@
  */
 
 import { describe, expect, test } from "bun:test";
-import { getattr, len, py_bool, py_eq, ValueError, type Path } from "../../src/pyrt/index.ts";
+import { getattr, hasattr, len, py_bool, py_eq, ValueError, type Path } from "../../src/pyrt/index.ts";
 import { make_tmp_path, raises } from "../../src/pyrt/pytest.ts";
 import { find_by_type } from "../../src/py_aep/binary/utils.ts";
 import { PropertyType } from "../../src/py_aep/enums/index.ts";
@@ -20,7 +20,7 @@ function* _walk(group: any, depth = 0): Generator<any> {
   if (depth > 10) return;
   for (const child of group) {
     yield child;
-    if (!("keyframes" in child)) {
+    if (!hasattr(child, "keyframes")) {
       yield* _walk(child, depth + 1);
     }
   }

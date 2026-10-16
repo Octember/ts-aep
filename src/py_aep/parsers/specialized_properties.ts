@@ -33,10 +33,13 @@ export const logger = {
   warning: (m: string) => warn(m),
 };
 
-// TODO(pyrt): `obj.__dict__[name] = value` has no shim. An own data property
-// shadows the prototype accessor, which is what the Python write does.
+// TODO(pyrt): no shim for `obj.__dict__`; the same non-enumerable Map per instance
+// that `ChunkField.__get__` / `__set__` (models/descriptors.ts) read and pop overrides from.
 function instance_dict_set(obj: any, name: string, value: any): void {
-  Object.defineProperty(obj, name, { value, writable: true, enumerable: true, configurable: true });
+  if (!Object.prototype.hasOwnProperty.call(obj, "__dict__")) {
+    Object.defineProperty(obj, "__dict__", { value: new Map<string, any>(), enumerable: false });
+  }
+  obj.__dict__.set(name, value);
 }
 
 export function parse_orientation(

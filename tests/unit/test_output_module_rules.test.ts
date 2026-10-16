@@ -136,9 +136,10 @@ function _depth_closure_ok(channels: ReadonlySet<any>, depths: ReadonlySet<any>)
   return [true, ""];
 }
 
-test.each(OutputFormat.members().map((fmt) => [fmt]))(
-  "test_depth_pairing_closed_under_channel_sync[%#]",
-  (fmt: number) => {
+// ids=lambda f: f.name
+test.each(OutputFormat.members().map((fmt) => [OutputFormat.name_of(fmt), fmt] as [string, number]))(
+  "test_depth_pairing_closed_under_channel_sync[%s]",
+  (_id: string, fmt: number) => {
     /**
      * `_sync_after_channels` can never write an out-of-table depth.
      *

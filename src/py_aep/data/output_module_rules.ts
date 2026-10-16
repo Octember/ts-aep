@@ -657,10 +657,8 @@ function _conditions_match(conditions: Map<string, any>, context: Map<string, an
  * Drives whole-state validation (`OutputModule.validate_state`): keys
  * outside this set are unconstrained for the format and never checked.
  */
-// TODO(port): `fmt.kind` is an enum-member @property in enums/output_module.py;
-// assumed here as the enum-object method `OutputFormat.kind_of(fmt)` (rulebook §6).
 export function constrained_keys(fmt: OutputFormat): ReadonlySet<string> {
-  const keys = new Set<string>(getitem(_KIND_RULES, OutputFormat.kind_of(fmt)).keys());
+  const keys = new Set<string>(getitem(_KIND_RULES, OutputFormat.kind(fmt)).keys());
   for (const k of dict_get(_FORMAT_RULES, fmt, new Map<string, ReadonlySet<any>>()).keys()) keys.add(k);
   for (const [, constraints] of dict_get(_CONDITIONAL_RULES, fmt, [] as Rule[])) {
     for (const k of constraints.keys()) keys.add(k);
@@ -688,7 +686,7 @@ export function allowed_values(
   context: Map<string, any> | null = null,
 ): ReadonlySet<any> | null {
   const rules = new Map<string, ReadonlySet<any>>();
-  for (const [k, v] of getitem(_KIND_RULES, OutputFormat.kind_of(fmt))) rules.set(k, v);
+  for (const [k, v] of getitem(_KIND_RULES, OutputFormat.kind(fmt))) rules.set(k, v);
   for (const [k, v] of dict_get(_FORMAT_RULES, fmt, new Map<string, ReadonlySet<any>>())) rules.set(k, v);
   if (context == null) context = new Map<string, any>();
   for (const [conditions, constraints] of dict_get(_CONDITIONAL_RULES, fmt, [] as Rule[])) {

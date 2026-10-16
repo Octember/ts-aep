@@ -259,6 +259,13 @@ test("test_reader_image_does_not_block_vectors", () => {
  * Windows Wingdings/Webdings/Symbol/Marlett, which has no Unicode cmap).
  */
 class _NoCmapFont {
+  // fontkit-shaped twins of the Python duck type: the TS `_glyphs` reads
+  // `font._cmapProcessor` (null = no Unicode cmap), `font.unitsPerEm` and
+  // `glyph_set.numGlyphs` instead of getBestCmap()/getGlyphSet()/font["head"].
+  _cmapProcessor: null = null;
+  unitsPerEm = 1000;
+  numGlyphs = 0;
+
   getBestCmap(): null {
     return null;
   }

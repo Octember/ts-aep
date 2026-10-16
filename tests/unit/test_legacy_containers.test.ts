@@ -67,7 +67,7 @@ test("test_a_one_byte_tdsn_does_not_swallow_the_next_chunk", () => {
   const tdsn = chunks[0];
   expect(tdsn instanceof TdsnChunk).toBe(true);
   // An empty legacy name is an unnamed property.
-  expect(tdsn.utf8.value).toBe(TDSN_SENTINEL);
+  expect(py_eq(tdsn.utf8.value, TDSN_SENTINEL)).toBe(true);
   expect(tdsn.utf8.synthetic).toBe(true);
   expect(py_eq(_write(chunks), data)).toBe(true);
 });
@@ -83,7 +83,7 @@ test("test_a_legacy_fnam_reads_its_string", () => {
   expect(fnam instanceof ContainerChunk).toBe(true);
   const [utf8] = fnam.chunks;
   expect(utf8 instanceof Utf8Chunk).toBe(true);
-  expect(utf8.value).toBe("Color Control");
+  expect(py_eq(utf8.value, "Color Control")).toBe(true);
   // Written back byte for byte, stale bytes included.
   expect(py_eq(_write([fnam]), data)).toBe(true);
 });
@@ -101,7 +101,7 @@ test("test_a_modern_fnam_is_unchanged", () => {
   const data = _chunk("fnam", utf8);
   const [fnam] = _read(data);
   const [child] = fnam.chunks;
-  expect(child.value).toBe("Glow");
+  expect(py_eq(child.value, "Glow")).toBe(true);
   expect(child.synthetic).toBe(false);
   expect(py_eq(fnam.data, b(""))).toBe(true);
   expect(py_eq(_write([fnam]), data)).toBe(true);
@@ -129,7 +129,7 @@ test("test_a_legacy_fnam_with_a_four_letter_name_reads_its_string", () => {
     const data = _chunk("fnam", bytes_.ljust(name, 48, 0));
     const [fnam] = _read(data);
     const [utf8] = fnam.chunks;
-    expect(utf8.value).toBe(decode(name));
+    expect(py_eq(utf8.value, decode(name))).toBe(true);
     expect(utf8.synthetic).toBe(true);
     expect(py_eq(_write([fnam]), data)).toBe(true);
   }
@@ -285,7 +285,7 @@ test("test_names_edited_in_an_older_project_read_back", () => {
       ["slider", "Checkbox Control"],
     ),
   ).toBe(true);
-  expect(back.render_queue.items[0].comment).toBe("note");
+  expect(py_eq(back.render_queue.items[0].comment, "note")).toBe(true);
 });
 
 test("test_an_older_project_cannot_be_relabelled", () => {
@@ -294,5 +294,5 @@ test("test_an_older_project_cannot_be_relabelled", () => {
   raises(ValueError, () => {
     app.version = "16.0x1";
   }, "older format");
-  expect(app.version).toBe("15.0x1");
+  expect(py_eq(app.version, "15.0x1")).toBe(true);
 });

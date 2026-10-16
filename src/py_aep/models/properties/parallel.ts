@@ -35,6 +35,16 @@ import { parse_gradient_xml } from "../../parsers/gradient.ts";
 import type { Keyframe } from "./keyframe.ts";
 import type { Property } from "./property.ts";
 
+// TODO(pyrt): no shim for `obj.__dict__`; the same non-enumerable Map per
+// instance that `ChunkField` (descriptors.ts) reads its overrides from.
+// `dimensions` is a read-only ChunkField, so a plain assignment would throw.
+function instance_dict_set(obj: any, name: string, value: any): void {
+  if (!Object.prototype.hasOwnProperty.call(obj, "__dict__")) {
+    Object.defineProperty(obj, "__dict__", { value: new Map<string, any>(), enumerable: false });
+  }
+  obj.__dict__.set(name, value);
+}
+
 const _EMPTY_CDAT_PAD = b("\x00\x00\x00\x00");
 
 /**
@@ -189,8 +199,8 @@ class _OrientationKind extends ParallelKind {
   apply_model_metadata(prop: Property): void {
     prop._property_control_type = PropertyControlType.ANGLE;
     prop._property_value_type = PropertyValueType.ThreeD_SPATIAL;
-    prop.dimensions = 3;
-    prop._vector = true;
+    instance_dict_set(prop, "dimensions", 3);
+    instance_dict_set(prop, "_vector", true);
   }
 
   on_wrap(prop: Property): void {

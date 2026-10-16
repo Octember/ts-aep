@@ -1,4 +1,4 @@
-import { len, float, round } from "../../../pyrt/index.ts";
+import { float, round } from "../../../pyrt/index.ts";
 import { LdtaChunk } from "../../binary/layer_chunks.ts";
 import { LayerType } from "../../enums/index.ts";
 import { default_camera_zoom } from "../../resolvers/transform.ts";
@@ -76,7 +76,7 @@ export class CameraLayer extends Layer {
     layer_id: number;
     duration: number;
     containing_comp: CompItem;
-    effect_param_defs?: Record<string, Record<string, Record<string, any>>> | null;
+    effect_param_defs?: Map<string, Map<string, Map<string, any>>> | null;
   }): CameraLayer {
     const {
       name,
@@ -85,6 +85,9 @@ export class CameraLayer extends Layer {
       containing_comp,
       effect_param_defs = null,
     } = kw;
+    // TODO(port): Python `# type: ignore[override]` — this keyword shape differs from Layer._new's
+    const name_cps = Array.from(name);
+    const layer_name = name_cps.length > 31 ? name_cps.slice(0, 31).join("") : name;
     const ldta = new LdtaChunk({
       layer_id,
       label: label_index(
@@ -94,7 +97,7 @@ export class CameraLayer extends Layer {
       ),
       layer_type: LayerType.CAMERA,
       layer_flags_2: 0x01,
-      layer_name: len(name) > 31 ? Array.from(name).slice(0, 31).join("") : name,
+      layer_name: layer_name,
     });
     ldta.out_point = duration;
     ldta.three_d_layer = true;

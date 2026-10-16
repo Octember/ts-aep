@@ -11,7 +11,7 @@ import type { U4Chunk, Utf8Chunk } from "../binary/scalar_chunks.ts";
 import type { Chunk, ListChunk } from "../binary/chunk.ts";
 import { _suppress_materialization } from "../models/descriptors.ts";
 import { EssentialGraphicsController, SourcePropertyRef } from "../models/essential_graphics.ts";
-import { int, py_bool, sorted } from "../../pyrt/index.ts";
+import { at, int, py_bool, sorted } from "../../pyrt/index.ts";
 
 // AE stores 0xFFFFFFFF in a CPrp path node's `index` to mean "match by name".
 const _BY_NAME_INDEX = 0xffffffff;
@@ -47,7 +47,7 @@ export function _parse_source_property_path(raw: string): SourcePropertyRef[] {
  */
 export function _parse_controller(cctl_chunk: ListChunk): EssentialGraphicsController {
   const cps2 = find_by_list_type(cctl_chunk.chunks, "CpS2");
-  const name_utf8 = filter_by_type(cps2.chunks, "Utf8")[0] as Utf8Chunk;
+  const name_utf8 = at(filter_by_type(cps2.chunks, "Utf8"), 0) as Utf8Chunk;
 
   const ctyp = find_by_type(cctl_chunk.chunks, "CTyp") as U4Chunk;
 
@@ -133,7 +133,7 @@ export const parse_essential_graphics = _suppress_materialization().decorate(
 
     // Template name from the first LIST:CpS2
     const cps2 = find_by_list_type(cif_chunks, "CpS2");
-    const template_name_utf8 = filter_by_type(cps2.chunks, "Utf8")[0] as Utf8Chunk;
+    const template_name_utf8 = at(filter_by_type(cps2.chunks, "Utf8"), 0) as Utf8Chunk;
 
     const cctl_chunks = filter_by_list_type(cif_chunks, "CCtl");
     const controllers = cctl_chunks.map((cctl) => _parse_controller(cctl));

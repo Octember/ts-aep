@@ -56,7 +56,9 @@ const _PERCENT_AXIS: Record<string, string> = {
 // so findall returns whole matches). Fresh "g" regex so a non-global NUMBER_RE
 // still scans every match.
 function findall(re: RegExp, s: string): string[] {
-  return Array.from(s.matchAll(new RegExp(re.source, "g")), (m) => m[0]);
+  // NUMBER_RE is anchored with a leading ^ (for .match); findall scans, so drop it.
+  const src = re.source.startsWith("^") ? re.source.slice(1) : re.source;
+  return Array.from(s.matchAll(new RegExp(src, "g")), (m) => m[0]);
 }
 
 /**

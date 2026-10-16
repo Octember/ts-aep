@@ -12,7 +12,7 @@ import { make_tmp_path } from "../../src/pyrt/pytest.ts";
 import { parse as parse_aep } from "../../src/py_aep/index.ts";
 import { type Chunk, write_chunk } from "../../src/py_aep/binary/chunk.ts";
 import "../../src/py_aep/binary/_register.ts";
-import type { Layer } from "../../src/py_aep/models/layers/layer.ts";
+import type { Layer } from "../../src/py_aep/models/layers/index.ts";
 import type { Project } from "../../src/py_aep/models/project.ts";
 import { Curves } from "../../src/py_aep/models/properties/curves.ts";
 import { Property } from "../../src/py_aep/models/properties/property.ts";
@@ -23,8 +23,9 @@ const SAMPLE = new Path(import.meta.path)
   .parent.parent.parent.div("samples", "models", "property", "curves.aep");
 
 function _layer(project: Project, name: string): Layer {
-  // TODO(port): Python next() raises StopIteration when no layer matches; find() returns undefined here.
-  return project.compositions[0].layers.find((ly) => ly.name === name)!;
+  const found = project.compositions[0].layers.find((ly) => ly.name === name);
+  if (found === undefined) throw new Error("StopIteration");
+  return found;
 }
 
 function _curves(layer: Layer, index = 0): Property {

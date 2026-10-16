@@ -62,6 +62,9 @@ class FileExistsError extends OSError {}
  *     exclusive_min: When `True`, the value must be strictly greater than
  *         `min` (e.g. a positive-but-non-zero size).
  */
+// TODO(port): int/float distinction - Python renders float bounds/values with a
+// trailing ".0" in messages (`must be >= 0.0, got -1`); JS prints whole numbers
+// without it because the two cannot be told apart.
 export function _validate_number(
   kw: { min?: NumBound; max?: NumBound; integer?: boolean; exclusive_min?: boolean } = {},
 ): Validator {
@@ -222,7 +225,7 @@ export function validate_one_of(allowed: Iterable<unknown>): Validator {
   const formatted = allowed_list.map((v) => str(v)).join(", ");
 
   return function _validator(value: any, instance: any = null): void {
-    if (!allowed_set.has(value)) {
+    if (!allowed_set.has(value instanceof String ? String(value) : value)) {
       throw new ValueError(`must be one of [${formatted}], got ${repr(value)}`);
     }
   };
@@ -248,9 +251,11 @@ export function _validate_str(
   const { allow_empty = true, max_length = null, max_bytes = null, allow_null = true } = kw;
 
   return function _validator(value: any, instance: any = null): void {
-    if (typeof value !== "string") {
+    // `_NulTailStr` (a `str` subclass) arrives as a String object.
+    if (!(typeof value === "string" || value instanceof String)) {
       throw new TypeError_(`expected a string, got ${type_name(value)}`);
     }
+    value = String(value);
     if (!allow_empty && !value) throw new ValueError("must not be empty");
     if (!allow_null && value.includes("\x00")) throw new ValueError("must not contain null bytes");
     // TODO(port): Python `len` counts code points; Array.from matches that for astral text.
@@ -284,10 +289,10 @@ export function _validate_path(
   const { must_exist = null, must_be_file = false } = kw;
 
   return function _validator(value: any, instance: any = null): void {
-    if (!(typeof value === "string" || value instanceof Path)) {
+    if (!(typeof value === "string" || value instanceof String || value instanceof Path)) {
       throw new TypeError_(`expected a file system path, got ${type_name(value)}`);
     }
-    const path = new Path(value);
+    const path = new Path(String(value));
     if (must_exist === true) {
       if (!path.exists()) throw new ValueError(`path does not exist: ${path}`);
       if (must_be_file && !path.is_file()) throw new ValueError(`path is not a file: ${path}`);
@@ -426,11 +431,11 @@ export const validate_f4_point = validate_sequence({ length: 2, min: -FLOAT32_MA
  * in 8.
  */
 export function validate_ae_version(value: any, instance: any = null): void {
-  if (typeof value !== "string") {
+  if (!(typeof value === "string" || value instanceof String)) {
     throw new TypeError_(`expected a version string, got ${type_name(value)}`);
   }
   // TODO(port): Python `$` also matches before a single trailing newline; the JS regex does not.
-  const match = AE_VERSION_RE.exec(value);
+  const match = AE_VERSION_RE.exec(String(value));
   if (match == null) {
     throw new ValueError(
       "version must match '{major}.{minor}x{build}' " +

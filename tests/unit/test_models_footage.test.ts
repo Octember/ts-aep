@@ -6,10 +6,11 @@ import "../../src/py_aep/binary/_register.ts";
 import { AlphaMode, LinearLightMode, parse as parse_aep } from "../../src/py_aep/index.ts";
 import { ListChunk } from "../../src/py_aep/binary/chunk.ts";
 import { Utf8Chunk } from "../../src/py_aep/binary/scalar_chunks.ts";
-import { find_by_type } from "../../src/py_aep/binary/utils.ts";
+import { UNDEFINED_FRAME, find_by_type } from "../../src/py_aep/binary/utils.ts";
 import { ColorProfileNotFoundError, default_icc_library, icc_profile_id } from "../../src/py_aep/color/icc.ts";
 import { ImportOptions } from "../../src/py_aep/models/import_options.ts";
-import { UNDEFINED_FRAME, FileSource } from "../../src/py_aep/models/sources/file.ts";
+// TODO(port): Python imports UNDEFINED_FRAME via models.sources.file (re-import); TS file.ts does not re-export it, so it comes from binary/utils.ts
+import { FileSource } from "../../src/py_aep/models/sources/file.ts";
 import { probe_media } from "../../src/py_aep/resolvers/media_probe.ts";
 import { AttributeError, ValueError, Path, b, bytes_, int, py_eq, repr } from "../../src/pyrt/index.ts";
 import { approx, raises, skip } from "../../src/pyrt/pytest.ts";
@@ -17,6 +18,22 @@ import { approx, raises, skip } from "../../src/pyrt/pytest.ts";
 const __file__ = new Path(import.meta.path);
 const SAMPLES_DIR = __file__.parent.parent.parent.div("samples", "models", "footage");
 const SAMPLES = __file__.parent.parent.parent.div("samples", "models");
+
+/**
+ * `pytest.raises(AttributeError)` around an assignment to a read-only property:
+ * a getter-only accessor throws a native JS TypeError in strict mode, which is
+ * the TS spelling of Python's AttributeError.
+ */
+function _raises_read_only(fn: () => unknown): void {
+  raises(AttributeError, () => {
+    try {
+      fn();
+    } catch (e) {
+      if (e instanceof globalThis.TypeError) throw new AttributeError(e.message);
+      throw e;
+    }
+  });
+}
 
 function _get_first_footage(aep_path: Path): any {
   /** Parse an .aep and return the first footage item. */
@@ -29,48 +46,42 @@ describe("TestFootageReadOnly", () => {
 
   test("test_width_is_read_only", () => {
     const footage = _get_first_footage(SAMPLES_DIR.div("solid_sizes.aep"));
-    // TODO(port): getter-only accessor throws a JS TypeError in strict mode, not pyrt AttributeError
-    raises(AttributeError, () => {
+    _raises_read_only(() => {
       footage.width = 100;
     });
   });
 
   test("test_height_is_read_only", () => {
     const footage = _get_first_footage(SAMPLES_DIR.div("solid_sizes.aep"));
-    // TODO(port): getter-only accessor throws a JS TypeError in strict mode, not pyrt AttributeError
-    raises(AttributeError, () => {
+    _raises_read_only(() => {
       footage.height = 100;
     });
   });
 
   test("test_duration_is_read_only", () => {
     const footage = _get_first_footage(SAMPLES_DIR.div("placeholder.aep"));
-    // TODO(port): getter-only accessor throws a JS TypeError in strict mode, not pyrt AttributeError
-    raises(AttributeError, () => {
+    _raises_read_only(() => {
       footage.duration = 5.0;
     });
   });
 
   test("test_frame_rate_is_read_only", () => {
     const footage = _get_first_footage(SAMPLES_DIR.div("footage_misc.aep"));
-    // TODO(port): getter-only accessor throws a JS TypeError in strict mode, not pyrt AttributeError
-    raises(AttributeError, () => {
+    _raises_read_only(() => {
       footage.frame_rate = 30.0;
     });
   });
 
   test("test_frame_duration_is_read_only", () => {
     const footage = _get_first_footage(SAMPLES_DIR.div("placeholder.aep"));
-    // TODO(port): getter-only accessor throws a JS TypeError in strict mode, not pyrt AttributeError
-    raises(AttributeError, () => {
+    _raises_read_only(() => {
       footage.frame_duration = 100;
     });
   });
 
   test("test_footage_missing_is_read_only", () => {
     const footage = _get_first_footage(SAMPLES_DIR.div("footage_missing.aep"));
-    // TODO(port): getter-only accessor throws a JS TypeError in strict mode, not pyrt AttributeError
-    raises(AttributeError, () => {
+    _raises_read_only(() => {
       footage.footage_missing = false;
     });
   });
@@ -444,7 +455,8 @@ describe("TestWritableInterpretation", () => {
      */
     const item = _import("new_exr.0002.exr", true);
     const sspc = item.main_source._sspc;
-    expect(approx([sspc.native_frame_rate, sspc.duration], [30.0, 2 / 30])).toBe(true);
+    expect(sspc.native_frame_rate).toBe(30.0);
+    expect(approx(sspc.duration, 2 / 30)).toBe(true);
     item.main_source.conform_frame_rate = 25.0;
     expect(sspc.conform_frame_rate).toBe(0.0);
     expect(sspc.native_frame_rate).toBe(25.0);

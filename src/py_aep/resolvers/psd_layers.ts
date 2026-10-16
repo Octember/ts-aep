@@ -25,6 +25,7 @@ import {
   IndexError,
   mod,
   py_bool,
+  py_eq,
   py_slice,
   range,
   repr,
@@ -92,6 +93,12 @@ export class PsdStyleBlocks {
     yield this.fill_opacity;
     yield this.blend_interior;
     yield this.channel_restrictions;
+  }
+
+  /** NamedTuple equality: tuple-wise comparison of the fields. */
+  __eq__(other: any): boolean {
+    if (other == null || typeof other[Symbol.iterator] !== "function") return false;
+    return py_eq([...this], [...other]);
   }
 }
 
@@ -212,6 +219,12 @@ export class PsdLayer {
     yield this.has_transparency;
     yield this.visible;
   }
+
+  /** NamedTuple equality: tuple-wise comparison of the fields. */
+  __eq__(other: any): boolean {
+    if (other == null || typeof other[Symbol.iterator] !== "function") return false;
+    return py_eq([...this], [...other]);
+  }
 }
 
 /**
@@ -259,6 +272,12 @@ export class PsdGroup {
     yield this.children;
     yield this.style_blocks;
     yield this.visible;
+  }
+
+  /** NamedTuple equality: tuple-wise comparison of the fields. */
+  __eq__(other: any): boolean {
+    if (other == null || typeof other[Symbol.iterator] !== "function") return false;
+    return py_eq([...this], [...other]);
   }
 }
 

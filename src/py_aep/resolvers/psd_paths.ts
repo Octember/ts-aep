@@ -45,10 +45,7 @@ export function parse_vector_mask(block: Uint8Array, canvas_w: number, canvas_h:
   const flush = (): void => {
     if (vertices.length) {
       shapes.push(
-        new Shape({
-          vertices: [...vertices],
-          in_tangents: [...in_tangents],
-          out_tangents: [...out_tangents],
+        new Shape([...vertices], [...in_tangents], [...out_tangents], {
           closed,
         }),
       );

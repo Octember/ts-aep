@@ -17,7 +17,7 @@ function pack_into(format: string, buf: Uint8Array, offset: number, ...values: a
 
 /** A Curves aRbp as After Effects writes it, the maps left identity. */
 function _blob(
-  points: Map<string, [number, number][]>,
+  points: Map<string, number[][]>,
   mode = 1,
   stale = false,
   selected = -1,

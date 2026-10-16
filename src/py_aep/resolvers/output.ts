@@ -6,7 +6,7 @@
  */
 
 import { OutputChannels, OutputColorDepth, TimeSpanSource } from "../enums/index.ts";
-import { dict_get, floordiv, format, getitem, int, mod, num_str, py_bool, py_or, round } from "../../pyrt/index.ts";
+import { IndexError, PyException, dict_get, floordiv, format, getitem, int, mod, num_str, py_bool, py_or, round } from "../../pyrt/index.ts";
 import type { CompItem } from "../models/items/composition.ts";
 
 // Roou format_id (4-char) to file extension.
@@ -75,6 +75,102 @@ export const VIDEO_CODEC_NAMES: Map<string, string> = new Map<string, string>([
   ["apcs", "ProRes 422 LT"],
   ["apco", "ProRes 422 Proxy"],
 ]);
+
+// TODO(pyrt): re.sub replacement-template expansion (sre_parse.parse_template)
+// has no shim; local port for a pattern with zero capture groups.
+function _expand_template(template: string, match: string): string {
+  if (!template.includes("\\")) {
+    return template;
+  }
+  const OCT = "01234567";
+  const DIGITS = "0123456789";
+  const out: string[] = [];
+  const ESCAPES: Record<string, string> = {
+    "\\a": "\x07",
+    "\\b": "\b",
+    "\\f": "\f",
+    "\\n": "\n",
+    "\\r": "\r",
+    "\\t": "\t",
+    "\\v": "\v",
+    "\\\\": "\\",
+  };
+  let i = 0;
+  while (i < template.length) {
+    const start = i;
+    const ch = template[i++];
+    if (ch !== "\\") {
+      out.push(ch);
+      continue;
+    }
+    if (i >= template.length) {
+      throw new PyException(`bad escape (end of pattern) at position ${start}`);
+    }
+    const c = template[i++];
+    let this_ = ch + c;
+    if (c === "g") {
+      if (template[i] !== "<") {
+        throw new PyException(`missing < at position ${i}`);
+      }
+      i++;
+      const end = template.indexOf(">", i);
+      if (end < 0) {
+        throw new PyException(`missing >, unterminated name at position ${i}`);
+      }
+      const name = template.slice(i, end);
+      i = end + 1;
+      if (name === "") {
+        throw new PyException(`missing group name at position ${end}`);
+      }
+      if (/^[^\W\d]\w*$/u.test(name)) {
+        throw new IndexError(`unknown group name '${name}'`);
+      }
+      if (!/^[0-9]+$/.test(name)) {
+        throw new PyException(`bad character in group name '${name}' at position ${end - name.length}`);
+      }
+      const index = Number(name);
+      if (index > 0) {
+        throw new PyException(`invalid group reference ${index} at position ${i - this_.length - name.length - 1}`);
+      }
+      out.push(match);
+    } else if (c === "0") {
+      if (i < template.length && OCT.includes(template[i])) {
+        this_ += template[i++];
+        if (i < template.length && OCT.includes(template[i])) {
+          this_ += template[i++];
+        }
+      }
+      out.push(String.fromCharCode(parseInt(this_.slice(1), 8) & 0xff));
+    } else if (DIGITS.includes(c)) {
+      let isoctal = false;
+      if (i < template.length && DIGITS.includes(template[i])) {
+        this_ += template[i++];
+        if (OCT.includes(c) && OCT.includes(this_[2]) && i < template.length && OCT.includes(template[i])) {
+          this_ += template[i++];
+          isoctal = true;
+          const code = parseInt(this_.slice(1), 8);
+          if (code > 0o377) {
+            throw new PyException(
+              `octal escape value ${this_} outside of range 0-0o377 at position ${start}`,
+            );
+          }
+          out.push(String.fromCharCode(code));
+        }
+      }
+      if (!isoctal) {
+        throw new PyException(`invalid group reference ${Number(this_.slice(1))} at position ${start + 1}`);
+      }
+    } else if (this_ in ESCAPES) {
+      out.push(ESCAPES[this_]);
+    } else {
+      if (/^[A-Za-z]$/.test(c)) {
+        throw new PyException(`bad escape ${this_} at position ${start}`);
+      }
+      out.push(this_);
+    }
+  }
+  return out.join("");
+}
 
 // TODO(pyrt): math.gcd has no shim in pyrt/num.ts; local Euclid, matching
 // Python's non-negative result for negative inputs.
@@ -279,9 +375,10 @@ export function resolve_output_filename(
   let result = file_template;
   for (const [key, value] of substitutions) {
     if (value != null) {
-      // TODO(port): Python re.sub expands backslash escapes and \g<n> group
-      // references in the replacement string; the value is inserted literally here.
-      result = result.replace(new RegExp(`\\[${key}\\]`, "gi"), () => value);
+      _expand_template(value, ""); // re.sub compiles the template eagerly (raises on bad escapes)
+      result = result.replace(new RegExp(`\\[${key}\\]`, "gi"), (match: string) =>
+        _expand_template(value, match),
+      );
     }
   }
 

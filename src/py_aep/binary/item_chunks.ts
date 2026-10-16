@@ -63,6 +63,11 @@ export class IdtaChunk extends Chunk {
   /** Bytes 0x50-0x53: big-endian Mac-epoch seconds (see `modified_time`). */
   declare _modified_stamp: number;
 
+  // -- BitField descriptors (not attrs fields) ---------------------------
+  declare use_proxy: boolean;
+  declare is_solid: boolean;
+  declare is_footage: boolean;
+
   /**
    * Item time stamp, as a Unix timestamp (`0` when unstamped).
    *
@@ -314,6 +319,9 @@ export class NhedChunk extends Chunk {
   declare transparency_grid_thumbnails: boolean;
   declare _reserved_11: Uint8Array;
 
+  declare feet_frames_film_type: boolean;
+  declare frames_use_feet_frames: boolean;
+
   /** Time display type (0=TIMECODE, 1=FRAMES). */
   get time_display_type(): number {
     return this._display_byte & 0x7f;
@@ -389,6 +397,10 @@ export class NnhdChunk extends Chunk {
    */
   declare _system_code_page: number;
   declare _unknown_1c: Uint8Array;
+
+  // -- Bit-level accessors (not attrs fields) ----------------------------
+  declare feet_frames_film_type: boolean;
+  declare frames_use_feet_frames: boolean;
 
   /** Time display type (0=TIMECODE, 1=FRAMES). */
   get time_display_type(): number {

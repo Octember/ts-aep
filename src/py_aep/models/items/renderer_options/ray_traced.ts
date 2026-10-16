@@ -1,6 +1,7 @@
 /** Ray-traced 3D (`ADBE Picasso`) render options. */
 
 import { RendererOptionsBase } from "./renderer_options_base.ts";
+import type { SettingsSpec } from "../../renderqueue/settings.ts";
 import type { RayTracedPrdaChunk } from "../../../binary/misc_chunks.ts";
 
 /**
@@ -14,5 +15,5 @@ import type { RayTracedPrdaChunk } from "../../../binary/misc_chunks.ts";
 export class RayTracedRendererOptions extends RendererOptionsBase {
   declare _body: RayTracedPrdaChunk;
 
-  static _SPEC: Map<string, [string, any]> = new Map<string, [string, any]>();
+  static _SPEC: SettingsSpec = new Map();
 }

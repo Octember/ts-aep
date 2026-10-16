@@ -234,10 +234,7 @@ const _TARGA_PAD = bytes_.concat(
  * `CineonRoptChunk()` is a valid format-options chunk.
  */
 export class CineonRoptChunk extends RoptChunk {
-  // TODO(port): `format_code` is declared as a field in Python, but RoptChunk
-  // exposes it as a getter-only accessor here, so a `declare` would clash with
-  // it. The field is still defined through define() below; shadow_format_code()
-  // gives the instance its own writable slot.
+  // `format_code` is a field here (define() installs a converter accessor that shadows the base getter).
   declare _pad: Uint8Array;
   declare ten_bit_black_point: number;
   declare ten_bit_white_point: number;
@@ -273,7 +270,6 @@ define(CineonRoptChunk, {
  * `JpegRoptChunk()` is a valid format-options chunk.
  */
 export class JpegRoptChunk extends RoptChunk {
-  // TODO(port): see CineonRoptChunk - `format_code` is a field here, not a declare.
   declare _pad: Uint8Array;
   declare quality: number;
   declare format_type: number;
@@ -295,7 +291,6 @@ define(JpegRoptChunk, {
  * `OpenExrRoptChunk()` is a valid format-options chunk.
  */
 export class OpenExrRoptChunk extends RoptChunk {
-  // TODO(port): see CineonRoptChunk - `format_code` is a field here, not a declare.
   declare _pad_04: Uint8Array;
   declare compression: number;
   declare thirty_two_bit_float: boolean;
@@ -323,7 +318,6 @@ define(OpenExrRoptChunk, {
  * `TargaRoptChunk()` is a valid format-options chunk.
  */
 export class TargaRoptChunk extends RoptChunk {
-  // TODO(port): see CineonRoptChunk - `format_code` is a field here, not a declare.
   declare _pad: Uint8Array;
   declare bits_per_pixel: number;
   declare _pad2: Uint8Array;
@@ -349,7 +343,6 @@ define(TargaRoptChunk, {
  * output module.
  */
 export class TiffRoptChunk extends RoptChunk {
-  // TODO(port): see CineonRoptChunk - `format_code` is a field here, not a declare.
   declare _pad_04: Uint8Array;
   /** Full `Ropt` body size in bytes (AE writes a redundant copy here). */
   declare chunk_size: number;
@@ -378,7 +371,6 @@ define(TiffRoptChunk, {
  * `width`/`height` come from the reference template.
  */
 export class PngRoptChunk extends RoptChunk {
-  // TODO(port): see CineonRoptChunk - `format_code` is a field here, not a declare.
   declare _pad: Uint8Array;
   declare width: number;
   declare height: number;
@@ -412,21 +404,6 @@ define(PngRoptChunk, {
 /** Python `BitField` descriptors are class attributes with no annotation, so attrs skips them. */
 descriptor(PngRoptChunk, "has_alpha", new BitField("_flags", 2));
 
-/**
- * Makes a variant's `format_code` field shadow the base getter, the way attrs
- * `slots=True` does in Python. Assignment through an accessor with no setter
- * would throw in strict mode, so this gives the prototype a writable slot.
- */
-// TODO(pyrt): a `shadow` helper for attrs fields that shadow a base-class property belongs in src/pyrt/attrs.ts.
-function shadow_format_code(cls: Function): void {
-  Object.defineProperty(cls.prototype, "format_code", {
-    configurable: true,
-    enumerable: true,
-    writable: true,
-    value: undefined,
-  });
-}
-
 const _ROPT_VARIANTS: Map<string, typeof RoptChunk> = new Map<string, typeof RoptChunk>([
   ["sDPX", CineonRoptChunk],
   ["JPEG", JpegRoptChunk],
@@ -435,8 +412,6 @@ const _ROPT_VARIANTS: Map<string, typeof RoptChunk> = new Map<string, typeof Rop
   ["TIF ", TiffRoptChunk],
   ["png!", PngRoptChunk],
 ]);
-
-for (const variant of _ROPT_VARIANTS.values()) shadow_format_code(variant);
 
 // ---------------------------------------------------------------------------
 // Rout - render queue item flags (variable length, repeating items)

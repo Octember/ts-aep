@@ -10,7 +10,7 @@ import {
 } from "../../src/py_aep/models/properties/gradient.ts";
 import { parse_gradient_xml } from "../../src/py_aep/parsers/gradient.ts";
 import { approx, make_tmp_path } from "../../src/pyrt/pytest.ts";
-import { py_eq } from "../../src/pyrt/index.ts";
+import { hasattr, py_eq } from "../../src/pyrt/index.ts";
 
 const SAMPLE = "samples/models/property/gradient.aep";
 const SAMPLE_XML = `<prop.map version="4">
@@ -224,7 +224,7 @@ function gradient_comp_fixture(): any {
 /** `next(v for v in items if hasattr(v, "layers"))`; StopIteration becomes a thrown Error. */
 function next_with_layers(values: Iterable<any>): any {
   for (const v of values) {
-    if ("layers" in v) return v;
+    if (hasattr(v, "layers")) return v;
   }
   throw new Error("StopIteration");
 }

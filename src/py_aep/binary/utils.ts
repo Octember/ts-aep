@@ -258,8 +258,9 @@ export function parse_alas_data(parent_chunks: Chunk[]): Map<string, any> {
     return new Map();
   }
   const alas_text = (alas_chunk as Utf8Chunk).value;
-  if (!py_bool(alas_text)) return new Map();
-  const result = json_loads(alas_text);
+  // `value` may be a `_NulTailStr` (String object), which py_bool would call truthy.
+  if (alas_text == null || String(alas_text).length === 0) return new Map();
+  const result = json_loads(String(alas_text));
   return result instanceof Map ? result : new Map();
 }
 
@@ -364,7 +365,7 @@ export function chunk_tree(chunks: Chunk[], depth = -1, indent = 0): string {
 /**
  * Add or remove a flag chunk from a ListChunk container.
  *
- * Flag chunks are tiny (1-byte body `b"\\x01"`) presence/absence
+ * Flag chunks are tiny (1-byte body `b"\x01"`) presence/absence
  * markers.
  *
  * Some flag chunks are positional: After Effects reads them in a fixed
@@ -438,21 +439,114 @@ export function recursive_find(
   return results;
 }
 
-// TODO(pyrt): json.loads shim. Python `dict` -> Map at every depth. JS
-// JSON.parse reorders integer-like keys and reads `1.0` as `1` (the int/float
-// distinction is lost), so non-canonical alas records can differ from Python.
+// json.loads parity: Python `dict` -> Map at every depth, keys kept in source
+// order (JSON.parse reorders integer-like keys), duplicate keys keep the first
+// position with the last value, and NaN / Infinity / -Infinity are accepted.
+// TODO(port): int/float distinction (`1.0` reads as `1`) and ints beyond 2^53
+// lose precision, so such alas records can differ from Python.
 function json_loads(text: string): any {
-  return to_map(JSON.parse(text));
-}
-
-function to_map(x: any): any {
-  if (Array.isArray(x)) return x.map(to_map);
-  if (x !== null && typeof x === "object") {
-    return new Map<string, any>(
-      Object.entries(x).map(([k, v]): [string, any] => [k, to_map(v)]),
-    );
-  }
-  return x;
+  const ws = " \t\n\r";
+  let pos = 0;
+  const skip = (): void => {
+    while (pos < text.length && ws.includes(text[pos])) pos++;
+  };
+  const fail = (msg: string): never => {
+    throw new ValueError(`${msg}: char ${pos}`);
+  };
+  const parse_value = (): any => {
+    skip();
+    const ch = text[pos];
+    if (ch === "{") {
+      pos++;
+      const out = new Map<string, any>();
+      skip();
+      if (text[pos] === "}") {
+        pos++;
+        return out;
+      }
+      for (;;) {
+        skip();
+        if (text[pos] !== '"') fail("Expecting property name enclosed in double quotes");
+        const key = parse_string();
+        skip();
+        if (text[pos] !== ":") fail("Expecting ':' delimiter");
+        pos++;
+        out.set(key, parse_value());
+        skip();
+        if (text[pos] === ",") {
+          pos++;
+          continue;
+        }
+        if (text[pos] === "}") {
+          pos++;
+          return out;
+        }
+        fail("Expecting ',' delimiter");
+      }
+    }
+    if (ch === "[") {
+      pos++;
+      const out: any[] = [];
+      skip();
+      if (text[pos] === "]") {
+        pos++;
+        return out;
+      }
+      for (;;) {
+        out.push(parse_value());
+        skip();
+        if (text[pos] === ",") {
+          pos++;
+          continue;
+        }
+        if (text[pos] === "]") {
+          pos++;
+          return out;
+        }
+        fail("Expecting ',' delimiter");
+      }
+    }
+    if (ch === '"') return parse_string();
+    for (const [lit, val] of [
+      ["null", null],
+      ["true", true],
+      ["false", false],
+      ["NaN", NaN],
+      ["Infinity", Infinity],
+      ["-Infinity", -Infinity],
+    ] as [string, any][]) {
+      if (text.startsWith(lit, pos)) {
+        pos += lit.length;
+        return val;
+      }
+    }
+    const m = /-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][-+]?\d+)?/y;
+    m.lastIndex = pos;
+    const r = m.exec(text);
+    if (r === null) return fail("Expecting value");
+    pos = m.lastIndex;
+    return Number(r[0]);
+  };
+  const parse_string = (): string => {
+    const start = pos;
+    pos++;
+    while (pos < text.length && text[pos] !== '"') pos += text[pos] === "\\" ? 2 : 1;
+    if (pos >= text.length) {
+      pos = start;
+      fail("Unterminated string starting at");
+    }
+    pos++;
+    try {
+      return JSON.parse(text.slice(start, pos));
+    } catch {
+      pos = start;
+      return fail("Invalid string");
+    }
+  };
+  const result = parse_value();
+  skip();
+  if (pos !== text.length) fail("Extra data");
+  return result;
 }
 
 // json.dumps parity: `json.dumps(obj, sort_keys=True, separators=(",", ":"))`

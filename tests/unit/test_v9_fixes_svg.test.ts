@@ -58,7 +58,7 @@ describe("TestMiterLimit", () => {
           `stroke-miterlimit='${value}'/>`,
       ),
     );
-    const contents = comp.layers[0].property("ADBE Root Vectors Group");
+    const contents: any = comp.layers[0].property("ADBE Root Vectors Group");
     const stroke = contents
       .__getitem__(0)
       .__getitem__("ADBE Vectors Group")
@@ -131,8 +131,8 @@ describe("TestBoundingBoxGradients", () => {
 describe("TestMalformedInput", () => {
   test("test_wrong_arity_transform_is_ignored", () => {
     // AE 2026 imports a `matrix(1 0 0 1)` group untransformed.
-    expect(py_eq(parse_transform("matrix(1 0 0 1)"), IDENTITY)).toBe(true);
-    expect(py_eq(parse_transform("translate(5) skewX()"), IDENTITY)).toBe(true);
+    expect(py_eq([...parse_transform("matrix(1 0 0 1)")], [...IDENTITY])).toBe(true);
+    expect(py_eq([...parse_transform("translate(5) skewX()")], [...IDENTITY])).toBe(true);
     const bbox = _bbox(
       _svg("<g transform='matrix(1 0 0 1)'><rect x='3' width='10' height='10'/></g>"),
     );
@@ -140,8 +140,8 @@ describe("TestMalformedInput", () => {
   });
 
   test("test_non_finite_transform_is_ignored", () => {
-    expect(py_eq(parse_transform("rotate(1e400)"), IDENTITY)).toBe(true);
-    expect(py_eq(parse_transform("skewY(1e400)"), IDENTITY)).toBe(true);
+    expect(py_eq([...parse_transform("rotate(1e400)")], [...IDENTITY])).toBe(true);
+    expect(py_eq([...parse_transform("skewY(1e400)")], [...IDENTITY])).toBe(true);
   });
 
   test("test_unknown_transform_still_raises", () => {

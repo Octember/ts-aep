@@ -37,6 +37,10 @@ export class Affine {
     yield this.f;
   }
 
+  __eq__(other: any): boolean {
+    return other instanceof Affine && this.a === other.a && this.b === other.b && this.c === other.c && this.d === other.d && this.e === other.e && this.f === other.f;
+  }
+
   /** Return `self @ other` (apply `other` first, then `self`). */
   multiply(other: Affine): Affine {
     return new Affine(
@@ -74,7 +78,8 @@ const _FUNC_RE = /([a-zA-Z]+)\s*\(([^)]*)\)/g;
 const _FUNCTIONS: ReadonlySet<string> = new Set(["matrix", "translate", "scale", "rotate", "skewX", "skewY"]);
 
 function _numbers(text: string): number[] {
-  return Array.from(text.matchAll(new RegExp(NUMBER_RE.source, "g")), (m) => float(m[0]));
+  // NUMBER_RE.findall is unanchored in Python; the TS NUMBER_RE carries a leading ^, stripped here.
+  return Array.from(text.matchAll(new RegExp(NUMBER_RE.source.replace(/^\^/, ""), "g")), (m) => float(m[0]));
 }
 
 /**

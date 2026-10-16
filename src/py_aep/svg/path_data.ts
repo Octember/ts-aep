@@ -48,8 +48,8 @@ const _COMMANDS = new Set("MmLlHhVvCcSsQqTtAaZz");
 const _CMD_RE = /^[MmLlHhVvCcSsQqTtAaZz]/;
 // Argument count per command (per coordinate-set repetition).
 const _ARGC: Record<string, number> = { M: 2, L: 2, H: 1, V: 1, C: 6, S: 4, Q: 4, T: 2, A: 7 };
-// Sticky copy of NUMBER_RE: Python's `NUMBER_RE.match(d, i)` anchors at `i`.
-const _NUMBER_AT = new RegExp(NUMBER_RE.source, "y");
+// Sticky, un-anchored copy of NUMBER_RE (its source starts with `^`): Python's `NUMBER_RE.match(d, i)` anchors at `i`.
+const _NUMBER_AT = new RegExp(NUMBER_RE.source.replace(/^\^/, ""), "y");
 
 function _tokenize(d: string): string[] {
   /**

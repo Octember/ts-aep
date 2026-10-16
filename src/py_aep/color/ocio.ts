@@ -16,7 +16,7 @@
 // pyrt `lru_cache`, plain types and pyrt `Path`.
 
 import { statSync } from "node:fs";
-import { parse, YAMLError } from "yaml";
+import { parse, YAMLError, isMap, isSeq, isScalar } from "yaml";
 import {
   Path,
   lru_cache,
@@ -42,18 +42,38 @@ import { ae_guid } from "./murmur3.ts";
 /**
  * `class _OcioLoader(yaml.SafeLoader)`: a YAML loader that ignores OCIO's custom tags.
  *
+ * yaml (npm) has no loader subclasses, so the loader is represented by the
+ * parse options PyYAML's `SafeLoader` implies: YAML 1.1 resolution (`yes`/`on`
+ * booleans, merge keys), no duplicate-key error and no alias-count cap.
+ */
+export class _OcioLoader {
+  static readonly options = {
+    version: "1.1",
+    mapAsMap: true,
+    logLevel: "error",
+    uniqueKeys: false,
+    maxAliasCount: -1,
+  } as const;
+}
+
+/**
+ * `_ignore_tag(loader, suffix, node)`: the empty-prefix multi-constructor.
+ *
  * OCIO writes tags as `!<ColorSpace>` etc.; these resolve to BARE tags
  * (`ColorSpace`, `View`, `Rule`, ...), so an empty-prefix multi-constructor
- * is required (a `"!"`-prefix one would not match). The multi-constructor
- * returned the underlying value, discarding the tag.
+ * is required (a `"!"`-prefix one would not match). Return the underlying
+ * value, discarding the tag.
  *
- * TODO(port): yaml (npm) has no loader subclasses or multi-constructors, so
- * `_OcioLoader`, `_ignore_tag` and the module-level `add_multi_constructor`
- * call are not translated. Tagged nodes fall through yaml's unresolved-tag path
- * in `parse` below (tag dropped, value kept). Parity risk: PyYAML also skips
- * scalar type resolution for tagged scalars and uses YAML 1.1 (`yes`/`on`), while
- * yaml (npm) uses YAML 1.2. Verify on AE's bundled ACES 1.2.
+ * TODO(port): yaml (npm) has no multi-constructors, so this is never
+ * registered; `parse` in `_load_config_cached` drops unresolved tags itself
+ * (warning silenced by `logLevel: "error"`). `loader` is the yaml `Document`.
  */
+export function _ignore_tag(loader: any, suffix: string, node: any): any {
+  if (isMap(node) || isSeq(node) || isScalar(node)) {
+    return node.toJS(loader, { mapAsMap: true } as any);
+  }
+  return null;
+}
 
 /**
  * `@lru_cache(maxsize=8) def _load_config_cached(config_path, _stamp)`.
@@ -71,9 +91,8 @@ export const _load_config_cached = lru_cache(
     let doc: any;
     try {
       doc = parse(decode(new Path(config_path).read_bytes(), "utf-8"), {
-        mapAsMap: true,
-        logLevel: "error",
-      });
+        ..._OcioLoader.options,
+      } as any);
     } catch (e: any) {
       // `except (OSError, yaml.YAMLError)`; node fs errors carry a `code`.
       if (!(e instanceof OSError || e instanceof YAMLError || e?.code)) throw e;
@@ -525,7 +544,7 @@ export function _rule_matches(rule: Map<string, any>, file_path: string): boolea
  *
  * TODO(pyrt): no pyrt shim for `fnmatch`. This is a local translation of
  * `fnmatch.translate` (`*`, `?`, `[seq]`, `[!seq]`, everything else literal)
- * matched against the whole name. Code points are not handled separately.
+ * matched against the whole name (CPython 3.12 bracket handling).
  */
 export function fnmatchcase(name: string, pat: string): boolean {
   let re_src = "";
@@ -538,23 +557,51 @@ export function fnmatchcase(name: string, pat: string): boolean {
       re_src += ".";
     } else if (c === "[") {
       let j = i;
-      if (pat[j] === "!") j++;
-      if (pat[j] === "]") j++;
+      if (j < pat.length && pat[j] === "!") j++;
+      if (j < pat.length && pat[j] === "]") j++;
       while (j < pat.length && pat[j] !== "]") j++;
       if (j >= pat.length) {
         re_src += "\\[";
       } else {
-        let stuff = pat.slice(i, j).replace(/\\/g, "\\\\");
+        let stuff: string;
+        if (!pat.slice(i, j).includes("-")) {
+          stuff = pat.slice(i, j).replace(/\\/g, "\\\\");
+        } else {
+          const chunks: string[] = [];
+          let k = pat[i] === "!" ? i + 2 : i + 1;
+          while (true) {
+            k = pat.indexOf("-", k);
+            if (k < 0 || k >= j) break;
+            chunks.push(pat.slice(i, k));
+            i = k + 1;
+            k = k + 3;
+          }
+          const chunk = pat.slice(i, j);
+          if (chunk) chunks.push(chunk);
+          else chunks[chunks.length - 1] += "-";
+          // Remove empty ranges -- invalid in RE.
+          for (let m = chunks.length - 1; m > 0; m--) {
+            if (chunks[m - 1].at(-1)! > chunks[m][0]) {
+              chunks[m - 1] = chunks[m - 1].slice(0, -1) + chunks[m].slice(1);
+              chunks.splice(m, 1);
+            }
+          }
+          stuff = chunks.map((x) => x.replace(/\\/g, "\\\\").replace(/-/g, "\\-")).join("-");
+        }
         i = j + 1;
-        if (stuff.startsWith("!")) stuff = "^" + stuff.slice(1);
-        else if (stuff.startsWith("^")) stuff = "\\" + stuff;
-        re_src += `[${stuff}]`;
+        if (!stuff) re_src += "(?!)";
+        else if (stuff === "!") re_src += ".";
+        else {
+          if (stuff[0] === "!") stuff = "^" + stuff.slice(1);
+          else if (stuff[0] === "^" || stuff[0] === "[") stuff = "\\" + stuff;
+          re_src += `[${stuff}]`;
+        }
       }
     } else {
       re_src += c.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     }
   }
-  return new RegExp(`^(?:${re_src})$`, "s").test(name);
+  return new RegExp(`^(?:${re_src})$`, "su").test(name);
 }
 
 /**

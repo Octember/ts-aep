@@ -38,13 +38,14 @@ function _effect_props(comp_name: string, layer_name: string): Property[] {
   // Python `next(...)` raises StopIteration when no layer matches; `find` yields undefined instead.
   const layer = comp.layers.find((ly: any) => ly.name === layer_name)!;
   py_assert(layer.effects != null);
-  return layer.effects[0].properties.filter((p: any) => p instanceof Property);
+  return layer.effects.__getitem__(0).properties.filter((p: any) => p instanceof Property);
 }
 
 function _expected_props(comp_name: string, layer_name: string): Map<string, any> {
   const comp = get_comp_from_json_by_name(load_expected(SAMPLES_DIR, SAMPLE), comp_name);
-  const layer = comp.layers.find((ly: any) => ly.name === layer_name);
-  const parade = layer.properties.find((p: any) => p.matchName === "ADBE Effect Parade");
+  // Python `next(...)` raises StopIteration when nothing matches; fail loudly instead of TypeError on undefined.
+  const layer = comp.layers.find((ly: any) => ly.name === layer_name)!;
+  const parade = layer.properties.find((p: any) => p.matchName === "ADBE Effect Parade")!;
   return new Map(parade.properties[0].properties.map((p: any) => [p.matchName, p]));
 }
 

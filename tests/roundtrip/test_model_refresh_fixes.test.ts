@@ -6,8 +6,7 @@
 
 import { describe, expect, test } from "bun:test";
 import * as py_aep from "../../src/py_aep/index.ts";
-import { KeyframeEase } from "../../src/py_aep/index.ts";
-import { getattr, hasattr, len, py_bool, range, str } from "../../src/pyrt/index.ts";
+import { StopIteration, getattr, hasattr, len, py_bool, range, str } from "../../src/pyrt/index.ts";
 import type { Path } from "../../src/pyrt/index.ts";
 import { approx, make_tmp_path } from "../../src/pyrt/pytest.ts";
 import { SAMPLES_DIR, parse_app_fresh } from "../helpers.ts";
@@ -23,7 +22,7 @@ function next<T>(xs: Iterable<T>, pred: ((x: T) => boolean) | null = null): T {
   for (let r = it.next(); !r.done; r = it.next()) {
     if (pred === null || pred(r.value)) return r.value;
   }
-  throw new Error("StopIteration");
+  throw new StopIteration();
 }
 
 function* _walk(group: any, depth = 0): Generator<any> {
@@ -322,7 +321,7 @@ describe("TestEaseSpeedsAreNotLayerTime", () => {
       kf.in_interpolation_type = py_aep.KeyframeInterpolationType.BEZIER;
       kf.out_interpolation_type = py_aep.KeyframeInterpolationType.BEZIER;
     }
-    op.keyframes[0].out_temporal_ease = [new KeyframeEase(30.0, 40.0)];
+    op.keyframes[0].out_temporal_ease = [new py_aep.KeyframeEase(30.0, 40.0)];
 
     expect(approx(op.keyframes[0].out_temporal_ease[0].speed, 30.0)).toBe(true);
     expect(approx(op.keyframes[0].out_temporal_ease[0].influence, 40.0)).toBe(true);

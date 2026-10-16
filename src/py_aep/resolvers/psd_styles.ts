@@ -322,19 +322,29 @@ const _STROKE_POSITION = new Map<string, number>([
   ["CtrF", 3.0],
 ]);
 
+/** Python `repr()` of a parsed descriptor value (dicts print as `{'k': v}`). */
+// TODO(pyrt): pyrt repr() has no dict support; also cannot tell int 5 from float 5.0 (prints "5")
+function _repr(value: any): string {
+  if (value instanceof Map) {
+    return `{${[...value].map(([k, v]) => `${repr(k)}: ${_repr(v)}`).join(", ")}}`;
+  }
+  if (Array.isArray(value)) return `[${value.map(_repr).join(", ")}]`;
+  return repr(value);
+}
+
 function _enum(table: Map<string, number>): (value: any) => number {
   return function convert(value: any): number {
     // Map.get, not a plain-object lookup: descriptor strings such as
     // "constructor" must not reach Object.prototype.
     const hit = table.get(value);
-    if (hit === undefined) throw new UnsupportedStyleError(`unmapped enum value ${repr(value)}`);
+    if (hit === undefined) throw new UnsupportedStyleError(`unmapped enum value ${_repr(value)}`);
     return hit;
   };
 }
 
 function _number(value: any): number {
   if (typeof value !== "number") {
-    throw new UnsupportedStyleError(`expected a number, got ${repr(value)}`);
+    throw new UnsupportedStyleError(`expected a number, got ${_repr(value)}`);
   }
   return value;
 }
@@ -368,7 +378,7 @@ function _py_iter(value: any): any[] {
 
 function _color(value: any): number[] {
   if (!(value instanceof Map) || dict_get(value, "_class") !== "RGBC") {
-    throw new UnsupportedStyleError(`unsupported color model ${repr(value)}`);
+    throw new UnsupportedStyleError(`unsupported color model ${_repr(value)}`);
   }
   return [
     _arith(getitem(value, "Rd  ")) / 255.0,
@@ -380,14 +390,14 @@ function _color(value: any): number[] {
 
 function _point(value: any): number[] {
   if (!(value instanceof Map)) {
-    throw new UnsupportedStyleError(`expected a point, got ${repr(value)}`);
+    throw new UnsupportedStyleError(`expected a point, got ${_repr(value)}`);
   }
   return [_number(getitem(value, "Hrzn")), _number(getitem(value, "Vrtc"))];
 }
 
 function _gradient(value: any): Gradient {
   if (!(value instanceof Map) || dict_get(value, "_class") !== "Grdn") {
-    throw new UnsupportedStyleError(`expected a gradient, got ${repr(value)}`);
+    throw new UnsupportedStyleError(`expected a gradient, got ${_repr(value)}`);
   }
   if (dict_get(value, "GrdF") !== "CstS") {
     // Noise gradients ("ClNs") have no AE representation.

@@ -38,7 +38,7 @@ import {
   load_expected,
   parse_project,
 } from "../conftest.ts";
-import type { Layer } from "../../src/py_aep/models/layers/layer.ts";
+import type { Layer } from "../../src/py_aep/models/layers/index.ts";
 import { Property } from "../../src/py_aep/models/properties/property.ts";
 
 const SAMPLES_DIR = new Path(import.meta.dir).parent.parent.div("samples", "models", "layer");
@@ -68,8 +68,9 @@ const _LIGHT_LAYERS = [
   "Environment",
   "Point Separated",
 ];
-const _LIGHT_ROWS: string[][] = _LIGHT_COMPS.flatMap((comp_name) =>
-  _LIGHT_LAYERS.map((layer_name) => [comp_name, layer_name]),
+// pytest: the decorator nearest the function (comp_name) varies fastest.
+const _LIGHT_ROWS: string[][] = _LIGHT_LAYERS.flatMap((layer_name) =>
+  _LIGHT_COMPS.map((comp_name) => [comp_name, layer_name]),
 );
 
 function _layer(sample: string, comp_name: string, layer_name: string): Layer {

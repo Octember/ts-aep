@@ -54,14 +54,14 @@ function _run_suppressed<R>(body: () => R): R {
  * `@_suppress_materialization()` becomes `.decorate(fn)`.
  */
 export function _suppress_materialization() {
-  return {
-    run: _run_suppressed,
-    decorate<F extends (...args: any[]) => any>(fn: F): F {
-      return function (this: unknown, ...args: any[]) {
-        return _run_suppressed(() => fn.apply(this, args));
-      } as unknown as F;
-    },
-  };
+  function decorate<F extends (...args: any[]) => any>(fn: F): F {
+    return function (this: unknown, ...args: any[]) {
+      return _run_suppressed(() => fn.apply(this, args));
+    } as unknown as F;
+  }
+  // Callable (`@_suppress_materialization()` applied as `_suppress_materialization()(fn)`),
+  // and also exposes `.decorate(fn)` / `.run(body)`.
+  return Object.assign(decorate, { run: _run_suppressed, decorate });
 }
 
 /**
@@ -337,6 +337,7 @@ export class ChunkField<T> {
    * `U1Chunk.value`) add `transform=bool, reverse=int`.
    */
   static bool(chunk_attr: string, field: string, kwargs: Record<string, any> = {}): ChunkField<boolean> {
+    kwargs = { ...kwargs };
     if (!("validate" in kwargs)) kwargs.validate = validate_bool;
     return new this(chunk_attr, field, kwargs) as ChunkField<boolean>;
   }

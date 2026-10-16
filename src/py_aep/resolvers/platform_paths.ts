@@ -90,21 +90,37 @@ function _posix_parts(path: string): string[] {
 }
 
 function _windows_parts(path: string): string[] {
-  // CPython's PureWindowsPath: a drive and/or root (or a UNC `\\server\share\`
-  // anchor) is one leading part; separators are `\` or `/`.
-  let anchor = "";
-  let rest = path;
-  const drive = /^([A-Za-z]):([\\\/]?)(.*)$/s.exec(path);
-  const unc = drive ? null : /^(?:\\\\|\/\/)([^\\\/]+)[\\\/]([^\\\/]+)[\\\/]?(.*)$/s.exec(path);
-  if (drive) {
-    anchor = drive[1] + ":" + (drive[2] !== "" ? "\\" : "");
-    rest = drive[3];
-  } else if (unc) {
-    anchor = "\\\\" + unc[1] + "\\" + unc[2] + "\\";
-    rest = unc[3];
+  // CPython 3.12 ntpath.splitroot + pathlib: separators normalised to `\`, the
+  // drive and root form one leading part, empty and "." components dropped.
+  const normp = path.replace(/\//g, "\\");
+  let drv_root: string;
+  let tail: string;
+  if (normp.slice(0, 2) === "\\\\") {
+    // UNC drives, e.g. \\server\share or \\?\UNC\server\share; device drives
+    const start = normp.slice(0, 8).toUpperCase() === "\\\\?\\UNC\\" ? 8 : 2;
+    const index = normp.indexOf("\\", start);
+    const index2 = index === -1 ? -1 : normp.indexOf("\\", index + 1);
+    if (index2 === -1) {
+      drv_root = normp;
+      tail = "";
+    } else {
+      drv_root = normp.slice(0, index2 + 1);
+      tail = normp.slice(index2 + 1);
+    }
+  } else if (normp.slice(1, 2) === ":") {
+    if (normp.slice(2, 3) === "\\") {
+      drv_root = normp.slice(0, 3);
+      tail = normp.slice(3);
+    } else {
+      drv_root = normp.slice(0, 2);
+      tail = normp.slice(2);
+    }
+  } else {
+    drv_root = "";
+    tail = normp;
   }
-  const comps = rest.split(/[\\\/]/).filter((c) => c !== "" && c !== ".");
-  return anchor !== "" ? [anchor, ...comps] : comps;
+  const comps = tail.split("\\").filter((c) => c !== "" && c !== ".");
+  return drv_root !== "" ? [drv_root, ...comps] : comps;
 }
 
 function _pure_path(path: string): PurePath | null {
@@ -162,7 +178,6 @@ export function relative_path_counts(
     goal = goal.div("_");
   }
   // Windows paths compare case-insensitively.
-  // TODO(port): JS toLowerCase is context-sensitive for final sigma; Python str.lower is not.
   const fold = base instanceof PureWindowsPath;
   const a = base.parts.map((p) => (fold ? p.toLowerCase() : p));
   const b = goal.parts.map((p) => (fold ? p.toLowerCase() : p));

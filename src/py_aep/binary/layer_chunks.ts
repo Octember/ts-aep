@@ -5,7 +5,7 @@
  * so it reads as `None` from older files and is omitted on write when absent.
  */
 
-import { define, descriptor } from "../../pyrt/index.ts";
+import { ZeroDivisionError, define, descriptor } from "../../pyrt/index.ts";
 import { LayerType } from "../enums/index.ts";
 import { to_dividend_divisor, to_float32_ratio } from "./bin_utils.ts";
 import { BitField } from "./bitfield.ts";
@@ -156,11 +156,13 @@ export class LdtaChunk extends Chunk {
 
   /** Start time in seconds (dividend / divisor). */
   get start_time(): number {
+    if (this.start_time_divisor === 0) throw new ZeroDivisionError("division by zero");
     return this.start_time_dividend / this.start_time_divisor;
   }
 
   /** In point in seconds (dividend / divisor). */
   get in_point(): number {
+    if (this.in_point_divisor === 0) throw new ZeroDivisionError("division by zero");
     return this.in_point_dividend / this.in_point_divisor;
   }
 
@@ -170,6 +172,7 @@ export class LdtaChunk extends Chunk {
 
   /** Out point in seconds (dividend / divisor). */
   get out_point(): number {
+    if (this.out_point_divisor === 0) throw new ZeroDivisionError("division by zero");
     return this.out_point_dividend / this.out_point_divisor;
   }
 
