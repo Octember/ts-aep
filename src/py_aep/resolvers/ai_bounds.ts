@@ -57,6 +57,8 @@ import {
   warn,
   round,
   py_bool,
+  is_real,
+
 } from "../../pyrt/index.ts";
 
 export type Box = [number, number, number, number];
@@ -151,7 +153,7 @@ export const _INLINE_IMAGE_END = /[ \t\n\r\f\v\x00]EI[ \t\n\r\f\v\x00]|[ \t\n\r\
 
 /** `str(x)` for a content-stream operand: every number there is a Python float (`1.0`). */
 export function _operand_str(x: any): string {
-  return typeof x === "number" ? num_str(x, true) : str(x);
+  return is_real(x) ? num_str(x, true) : str(x);
 }
 
 /**
@@ -340,7 +342,7 @@ export class _Document {
 
   number(value: any, default_: number = 0.0): number {
     const resolved = this.resolve(value);
-    if (typeof resolved !== "number") return default_;
+    if (!is_real(resolved)) return default_;
     return float(resolved);
   }
 
@@ -409,7 +411,7 @@ export class _Document {
       start += 1;
     }
     const length = this.get(info, "Length");
-    if (typeof length === "number") {
+    if (is_real(length)) {
       return bytes_.slice(this._data, start, start + int(length));
     }
     const end = bytes_.find(this._data, b("endstream"), start);

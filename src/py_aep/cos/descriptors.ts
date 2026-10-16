@@ -22,7 +22,9 @@ import {
   float,
   getattr,
   int,
+  is_real,
   py_bool,
+  pyfloat,
   repr,
   round,
 } from "../../pyrt/index.ts";
@@ -80,7 +82,7 @@ export function _extract(
 // which `_extract` must turn into the default. Guard the argument type here.
 export function _int_float_guard(fn: (x: any) => number): (x: any) => number {
   return (x: any) => {
-    if (typeof x !== "number" && typeof x !== "string" && typeof x !== "boolean" && typeof x !== "bigint") {
+    if (!is_real(x) && typeof x !== "string" && typeof x !== "boolean" && typeof x !== "bigint") {
       throw new TypeError_(`argument must be a string or a real number, not '${x?.constructor?.name ?? "NoneType"}'`);
     }
     return fn(x);
@@ -259,7 +261,8 @@ export class CosField<T> {
    */
   static float<T>(dict_attr: string, key: string, kwargs: Record<string, any> = {}): CosField<number | null> {
     kwargs = { ...kwargs };
-    if (!("reverse" in kwargs)) kwargs.reverse = float;
+    // The stored value is a Python float, so box it to keep `1.0` from serializing as `1`.
+    if (!("reverse" in kwargs)) kwargs.reverse = (x: any) => pyfloat(float(x));
     // TODO(port): Python raises TypeError when kwargs repeat transform; here kwargs silently win.
     // TODO(pyrt): pyrt float() accepts only str/number/bool; Python float(None) raises TypeError (caught natively by _extract).
     return new this(dict_attr, key, { transform: _int_float_guard(float), ...kwargs });

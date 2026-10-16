@@ -1,7 +1,7 @@
 // Python builtins whose JS spelling differs in behavior, not just syntax.
 
 import { AttributeError, IndexError, KeyError, ValueError } from "./errors.ts";
-import { float_repr } from "./num.ts";
+import { float_repr, PyFloat } from "./num.ts";
 
 /**
  * Python truthiness: empty containers (array, string, bytes, Map, Set,
@@ -10,6 +10,7 @@ import { float_repr } from "./num.ts";
  */
 export function py_bool(x: any): boolean {
   if (x == null) return false;
+  if (x instanceof PyFloat) return x.value !== 0;
   if (typeof x === "boolean") return x;
   if (typeof x === "number") return x !== 0;
   if (typeof x === "bigint") return x !== 0n;
@@ -220,6 +221,9 @@ export function contains(container: any, x: any): boolean {
 /** `a == b` for values (numbers, strings, arrays/tuples, bytes, Maps, objects with `__eq__`). */
 export function py_eq(a: any, b: any): boolean {
   if (a === b) return true;
+  if (a instanceof PyFloat) a = a.value;
+  if (b instanceof PyFloat) b = b.value;
+  if (a === b) return true;
   if (typeof a === "number" && typeof b === "number") return a === b;
   if (typeof a === "number" && typeof b === "boolean") return a === (b ? 1 : 0);
   if (typeof a === "boolean" && typeof b === "number") return (a ? 1 : 0) === b;
@@ -247,6 +251,7 @@ export function repr(x: any): string {
   if (x == null) return "None";
   if (typeof x === "boolean") return x ? "True" : "False";
   if (typeof x === "number") return Number.isInteger(x) ? String(x) : float_repr(x);
+  if (x instanceof PyFloat) return float_repr(x.value);
   if (typeof x === "bigint") return x.toString();
   if (typeof x === "string" || x instanceof String) {
     const s = String(x);

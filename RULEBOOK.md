@@ -152,7 +152,11 @@ translating** and use them; do not reimplement anything they provide. Never edit
   Bare `except Exception:` also catches JS `Error`s.
 - **`isinstance(x, int)`** → `typeof x === "number" && Number.isInteger(x)`; `float` →
   `typeof x === "number"` (an int-valued float is indistinguishable — add
-  `// TODO(port): int/float distinction` where the Python branch depends on it);
+  `// TODO(port): int/float distinction` where the Python branch depends on it). Exception:
+  COS data carries Python floats boxed as pyrt `PyFloat` (the parser makes them; code that
+  stores a Python float into a COS dict wraps it with `pyfloat(...)`), so there
+  `isinstance(x, (int, float))` → `is_real(x)`, `float(x)` / `py_eq` unwrap, and getters
+  hand users plain numbers (`float(x)` / `unbox(x)`);
   `str` → `typeof x === "string"`; `bytes` → `x instanceof Uint8Array`; `(list, tuple)` →
   `Array.isArray(x)`; `dict` → `x instanceof Map`; a class → `instanceof`; an enum → `E.has(x)`.
 - **`hasattr` / `getattr` / `setattr`** with a literal name → direct property access

@@ -20,6 +20,11 @@ import {
   str,
   ValueError,
   zip,
+  is_real,
+  pyfloat,
+  PyFloat,
+  unbox,
+
 } from "../../../pyrt/index.ts";
 import { ListChunk } from "../../binary/chunk.ts";
 import type { HeadChunk } from "../../binary/item_chunks.ts";
@@ -35,10 +40,6 @@ import { CHARACTER_RANGE_OOB, NOT_ASSOCIATED, CharacterRange, ComposedLineRange,
 /** A COS dict (`dict[str, Any]`): a `Map` so numeric-looking keys keep their order. */
 export type Dict = Map<string, any>;
 
-// TODO(port): int/float distinction. Python writes ints and floats differently into COS
-// (`1` vs `1.0`, `-2` vs `-2.0`); JS numbers do not carry that. The COS serializer must
-// receive the Python type some other way for whole-valued floats written below.
-
 /**
  * `baseline_locs` entry for a line with no visible characters: the
  * maximum 32-bit float, as After Effects reports (`3.402823466e+38`).
@@ -51,10 +52,10 @@ export const _EMPTY_LINE_LOC = 3.4028234663852886e38;
  * Coordinates trace the rectangle corners (each corner duplicated, AE's
  * bezier vertex layout), anchored at the top-left `(left, top)`.
  */
-export function _box_coords(left: number, top: number, width: number, height: number): number[] {
+export function _box_coords(left: number, top: number, width: number, height: number): PyFloat[] {
   const right = left + width;
   const bottom = top + height;
-  const coords: number[] = [];
+  const coords: PyFloat[] = [];
   for (const [x, y] of [
     [left, top],
     [left, top],
@@ -73,7 +74,7 @@ export function _box_coords(left: number, top: number, width: number, height: nu
     [left, top],
     [left, top],
   ]) {
-    coords.push(float(x), float(y));
+    coords.push(pyfloat(float(x)), pyfloat(float(y)));
   }
   return coords;
 }
@@ -97,12 +98,11 @@ export function _numeric_sort(d: Dict): void {
  * (paragraph) text layer; other keys in the sub-dict are preserved.
  */
 export function _apply_box_conversion(meta: Dict): void {
-  // TODO(port): int/float distinction - `-2.0` and `1` / `-2` below.
   meta.set("0", 1);
-  meta.set("6", [-2.0, -2.0]);
+  meta.set("6", [pyfloat(-2.0), pyfloat(-2.0)]);
   const eleven = setdefault(meta, "11", new Map());
   eleven.set("4", -2);
-  eleven.set("18", -2.0);
+  eleven.set("18", pyfloat(-2.0));
   _numeric_sort(meta);
 }
 
@@ -347,7 +347,7 @@ export class TextDocument {
     const total = u16_len(_raw_text(this));
     _apply_char_key(this, 0, total, "4", value);
     if (value) {
-      _apply_char_key(this, 0, total, "5", 0.01);
+      _apply_char_key(this, 0, total, "5", pyfloat(0.01));
     }
     this._propagate_cos();
   }
@@ -774,7 +774,7 @@ export class TextDocument {
     if (override != null) return override;
     if (this._char_style != null) {
       const raw = this._char_style.get("5");
-      if (typeof raw === "number") {
+      if (is_real(raw)) {
         // When auto-leading is on, AE stores a sentinel in key "5"
         // and displays font_size * auto_leading_factor (para "7").
         if (py_bool(this.auto_leading) && this._para_style != null) {
@@ -794,7 +794,7 @@ export class TextDocument {
     if (this._char_style != null && value != null) {
       // Setting an explicit leading turns auto-leading off, matching AE.
       const total = u16_len(_raw_text(this));
-      _apply_char_key(this, 0, total, "5", float(value));
+      _apply_char_key(this, 0, total, "5", pyfloat(float(value)));
       _apply_char_key(this, 0, total, "4", false);
       this._propagate_cos();
     } else {
@@ -862,7 +862,6 @@ export class TextDocument {
    */
   get kerning(): number {
     const val = cos_get(this._doc, "0", "7");
-    // TODO(port): int/float distinction - Python rejects a float-typed whole number here.
     if (typeof val === "number" && Number.isInteger(val)) return val;
     return 0;
   }
@@ -974,7 +973,7 @@ export class TextDocument {
   get box_text_pos(): number[] | null {
     const coords = this._box_outline();
     if (coords == null) return null;
-    return [coords[0], coords[1]];
+    return [unbox(coords[0]), unbox(coords[1])];
   }
 
   set box_text_pos(value: number[]) {
@@ -994,7 +993,7 @@ export class TextDocument {
   /** The box's inset (padding) spacing in pixels. Read / Write. */
   get box_inset_spacing(): number {
     const val = cos_get(this._box_frame(), "2", "9");
-    return typeof val === "number" ? float(val) : 0.0;
+    return is_real(val) ? float(val) : 0.0;
   }
 
   set box_inset_spacing(value: number) {
@@ -1039,7 +1038,7 @@ export class TextDocument {
   /** The minimum for `MINIMUM_VALUE_*` first-baseline alignment. R/W. */
   get box_first_baseline_alignment_minimum(): number {
     const sub = cos_get(this._box_frame(), "2", "10");
-    if (sub instanceof Map && typeof sub.get("1") === "number") return float(sub.get("1"));
+    if (sub instanceof Map && is_real(sub.get("1"))) return float(sub.get("1"));
     return 0.0;
   }
 
@@ -1505,7 +1504,7 @@ export const _box_inset_spacing_set = requires_version(24)(function box_inset_sp
   /** Setter body for `box_inset_spacing`. */
   validate_positive_number(value);
   const meta = setdefault(this._ensure_frame(), "2", new Map());
-  meta.set("9", float(value));
+  meta.set("9", pyfloat(float(value)));
   _numeric_sort(meta);
   this._propagate_cos();
 });
@@ -1535,8 +1534,7 @@ export const _box_first_baseline_alignment_set = requires_version(24)(function b
   const sub = setdefault(meta, "10", new Map());
   sub.set("0", BoxFirstBaselineAlignment.to_binary(value));
   // AE always stores the minimum alongside the alignment.
-  // TODO(port): int/float distinction - `0.0` default below.
-  setdefault(sub, "1", 0.0);
+  setdefault(sub, "1", pyfloat(0.0));
   _numeric_sort(meta);
   this._propagate_cos();
 });
@@ -1546,7 +1544,7 @@ export const _box_first_baseline_alignment_minimum_set = requires_version(24)(fu
   const meta = setdefault(this._ensure_frame(), "2", new Map());
   const sub = setdefault(meta, "10", new Map());
   setdefault(sub, "0", BoxFirstBaselineAlignment.to_binary(BoxFirstBaselineAlignment.ASCENT));
-  sub.set("1", float(value));
+  sub.set("1", pyfloat(float(value)));
   _numeric_sort(meta);
   this._propagate_cos();
 });

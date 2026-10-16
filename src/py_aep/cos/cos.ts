@@ -21,6 +21,7 @@ import {
   py_enum,
   py_eq,
   py_or,
+  pyfloat,
   repr,
   str,
   SyntaxError_,
@@ -152,7 +153,6 @@ export function run_spans(
   let pos = 0;
   for (const run of runs) {
     const length: any = run instanceof Map ? dict_get(run, "1") : null;
-    // TODO(port): int/float distinction - Python `isinstance(2.0, int)` is False, but a JS 2.0 is an integer here.
     // Python `isinstance(True, int)` is True, so booleans count as lengths 1/0 (`int()` below).
     const is_int = typeof length === "boolean" || (typeof length === "number" && Number.isInteger(length));
     if (!is_int) continue;
@@ -622,9 +622,8 @@ export class CosParser {
         break;
       }
     }
-    // TODO(port): int/float distinction - a float with an integral value (e.g. "2.0") is a JS number
-    // indistinguishable from an int, so Python's isinstance(x, int) checks downstream can differ.
-    return new Token(TokenType.Number, float(head));
+    // Boxed so an integral float ("2.0") stays a float through copies and re-serialization.
+    return new Token(TokenType.Number, pyfloat(float(head)));
   }
 
   lex_keyword(char: Uint8Array): Token {

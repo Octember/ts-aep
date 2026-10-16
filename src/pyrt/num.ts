@@ -2,6 +2,58 @@
 
 import { OverflowError, ValueError, ZeroDivisionError } from "./errors.ts";
 
+/**
+ * A Python `float` whose float-ness must survive in data that is later
+ * serialized by type (COS text-document blobs write `1.0` for a float and
+ * `1` for an int). JS has one number type, so an integral float would be
+ * indistinguishable from an int; boxing carries the distinction with the
+ * value through copies and container moves. Arithmetic and relational
+ * operators unwrap it through `valueOf`; `===`, `typeof` and the
+ * `Number.is*` predicates do not, so compare through `py_eq` / `unbox`.
+ */
+export class PyFloat {
+  declare readonly value: number;
+  constructor(value: number) {
+    this.value = +value;
+  }
+  valueOf(): number {
+    return this.value;
+  }
+  toString(): string {
+    return float_repr(this.value);
+  }
+  toJSON(): number {
+    return this.value;
+  }
+  __repr__(): string {
+    return float_repr(this.value);
+  }
+  __bool__(): boolean {
+    return this.value !== 0;
+  }
+  __eq__(other: any): boolean {
+    return unbox(other) === this.value;
+  }
+  __deepcopy__(): PyFloat {
+    return this;
+  }
+}
+
+/** Python `float(x)` kept as a float: a boxed `PyFloat` (see `PyFloat`). */
+export function pyfloat(x: number | PyFloat): PyFloat {
+  return x instanceof PyFloat ? x : new PyFloat(x);
+}
+
+/** `isinstance(x, (int, float))` without the bool case: a JS number or a boxed `PyFloat`. */
+export function is_real(x: any): x is number | PyFloat {
+  return typeof x === "number" || x instanceof PyFloat;
+}
+
+/** The plain JS number behind a possibly boxed `PyFloat`; other values pass through. */
+export function unbox<T>(x: T): T extends PyFloat ? number : T {
+  return (x instanceof PyFloat ? x.value : x) as any;
+}
+
 /** `a // b` (floor division; ZeroDivisionError on 0). */
 export function floordiv(a: number, b: number): number {
   if (b === 0) throw new ZeroDivisionError("division by zero");
@@ -35,7 +87,8 @@ export function divmod(a: number, b: number): [number, number] {
 }
 
 /** `int(x)` for a float: truncate toward zero; raises like Python on nan/inf. */
-export function int(x: number | string | boolean | bigint, base = 10): number {
+export function int(x: number | string | boolean | bigint | PyFloat, base = 10): number {
+  if (x instanceof PyFloat) x = x.value;
   if (typeof x === "boolean") return x ? 1 : 0;
   if (typeof x === "bigint") return Number(x);
   if (typeof x === "string") {
@@ -50,7 +103,8 @@ export function int(x: number | string | boolean | bigint, base = 10): number {
 }
 
 /** `float(text)` */
-export function float(x: string | number | boolean): number {
+export function float(x: string | number | boolean | PyFloat): number {
+  if (x instanceof PyFloat) return x.value;
   if (typeof x === "number") return x;
   if (typeof x === "boolean") return x ? 1 : 0;
   const s = x.trim().toLowerCase().replace(/_/g, "");
@@ -91,7 +145,8 @@ export function float_as_ratio(x: number): [bigint, bigint] {
  * Python `round(x)` (ties to even, returns an int) and `round(x, n)`
  * (correctly rounded on the exact binary value, ties to even).
  */
-export function round(x: number, ndigits?: number | null): number {
+export function round(x: number | PyFloat, ndigits?: number | null): number {
+  if (x instanceof PyFloat) x = x.value;
   if (ndigits == null) {
     if (Number.isNaN(x)) throw new ValueError("cannot convert float NaN to integer");
     if (!Number.isFinite(x)) throw new OverflowError("cannot convert float infinity to integer");
@@ -184,7 +239,9 @@ export function fsum(values: Iterable<number>): number {
 }
 
 /** `math.isclose(a, b, rel_tol=1e-9, abs_tol=0)` */
-export function isclose(a: number, b: number, rel_tol = 1e-9, abs_tol = 0): boolean {
+export function isclose(a: number | PyFloat, b: number | PyFloat, rel_tol = 1e-9, abs_tol = 0): boolean {
+  a = unbox(a);
+  b = unbox(b);
   if (a === b) return true;
   if (!Number.isFinite(a) || !Number.isFinite(b)) return false;
   const diff = Math.abs(b - a);
@@ -192,7 +249,9 @@ export function isclose(a: number, b: number, rel_tol = 1e-9, abs_tol = 0): bool
 }
 
 /** `math.copysign` */
-export function copysign(x: number, y: number): number {
+export function copysign(x: number | PyFloat, y: number | PyFloat): number {
+  x = unbox(x);
+  y = unbox(y);
   const neg = y < 0 || Object.is(y, -0);
   return neg ? -Math.abs(x) : Math.abs(x);
 }
@@ -202,7 +261,8 @@ export const radians = (x: number): number => x * (Math.PI / 180);
 export const degrees = (x: number): number => x * (180 / Math.PI);
 
 /** Python `repr(float)` / `str(float)`: shortest round-trip, Python spelling. */
-export function float_repr(x: number): string {
+export function float_repr(x: number | PyFloat): string {
+  if (x instanceof PyFloat) x = x.value;
   if (Number.isNaN(x)) return "nan";
   if (!Number.isFinite(x)) return x > 0 ? "inf" : "-inf";
   if (x === 0) return Object.is(x, -0) ? "-0.0" : "0.0";
@@ -217,7 +277,8 @@ export function float_repr(x: number): string {
 }
 
 /** Python `str(x)` for a number that may be an int or a float. */
-export function num_str(x: number, is_float = !Number.isInteger(x)): string {
+export function num_str(x: number | PyFloat, is_float = x instanceof PyFloat || !Number.isInteger(x)): string {
+  if (x instanceof PyFloat) x = x.value;
   return is_float ? float_repr(x) : String(x);
 }
 
@@ -225,7 +286,9 @@ export function num_str(x: number, is_float = !Number.isInteger(x)): string {
  * Python `format(x, spec)` for the numeric specs py_aep uses:
  * `[sign][0][width][.prec](f|e|g|%|d|x|X)`, plus `,` grouping.
  */
-export function format(x: number, spec: string): string {
+export function format(x: number | PyFloat, spec: string): string {
+  const is_float = x instanceof PyFloat;
+  x = unbox(x);
   const m = /^([<>=^]?)([+\- ]?)(0?)(\d*)(,?)(?:\.(\d+))?([fFeEgGdxX%n]?)$/.exec(spec);
   if (!m) throw new ValueError(`Unsupported format spec ${spec}`);
   const [, align, sign, zero, width_s, comma, prec_s, type] = m;
@@ -260,7 +323,7 @@ export function format(x: number, spec: string): string {
       body = Math.trunc(a).toString(16).toUpperCase();
       break;
     default:
-      body = prec === undefined ? (Number.isInteger(x) ? String(a) : float_repr(a)) : general(a, prec, true);
+      body = prec === undefined ? (!is_float && Number.isInteger(x) ? String(a) : float_repr(a)) : general(a, prec, true);
   }
   if (type === "E" || type === "G" || type === "F") body = body.toUpperCase();
   if (comma) {

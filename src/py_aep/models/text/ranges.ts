@@ -49,6 +49,9 @@ import {
   split,
   str,
   descriptor,
+  is_real,
+  pyfloat,
+
 } from "../../../pyrt/index.ts";
 import { CosField, CosName, cos_get, run_spans } from "../../cos/index.ts";
 import { _extract } from "../../cos/descriptors.ts";
@@ -191,13 +194,12 @@ export function _line_data_from_nodes(nodes: Dict[]): [[number, number][], (numb
     if (Array.isArray(children)) {
       for (const seg of children) {
         const count = cos_get(seg, "15", "0");
-        // TODO(port): int/float distinction - Python `isinstance(count, int)`.
         if (typeof count === "number" && Number.isInteger(count)) total += count;
       }
     }
     lengths.push(total);
     const baseline = dict_get(node, "10");
-    baselines.push(typeof baseline === "number" ? float(baseline) : null);
+    baselines.push(is_real(baseline) ? float(baseline) : null);
   }
   if (!lengths.length) return null;
   const spans: [number, number][] = [];
@@ -219,7 +221,7 @@ export function _line_origin(node: Dict): [number, number] {
   const origin = cos_get(node, "0", "0");
   if (Array.isArray(origin) && origin.length >= 2) return [float(origin[0]), float(origin[1])];
   const baseline = dict_get(node, "10");
-  const y = typeof baseline === "number" ? float(baseline) : 0.0;
+  const y = is_real(baseline) ? float(baseline) : 0.0;
   return [0.0, y];
 }
 
@@ -241,7 +243,7 @@ export function _line_advances(node: Dict): number[] {
     const advances = cos_get(seg, "15", "7", "7");
     if (!Array.isArray(advances)) continue;
     for (const advance of advances) {
-      if (typeof advance === "number") out.push(base + float(advance));
+      if (is_real(advance)) out.push(base + float(advance));
     }
     if (out.length) base = out[out.length - 1];
   }
@@ -315,14 +317,13 @@ export function _parse_color(paint: any): number[] | null {
  * alpha of `1.0`.
  */
 export function _build_color_paint(rgb: number[]): Dict {
-  // TODO(port): int/float distinction - Python `1.0` alpha and the float(...) channels serialize as floats; a JS number cannot tell.
   return new Map<string, any>([
     ["99", new CosName("SimplePaint")],
     [
       "0",
       new Map<string, any>([
         ["0", 1],
-        ["1", [1.0, float(rgb[0]), float(rgb[1]), float(rgb[2])]],
+        ["1", [pyfloat(1.0), pyfloat(float(rgb[0])), pyfloat(float(rgb[1])), pyfloat(float(rgb[2]))]],
       ]),
     ],
   ]);
@@ -375,7 +376,6 @@ export function _register_font_at(
 
   const bump = (holder: Dict): void => {
     const current = dict_get(holder, "0");
-    // TODO(port): int/float distinction - Python `isinstance(current, int)`.
     if (typeof current === "number" && Number.isInteger(current) && current >= index) {
       holder.set("0", current + 1);
     }
@@ -966,7 +966,8 @@ export class RangeField {
   /** Create a RangeField that coerces to float. */
   static float(kind: string, key: string, kwargs: Record<string, any> = {}): RangeField {
     const kw: Record<string, any> = { ...kwargs };
-    if (!("reverse" in kw)) kw.reverse = float;
+    // The stored value is a Python float, so box it to keep `1.0` from serializing as `1`.
+    if (!("reverse" in kw)) kw.reverse = (x: any) => pyfloat(float(x));
     return new this(kind, key, { transform: float, ...kw });
   }
 
@@ -1346,7 +1347,6 @@ export class CharacterRange extends _TextRange {
         const style = cos_get(clone, "0", "0", "6");
         if (style instanceof Map) {
           const index = dict_get(style, "0");
-          // TODO(port): int/float distinction - Python `isinstance(index, int)`.
           if (typeof index === "number" && Number.isInteger(index) && 0 <= index && index < src_doc._fonts.length) {
             needed.set(index, src_doc._fonts[index].post_script_name);
           }
@@ -1417,8 +1417,7 @@ export class CharacterRange extends _TextRange {
     const [start, end] = this._bounds();
     _apply_char_key(this._doc_ref, start, end, "4", value);
     if (value) {
-      // TODO(port): int/float distinction - AE writes this leading sentinel as a float.
-      _apply_char_key(this._doc_ref, start, end, "5", 0.01);
+      _apply_char_key(this._doc_ref, start, end, "5", pyfloat(0.01));
     }
     this._propagate();
   }
@@ -1523,8 +1522,7 @@ export class CharacterRange extends _TextRange {
     if (value == null) {
       _apply_char_key(this._doc_ref, start, end, "5", null);
     } else {
-      // TODO(port): int/float distinction - Python `float(value)` always stores a float.
-      _apply_char_key(this._doc_ref, start, end, "5", float(value));
+      _apply_char_key(this._doc_ref, start, end, "5", pyfloat(float(value)));
       _apply_char_key(this._doc_ref, start, end, "4", false);
     }
     this._propagate();

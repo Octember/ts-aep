@@ -629,7 +629,7 @@ describe("TestDocumentWideWrites", () => {
     doc.character_range(1, 4).leading = 50;
     doc.auto_leading = true;
     expect(len(doc._doc.get("0").get("6").get("0"))).toBe(1);
-    expect(doc._char_style.get("5")).toBe(0.01);
+    expect(py_eq(doc._char_style.get("5"), 0.01)).toBe(true);
   });
 });
 

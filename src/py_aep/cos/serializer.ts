@@ -7,7 +7,7 @@
  * bytes suitable for writing back into a btdk chunk's `binary_data`.
  */
 
-import { BytesIO, b, bytes_, concat, encode, format, getattr, TypeError_ } from "../../pyrt/index.ts";
+import { BytesIO, b, bytes_, concat, encode, format, getattr, PyFloat, TypeError_, unbox } from "../../pyrt/index.ts";
 import { CosName, IndirectObject, IndirectReference, Stream } from "./cos.ts";
 
 /**
@@ -57,13 +57,12 @@ export function _write_value(buf: BytesIO, value: any, kw: { top_level?: boolean
     _space(buf);
     buf.write(value ? b("true") : b("false"));
   } else if (typeof value === "bigint" || (typeof value === "number" && Number.isInteger(value) && !Object.is(value, -0))) {
-    // TODO(port): int/float distinction — a Python float with an integral value (9.0) lands here
-    // and is written as "9", not "9.0", because JS has one number type. Same for ints beyond 2^53.
+    // A plain integral JS number is a Python int; a Python float reaches here boxed as `PyFloat`.
     _space(buf);
     buf.write(encode(String(value), "ascii"));
-  } else if (typeof value === "number") {
+  } else if (typeof value === "number" || value instanceof PyFloat) {
     _space(buf);
-    buf.write(_format_float(value));
+    buf.write(_format_float(unbox(value)));
   } else if (value instanceof CosName) {
     _space(buf);
     _write_identifier(buf, value.value);
