@@ -16,12 +16,7 @@ import { make_tmp_path, raises } from "../../src/pyrt/pytest.ts";
 import { parse_app_fresh } from "../helpers.ts";
 
 import "../../src/py_aep/binary/_register.ts";
-import {
-  ChannelType,
-  FastPreviewType,
-  ViewerType,
-  type ViewOptions,
-} from "../../src/py_aep/index.ts";
+import { ChannelType, FastPreviewType, ViewerType, type ViewOptions } from "../../src/py_aep/index.ts";
 import { parse as parse_aep } from "../../src/py_aep/index.ts";
 import type { Application } from "../../src/py_aep/index.ts";
 

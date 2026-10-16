@@ -30,25 +30,25 @@ export const AddableKind = py_enum("AddableKind", {
 export type AddableKind = EnumValue<typeof AddableKind>;
 
 // Match names that can be added to specific indexed groups via add_property().
-const _ADDABLE_MASK_MATCH_NAMES: ReadonlySet<string> = new Set(["ADBE Mask Atom"]);
+export const _ADDABLE_MASK_MATCH_NAMES: ReadonlySet<string> = new Set(["ADBE Mask Atom"]);
 
 // Effects creatable via add_property(). The Dropdown Menu Control
 // registers as a pseudo effect with a per-instance generated match name
 // (`Pseudo/@@` + base64(uuid4)); add_property generates one on demand.
-const _ADDABLE_EFFECT_MATCH_NAMES: ReadonlySet<string> = new Set([
+export const _ADDABLE_EFFECT_MATCH_NAMES: ReadonlySet<string> = new Set([
   ...EXPRESSION_CONTROLS.keys(),
   "ADBE Dropdown Control",
 ]);
 
-const _EFFECT_DISPLAY_TO_MATCH: Map<string, string> = new Map(
+export const _EFFECT_DISPLAY_TO_MATCH: Map<string, string> = new Map(
   [...EXPRESSION_CONTROLS].map(([mn, entry]) => [entry.name, mn] as [string, string]),
 );
 _EFFECT_DISPLAY_TO_MATCH.set("Dropdown Menu Control", "ADBE Dropdown Control");
 
-const _ADDABLE_TEXT_ANIMATOR_MATCH_NAMES: ReadonlySet<string> = new Set(["ADBE Text Animator"]);
+export const _ADDABLE_TEXT_ANIMATOR_MATCH_NAMES: ReadonlySet<string> = new Set(["ADBE Text Animator"]);
 
 // Selectors addable to a text animator's Selectors group.
-const _ADDABLE_TEXT_SELECTOR_MATCH_NAMES: ReadonlySet<string> = new Set([
+export const _ADDABLE_TEXT_SELECTOR_MATCH_NAMES: ReadonlySet<string> = new Set([
   "ADBE Text Selector",
   "ADBE Text Wiggly Selector",
   "ADBE Text Expressible Selector",
@@ -56,17 +56,17 @@ const _ADDABLE_TEXT_SELECTOR_MATCH_NAMES: ReadonlySet<string> = new Set([
 
 // Animator properties applicable to a text animator's (NAMED) Properties
 // group - the full pool minus the 8 variable-font axes (not addable).
-const _ADDABLE_ANIMATOR_PROPERTY_MATCH_NAMES: ReadonlySet<string> = new Set(
+export const _ADDABLE_ANIMATOR_PROPERTY_MATCH_NAMES: ReadonlySet<string> = new Set(
   TEXT_ANIMATOR_POOL.filter((e) => !e.mn.startsWith("ADBE Text VF Axis")).map((e) => e.mn),
 );
-const _ANIMATOR_PROPERTY_DISPLAY_TO_MATCH: Map<string, string> = new Map(
+export const _ANIMATOR_PROPERTY_DISPLAY_TO_MATCH: Map<string, string> = new Map(
   TEXT_ANIMATOR_POOL.filter(
     (e) => py_bool(e.name) && !e.mn.startsWith("ADBE Text VF Axis"),
   ).map((e) => [e.name, e.mn] as [string, string]),
 );
 
 // Shape elements that can be added to a Root Vectors Group (Contents).
-const _ADDABLE_SHAPE_MATCH_NAMES: ReadonlySet<string> = new Set([
+export const _ADDABLE_SHAPE_MATCH_NAMES: ReadonlySet<string> = new Set([
   "ADBE Vector Group",
   "ADBE Vector Shape - Rect",
   "ADBE Vector Shape - Ellipse",
@@ -89,7 +89,7 @@ const _ADDABLE_SHAPE_MATCH_NAMES: ReadonlySet<string> = new Set([
 ]);
 
 // Reverse lookup: display name -> match name for addable items.
-const _ADDABLE_DISPLAY_TO_MATCH: Map<string, string> = new Map();
+export const _ADDABLE_DISPLAY_TO_MATCH: Map<string, string> = new Map();
 // Python `del _mn, _auto` at the end of this loop is module-namespace
 // cleanup only; TS loop bindings are already block-scoped.
 for (const _mn of new Set([
@@ -104,7 +104,7 @@ for (const _mn of new Set([
 
 // Per-group addable sets + builder kind, keyed by parent match name.
 // "ADBE Vectors Group" is a nested shape group's own contents.
-const _ADDABLE_BY_GROUP: Map<string, readonly [ReadonlySet<string>, AddableKind]> = new Map([
+export const _ADDABLE_BY_GROUP: Map<string, readonly [ReadonlySet<string>, AddableKind]> = new Map([
   ["ADBE Mask Parade", [_ADDABLE_MASK_MATCH_NAMES, AddableKind.MASK]],
   ["ADBE Effect Mask Parade", [_ADDABLE_MASK_MATCH_NAMES, AddableKind.MASK]],
   ["ADBE Text Animators", [_ADDABLE_TEXT_ANIMATOR_MATCH_NAMES, AddableKind.TEXT_ANIMATOR]],
@@ -120,7 +120,7 @@ const _ADDABLE_BY_GROUP: Map<string, readonly [ReadonlySet<string>, AddableKind]
 // Addable groups that are NAMED (not indexed) - the ExtendScript
 // "named-group exception". Adding to them materializes a fixed-pool
 // member in place rather than appending a new indexed child.
-const _NAMED_ADDABLE_GROUPS: ReadonlySet<string> = new Set(["ADBE Text Animator Properties"]);
+export const _NAMED_ADDABLE_GROUPS: ReadonlySet<string> = new Set(["ADBE Text Animator Properties"]);
 
 /**
  * Resolve `name` to `(match_name, kind)` for an addable property.

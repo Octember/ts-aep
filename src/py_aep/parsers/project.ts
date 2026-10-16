@@ -6,12 +6,7 @@ import { HeadChunk, NhedChunk, NnhdChunk } from "../binary/item_chunks.ts";
 import { DwgaChunk } from "../binary/misc_chunks.ts";
 import { F8Chunk, U1Chunk, U4Chunk, Utf8Chunk } from "../binary/scalar_chunks.ts";
 import type { Chunk, ListChunk } from "../binary/chunk.ts";
-import {
-  ChunkNotFoundError,
-  filter_by_type,
-  find_by_list_type,
-  find_by_type,
-} from "../binary/utils.ts";
+import { ChunkNotFoundError, filter_by_type, find_by_list_type, find_by_type } from "../binary/utils.ts";
 import { GpuAccelType } from "../enums/index.ts";
 import { _suppress_materialization } from "../models/descriptors.ts";
 import { Project } from "../models/project.ts";
@@ -33,7 +28,7 @@ import { parse_render_queue } from "./render_queue.ts";
  *     The `Utf8Chunk` holding the profile envelope, or `null` when the marker
  *     is absent or its slot is unset.
  */
-function _color_profile_utf8(root_chunks: Chunk[], marker: string): Utf8Chunk | null {
+export function _color_profile_utf8(root_chunks: Chunk[], marker: string): Utf8Chunk | null {
   for (const [i, chunk] of root_chunks.entries()) {
     if (chunk.chunk_type !== marker || i + 1 >= root_chunks.length) continue;
     const following = root_chunks[i + 1];
@@ -45,7 +40,7 @@ function _color_profile_utf8(root_chunks: Chunk[], marker: string): Utf8Chunk | 
 }
 
 // The project settings nhed holds as nnhd does, in its older layout.
-const _NHED_SETTINGS = [
+export const _NHED_SETTINGS = [
   "_display_byte",
   "footage_timecode_display_start_type",
   "_feet_byte",
@@ -56,7 +51,7 @@ const _NHED_SETTINGS = [
 ] as const;
 
 /** A synthetic nnhd carrying the settings of a project that has only nhed. */
-function _nnhd_from_nhed(nhed: NhedChunk): NnhdChunk {
+export function _nnhd_from_nhed(nhed: NhedChunk): NnhdChunk {
   const nnhd = new NnhdChunk({ synthetic: true });
   for (const name of _NHED_SETTINGS) {
     // setattr(nnhd, name, getattr(nhed, name)) with a computed name

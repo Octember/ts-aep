@@ -1,13 +1,7 @@
+import { deferred, descriptor } from "../../../pyrt/index.ts";
 // Port of py_aep/models/layers/av_layer.py
 
-import {
-  BlendingMode,
-  FrameBlendingType,
-  LayerQuality,
-  LayerSamplingQuality,
-  LayerType,
-  TrackMatteType,
-} from "../../enums/index.ts";
+import { BlendingMode, FrameBlendingType, LayerQuality, LayerSamplingQuality, LayerType, TrackMatteType } from "../../enums/index.ts";
 import {
   AttributeError,
   KeyError,
@@ -32,34 +26,23 @@ import { resolve_essential_property_controllers } from "../../resolvers/essentia
 import { can_add_layer } from "../../resolvers/motion_graphics.ts";
 import { shape_layer_rect } from "../../resolvers/shape_bounds.ts";
 import { text_ink_rect } from "../../resolvers/text_ink.ts";
-import {
-  type Mat4,
-  build_world_matrix,
-  camera_ray,
-  intersect_layer_plane,
-  project_to_comp,
-  transform_from_points,
-} from "../../resolvers/transform.ts";
-import { ChunkField, descriptor } from "../descriptors.ts";
-import { AVItem } from "../items/av_item.ts";
-import { CompItem } from "../items/composition.ts";
-import { FootageItem } from "../items/footage.ts";
+import { type Mat4, build_world_matrix, camera_ray, intersect_layer_plane, project_to_comp, transform_from_points } from "../../resolvers/transform.ts";
+import { ChunkField } from "../descriptors.ts";
+import type { AVItem } from "../items/av_item.ts";
+import type { CompItem } from "../items/composition.ts";
 import { Property } from "../properties/property.ts";
 import type { PropertyGroup } from "../properties/property_group.ts";
-import { SolidSource } from "../sources/solid.ts";
 import type { TextDocument } from "../text/text_document.ts";
-import {
-  validate_bool,
-  validate_enum,
-  validate_name,
-  validate_number,
-  validate_vector2,
-  validate_vector3,
-} from "../validators.ts";
-import { apply_dimensionality_naming } from "../../synthesis/core.ts";
+import { validate_bool, validate_enum, validate_name, validate_number, validate_vector2, validate_vector3 } from "../validators.ts";
 import { Layer } from "./layer.ts";
 
-function _finite(point: number[]): number[] {
+const _av_item = deferred<typeof import("../items/av_item.ts")>(import.meta.url, "../items/av_item.ts");
+const _composition = deferred<typeof import("../items/composition.ts")>(import.meta.url, "../items/composition.ts");
+const _footage = deferred<typeof import("../items/footage.ts")>(import.meta.url, "../items/footage.ts");
+const _solid = deferred<typeof import("../sources/solid.ts")>(import.meta.url, "../sources/solid.ts");
+const _core = deferred<typeof import("../../synthesis/core.ts")>(import.meta.url, "../../synthesis/core.ts");
+
+export function _finite(point: number[]): number[] {
   /**
    * `point`, or `ValueError` when a coordinate overflowed to inf / nan
    * (an input near the float limit).
@@ -70,7 +53,7 @@ function _finite(point: number[]): number[] {
   return point;
 }
 
-function _would_create_cycle(target_comp: CompItem, new_source: AVItem): boolean {
+export function _would_create_cycle(target_comp: CompItem, new_source: AVItem): boolean {
   /**
    * Check if using `new_source` as a layer source would create a cycle.
    *
@@ -94,7 +77,7 @@ function _would_create_cycle(target_comp: CompItem, new_source: AVItem): boolean
   return false;
 }
 
-function _unregister_source_usage(
+export function _unregister_source_usage(
   source: AVItem,
   comp: CompItem,
   kw: { exclude?: AVLayer | null } = {},
@@ -115,7 +98,7 @@ function _unregister_source_usage(
   source._used_in.delete(comp);
 }
 
-function _validate_collapse_transformation(value: boolean, obj: AVLayer): void {
+export function _validate_collapse_transformation(value: boolean, obj: AVLayer): void {
   validate_bool(value);
   if (!obj.can_set_collapse_transformation) {
     throw new AttributeError(
@@ -368,7 +351,7 @@ export class AVLayer extends Layer {
     if (this._ldta.three_d_layer) {
       this._ldta.environment_layer = false;
     }
-    apply_dimensionality_naming(this, { reset_scale_z: true });
+    _core().apply_dimensionality_naming(this, { reset_scale_z: true });
   }
 
   /**
@@ -883,12 +866,12 @@ export class AVLayer extends Layer {
     if (source == null) {
       return false;
     }
-    if (source instanceof CompItem) {
+    if (source instanceof _composition().CompItem) {
       return true;
     }
-    if (source instanceof FootageItem) {
+    if (source instanceof _footage().FootageItem) {
       const ms = source.main_source;
-      if (ms instanceof SolidSource) {
+      if (ms instanceof _solid().SolidSource) {
         return true;
       }
     }
@@ -1229,7 +1212,7 @@ export class AVLayer extends Layer {
       throw new ValueError("replace_source is not supported on 3D model layers");
     }
 
-    if (!(new_source instanceof AVItem)) {
+    if (!(new_source instanceof _av_item().AVItem)) {
       throw new ValueError("new_source must be an AVItem.");
     }
 

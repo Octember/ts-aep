@@ -4,13 +4,7 @@ import type { Chunk, ContainerChunk, ListChunk } from "../binary/chunk.ts";
 import type { PardChunk } from "../binary/misc_chunks.ts";
 import type { TdmnChunk, TdsbChunk, TdsnChunk } from "../binary/property_chunks.ts";
 import type { Utf8Chunk } from "../binary/scalar_chunks.ts";
-import {
-  ChunkNotFoundError,
-  filter_by_list_type,
-  filter_by_type,
-  find_by_list_type,
-  find_by_type,
-} from "../binary/utils.ts";
+import { ChunkNotFoundError, filter_by_list_type, filter_by_type, find_by_list_type, find_by_type } from "../binary/utils.ts";
 import { MATCH_NAME_TO_AUTO_NAME } from "../data/match_names.ts";
 import { EFFECT_PARAM_SPATIAL_FLAGS } from "../data/spatial_flags.ts";
 import { PropertyControlType, PropertyType, PropertyValueType } from "../enums/index.ts";
@@ -20,11 +14,11 @@ import { Property } from "../models/properties/property.ts";
 import { PropertyGroup } from "../models/properties/property_group.ts";
 import { PropSpec } from "../synthesis/property.ts";
 import { get_chunks_by_match_name, get_match_name_runs } from "./utils.ts";
-import { parse_properties } from "./property.ts";
 import type { CompItem } from "../models/items/composition.ts";
 import type { Layer } from "../models/layers/layer.ts";
 import {
   and,
+  deferred,
   dict_get,
   enumerate,
   float,
@@ -37,6 +31,8 @@ import {
   warn,
   zip,
 } from "../../pyrt/index.ts";
+
+const _property = deferred<typeof import("./property.ts")>(import.meta.url, "./property.ts");
 
 // `logging.getLogger(__name__)`: this module logs nothing today, so only the
 // warning path is wired to pyrt `warn`.
@@ -380,7 +376,7 @@ export function _parse_effect_properties(
     ([name]) => !name.endsWith("-0000"),
   );
 
-  const parsed = parse_properties(
+  const parsed = _property().parse_properties(
     property_runs,
     child_depth,
     new Map(),
@@ -549,7 +545,7 @@ export const parse_effect = _suppress_materialization().decorate(function parse_
   return effect_group;
 });
 
-type PardExtractor = (body: any, result: Map<string, any>) => void;
+export type PardExtractor = (body: any, result: Map<string, any>) => void;
 
 export const _PARD_EXTRACTORS: Map<number, PardExtractor> = new Map();
 

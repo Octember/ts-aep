@@ -36,7 +36,7 @@ import {
 } from "../../pyrt/index.ts";
 
 /** A Python `dict`. Both the JSON side and the to_dict side are Maps (rulebook §3). */
-type Dict = Map<any, any>;
+export type Dict = Map<any, any>;
 
 // Fields to skip to avoid circular references.
 // Back-references: containing_comp, parent_folder, parent (OutputModule),
@@ -45,7 +45,7 @@ type Dict = Map<any, any>;
 //   comp (RenderQueueItem > CompItem),
 //   post_render_target_comp (OutputModule > CompItem).
 // The non-circular ID fields (source_id, parent_id) are still serialized.
-const SKIP_FIELDS: ReadonlySet<string> = new Set([
+export const SKIP_FIELDS: ReadonlySet<string> = new Set([
   "containing_comp",
   "parent_folder",
   "parent_property",
@@ -61,7 +61,7 @@ const SKIP_FIELDS: ReadonlySet<string> = new Set([
 
 // @property attributes that return complex/duplicate data and should not be
 // included in to_dict() serialization.
-const SKIP_PROPERTIES: ReadonlySet<string> = new Set([
+export const SKIP_PROPERTIES: ReadonlySet<string> = new Set([
   "active_camera",
   "composition_layers",
   "footage_layers",
@@ -88,13 +88,13 @@ const SKIP_PROPERTIES: ReadonlySet<string> = new Set([
   "marker",
 ]);
 
-const _field_names_cache = new Map<Function, readonly string[] | null>();
+export const _field_names_cache = new Map<Function, readonly string[] | null>();
 
 /**
  * Accessor (getter/setter) names on `cls` and its bases: the class-level
  * `property` objects that `isinstance(attr, property)` finds in Python.
  */
-function _property_accessors(cls: Function): string[] {
+export function _property_accessors(cls: Function): string[] {
   const out: string[] = [];
   for (let p = cls.prototype; p && p !== Object.prototype; p = Object.getPrototypeOf(p)) {
     for (const k of Object.getOwnPropertyNames(p)) {
@@ -120,7 +120,7 @@ function _property_accessors(cls: Function): string[] {
  *
  * Results are cached per type since field names are class-level metadata.
  */
-function _get_field_names(obj: any): readonly string[] | null {
+export function _get_field_names(obj: any): readonly string[] | null {
   const cls = obj.constructor;
   if (_field_names_cache.has(cls)) return _field_names_cache.get(cls)!;
 
@@ -158,14 +158,14 @@ function _get_field_names(obj: any): readonly string[] | null {
   return result2;
 }
 
-const _property_names_cache = new Map<Function, readonly string[]>();
+export const _property_names_cache = new Map<Function, readonly string[]>();
 
 /**
  * Get public @property names for a class, cached per type.
  *
  * Sorted for the same reason as `_get_field_names`.
  */
-function _get_property_names(cls: Function): readonly string[] {
+export function _get_property_names(cls: Function): readonly string[] {
   if (_property_names_cache.has(cls)) return _property_names_cache.get(cls)!;
   const names = new Set<string>();
   // `dir(cls)` + `isinstance(attr, property)`: descriptor-backed fields are not
@@ -181,7 +181,7 @@ function _get_property_names(cls: Function): readonly string[] {
   return result;
 }
 
-const _PRIMITIVE_TYPES: readonly string[] = ["number", "bigint", "string", "boolean"];
+export const _PRIMITIVE_TYPES: readonly string[] = ["number", "bigint", "string", "boolean"];
 
 /** Convert dataclass/enum to dict recursively, skipping circular reference fields. */
 export function to_dict(obj: any): any {
@@ -203,7 +203,7 @@ export function to_dict(obj: any): any {
  * `result` before recursing also means a reference cycle yields the shared dict
  * instead of recursing forever.
  */
-function _to_dict(obj: any, memo: Map<any, [any, any]>): any {
+export function _to_dict(obj: any, memo: Map<any, [any, any]>): any {
   // Fast path for primitive types (majority of recursive calls).
   // Enum members are plain values in the TS port (pyrt enum.ts), so the
   // `isinstance(obj, Enum)` branch returns `obj.value` through this path.
@@ -272,9 +272,9 @@ export function get_enum_value(val: any): any {
   return val;
 }
 
-const _CAMEL_RE = /(?<=[a-z0-9])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])/g;
+export const _CAMEL_RE = /(?<=[a-z0-9])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])/g;
 
-function _normalize_keys(d: Dict): Dict {
+export function _normalize_keys(d: Dict): Dict {
   /** Convert camelCase dict keys to snake_case recursively. */
   const result: Dict = new Map();
   for (const [key, value0] of d) {
@@ -317,7 +317,7 @@ export function compare_values(expected: any, parsed: any, tolerance = 0.001): b
  * TODO(port): int/float distinction - a JS integer-valued number cannot tell
  * `1.0` (repr "1.0") from `1` (repr "1").
  */
-function _repr(x: any): string {
+export function _repr(x: any): string {
   if (x instanceof Map) return `{${[...x].map(([k, v]) => `${_repr(k)}: ${_repr(v)}`).join(", ")}}`;
   if (Array.isArray(x)) return `[${x.map((item) => _repr(item)).join(", ")}]`;
   return repr(x);
@@ -372,7 +372,7 @@ export class ValidationResult {
  * `mappings` is a fixed literal table of non-integer keys, so a plain object
  * keeps the Python insertion order.
  */
-function _compare_fields(
+export function _compare_fields(
   expected: Dict,
   parsed: Dict,
   mappings: Record<string, string>,
@@ -395,7 +395,7 @@ function _compare_fields(
   }
 }
 
-function _compare_markers(
+export function _compare_markers(
   expected_markers: Dict[],
   parsed_markers: Dict[],
   path: string,
@@ -411,7 +411,7 @@ function _compare_markers(
   }
 }
 
-function _compare_guides(expected_guides: Dict[], parsed_guides: Dict[], path: string, result: ValidationResult): void {
+export function _compare_guides(expected_guides: Dict[], parsed_guides: Dict[], path: string, result: ValidationResult): void {
   /** Compare a list of guides. */
   if (len(expected_guides) !== len(parsed_guides)) {
     result.add_diff(`${path}.numGuides`, len(expected_guides), len(parsed_guides), "composition");
@@ -426,7 +426,7 @@ function _compare_guides(expected_guides: Dict[], parsed_guides: Dict[], path: s
   }
 }
 
-function _compare_proxy_source(expected_item: Dict, parsed_item: Dict, path: string, result: ValidationResult): void {
+export function _compare_proxy_source(expected_item: Dict, parsed_item: Dict, path: string, result: ValidationResult): void {
   /** Compare proxySource on an AVItem (comp or footage). */
   const exp_proxy = dict_get(expected_item, "proxySource");
   const parsed_proxy = dict_get(parsed_item, "proxy_source");
@@ -454,7 +454,7 @@ function _compare_proxy_source(expected_item: Dict, parsed_item: Dict, path: str
   }
 }
 
-function _compare_children_by_match_name(
+export function _compare_children_by_match_name(
   expected_props: Dict[],
   parsed_props: Dict[],
   path: string,
@@ -1300,7 +1300,7 @@ export function compare_folder_hierarchy(
  * TODO(port): a drive-only or UNC-root path (`C:\`, `\\server\share`) yields the
  * drive or share name here, where Python gives "" for the root.
  */
-function pure_windows_name(p: string): string {
+export function pure_windows_name(p: string): string {
   const parts = p.replace(/^[A-Za-z]:/, "").split(/[\\/]/).filter((s) => s !== "");
   return parts.length ? parts[parts.length - 1] : "";
 }
@@ -1655,7 +1655,7 @@ export function compare_viewer(
  * TODO(port): int/float distinction - `1.0` parses to the number 1, and integers
  * past 2^53 lose precision.
  */
-function json_load(text: string): any {
+export function json_load(text: string): any {
   let pos = 0;
   const fail = (msg: string): never => {
     throw new ValueError(`${msg}: char ${pos}`);
@@ -1934,7 +1934,7 @@ export function print_coverage(result: ValidationResult): void {
   }
 }
 
-const _CATEGORY_CHOICES: readonly string[] = [
+export const _CATEGORY_CHOICES: readonly string[] = [
   "project",
   "composition",
   "layers",
@@ -1948,12 +1948,12 @@ const _CATEGORY_CHOICES: readonly string[] = [
   "viewer",
 ];
 
-const _USAGE =
+export const _USAGE =
   "usage: validate.py [-h] [-v] [-c {project,composition,layers,properties,markers,folders,footage,keyframes,textdocument,renderqueue,viewer}] [--coverage] aep_file json_file";
 
 // TODO(port): argparse's help layout is approximated, and argparse's unique option
 // prefixes (`--verb`) and combined short flags (`-vc layers`) are not accepted.
-const _HELP = `${_USAGE}
+export const _HELP = `${_USAGE}
 
 Validate parsed AEP values against expected JSON from ExtendScript export.
 
@@ -1969,14 +1969,14 @@ options:
   --coverage            Print field coverage report (compared vs not-compared fields)`;
 
 /** `parser.error(message)`: usage and message to stderr, then exit status 2. */
-function _parser_error(message: string): never {
+export function _parser_error(message: string): never {
   console.error(_USAGE);
   console.error(`validate.py: error: ${message}`);
   process.exit(2);
 }
 
 /** `parser.parse_args(args)` for the flags this tool declares. */
-function _parse_args(argv: string[]): {
+export function _parse_args(argv: string[]): {
   aep_file: Path;
   json_file: Path;
   verbose: boolean;

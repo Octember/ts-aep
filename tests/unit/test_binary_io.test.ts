@@ -21,85 +21,18 @@ import {
   repr,
   struct,
 } from "../../src/pyrt/index.ts";
-import {
-  is_readable,
-  read_bytes,
-  read_fmt,
-  read_pad,
-  write_bytes,
-  write_fmt,
-  write_pad,
-} from "../../src/py_aep/binary/bin_utils.ts";
-import {
-  Chunk,
-  ContainerChunk,
-  ListChunk,
-  ReadContext,
-  _resolve_cdat_context,
-  _resolve_ldat_context,
-  _resolve_tdum_context,
-  read_aep,
-  read_chunks,
-  read_header,
-  write_aep,
-  write_chunk,
-} from "../../src/py_aep/binary/chunk.ts";
+import { is_readable, read_bytes, read_fmt, read_pad, write_bytes, write_fmt, write_pad } from "../../src/py_aep/binary/bin_utils.ts";
+import { Chunk, ContainerChunk, ListChunk, ReadContext, _resolve_cdat_context, _resolve_ldat_context, _resolve_tdum_context, read_aep, read_chunks, read_header, write_aep, write_chunk } from "../../src/py_aep/binary/chunk.ts";
 import { CHUNK_TYPES, register } from "../../src/py_aep/binary/registry.ts";
 import { _struct_info, ascii_field, bytes_field, u1_field, u2_field, u4_field } from "../../src/py_aep/binary/fmt_field.ts";
 import { U4Chunk } from "../../src/py_aep/binary/scalar_chunks.ts";
-import {
-  AnglePardChunk,
-  BooleanPardChunk,
-  ColorPardChunk,
-  EnumPardChunk,
-  FeatherPointItem,
-  FipsChunk,
-  Fth5Chunk,
-  GenericPardChunk,
-  IntegerPardChunk,
-  NmhdChunk,
-  PardChunk,
-  PrinChunk,
-  ScalarPardChunk,
-  SliderPardChunk,
-  ThreeDPardChunk,
-  TwoDPardChunk,
-} from "../../src/py_aep/binary/misc_chunks.ts";
+import { AnglePardChunk, BooleanPardChunk, ColorPardChunk, EnumPardChunk, FeatherPointItem, FipsChunk, Fth5Chunk, GenericPardChunk, IntegerPardChunk, NmhdChunk, PardChunk, PrinChunk, ScalarPardChunk, SliderPardChunk, ThreeDPardChunk, TwoDPardChunk } from "../../src/py_aep/binary/misc_chunks.ts";
 import { LdtaChunk } from "../../src/py_aep/binary/layer_chunks.ts";
 import { BitField } from "../../src/py_aep/binary/bitfield.ts";
 import { CdatChunk, Tdb4Chunk, TdsbChunk, TdumChunk } from "../../src/py_aep/binary/property_chunks.ts";
-import {
-  CineonRoptChunk,
-  JpegRoptChunk,
-  OpenExrRoptChunk,
-  PngRoptChunk,
-  RoptChunk,
-  RouuChunk,
-  RoutChunk,
-  RoutItem,
-  TargaRoptChunk,
-} from "../../src/py_aep/binary/render_chunks.ts";
-import {
-  OptiChunk,
-  PlaceholderOptiChunk,
-  PsdOptiChunk,
-  SoliOptiChunk,
-  SspcChunk,
-  TextOptiChunk,
-  build_ai_layer_opti_data,
-} from "../../src/py_aep/binary/footage_chunks.ts";
-import {
-  GuideItem,
-  KfColor,
-  KfMultiDimensional,
-  KfNoValue,
-  KfPosition,
-  LdatChunk,
-  LdatItem,
-  LdatItemType,
-  Lhd3Chunk,
-  ShapePoint,
-} from "../../src/py_aep/binary/ldat_chunks.ts";
+import { CineonRoptChunk, JpegRoptChunk, OpenExrRoptChunk, PngRoptChunk, RoptChunk, RouuChunk, RoutChunk, RoutItem, TargaRoptChunk } from "../../src/py_aep/binary/render_chunks.ts";
+import { OptiChunk, PlaceholderOptiChunk, PsdOptiChunk, SoliOptiChunk, SspcChunk, TextOptiChunk, build_ai_layer_opti_data } from "../../src/py_aep/binary/footage_chunks.ts";
+import { GuideItem, KfColor, KfMultiDimensional, KfNoValue, KfPosition, LdatChunk, LdatItem, LdatItemType, Lhd3Chunk, ShapePoint } from "../../src/py_aep/binary/ldat_chunks.ts";
 import { ChunkNotFoundError, find_by_type } from "../../src/py_aep/binary/utils.ts";
 import { _unflag_markers, remove_chunks_by_type, toggle_flag_chunk } from "../../src/py_aep/binary/mutations.ts";
 

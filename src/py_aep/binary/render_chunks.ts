@@ -11,21 +11,7 @@ import type { IO } from "../../pyrt/index.ts";
 import { read_bytes, to_dividend_divisor, to_fixed_16_16 } from "./bin_utils.ts";
 import { BitField } from "./bitfield.ts";
 import { Chunk } from "./chunk.ts";
-import {
-  FmtItem,
-  ascii_field,
-  bool_field,
-  bytes_field,
-  f4_field,
-  f8_field,
-  items_field,
-  s2_field,
-  s4_field,
-  str_field,
-  u1_field,
-  u2_field,
-  u4_field,
-} from "./fmt_field.ts";
+import { FmtItem, ascii_field, bool_field, bytes_field, f4_field, f8_field, items_field, s2_field, s4_field, str_field, u1_field, u2_field, u4_field } from "./fmt_field.ts";
 import { register } from "./registry.ts";
 
 // ---------------------------------------------------------------------------
@@ -215,11 +201,11 @@ register("Ropt")(RoptChunk);
 // Pad defaults reproducing AE's real `Ropt` bytes per format (oEXR/png! from
 // AE preferences, others from sample projects). Long blocks are module-level
 // constants so the field declarations stay readable.
-const _JPEG_PAD = bytes_.fromhex(
+export const _JPEG_PAD = bytes_.fromhex(
   "002e0000003a01000000000000000000001c00000000000000004a503634" +
     "000000000000000000000000000000000000",
 );
-const _TARGA_PAD = bytes_.concat(
+export const _TARGA_PAD = bytes_.concat(
   bytes_.fromhex("002e000000540400"),
   bytes_.repeat(b("\x00"), 9),
   b("\x36"),
@@ -404,7 +390,7 @@ define(PngRoptChunk, {
 /** Python `BitField` descriptors are class attributes with no annotation, so attrs skips them. */
 descriptor(PngRoptChunk, "has_alpha", new BitField("_flags", 2));
 
-const _ROPT_VARIANTS: Map<string, typeof RoptChunk> = new Map<string, typeof RoptChunk>([
+export const _ROPT_VARIANTS: Map<string, typeof RoptChunk> = new Map<string, typeof RoptChunk>([
   ["sDPX", CineonRoptChunk],
   ["JPEG", JpegRoptChunk],
   ["oEXR", OpenExrRoptChunk],
@@ -848,7 +834,7 @@ descriptor(OutputModuleSettingsItem, "crop", new BitField("_flag_byte_22", 0));
 descriptor(OutputModuleSettingsItem, "include_project_link", new BitField("_include_project_link", 0));
 
 /** `_ROUT_ITEM_SIZE` */
-const _ROUT_ITEM_SIZE = 4;
+export const _ROUT_ITEM_SIZE = 4;
 
 // AE writes a fixed block of 5 Rout items per render queue item (1 render-flag
 // entry followed by 4 position-dependent slot entries), independent of the

@@ -14,11 +14,7 @@ import { py_eq } from "../../src/pyrt/index.ts";
 import { approx } from "../../src/pyrt/pytest.ts";
 // TODO(port): `_DEFAULT_INFLUENCE` is module-private in resolvers/interpolation.ts
 // today; the Python test imports it by name, so it needs an export there.
-import {
-  _DEFAULT_INFLUENCE,
-  auto_spatial_tangents,
-  auto_temporal_speeds,
-} from "../../src/py_aep/resolvers/interpolation.ts";
+import { _DEFAULT_INFLUENCE, auto_spatial_tangents, auto_temporal_speeds } from "../../src/py_aep/resolvers/interpolation.ts";
 
 /** Tangent is +/- one sixth of the chord between the neighbours. */
 describe("TestAutoSpatialTangents", () => {

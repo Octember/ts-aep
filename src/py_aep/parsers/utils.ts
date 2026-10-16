@@ -2,7 +2,7 @@ import type { Chunk, ListChunk } from "../binary/chunk.ts";
 import type { TdmnChunk } from "../binary/property_chunks.ts";
 import { at, py_bool, setdefault } from "../../pyrt/index.ts";
 
-const _SKIP_CHUNK_TYPES: readonly string[] = ["engv", "aRbs"];
+export const _SKIP_CHUNK_TYPES: readonly string[] = ["engv", "aRbs"];
 
 /**
  * Group chunks into runs of consecutive same-match-name properties.

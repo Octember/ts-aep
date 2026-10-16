@@ -4,15 +4,7 @@ import type { Chunk } from "../binary/chunk.ts";
 import type { OpenExrRoptChunk, PngRoptChunk, RoptChunk } from "../binary/render_chunks.ts";
 import type { Utf8Chunk } from "../binary/scalar_chunks.ts";
 import { ChunkNotFoundError, find_by_type } from "../binary/utils.ts";
-import {
-  CineonFormatOptions,
-  JpegFormatOptions,
-  OpenExrFormatOptions,
-  PngFormatOptions,
-  TargaFormatOptions,
-  TiffFormatOptions,
-  XmlFormatOptions,
-} from "../models/renderqueue/format_options/index.ts";
+import { CineonFormatOptions, JpegFormatOptions, OpenExrFormatOptions, PngFormatOptions, TargaFormatOptions, TiffFormatOptions, XmlFormatOptions } from "../models/renderqueue/format_options/index.ts";
 
 export type FormatOptions =
   | CineonFormatOptions
@@ -24,7 +16,7 @@ export type FormatOptions =
   | XmlFormatOptions;
 
 // Format codes that use XML-based PremiereData options
-const _XML_FORMAT_CODES: ReadonlySet<string> = new Set([".AVI", "H264", "Mp3 ", "MooV", "wao_"]);
+export const _XML_FORMAT_CODES: ReadonlySet<string> = new Set([".AVI", "H264", "Mp3 ", "MooV", "wao_"]);
 
 /**
  * Parse format-specific options from the Ropt chunk, if present.

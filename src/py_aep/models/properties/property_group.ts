@@ -7,6 +7,7 @@ import {
   ValueError,
   at,
   bytes_,
+  deferred,
   dict_get,
   float,
   getattr,
@@ -28,54 +29,26 @@ import { BUILTIN_EFFECTS } from "../../data/builtin_effects.ts";
 import { EXPRESSION_CONTROLS } from "../../data/effect_controls.ts";
 import { MATCH_NAME_TO_AUTO_NAME } from "../../data/match_names.ts";
 import { PropertyType } from "../../enums/index.ts";
-import {
-  AddableKind,
-  can_add_property as _can_add_property,
-  resolve_addable,
-} from "../../resolvers/can_add_property.ts";
+import { AddableKind, can_add_property as _can_add_property, resolve_addable } from "../../resolvers/can_add_property.ts";
 import { get_ae_version_major, requires_version } from "../../ae_version.ts";
 import { Chunk, ListChunk, read_chunks } from "../../binary/chunk.ts";
-import {
-  build_dropdown_control,
-  build_expression_control,
-  build_text_animator,
-  build_text_selector,
-  build_vector_element,
-  clone_chunk_tree,
-  rewrite_owner_tdpi,
-  rewrite_time_base,
-} from "../../binary/mutations.ts";
-import {
-  TDSN_SENTINEL,
-  TdmnChunk,
-  TdsbChunk,
-  TdsnChunk,
-  TdumChunk,
-  VfdnChunk,
-  tdb4_apply_vf_axis_template,
-} from "../../binary/property_chunks.ts";
+import { build_dropdown_control, build_expression_control, build_text_animator, build_text_selector, build_vector_element, clone_chunk_tree, rewrite_owner_tdpi, rewrite_time_base } from "../../binary/mutations.ts";
+import { TDSN_SENTINEL, TdmnChunk, TdsbChunk, TdsnChunk, TdumChunk, VfdnChunk, tdb4_apply_vf_axis_template } from "../../binary/property_chunks.ts";
 import type { Utf8Chunk } from "../../binary/scalar_chunks.ts";
 import { ChunkNotFoundError, find_by_list_type, index_by_identity } from "../../binary/utils.ts";
 import { DROPDOWN_CONTROL } from "../../data/dropdown_control.ts";
 import { read_design_axes } from "../../resolvers/font_axes.ts";
 import { resolve_font_exact } from "../../svg/fonts.ts";
-import {
-  _GROUP_CHILD_SPECS,
-  _LAYER_STYLE_CHILD_SPECS,
-  _USE_VALUE,
-  GroupSpec,
-  type PropSpec,
-} from "../../synthesis/property.ts";
+import { _GROUP_CHILD_SPECS, _LAYER_STYLE_CHILD_SPECS, _USE_VALUE, GroupSpec, type PropSpec } from "../../synthesis/property.ts";
 import { validate_string } from "../validators.ts";
 import { _PROPERTY_MIN_MAX } from "./overrides.ts";
 import { Property, _values_equal, _vf_tag_from_str } from "./property.ts";
 import { _INDEXED_GROUP_MATCH_NAMES, PropertyBase } from "./property_base.ts";
-// TODO(port): Python imports MaskPropertyGroup inside `_add_mask_atom` (cycle
-// breaker). mask_property_group.ts does `extends PropertyGroup`, so if this module
-// is the first of the cycle to evaluate, that `extends` hits the TDZ.
-import { MaskPropertyGroup } from "./mask_property_group.ts";
-import { match_effect_definition, parse_effect } from "../../parsers/effect.ts";
-import { parse_property_group } from "../../parsers/property.ts";
+import type { MaskPropertyGroup } from "./mask_property_group.ts";
+
+const _mask_property_group = deferred<typeof import("./mask_property_group.ts")>(import.meta.url, "./mask_property_group.ts");
+const _effect = deferred<typeof import("../../parsers/effect.ts")>(import.meta.url, "../../parsers/effect.ts");
+const _property = deferred<typeof import("../../parsers/property.ts")>(import.meta.url, "../../parsers/property.ts");
 
 // Mandatory empty subgroups AE writes inside some freshly added shape
 // elements, as (match name, tdsb lock flags, tdsb enable flags) triples. A
@@ -127,7 +100,7 @@ export const _PUPPET_ENGINE_VERSION = bytes_.int_to_bytes(2, 4, "big");
 
 // TODO(pyrt): `type(x).__name__` has no shim; this covers the types the
 // error messages in this file can see.
-function type_name(x: any): string {
+export function type_name(x: any): string {
   if (x == null) return "NoneType";
   if (typeof x === "boolean") return "bool";
   if (typeof x === "number") return Number.isInteger(x) ? "int" : "float";
@@ -142,14 +115,14 @@ function type_name(x: any): string {
 // instance that `ChunkField` (descriptors.ts) reads its overrides from. Both
 // names this file writes (`enabled`, `_color`) are `ChunkField`s, whose
 // `__get__` consults this Map first and whose `__set__` pops from it.
-function instance_dict(obj: any): Map<string, any> {
+export function instance_dict(obj: any): Map<string, any> {
   if (!Object.prototype.hasOwnProperty.call(obj, "__dict__")) {
     Object.defineProperty(obj, "__dict__", { value: new Map<string, any>(), enumerable: false });
   }
   return obj.__dict__;
 }
 
-function instance_dict_set(obj: any, name: string, value: any): void {
+export function instance_dict_set(obj: any, name: string, value: any): void {
   instance_dict(obj).set(name, value);
 }
 
@@ -1145,7 +1118,7 @@ export class PropertyGroup extends PropertyBase {
     // not a positional count: len+1 collides after a mid-parade mask is
     // removed, or on a parsed layer whose mask ids are non-contiguous.
     const existing = this.properties.filter(
-      (m): m is MaskPropertyGroup => m instanceof MaskPropertyGroup,
+      (m): m is MaskPropertyGroup => m instanceof _mask_property_group().MaskPropertyGroup,
     );
     const next_id = max(
       existing.map((m) => m._mkif.mask_id),
@@ -1155,7 +1128,7 @@ export class PropertyGroup extends PropertyBase {
     // The name is numbered past the highest "Mask N" name, independently
     // of the id (AE 2026: beside "Mask 1" and a mask renamed "stored" the
     // new mask is id 3 "Mask 2"; beside "Mask 1" and "Mask 3", "Mask 4").
-    const mask = MaskPropertyGroup._new(this, this.property_depth + 1, {
+    const mask = _mask_property_group().MaskPropertyGroup._new(this, this.property_depth + 1, {
       name: _next_mask_name(existing.map((m) => m.name)),
       mask_id: next_id,
     });
@@ -1229,7 +1202,7 @@ export class PropertyGroup extends PropertyBase {
      */
     if (this.match_name !== "ADBE Effect Parade") return null;
     const project = this._containing_layer.containing_comp._project;
-    const found = match_effect_definition(project._effect_definitions(), name);
+    const found = _effect().match_effect_definition(project._effect_definitions(), name);
     if (found != null) return found;
     return _baked_effect_def(name);
   }
@@ -1307,7 +1280,7 @@ export class PropertyGroup extends PropertyBase {
     _insert_before_group_end(parent_tdgp, sspc);
 
     const effect_param_defs = comp._project._effect_param_defs;
-    const effect = parse_effect(
+    const effect = _effect().parse_effect(
       sspc,
       match_name,
       this.property_depth + 1,
@@ -1338,7 +1311,7 @@ export class PropertyGroup extends PropertyBase {
     _insert_before_group_end(parent_tdgp, tdmn);
     _insert_before_group_end(parent_tdgp, tdgp);
 
-    const group = parse_property_group(
+    const group = _property().parse_property_group(
       tdgp,
       match_name,
       this.property_depth + 1,

@@ -78,7 +78,7 @@ export const VIDEO_CODEC_NAMES: Map<string, string> = new Map<string, string>([
 
 // TODO(pyrt): re.sub replacement-template expansion (sre_parse.parse_template)
 // has no shim; local port for a pattern with zero capture groups.
-function _expand_template(template: string, match: string): string {
+export function _expand_template(template: string, match: string): string {
   if (!template.includes("\\")) {
     return template;
   }
@@ -174,7 +174,7 @@ function _expand_template(template: string, match: string): string {
 
 // TODO(pyrt): math.gcd has no shim in pyrt/num.ts; local Euclid, matching
 // Python's non-negative result for negative inputs.
-function gcd(a: number, b: number): number {
+export function gcd(a: number, b: number): number {
   let x = Math.abs(a);
   let y = Math.abs(b);
   while (y !== 0) {

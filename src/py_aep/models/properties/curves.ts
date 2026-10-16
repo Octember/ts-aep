@@ -27,7 +27,7 @@ import {
   repr,
   sorted,
   zip,
-} from "../../pyrt/index.ts";
+} from "../../../pyrt/index.ts";
 import { validate_number } from "../validators.ts";
 import type { CurvesArbpChunk } from "../../binary/property_chunks.ts";
 
@@ -42,7 +42,7 @@ export const CURVES_CHANNELS = ["rgb", "red", "green", "blue", "alpha"];
  * Points sharing an input keep the last one's output, as a curve can only
  * pass through one output per input.
  */
-class _NaturalSpline {
+export class _NaturalSpline {
   declare xs: number[];
   declare ys: number[];
   declare m: number[];

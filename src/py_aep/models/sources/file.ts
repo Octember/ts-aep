@@ -3,78 +3,24 @@
 import * as fs from "node:fs";
 import * as nodepath from "node:path";
 
-import {
-  OptiChunk,
-  SspcChunk,
-  TextOptiChunk,
-  build_ai_document_opti_data,
-  build_ai_layer_opti_data,
-  build_craw_opti_data,
-  build_dpx_opti_data,
-  build_exr_opti_data,
-  build_generic_opti_data,
-  build_psd_layer_opti_data,
-  build_psd_opti_data,
-  build_rhdr_opti_data,
-  build_text_opti_data,
-  build_tiff_opti_data,
-  type PsdOptiChunk,
-} from "../../binary/footage_chunks.ts";
+import { OptiChunk, SspcChunk, TextOptiChunk, build_ai_document_opti_data, build_ai_layer_opti_data, build_craw_opti_data, build_dpx_opti_data, build_exr_opti_data, build_generic_opti_data, build_psd_layer_opti_data, build_psd_opti_data, build_rhdr_opti_data, build_text_opti_data, build_tiff_opti_data, type PsdOptiChunk } from "../../binary/footage_chunks.ts";
 import { EmpdChunk } from "../../binary/misc_chunks.ts";
 import { ColorProfileRecord, build_pin_list } from "../../binary/mutations.ts";
 import { Utf8Chunk, type U1Chunk } from "../../binary/scalar_chunks.ts";
-import {
-  UNDEFINED_FRAME,
-  ChunkNotFoundError,
-  build_als2_list,
-  build_stvc_list,
-  filter_by_type,
-  find_by_list_type,
-  find_by_type,
-  find_chunks_before,
-  index_by_identity,
-  parse_alas_data,
-} from "../../binary/utils.ts";
+import { UNDEFINED_FRAME, ChunkNotFoundError, build_als2_list, build_stvc_list, filter_by_type, find_by_list_type, find_by_type, find_chunks_before, index_by_identity, parse_alas_data } from "../../binary/utils.ts";
 import type { Chunk, ListChunk } from "../../binary/chunk.ts";
 import { build_icc_envelope } from "../../color/envelope.ts";
-import {
-  ColorProfileNotFoundError,
-  default_icc_library,
-  icc_profile_description,
-  icc_profile_id,
-} from "../../color/icc.ts";
+import { ColorProfileNotFoundError, default_icc_library, icc_profile_description, icc_profile_id } from "../../color/icc.ts";
 import { ocio_input_envelope, resolve_ocio_config } from "../../color/ocio.ts";
-import {
-  AI_COMP_EXTENSIONS,
-  FORMAT_3D_MODEL_SCENE,
-  PSD_COMP_EXTENSIONS,
-  get_file_format,
-  platform_source_format,
-  type FileFormat,
-} from "../../data/file_formats.ts";
+import { AI_COMP_EXTENSIONS, FORMAT_3D_MODEL_SCENE, PSD_COMP_EXTENSIONS, get_file_format, platform_source_format, type FileFormat } from "../../data/file_formats.ts";
 import { ColorManagementSystem, LinearLightMode } from "../../enums/index.ts";
-import {
-  EMPTY_BOX,
-  footage_size,
-  read_ai_icc_profile,
-  read_ai_layer_bounds,
-} from "../../resolvers/ai_bounds.ts";
+import { EMPTY_BOX, footage_size, read_ai_icc_profile, read_ai_layer_bounds } from "../../resolvers/ai_bounds.ts";
 import { UnsupportedAiLayersError, read_ai_layer_ocgs } from "../../resolvers/ai_layers.ts";
-import {
-  pixel_buffer_size,
-  probe_media,
-  psd_layer_channels,
-  psd_layer_depth,
-  type MediaInfo,
-} from "../../resolvers/media_probe.ts";
+import { pixel_buffer_size, probe_media, psd_layer_channels, psd_layer_depth, type MediaInfo } from "../../resolvers/media_probe.ts";
 import { platform_path } from "../../resolvers/platform_paths.ts";
 import { psd_layer_box } from "../../resolvers/psd_bounds.ts";
 import { read_global_light } from "../../resolvers/psd_styles.ts";
-import {
-  layer_index_for_stored,
-  resolve_ai_layer,
-  resolve_psd_layer,
-} from "../../resolvers/source_layers.ts";
+import { layer_index_for_stored, resolve_ai_layer, resolve_psd_layer } from "../../resolvers/source_layers.ts";
 import type { PsdLayer } from "../../resolvers/psd_layers.ts";
 import { validate_bool, validate_file_exists } from "../validators.ts";
 import { _UNASSIGNED_PROFILE, FootageSource, _store_frames_over_rate } from "./footage.ts";
@@ -114,7 +60,7 @@ import {
  * final name and parent name.
  */
 // TODO(pyrt): PureWindowsPath / PurePosixPath shim (join, name, parent.name only).
-function _pure_parts(
+export function _pure_parts(
   text: string,
   windows: boolean,
 ): { drive: string; anchored: boolean; parts: string[] } {
@@ -141,7 +87,7 @@ function _pure_parts(
   return { drive, anchored, parts };
 }
 
-function _pure_join(folder: string, frame_name: string, windows: boolean): string {
+export function _pure_join(folder: string, frame_name: string, windows: boolean): string {
   const sep = windows ? "\\" : "/";
   const { drive, anchored, parts } = _pure_parts(folder, windows);
   const head = drive + (anchored ? sep : "") + parts.join(sep);
@@ -154,26 +100,26 @@ function _pure_join(folder: string, frame_name: string, windows: boolean): strin
  * `NamedTuple._replace(**kw)` for the translated NamedTuples (`MediaInfo`,
  * `FileFormat`) that may not carry a `_replace` method.
  */
-function _replace<T extends object>(obj: T, kw: Record<string, any>): T {
+export function _replace<T extends object>(obj: T, kw: Record<string, any>): T {
   const own = (obj as any)._replace;
   if (typeof own === "function") return own.call(obj, kw);
   return Object.assign(Object.create(Object.getPrototypeOf(obj)), obj, kw);
 }
 
 /** `PureWindowsPath(text).name` */
-function _windows_name(text: string): string {
+export function _windows_name(text: string): string {
   const { parts } = _pure_parts(text, true);
   return parts.length ? parts[parts.length - 1] : "";
 }
 
 /** `PureWindowsPath(text).parent.name` */
-function _windows_parent_name(text: string): string {
+export function _windows_parent_name(text: string): string {
   const { parts } = _pure_parts(text, true);
   return parts.length >= 2 ? parts[parts.length - 2] : "";
 }
 
 /** `os.path.splitext(name)[1]` */
-function _splitext_ext(name: string): string {
+export function _splitext_ext(name: string): string {
   // Leading dots belong to the stem, as in os.path.splitext.
   const stripped = name.replace(/^\.+/, "");
   const i = stripped.lastIndexOf(".");
@@ -184,7 +130,7 @@ function _splitext_ext(name: string): string {
  * Whether a caught Node `fs` error is Python's `OSError`. TODO(port): pyrt's
  * `Path` lets raw Node errors through, which are not `OSError` instances.
  */
-function _is_os_error(e: unknown): boolean {
+export function _is_os_error(e: unknown): boolean {
   return e instanceof OSError || typeof (e as any)?.errno === "number";
 }
 

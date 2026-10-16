@@ -27,14 +27,14 @@ import {
   str,
 } from "../../pyrt/index.ts";
 
-type Validator = (value: any, instance?: any) => void;
-type NumBound = number | ((instance: any) => number | null) | null;
+export type Validator = (value: any, instance?: any) => void;
+export type NumBound = number | ((instance: any) => number | null) | null;
 
 // TODO(pyrt): no `type(x).__name__` shim exists; best-effort names for the
 // types this module reports. Python tuples read here as "list" (both are JS
 // arrays) and int/float follows Number.isInteger (an int-valued float reads as
 // "int").
-function type_name(value: any): string {
+export function type_name(value: any): string {
   if (value == null) return "NoneType";
   if (typeof value === "boolean") return "bool";
   if (typeof value === "number") return Number.isInteger(value) ? "int" : "float";
@@ -48,7 +48,7 @@ function type_name(value: any): string {
 
 // TODO(pyrt): `FileExistsError` is not in pyrt/errors.ts; local stand-in with
 // the same base class (OSError).
-class FileExistsError extends OSError {}
+export class FileExistsError extends OSError {}
 
 /** Return a validator that checks a numeric value.
  *
@@ -175,7 +175,7 @@ export function validate_sequence(
  * `DocumentWideCosField.enum` for the same field - would otherwise hold
  * distinct instances; memoizing keeps them identity-equal.
  */
-const _ENUM_VALIDATORS = new Map<any, Validator>();
+export const _ENUM_VALIDATORS = new Map<any, Validator>();
 
 /** Return a validator that checks value is a member of `enum_cls`.
  *

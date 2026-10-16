@@ -2,12 +2,7 @@
 
 import { EnvironmentLightShadowResolution } from "../../../enums/index.ts";
 import { ChunkField } from "../../descriptors.ts";
-import {
-  validate_advanced_quality,
-  validate_casting_box_center,
-  validate_casting_box_size,
-  validate_shadow_smoothness,
-} from "../../validators.ts";
+import { validate_advanced_quality, validate_casting_box_center, validate_casting_box_size, validate_shadow_smoothness } from "../../validators.ts";
 import { RendererOptionsBase } from "./renderer_options_base.ts";
 import { descriptor } from "../../../../pyrt/index.ts";
 import type { AdvancedPrdaChunk } from "../../../binary/misc_chunks.ts";

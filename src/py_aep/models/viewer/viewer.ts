@@ -1,7 +1,7 @@
 import { ViewerType } from "../../enums/index.ts";
 import { ChunkField } from "../descriptors.ts";
 import { _validate_number } from "../validators.ts";
-import { descriptor, py_bool } from "../../pyrt/index.ts";
+import { descriptor, py_bool } from "../../../pyrt/index.ts";
 import type { AsciiChunk, U1Chunk } from "../../binary/scalar_chunks.ts";
 import type { View } from "./view.ts";
 

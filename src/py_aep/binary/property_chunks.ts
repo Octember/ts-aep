@@ -32,17 +32,7 @@ import {
 import { read_bytes, write_bytes } from "./bin_utils.ts";
 import { BitField } from "./bitfield.ts";
 import { Chunk, ContainerChunk } from "./chunk.ts";
-import {
-  FmtItem,
-  bool_field,
-  bytes_field,
-  f8_field,
-  items_field,
-  s4_field,
-  u1_field,
-  u2_field,
-  u4_field,
-} from "./fmt_field.ts";
+import { FmtItem, bool_field, bytes_field, f8_field, items_field, s4_field, u1_field, u2_field, u4_field } from "./fmt_field.ts";
 import { register } from "./registry.ts";
 import { Utf8Chunk, _StringChunkBase } from "./scalar_chunks.ts";
 import { find_by_type } from "./utils.ts";
@@ -684,8 +674,8 @@ register("vfdn")(VfdnChunk);
 // aRbp - the Curves effect's curves (ADBE CurvesCustom-0001)
 // ---------------------------------------------------------------------------
 
-const _CURVES_SLOTS = 16;
-const _CURVES_RECORD_SIZE = 72;
+export const _CURVES_SLOTS = 16;
+export const _CURVES_RECORD_SIZE = 72;
 /** The size of a Curves effect's aRbp, in bytes. */
 export const CURVES_ARBP_SIZE = 4 + 5 * 256 + 5 * _CURVES_RECORD_SIZE;
 

@@ -52,40 +52,19 @@ import {
 } from "../../../pyrt/index.ts";
 import { CosField, CosName, cos_get, run_spans } from "../../cos/index.ts";
 import { _extract } from "../../cos/descriptors.ts";
-import {
-  AutoKernType,
-  BaselineDirection,
-  DigitSet,
-  FontBaselineOption,
-  FontCapsOption,
-  LeadingType,
-  LineJoinType,
-  ParagraphDirection,
-  ParagraphJustification,
-} from "../../enums/index.ts";
+import { AutoKernType, BaselineDirection, DigitSet, FontBaselineOption, FontCapsOption, LeadingType, LineJoinType, ParagraphDirection, ParagraphJustification } from "../../enums/index.ts";
 import type { ComposerEngine } from "../../enums/index.ts";
 import { CompositionUnsupported, compose_lines } from "../../resolvers/text_composition.ts";
 import { font_version_string } from "../../svg/fonts.ts";
-import {
-  validate_bool,
-  validate_enum,
-  validate_font_name,
-  validate_normalized_float,
-  validate_number,
-  validate_positive_nonzero_number,
-  validate_positive_number,
-  validate_rgb_color,
-  validate_s4,
-  validate_text,
-} from "../validators.ts";
+import { validate_bool, validate_enum, validate_font_name, validate_normalized_float, validate_number, validate_positive_nonzero_number, validate_positive_number, validate_rgb_color, validate_s4, validate_text } from "../validators.ts";
 import { FontObject } from "./font_object.ts";
 import type { TextDocument } from "./text_document.ts";
 
 // TODO(pyrt): `bool()` builtin is missing from pyrt; local shim with Python truthiness.
-const bool = (x: unknown): boolean => py_bool(x);
+export const bool = (x: unknown): boolean => py_bool(x);
 
 /** A COS dict (`dict[str, Any]`): a `Map` so numeric-looking keys keep their order. */
-type Dict = Map<string, any>;
+export type Dict = Map<string, any>;
 
 // AE's exact error strings (AE 26.3, English locale); py_aep raises these
 // from ValueError so behavior parity does not depend on hosting AE.

@@ -28,13 +28,13 @@ import {
 } from "../../pyrt/index.ts";
 import { get_ae_version_major } from "../ae_version.ts";
 
-const _SENTINEL: unique symbol = Symbol("_SENTINEL");
+export const _SENTINEL: unique symbol = Symbol("_SENTINEL");
 
 // TODO(port): Python `obj.__dict__` (instance-dict overrides) has no pyrt shim;
 // keep the overrides in a side table keyed by instance.
-const INSTANCE_DICT = new WeakMap<object, Map<string, any>>();
+export const INSTANCE_DICT = new WeakMap<object, Map<string, any>>();
 
-function instance_dict(obj: object): Map<string, any> {
+export function instance_dict(obj: object): Map<string, any> {
   let d = INSTANCE_DICT.get(obj);
   if (!d) INSTANCE_DICT.set(obj, (d = new Map()));
   return d;
@@ -78,7 +78,7 @@ export function _extract(
 
 // TODO(pyrt): pyrt int() maps null/arrays/Maps to 0 where Python's int() raises TypeError,
 // which `_extract` must turn into the default. Guard the argument type here.
-function _int_float_guard(fn: (x: any) => number): (x: any) => number {
+export function _int_float_guard(fn: (x: any) => number): (x: any) => number {
   return (x: any) => {
     if (typeof x !== "number" && typeof x !== "string" && typeof x !== "boolean" && typeof x !== "bigint") {
       throw new TypeError_(`argument must be a string or a real number, not '${x?.constructor?.name ?? "NoneType"}'`);

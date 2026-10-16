@@ -23,71 +23,16 @@ import {
 import { ListChunk } from "../../binary/chunk.ts";
 import type { HeadChunk } from "../../binary/item_chunks.ts";
 import { get_cos_template, cos_get, serialize } from "../../cos/index.ts";
-import {
-  AutoKernType,
-  BaselineDirection,
-  BoxAutoFitPolicy,
-  BoxFirstBaselineAlignment,
-  BoxVerticalAlignment,
-  ComposerEngine,
-  DigitSet,
-  FontBaselineOption,
-  FontCapsOption,
-  LeadingType,
-  LineJoinType,
-  LineOrientation,
-  ParagraphDirection,
-  ParagraphJustification,
-} from "../../enums/index.ts";
+import { AutoKernType, BaselineDirection, BoxAutoFitPolicy, BoxFirstBaselineAlignment, BoxVerticalAlignment, ComposerEngine, DigitSet, FontBaselineOption, FontCapsOption, LeadingType, LineJoinType, LineOrientation, ParagraphDirection, ParagraphJustification } from "../../enums/index.ts";
 import { calibrate as calibrate_composition } from "../../resolvers/text_composition.ts";
 import { requires_version } from "../../ae_version.ts";
 import { Preferences, default_character_style, default_paragraph_style } from "../preferences.ts";
-import {
-  validate_bool,
-  validate_box_size,
-  validate_enum,
-  validate_font_name,
-  validate_int,
-  validate_normalized_float,
-  validate_number,
-  validate_positive_int,
-  validate_positive_nonzero_number,
-  validate_positive_number,
-  validate_rgb_color,
-  validate_s4,
-  validate_text,
-  validate_vector2,
-} from "../validators.ts";
+import { validate_bool, validate_box_size, validate_enum, validate_font_name, validate_int, validate_normalized_float, validate_number, validate_positive_int, validate_positive_nonzero_number, validate_positive_number, validate_rgb_color, validate_s4, validate_text, validate_vector2 } from "../validators.ts";
 import { FontObject } from "./font_object.ts";
-import {
-  CHARACTER_RANGE_OOB,
-  NOT_ASSOCIATED,
-  CharacterRange,
-  ComposedLineRange,
-  DocumentWideCosField,
-  ParagraphRange,
-  _apply_char_key,
-  _build_color_paint,
-  _cached_line_data,
-  _cached_line_nodes,
-  _char_run_spans,
-  _composed_line_spans,
-  _fresh_composed_spans,
-  _line_advances,
-  _line_data_from_nodes,
-  _line_origin,
-  _para_run_spans,
-  _parse_color,
-  _raw_text,
-  _rebuild_kern_runs,
-  _register_font_at,
-  _visible_length,
-  u16_len,
-  u16_slice,
-} from "./ranges.ts";
+import { CHARACTER_RANGE_OOB, NOT_ASSOCIATED, CharacterRange, ComposedLineRange, DocumentWideCosField, ParagraphRange, _apply_char_key, _build_color_paint, _cached_line_data, _cached_line_nodes, _char_run_spans, _composed_line_spans, _fresh_composed_spans, _line_advances, _line_data_from_nodes, _line_origin, _para_run_spans, _parse_color, _raw_text, _rebuild_kern_runs, _register_font_at, _visible_length, u16_len, u16_slice } from "./ranges.ts";
 
 /** A COS dict (`dict[str, Any]`): a `Map` so numeric-looking keys keep their order. */
-type Dict = Map<string, any>;
+export type Dict = Map<string, any>;
 
 // TODO(port): int/float distinction. Python writes ints and floats differently into COS
 // (`1` vs `1.0`, `-2` vs `-2.0`); JS numbers do not carry that. The COS serializer must
@@ -97,7 +42,7 @@ type Dict = Map<string, any>;
  * `baseline_locs` entry for a line with no visible characters: the
  * maximum 32-bit float, as After Effects reports (`3.402823466e+38`).
  */
-const _EMPTY_LINE_LOC = 3.4028234663852886e38;
+export const _EMPTY_LINE_LOC = 3.4028234663852886e38;
 
 /**
  * Build the 16-vertex box outline AE stores for paragraph text.
@@ -105,7 +50,7 @@ const _EMPTY_LINE_LOC = 3.4028234663852886e38;
  * Coordinates trace the rectangle corners (each corner duplicated, AE's
  * bezier vertex layout), anchored at the top-left `(left, top)`.
  */
-function _box_coords(left: number, top: number, width: number, height: number): number[] {
+export function _box_coords(left: number, top: number, width: number, height: number): number[] {
   const right = left + width;
   const bottom = top + height;
   const coords: number[] = [];
@@ -138,7 +83,7 @@ function _box_coords(left: number, top: number, width: number, height: number): 
  * AE stores the box-frame metadata keys in ascending numeric order;
  * matching that order keeps serialized output byte-identical.
  */
-function _numeric_sort(d: Dict): void {
+export function _numeric_sort(d: Dict): void {
   const items = sorted([...d.entries()], (kv) => int(kv[0]));
   d.clear();
   for (const [k, v] of items) d.set(k, v);
@@ -150,7 +95,7 @@ function _numeric_sort(d: Dict): void {
  * AE flips these metadata values when a point text layer becomes a box
  * (paragraph) text layer; other keys in the sub-dict are preserved.
  */
-function _apply_box_conversion(meta: Dict): void {
+export function _apply_box_conversion(meta: Dict): void {
   // TODO(port): int/float distinction - `-2.0` and `1` / `-2` below.
   meta.set("0", 1);
   meta.set("6", [-2.0, -2.0]);
@@ -1555,7 +1500,7 @@ descriptor(TextDocument, "direction", DocumentWideCosField.enum(ParagraphDirecti
 // The Python decorator wraps each setter; the gate runs before the body. The
 // setters above forward to these wrappers.
 
-const _box_inset_spacing_set = requires_version(24)(function box_inset_spacing(this: TextDocument, value: number): void {
+export const _box_inset_spacing_set = requires_version(24)(function box_inset_spacing(this: TextDocument, value: number): void {
   /** Setter body for `box_inset_spacing`. */
   validate_positive_number(value);
   const meta = setdefault(this._ensure_frame(), "2", new Map());
@@ -1564,7 +1509,7 @@ const _box_inset_spacing_set = requires_version(24)(function box_inset_spacing(t
   this._propagate_cos();
 });
 
-const _box_vertical_alignment_set = requires_version(24)(function box_vertical_alignment(this: TextDocument, value: BoxVerticalAlignment): void {
+export const _box_vertical_alignment_set = requires_version(24)(function box_vertical_alignment(this: TextDocument, value: BoxVerticalAlignment): void {
   /** Setter body for `box_vertical_alignment`. */
   const meta = setdefault(this._ensure_frame(), "2", new Map());
   meta.set("13", BoxVerticalAlignment.to_binary(value));
@@ -1572,7 +1517,7 @@ const _box_vertical_alignment_set = requires_version(24)(function box_vertical_a
   this._propagate_cos();
 });
 
-const _box_auto_fit_policy_set = requires_version(24)(function box_auto_fit_policy(this: TextDocument, value: BoxAutoFitPolicy): void {
+export const _box_auto_fit_policy_set = requires_version(24)(function box_auto_fit_policy(this: TextDocument, value: BoxAutoFitPolicy): void {
   /** Setter body for `box_auto_fit_policy`. */
   const meta = setdefault(this._ensure_frame(), "2", new Map());
   meta.set("14", BoxAutoFitPolicy.to_binary(value));
@@ -1580,7 +1525,7 @@ const _box_auto_fit_policy_set = requires_version(24)(function box_auto_fit_poli
   this._propagate_cos();
 });
 
-const _box_first_baseline_alignment_set = requires_version(24)(function box_first_baseline_alignment(
+export const _box_first_baseline_alignment_set = requires_version(24)(function box_first_baseline_alignment(
   this: TextDocument,
   value: BoxFirstBaselineAlignment,
 ): void {
@@ -1595,7 +1540,7 @@ const _box_first_baseline_alignment_set = requires_version(24)(function box_firs
   this._propagate_cos();
 });
 
-const _box_first_baseline_alignment_minimum_set = requires_version(24)(function box_first_baseline_alignment_minimum(this: TextDocument, value: number): void {
+export const _box_first_baseline_alignment_minimum_set = requires_version(24)(function box_first_baseline_alignment_minimum(this: TextDocument, value: number): void {
   /** Setter body for `box_first_baseline_alignment_minimum`. */
   const meta = setdefault(this._ensure_frame(), "2", new Map());
   const sub = setdefault(meta, "10", new Map());

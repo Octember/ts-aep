@@ -10,15 +10,7 @@ import { LayerType } from "../enums/index.ts";
 import { to_dividend_divisor, to_float32_ratio } from "./bin_utils.ts";
 import { BitField } from "./bitfield.ts";
 import { Chunk } from "./chunk.ts";
-import {
-  bytes_field,
-  f8_field,
-  s4_field,
-  str_field,
-  u1_field,
-  u2_field,
-  u4_field,
-} from "./fmt_field.ts";
+import { bytes_field, f8_field, s4_field, str_field, u1_field, u2_field, u4_field } from "./fmt_field.ts";
 import { register } from "./registry.ts";
 
 // Offset of source_id (u4 big-endian) within a LIST:Layr raw body:

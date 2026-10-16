@@ -8,14 +8,15 @@ import { find_by_list_type, find_by_type, index_by_identity } from "../../binary
 import { ChunkField } from "../descriptors.ts";
 import { auto_name } from "../naming.ts";
 import { default_sequence_fps } from "../preferences.ts";
-import { FileSource } from "../sources/file.ts";
-import { PlaceholderSource } from "../sources/placeholder.ts";
-import { SolidSource } from "../sources/solid.ts";
+import type { FileSource } from "../sources/file.ts";
+import type { PlaceholderSource } from "../sources/placeholder.ts";
+import type { SolidSource } from "../sources/solid.ts";
 import { validate_bool } from "../validators.ts";
 import { Item } from "./item.ts";
 import {
   AttributeError,
   ValueError,
+  deferred,
   descriptor,
   int,
   len,
@@ -27,7 +28,11 @@ import type { Viewer } from "../viewer/viewer.ts";
 import type { CompItem } from "./composition.ts";
 import type { FolderItem } from "./folder.ts";
 
-function _validate_use_proxy(value: boolean, obj: AVItem): void {
+const _file = deferred<typeof import("../sources/file.ts")>(import.meta.url, "../sources/file.ts");
+const _placeholder = deferred<typeof import("../sources/placeholder.ts")>(import.meta.url, "../sources/placeholder.ts");
+const _solid = deferred<typeof import("../sources/solid.ts")>(import.meta.url, "../sources/solid.ts");
+
+export function _validate_use_proxy(value: boolean, obj: AVItem): void {
   validate_bool(value);
   if (obj.proxy_source == null && value) {
     throw new AttributeError(
@@ -36,7 +41,7 @@ function _validate_use_proxy(value: boolean, obj: AVItem): void {
   }
 }
 
-function _sync_proxy_active(obj: AVItem): void {
+export function _sync_proxy_active(obj: AVItem): void {
   // idta 0x38 records that a proxy is assigned, not that it is in use:
   // AE 2026 keeps 1 after `useProxy = false` and writes 0 only on
   // `setProxyToNone()` (as in sample proxy.aep's `proxy_disabled` items).
@@ -295,7 +300,7 @@ export class AVItem extends Item {
       name = "Placeholder";
     }
 
-    const source = PlaceholderSource._new(name, width, height, frame_rate, duration);
+    const source = _placeholder().PlaceholderSource._new(name, width, height, frame_rate, duration);
     this._set_proxy(source);
   }
 
@@ -320,13 +325,13 @@ export class AVItem extends Item {
   ): void {
     if (name == null) {
       const existing = new Set([...this._project.items.values()].map((item) => item.name));
-      const solid_name = SolidSource._color_name(color[0], color[1], color[2]);
+      const solid_name = _solid().SolidSource._color_name(color[0], color[1], color[2]);
       name = auto_name(solid_name, existing);
     } else if (name === "") {
       name = "????";
     }
 
-    const source = SolidSource._new(name, color, width, height, pixel_aspect);
+    const source = _solid().SolidSource._new(name, color, width, height, pixel_aspect);
     this._set_proxy(source);
   }
 
@@ -355,7 +360,7 @@ export class AVItem extends Item {
    *         `opti` header not implemented for this format.
    */
   set_proxy(file: PathLike): void {
-    this._set_proxy(FileSource._from_file(file, { windows: this._project._windows }));
+    this._set_proxy(_file().FileSource._from_file(file, { windows: this._project._windows }));
   }
 
   /**
@@ -390,7 +395,7 @@ export class AVItem extends Item {
     force_alphabetical: boolean = false,
   ): void {
     this._set_proxy(
-      FileSource._from_file(file, {
+      _file().FileSource._from_file(file, {
         sequence: true,
         force_alphabetical,
         windows: this._project._windows,
@@ -409,11 +414,11 @@ export class AVItem extends Item {
   static _pin_for_source(
     source: FileSource | SolidSource | PlaceholderSource,
   ): ListChunk {
-    if (source instanceof FileSource) {
+    if (source instanceof _file().FileSource) {
       return source._pin;
     }
     const pin = build_pin_list(source._sspc, source._opti, {
-      is_solid: source instanceof SolidSource,
+      is_solid: source instanceof _solid().SolidSource,
     });
     // Link the source to its color record, as parsing does, so the
     // version fit and the color-management setters reach it.

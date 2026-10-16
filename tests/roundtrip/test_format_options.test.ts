@@ -23,31 +23,8 @@ import { parse } from "../../src/py_aep/index.ts";
 import "../../src/py_aep/binary/_register.ts";
 // TODO(port): xml.etree.ElementTree (`import xml.etree.ElementTree as ET`) has no pyrt shim;
 // it only appears in annotations, so ET.Element is typed as `any` below.
-import {
-  AudioCodec,
-  CineonFileFormat,
-  DnxResolution,
-  Hdr10ColorPrimaries,
-  JpegFormatType,
-  MPEGAudioFormat,
-  MPEGMultiplexer,
-  MPEGMuxStreamCompatibility,
-  MPEGProfile,
-  OpenExrCompression,
-  OutputChannels,
-  OutputColorDepth,
-  PngCompression,
-  VideoCodec,
-} from "../../src/py_aep/enums/index.ts";
-import {
-  CineonFormatOptions,
-  JpegFormatOptions,
-  OpenExrFormatOptions,
-  PngFormatOptions,
-  TargaFormatOptions,
-  TiffFormatOptions,
-  XmlFormatOptions,
-} from "../../src/py_aep/models/renderqueue/format_options/index.ts";
+import { AudioCodec, CineonFileFormat, DnxResolution, Hdr10ColorPrimaries, JpegFormatType, MPEGAudioFormat, MPEGMultiplexer, MPEGMuxStreamCompatibility, MPEGProfile, OpenExrCompression, OutputChannels, OutputColorDepth, PngCompression, VideoCodec } from "../../src/py_aep/enums/index.ts";
+import { CineonFormatOptions, JpegFormatOptions, OpenExrFormatOptions, PngFormatOptions, TargaFormatOptions, TiffFormatOptions, XmlFormatOptions } from "../../src/py_aep/models/renderqueue/format_options/index.ts";
 import type { OutputModule } from "../../src/py_aep/models/renderqueue/output_module.ts";
 
 const FORMAT_DIR = new Path(import.meta.dir, "..", "..", "samples", "models", "format_options");

@@ -31,7 +31,7 @@
 // `_check_envelope` refuses astral characters before any of this runs, so the
 // two agree on every text that reaches these helpers.
 
-import fontkit from "fontkit";
+import * as fontkit from "fontkit";
 import {
   NotImplementedError,
   at,
@@ -56,21 +56,21 @@ import { BoxAccumulator } from "./shape_bounds.ts";
 
 // A glyph's outline bounds in font units, `None` for an empty glyph.
 // TODO(port): keyed by fontkit glyph id (HarfBuzz codepoint), not by glyph name.
-type _GlyphBounds = Map<number, [number, number, number, number] | null>;
+export type _GlyphBounds = Map<number, [number, number, number, number] | null>;
 
-type _CharStyle = ReturnType<typeof tc._char_styles>[number];
+export type _CharStyle = ReturnType<typeof tc._char_styles>[number];
 
-const _CFF_INK_SCALE = 1031.25 / 1024;
+export const _CFF_INK_SCALE = 1031.25 / 1024;
 
-const _glyph_cache = new Map<string, [any, boolean, _GlyphBounds]>();
+export const _glyph_cache = new Map<string, [any, boolean, _GlyphBounds]>();
 
-function _is_os_error(exc: unknown): boolean {
+export function _is_os_error(exc: unknown): boolean {
   // Python catches OSError (a missing or unreadable file). Node reports those
   // as errors carrying a string `code`.
   return exc instanceof Error && typeof (exc as any).code === "string";
 }
 
-function _open_face(path: string, face_index: number): any {
+export function _open_face(path: string, face_index: number): any {
   // TODO(port): fontTools `TTFont(fontNumber=...)` picks a face of a .ttc.
   // fontkit exposes collection faces through `.fonts`; a plain font is its own
   // face.
@@ -79,7 +79,7 @@ function _open_face(path: string, face_index: number): any {
 }
 
 /** `(font, is_cff, outline bounds by glyph id)` for a PostScript name, cached; the bounds fill in as glyphs are measured. */
-function _font_outlines(ps_name: string): [any, boolean, _GlyphBounds] {
+export function _font_outlines(ps_name: string): [any, boolean, _GlyphBounds] {
   const [path, face_index] = tc._resolve_face(ps_name);
   const key = tkey(str(path), face_index);
   if (!_glyph_cache.has(key)) {
@@ -100,7 +100,7 @@ function _font_outlines(ps_name: string): [any, boolean, _GlyphBounds] {
 }
 
 /** fontTools `BoundsPen` for one glyph: `null` when it draws nothing. */
-function _pen_bounds(font: any, gid: number): [number, number, number, number] | null {
+export function _pen_bounds(font: any, gid: number): [number, number, number, number] | null {
   // TODO(port): fontTools BoundsPen is exact (curve extrema). fontkit's path
   // bbox is also computed from the outline; parity is unverified on every
   // CFF and TrueType outline.
@@ -110,11 +110,11 @@ function _pen_bounds(font: any, gid: number): [number, number, number, number] |
   return [b.minX, b.minY, b.maxX, b.maxY];
 }
 
-function _refuse(reason: string): NotImplementedError {
+export function _refuse(reason: string): NotImplementedError {
   return new NotImplementedError(`source_rect_at_time does not model text with ${reason}`);
 }
 
-function _check_styles(doc: TextDocument): void {
+export function _check_styles(doc: TextDocument): void {
   for (const [_start, _end, style] of run_spans(doc._doc, "6", "6")) {
     if (py_bool(dict_get(style, "2"))) throw _refuse("faux bold");
     if (py_bool(dict_get(style, "3"))) throw _refuse("faux italic");
@@ -129,7 +129,7 @@ function _check_styles(doc: TextDocument): void {
  * The stroke a character's run draws, 0 when it has none (the width
  * defaults to 1, as `TextDocument.stroke_width` reads it).
  */
-function _stroke_width(style: any): number {
+export function _stroke_width(style: any): number {
   if (!py_bool(dict_get(style, "57", false))) return 0.0;
   return float(dict_get(style, "63", 1.0));
 }
@@ -140,7 +140,7 @@ function _stroke_width(style: any): number {
  * Glyphs are placed by the composer's own shaping and advances
  * (`text_composition`), the ones that break and justify the lines.
  */
-function _line_ink(
+export function _line_ink(
   text: string,
   styles: _CharStyle[],
   strokes: number[],
@@ -191,7 +191,7 @@ function _line_ink(
 }
 
 /** Where a point-text line that is not left-justified starts its pen, from its advance width. */
-function _justified_origin(
+export function _justified_origin(
   justification: ParagraphJustification,
   width: number,
   text: string,
@@ -245,11 +245,11 @@ export function text_ink_rect(doc: TextDocument): Record<string, number> {
   return box.rect();
 }
 
-function _justification(paragraph_style: any): ParagraphJustification {
+export function _justification(paragraph_style: any): ParagraphJustification {
   return ParagraphJustification.from_binary(int(dict_get(paragraph_style, "0", 0)));
 }
 
-function _point_text_ink(
+export function _point_text_ink(
   raw: string,
   styles: _CharStyle[],
   strokes: number[],
@@ -300,7 +300,7 @@ function _point_text_ink(
   }
 }
 
-function _box_text_ink(
+export function _box_text_ink(
   doc: TextDocument,
   raw: string,
   styles: _CharStyle[],

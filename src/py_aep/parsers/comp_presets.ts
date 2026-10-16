@@ -16,9 +16,9 @@ import { CompPresetItem } from "../binary/composition_chunks.ts";
 import { PrefsFile, decode_pref_string, parse_hex_value } from "./prefs.ts";
 import { dict_get, getitem, len, py_assert, sorted } from "../../pyrt/index.ts";
 
-const _NAMES_SECTION = "Composition Preset Names Section v11";
-const _PRESETS_SECTION = "Composition Presets Section v11";
-const _PRESET_SIZE = 16;
+export const _NAMES_SECTION = "Composition Preset Names Section v11";
+export const _PRESETS_SECTION = "Composition Presets Section v11";
+export const _PRESET_SIZE = 16;
 
 /**
  * A New Composition preset from the AE preferences.

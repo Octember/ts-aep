@@ -15,6 +15,7 @@ import {
   concat,
   decode,
   define,
+  deferred,
   descriptor,
   dict_get,
   encode,
@@ -30,25 +31,12 @@ import type { IO } from "../../pyrt/index.ts";
 import { MAC_EPOCH_OFFSET, read_bytes, to_dividend_divisor, to_fixed_16_16, truncate_utf8 } from "./bin_utils.ts";
 import { BitField } from "./bitfield.ts";
 import { Chunk } from "./chunk.ts";
-import {
-  ascii_field,
-  bool_field,
-  bytes_field,
-  f4_field,
-  f8_field,
-  s2_field,
-  s4_field,
-  str_field,
-  u1_field,
-  u2_field,
-  u4_field,
-  u8_field,
-} from "./fmt_field.ts";
+import { ascii_field, bool_field, bytes_field, f4_field, f8_field, s2_field, s4_field, str_field, u1_field, u2_field, u4_field, u8_field } from "./fmt_field.ts";
 import { register } from "./registry.ts";
-import { CineonRoptChunk } from "./render_chunks.ts";
+const _render_chunks = deferred<typeof import("./render_chunks.ts")>(import.meta.url, "./render_chunks.ts");
 
 // TODO(pyrt): struct.pack_into is not in pyrt/struct.ts. This helper packs, then copies at `offset`, which is what pack_into writes.
-function pack_into(buf: Uint8Array, offset: number, format: string, ...values: any[]): void {
+export function pack_into(buf: Uint8Array, offset: number, format: string, ...values: any[]): void {
   buf.set(struct.pack(format, ...values), offset);
 }
 
@@ -769,11 +757,11 @@ export function build_psd_layer_opti_data(
  * writes this exact 48-byte body for every DPX and Cineon item.
  */
 export function build_dpx_opti_data(): Uint8Array {
-  return new CineonRoptChunk().tobytes();
+  return new (_render_chunks().CineonRoptChunk)().tobytes();
 }
 
 /** Length of the `oEXR` opti body AE 2026 writes for every OpenEXR file. */
-const _OEXR_OPTI_SIZE = 9750;
+export const _OEXR_OPTI_SIZE = 9750;
 
 /**
  * Build the 9750-byte OpenEXR (`oEXR`) `opti` asset-info body.
@@ -1292,7 +1280,7 @@ define(PlaceholderOptiChunk, {
   placeholder_name: str_field(256, { default: "", encoding: "utf-8" }),
 });
 
-const _OPTI_VARIANTS = new Map<string, typeof OptiChunk>([
+export const _OPTI_VARIANTS = new Map<string, typeof OptiChunk>([
   ["Soli", SoliOptiChunk],
   ["8BPS", PsdOptiChunk],
   ["TEXT", TextOptiChunk],

@@ -1,7 +1,7 @@
 import { ChannelType, FastPreviewType } from "../../enums/index.ts";
 import { ChunkField } from "../descriptors.ts";
 import { _validate_number } from "../validators.ts";
-import { descriptor } from "../../pyrt/index.ts";
+import { descriptor } from "../../../pyrt/index.ts";
 import type { FipsChunk } from "../../binary/misc_chunks.ts";
 import type { AVItem } from "../items/av_item.ts";
 

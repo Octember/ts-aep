@@ -28,7 +28,7 @@ import type { Keyframe } from "../models/properties/keyframe.ts";
 import type { KeyframeEase } from "../models/properties/keyframe_ease.ts";
 
 
-const _DEFAULT_INFLUENCE = 100.0 / 6.0; // 16.6667 %
+export const _DEFAULT_INFLUENCE = 100.0 / 6.0; // 16.6667 %
 
 // ---------------------------------------------------------------------------
 // BezierEasing
@@ -43,27 +43,27 @@ const _DEFAULT_INFLUENCE = 100.0 / 6.0; // 16.6667 %
 // endpoint within `_EPS`. This replaces an earlier sample-table + Newton port,
 // which agreed with AE only to ~1e-5 in the parameter.
 
-const _EPS = 1e-10;
+export const _EPS = 1e-10;
 
 // AE saturates a vertical slope instead of dividing by a near-zero dx: inside
 // this window it reports +/- this value.
-const _VERTICAL_SLOPE_EPS = 1e-12;
-const _VERTICAL_SLOPE = 1e10;
+export const _VERTICAL_SLOPE_EPS = 1e-12;
+export const _VERTICAL_SLOPE = 1e10;
 
-function _bez_A(a1: number, a2: number): number {
+export function _bez_A(a1: number, a2: number): number {
   return 1.0 - 3.0 * a2 + 3.0 * a1;
 }
 
-function _bez_B(a1: number, a2: number): number {
+export function _bez_B(a1: number, a2: number): number {
   return 3.0 * a2 - 6.0 * a1;
 }
 
-function _bez_C(a1: number): number {
+export function _bez_C(a1: number): number {
   return 3.0 * a1;
 }
 
 /** Calculate bezier value at t for one axis (x or y). */
-function _calc_bezier(t: number, a1: number, a2: number): number {
+export function _calc_bezier(t: number, a1: number, a2: number): number {
   return ((_bez_A(a1, a2) * t + _bez_B(a1, a2)) * t + _bez_C(a1)) * t;
 }
 
@@ -79,7 +79,7 @@ function _calc_bezier(t: number, a1: number, a2: number): number {
  * there; that is a bug, not behaviour to copy.
  */
 // TODO(port): Math.pow / Math.cos / Math.acos may differ from CPython's libm in the last bit; byte-exact parity of the cubic roots is unverified.
-function _solve_cubic(a: number, b: number, c: number, d: number): number | null {
+export function _solve_cubic(a: number, b: number, c: number, d: number): number | null {
   let root: number;
   if (Math.abs(a) >= _EPS) {
     const big_a = b / a;
@@ -124,7 +124,7 @@ function _solve_cubic(a: number, b: number, c: number, d: number): number | null
 }
 
 /** Cached unit-square bezier easing function. */
-class _BezierEasing {
+export class _BezierEasing {
   declare _cx1: number;
   declare _cy1: number;
   declare _cx2: number;
@@ -166,10 +166,10 @@ class _BezierEasing {
 }
 
 // Cache for easing functions (mirroring lottie-web's BezierFactory cache)
-const _easing_cache = new Map<string, _BezierEasing>();
+export const _easing_cache = new Map<string, _BezierEasing>();
 
 /** Get or create a cached BezierEasing instance. */
-function _get_bezier_easing(cx1: number, cy1: number, cx2: number, cy2: number): _BezierEasing {
+export function _get_bezier_easing(cx1: number, cy1: number, cx2: number, cy2: number): _BezierEasing {
   const key = tkey(cx1, cy1, cx2, cy2);
   const cached = _easing_cache.get(key);
   if (cached != null) return cached;
@@ -197,7 +197,7 @@ function _get_bezier_easing(cx1: number, cy1: number, cx2: number, cy2: number):
  *
  * Returns (cx1, cy1, cx2, cy2) for use with BezierEasing.
  */
-function _ease_to_bezier_1d(
+export function _ease_to_bezier_1d(
   t0: number,
   t1: number,
   v0: number,
@@ -244,7 +244,7 @@ function _ease_to_bezier_1d(
  * curve bowing when they do not (issue #225: a 1-D BEZIER segment whose
  * keys both hold 50 peaks at 99.5 in AE, not 50).
  */
-function _ease_value_handles(
+export function _ease_value_handles(
   t0: number,
   t1: number,
   v0: number,
@@ -350,7 +350,7 @@ export function split_segment_influences(
  * Not AE's 0.1 % dialog minimum: splitting a segment whose far side has a
  * blank (0) influence leaves that side at 0 in AE's own files (AE 2026).
  */
-function _clamp_influence(value: number): number {
+export function _clamp_influence(value: number): number {
   return min([max([value, 0.0]), 100.0]);
 }
 
@@ -379,27 +379,27 @@ function _clamp_influence(value: number): number {
 // value_at_time fixtures - to 1e-12, so keep the products and sums in the
 // order they are in.
 
-const _ARC_SAMPLES = 128;
+export const _ARC_SAMPLES = 128;
 // The `tdb4` arc accuracy of a property stored in pixels, and the one a
 // keyed normalized point (effect point, a footage layer's Anchor Point,
 // layer-style point) stores: 6.25e-12, exactly this double in AE's files.
-const _DEFAULT_ARC_ACCURACY = 1e-4;
+export const _DEFAULT_ARC_ACCURACY = 1e-4;
 // float.fromhex("0x1.b7cdfd9d7bdbcp-38"), written as an exact double expression.
 export const NORMALIZED_ARC_ACCURACY = (1 + 0xb7cdfd9d7bdbc / 2 ** 52) * 2 ** -38;
 // The fit's handle length for a two-sample run: 0.333333333333333, not 1/3 -
 // the value that reproduces AE's sampled positions.
-const _FIT_THIRD = 0.333333333333333;
+export const _FIT_THIRD = 0.333333333333333;
 // A LINEAR side's handle on the distance curve, as a fraction of the span on
 // both axes: 0.16666666667, not 1/6, for the same reason.
-const _LINEAR_HANDLE = 0.16666666667;
+export const _LINEAR_HANDLE = 0.16666666667;
 // Largest coordinate measured as is; a farther curve is fitted scaled down so
 // its squared chords stay finite.
-const _HUGE_COORDINATE = 1e150;
+export const _HUGE_COORDINATE = 1e150;
 
 // Four control points of an N-dimensional cubic; tuples so a curve can key
 // the spline cache.
-type _Curve = number[][];
-type _Point2 = [number, number];
+export type _Curve = number[][];
+export type _Point2 = [number, number];
 
 /**
  * How AE measures one spatial property's motion path.
@@ -442,22 +442,22 @@ export class ArcMetric {
   }
 }
 
-const _DEFAULT_ARC_METRIC = new ArcMetric();
+export const _DEFAULT_ARC_METRIC = new ArcMetric();
 
 /** One coordinate of a cubic bezier, evaluated the way AE evaluates it. */
-function _cubic_1d(a: number, b: number, c: number, d: number, t: number): number {
+export function _cubic_1d(a: number, b: number, c: number, d: number, t: number): number {
   const mt = 1.0 - t;
   const t2 = t * t;
   return ((3.0 * b * t + mt * a) * mt + 3.0 * c * t2) * mt + t2 * t * d;
 }
 
-function _cubic_point(curve: _Curve, t: number): number[] {
+export function _cubic_point(curve: _Curve, t: number): number[] {
   const [p0, p1, p2, p3] = curve;
   return Array.from({ length: p0.length }, (_v, d) => _cubic_1d(p0[d], p1[d], p2[d], p3[d], t));
 }
 
 /** A spatial segment's control points, in reported units. */
-function _spatial_curve(v0: number[], v1: number[], out_tangent: number[], in_tangent: number[]): _Curve {
+export function _spatial_curve(v0: number[], v1: number[], out_tangent: number[], in_tangent: number[]): _Curve {
   const ndim = v0.length;
   return [
     [...v0],
@@ -468,7 +468,7 @@ function _spatial_curve(v0: number[], v1: number[], out_tangent: number[], in_ta
 }
 
 /** A reported vector in the space AE measures arc length in. */
-function _measured(values: number[], metric: ArcMetric): number[] {
+export function _measured(values: number[], metric: ArcMetric): number[] {
   const divisors = metric.divisors;
   const result: number[] = [];
   for (const [d, raw] of values.entries()) {
@@ -485,7 +485,7 @@ function _measured(values: number[], metric: ArcMetric): number[] {
  * A spatial segment's control points, in the space AE measures arc
  * length in.
  */
-function _measured_curve(
+export function _measured_curve(
   v0: number[],
   v1: number[],
   out_tangent: number[],
@@ -501,7 +501,7 @@ function _measured_curve(
 }
 
 /** `(parameter, distance)` samples along `curve`, and its length. */
-function _arc_samples(curve: _Curve): [_Point2[], number] {
+export function _arc_samples(curve: _Curve): [_Point2[], number] {
   const p0 = curve[0];
   const step = 1.0 / (_ARC_SAMPLES - 1);
   const samples: _Point2[] = [[0.0, 0.0]];
@@ -524,14 +524,14 @@ function _arc_samples(curve: _Curve): [_Point2[], number] {
   return [samples, total];
 }
 
-function _unit(x: number, y: number): _Point2 {
+export function _unit(x: number, y: number): _Point2 {
   const length = Math.sqrt(x * x + y * y);
   if (length === 0.0) return [x, y];
   const inverse = 1.0 / length;
   return [inverse * x, inverse * y];
 }
 
-function _fit_point(curve: _Point2[], u: number): _Point2 {
+export function _fit_point(curve: _Point2[], u: number): _Point2 {
   const [p0, p1, p2, p3] = curve;
   return [
     _cubic_1d(p0[0], p1[0], p2[0], p3[0], u),
@@ -540,7 +540,7 @@ function _fit_point(curve: _Point2[], u: number): _Point2 {
 }
 
 /** Schneider's chord-length parameterization of `points[first:last+1]`. */
-function _chord_parameters(points: _Point2[], first: number, last: number): number[] {
+export function _chord_parameters(points: _Point2[], first: number, last: number): number[] {
   const u: number[] = [0.0];
   for (let i = first + 1; i <= last; i++) {
     const dx = points[i][0] - points[i - 1][0];
@@ -559,7 +559,7 @@ function _chord_parameters(points: _Point2[], first: number, last: number): numb
  * rather than tested for exactly 0, and only a NEGATIVE handle length
  * falls back to the Wu/Barsky heuristic.
  */
-function _fit_bezier(
+export function _fit_bezier(
   points: _Point2[],
   first: number,
   last: number,
@@ -624,7 +624,7 @@ function _fit_bezier(
  * A tie goes to the LATER sample, which is what decides the split on a
  * symmetric run.
  */
-function _fit_error(
+export function _fit_error(
   points: _Point2[],
   first: number,
   last: number,
@@ -654,7 +654,7 @@ function _fit_error(
  * every tolerance below 1 - all AE writes - that bound lies under the
  * tolerance itself, so the fit always splits.
  */
-function _fit_cubics(
+export function _fit_cubics(
   points: _Point2[],
   first: number,
   last: number,
@@ -702,7 +702,7 @@ function _fit_cubics(
  *
  * Snaps to either end within `_EPS`, and clamps outside them.
  */
-function _t_on_axis(curve: _Point2[], axis: number, value: number): number {
+export function _t_on_axis(curve: _Point2[], axis: number, value: number): number {
   const v0 = curve[0][axis];
   if (v0 > value || Math.abs(value - v0) < _EPS) return 0.0;
   const v3 = curve[3][axis];
@@ -725,7 +725,7 @@ function _t_on_axis(curve: _Point2[], axis: number, value: number): number {
  *
  * The handle is shortened along its own slope, not just clamped.
  */
-function _non_decreasing(curve: _Point2[]): _Point2[] {
+export function _non_decreasing(curve: _Point2[]): _Point2[] {
   const p0 = curve[0];
   let p1 = curve[1];
   let p2 = curve[2];
@@ -741,7 +741,7 @@ function _non_decreasing(curve: _Point2[]): _Point2[] {
   return [p0, p1, p2, p3];
 }
 
-function _is_non_decreasing(curve: _Point2[]): boolean {
+export function _is_non_decreasing(curve: _Point2[]): boolean {
   const [y0, y1, y2, y3] = curve.map((point) => point[1]);
   return !(
     (y1 < y0 && Math.abs(y1 - y0) >= _EPS) ||
@@ -756,7 +756,7 @@ function _is_non_decreasing(curve: _Point2[]): boolean {
  *
  * Built from the segment's control points in measured units.
  */
-class _ArcSpline {
+export class _ArcSpline {
   declare length: number;
   declare _knots: _Point2[];
 
@@ -812,10 +812,10 @@ class _ArcSpline {
 }
 
 // TODO(port): `functools.lru_cache(maxsize=1024)` keys its entries by argument value. pyrt `lru_cache` keys by object identity, and `_measured_curve` returns a fresh array per call, so this local LRU keys on `tkey(curve, accuracy)` and keeps the same 1024 bound.
-const _arc_spline_cache = new Map<string, _ArcSpline>();
+export const _arc_spline_cache = new Map<string, _ArcSpline>();
 
 /** A cached `_ArcSpline`: every evaluated frame rebuilds the same one. */
-function _arc_spline(curve: _Curve, accuracy: number): _ArcSpline {
+export function _arc_spline(curve: _Curve, accuracy: number): _ArcSpline {
   const key = tkey(curve, accuracy);
   const cached = _arc_spline_cache.get(key);
   if (cached !== undefined) {
@@ -853,7 +853,7 @@ export function motion_path_length(
  * (so it is not read: a LINEAR ease derives from the path's arc length).
  * An overshooting handle is pulled back so the distance never reverses.
  */
-function _distance_curve(
+export function _distance_curve(
   duration: number,
   distance: number,
   kf_start: Keyframe,
@@ -887,7 +887,7 @@ function _distance_curve(
  * The span runs from `kf_start` to `kf_end`, a single segment or a whole
  * roving run. HOLD on either side keeps it at the start.
  */
-function _spatial_distance(
+export function _spatial_distance(
   elapsed: number,
   duration: number,
   distance: number,
@@ -946,7 +946,7 @@ export function split_spatial_path(
   ];
 }
 
-function _tangents_are_zero(tangent: number[] | null): boolean {
+export function _tangents_are_zero(tangent: number[] | null): boolean {
   if (tangent == null) return true;
   return tangent.every((x) => Math.abs(x) < 1e-12);
 }
@@ -955,7 +955,7 @@ function _tangents_are_zero(tangent: number[] | null): boolean {
 // Auto-bezier computation (same as original - needed for AEP binary data)
 // ---------------------------------------------------------------------------
 
-const _AUTO_BEZIER_CHORD_SCALE = 1.0 / 6.0;
+export const _AUTO_BEZIER_CHORD_SCALE = 1.0 / 6.0;
 
 /**
  * AE's auto-bezier spatial tangents for `values[index]`.
@@ -1025,7 +1025,7 @@ export function auto_temporal_speeds(values: number[][], times: number[], index:
  * `_single_progress`). `None` means "no explicit ease", i.e. constant
  * progress.
  */
-function _progress_easing(
+export function _progress_easing(
   out_ease: KeyframeEase | null,
   in_ease: KeyframeEase | null,
   kw: { out_linear?: boolean; in_linear?: boolean } = {},
@@ -1154,7 +1154,7 @@ export function roving_keyframe_times(keyframes: Keyframe[], metric: ArcMetric):
  * The time unit at which a roving run has travelled `travelled`, read
  * off the run's ease `curve` (`None` when both anchors are LINEAR).
  */
-function _roving_units(
+export function _roving_units(
   curve: _Point2[] | null,
   timebase: number,
   units0: number,
@@ -1178,7 +1178,7 @@ function _roving_units(
  * asked for (and an auto-bezier key's neighbours) are read: evaluating
  * one segment must not walk every keyframe of a long track.
  */
-function _spatial_tangents(keyframes: Keyframe[], first: number, last: number): Map<number, [number[], number[]]> {
+export function _spatial_tangents(keyframes: Keyframe[], first: number, last: number): Map<number, [number[], number[]]> {
   const result = new Map<number, [number[], number[]]>();
   for (let i = first; i <= last; i++) {
     const kf = keyframes[i];
@@ -1204,7 +1204,7 @@ function _spatial_tangents(keyframes: Keyframe[], first: number, last: number): 
  * Converts speed/influence to normalized bezier control points,
  * then uses BezierEasing to get the eased progress, then lerps.
  */
-function _interpolate_bezier_1d(
+export function _interpolate_bezier_1d(
   t: number,
   t0: number,
   t1: number,
@@ -1235,7 +1235,7 @@ function _interpolate_bezier_1d(
 }
 
 /** The arc spline of the segment from `keyframes[index]` to the next. */
-function _segment_spline(
+export function _segment_spline(
   keyframes: Keyframe[],
   index: number,
   tangents: Map<number, [number[], number[]]>,
@@ -1255,7 +1255,7 @@ function _segment_spline(
  * The arc splines of the segments from `keyframes[start]` to
  * `keyframes[end]`, and their total length (summed left to right).
  */
-function _run_splines(keyframes: Keyframe[], start: number, end: number, metric: ArcMetric): [_ArcSpline[], number] {
+export function _run_splines(keyframes: Keyframe[], start: number, end: number, metric: ArcMetric): [_ArcSpline[], number] {
   const tangents = _spatial_tangents(keyframes, start, end);
   const splines: _ArcSpline[] = [];
   for (let i = start; i < end; i++) splines.push(_segment_spline(keyframes, i, tangents, metric));
@@ -1268,7 +1268,7 @@ function _run_splines(keyframes: Keyframe[], start: number, end: number, metric:
  * The control points of the segment from `keyframes[index]` to the
  * next, in reported units.
  */
-function _segment_curve(keyframes: Keyframe[], index: number): _Curve {
+export function _segment_curve(keyframes: Keyframe[], index: number): _Curve {
   const tangents = _spatial_tangents(keyframes, index, index + 1);
   return _spatial_curve(
     keyframes[index]._stored_value as number[],
@@ -1312,7 +1312,7 @@ export function linear_path_speed(keyframes: Keyframe[], index: number, metric: 
  * The anchors enclosing the segment that starts at `keyframes[left]`:
  * the ends of the roving run it belongs to.
  */
-function _run_bounds(keyframes: Keyframe[], left: number): [number, number] {
+export function _run_bounds(keyframes: Keyframe[], left: number): [number, number] {
   let start = left;
   let end = left + 1;
   while (start > 0 && keyframes[start].roving) start -= 1;
@@ -1324,7 +1324,7 @@ function _run_bounds(keyframes: Keyframe[], left: number): [number, number] {
  * The arc distance from `keyframes[low]` to `keyframes[high]` over their
  * time span, in the units ease speeds report.
  */
-function _path_speed(keyframes: Keyframe[], low: number, high: number, metric: ArcMetric): number {
+export function _path_speed(keyframes: Keyframe[], low: number, high: number, metric: ArcMetric): number {
   const span = keyframes[high]._layer_time - keyframes[low]._layer_time;
   if (span <= 0) return 0.0;
   const [, distance] = _run_splines(keyframes, low, high, metric);
@@ -1434,7 +1434,7 @@ export function motion_path_direction(time: number, keyframes: Keyframe[], metri
  *     t0: `kf_left`'s layer time.
  *     t1: `kf_right`'s layer time.
  */
-function _single_progress(
+export function _single_progress(
   kf_left: Keyframe,
   kf_right: Keyframe,
   time: number,
@@ -1458,14 +1458,14 @@ function _single_progress(
 }
 
 /** A rotation of `degrees` about axis 0 (X), 1 (Y) or 2 (Z). */
-function _axis_quaternion(axis: number, degrees: number): [number, number, number, number] {
+export function _axis_quaternion(axis: number, degrees: number): [number, number, number, number] {
   const half = radians(degrees) / 2.0;
   const parts = [0.0, 0.0, 0.0, Math.cos(half)];
   parts[axis] = Math.sin(half);
   return [parts[0], parts[1], parts[2], parts[3]];
 }
 
-function _quaternion_multiply(
+export function _quaternion_multiply(
   a: [number, number, number, number],
   b: [number, number, number, number],
 ): [number, number, number, number] {
@@ -1558,16 +1558,16 @@ export function slerp_orientation(start: number[], end: number[], progress: numb
   );
 }
 
-function _lerp_points(a: number[][], b: number[][], progress: number): number[][] {
+export function _lerp_points(a: number[][], b: number[][], progress: number): number[][] {
   return zip(a, b).map(([p, q]) => [p[0] + (q[0] - p[0]) * progress, p[1] + (q[1] - p[1]) * progress]);
 }
 
-function _lerp_point(a: _Point2, b: _Point2, t: number): _Point2 {
+export function _lerp_point(a: _Point2, b: _Point2, t: number): _Point2 {
   return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
 }
 
 // A cubic bezier segment: start, its out handle, the end's in handle, end.
-type _Cubic = [_Point2, _Point2, _Point2, _Point2];
+export type _Cubic = [_Point2, _Point2, _Point2, _Point2];
 
 /**
  * De Casteljau: the two halves of `cubic` either side of `t`.
@@ -1577,7 +1577,7 @@ type _Cubic = [_Point2, _Point2, _Point2, _Point2];
  * and wants both halves as control points, which is what this returns -
  * marshalling between the two costs more than the 6 lerps do.
  */
-function _split_cubic(cubic: _Cubic, t: number): [_Cubic, _Cubic] {
+export function _split_cubic(cubic: _Cubic, t: number): [_Cubic, _Cubic] {
   const [p0, p1, p2, p3] = cubic;
   const a = _lerp_point(p0, p1, t);
   const b = _lerp_point(p1, p2, t);
@@ -1602,7 +1602,7 @@ function _split_cubic(cubic: _Cubic, t: number): [_Cubic, _Cubic] {
  * of a completely different shape, and a source with even rather than
  * lopsided segments, both cut identically).
  */
-function _subdivision_cuts(segment_count: number, target_count: number): number[][] {
+export function _subdivision_cuts(segment_count: number, target_count: number): number[][] {
   // TODO(pyrt): `collections.deque` has no shim; an array with shift() (popleft) and push() is used instead.
   const pieces: [number, number, number][] = [];
   for (let index = 0; index < segment_count; index++) pieces.push([index, 0.0, 1.0]);
@@ -1628,7 +1628,7 @@ function _subdivision_cuts(segment_count: number, target_count: number): number[
  * The new vertices land where a de Casteljau split puts them, so the
  * outline is unchanged - only its parameterisation gains points.
  */
-function _resample_path(
+export function _resample_path(
   vertices: number[][],
   in_tangents: number[][],
   out_tangents: number[][],
@@ -1759,7 +1759,7 @@ export function interpolate_shapes(start: Shape, end: Shape, progress: number): 
 
 // A colour's ease speed is a rate along the straight line between its keys,
 // in 0-255 channel units: the 0-1 channel distance times this.
-const _COLOR_SPEED_SCALE = 255.0;
+export const _COLOR_SPEED_SCALE = 255.0;
 
 /**
  * The distance between two colours in the units their ease speeds use.
@@ -1806,7 +1806,7 @@ export function color_auto_speed(values: number[][], times: number[], index: num
  * eased and mixed segments, and with stored speeds of 0 it is the
  * influence-only curve measured earlier.
  */
-function _interpolate_color(
+export function _interpolate_color(
   kf_left: Keyframe,
   kf_right: Keyframe,
   time: number,

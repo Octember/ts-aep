@@ -8,52 +8,20 @@ import { ae_writes } from "../../ae_version.ts";
 import { ListChunk } from "../../binary/chunk.ts";
 import { layer_timebase, rescale_ticks } from "../../binary/composition_chunks.ts";
 import { CmtaChunk } from "../../binary/item_chunks.ts";
-import {
-  build_gide_list,
-  build_ovdg,
-  clone_chunk_tree,
-  remap_layer_ref_tdpi,
-  rewrite_owner_tdpi,
-  rewrite_time_base,
-} from "../../binary/mutations.ts";
+import { build_gide_list, build_ovdg, clone_chunk_tree, remap_layer_ref_tdpi, rewrite_owner_tdpi, rewrite_time_base } from "../../binary/mutations.ts";
 import { TdmnChunk, TdsbChunk, TdsnChunk } from "../../binary/property_chunks.ts";
 import { Utf8Chunk } from "../../binary/scalar_chunks.ts";
 import { find_by_type, index_by_identity } from "../../binary/utils.ts";
 import { parse_properties } from "../../parsers/property.ts";
 import { get_match_name_runs } from "../../parsers/utils.ts";
-import {
-  Mat4,
-  aspect_scale,
-  build_world_matrix,
-  compose_orientation,
-  decompose_transform,
-  layer_source_aspect,
-  position_space_aspect,
-  rig_aims_at_poi,
-  rotation_part,
-  square_pixels,
-  strip_orientation,
-} from "../../resolvers/transform.ts";
+import { Mat4, aspect_scale, build_world_matrix, compose_orientation, decompose_transform, layer_source_aspect, position_space_aspect, rig_aims_at_poi, rotation_part, square_pixels, strip_orientation } from "../../resolvers/transform.ts";
 import { ChunkField } from "../descriptors.ts";
 import { auto_name } from "../naming.ts";
 import { Property } from "../properties/property.ts";
 import { PropertyBase } from "../properties/property_base.ts";
 import { PropertyGroup } from "../properties/property_group.ts";
-import {
-  _validate_number,
-  validate_int,
-  validate_number,
-  validate_string,
-} from "../validators.ts";
-import { CompItem } from "../items/composition.ts";
-// TODO(port): deferred imports in the Python (`from .av_layer import ...`,
-// `from ..items.composition import CompItem`, `from ...parsers.layer import
-// parse_layer`, `from ...synthesis.core import ...`) are top-level here per the
-// rulebook. av_layer.ts extends Layer at module evaluation, so if layer.ts is
-// evaluated first the import cycle reads `Layer` before it is initialized.
-import { parse_layer } from "../../parsers/layer.ts";
-import { synthesize_layer_properties } from "../../synthesis/core.ts";
-import { _unregister_source_usage } from "./av_layer.ts";
+import { _validate_number, validate_int, validate_number, validate_string } from "../validators.ts";
+import type { CompItem } from "../items/composition.ts";
 import {
   KeyError,
   ValueError,
@@ -71,10 +39,16 @@ import {
   repr,
   round,
   warn,
+  deferred,
 } from "../../../pyrt/index.ts";
 
+const _synthesis_core = deferred<typeof import("../../synthesis/core.ts")>(import.meta.url, "../../synthesis/core.ts");
+const _av_layer = deferred<typeof import("./av_layer.ts")>(import.meta.url, "./av_layer.ts");
+const _composition = deferred<typeof import("../items/composition.ts")>(import.meta.url, "../items/composition.ts");
+const _layer = deferred<typeof import("../../parsers/layer.ts")>(import.meta.url, "../../parsers/layer.ts");
+
 // logging.getLogger(__name__)
-const logger = {
+export const logger = {
   debug() {},
   info() {},
   warning: (m: string) => warn(m),
@@ -82,47 +56,47 @@ const logger = {
 
 // AE turns any stretch under 1 % into 655 / 65536 (1 % in 16.16, rounded
 // down), in percent.
-const _MIN_STRETCH = (655 * 100) / 65536;
+export const _MIN_STRETCH = (655 * 100) / 65536;
 
 // The stretch is a float32 stored as a ratio with a signed 32-bit dividend;
 // 2147483520 is the largest float32 under 2**31.
-const _validate_stretch = _validate_number({
+export const _validate_stretch = _validate_number({
   min: -2147483520 * 100.0,
   max: 2147483520 * 100.0,
 });
 
 // The start time is a signed 32-bit count of the layer's timebase ticks.
-const _validate_start_time = _validate_number({
+export const _validate_start_time = _validate_number({
   min: (layer: any) => -0x80000000 / layer._layer_timebase(),
   max: (layer: any) => 0x7fffffff / layer._layer_timebase(),
 });
 
 /** Sentinel value indicating an undefined source id in the binary format. */
-const _UNDEFINED_ID = 0xffffffff;
+export const _UNDEFINED_ID = 0xffffffff;
 
 /**
  * The ldta source id of a light without a source: 0 before AE 23, which
  * writes the undefined id.
  */
-function _no_source_id(comp: CompItem): number {
+export function _no_source_id(comp: CompItem): number {
   const major = comp._project._head.ae_version_major;
   return ae_writes("light source id", major) ? _UNDEFINED_ID : 0;
 }
 
 /** World matrix a child of `parent` is placed in, at comp `time`. */
-function _parent_world(parent: Layer | null, time: number, child_is_3d: boolean): Mat4 {
+export function _parent_world(parent: Layer | null, time: number, child_is_3d: boolean): Mat4 {
   if (parent == null) return Mat4.identity();
   return build_world_matrix(parent, time, !child_is_3d, { as_parent: true });
 }
 
 /** `list.index(x)` with `==` (identity for layers) and CPython's ValueError. */
-function _list_index(xs: any[], x: any): number {
+export function _list_index(xs: any[], x: any): number {
   for (let i = 0; i < xs.length; i++) if (xs[i] === x) return i;
   throw new ValueError(`${repr(x)} is not in list`);
 }
 
 /** `list.remove(x)` with CPython's ValueError. */
-function _list_remove(xs: any[], x: any): void {
+export function _list_remove(xs: any[], x: any): void {
   for (let i = 0; i < xs.length; i++) {
     if (xs[i] === x) {
       xs.splice(i, 1);
@@ -443,7 +417,7 @@ export class Layer extends PropertyGroup {
     layer._properties = props;
     for (const child of props) child._parent_property = layer;
 
-    synthesize_layer_properties(layer);
+    _synthesis_core().synthesize_layer_properties(layer);
     return layer;
   }
 
@@ -1297,7 +1271,7 @@ export class Layer extends PropertyGroup {
     comp._project._ensure_used_in_linked();
     const source = getattr(this, "source", null);
     if (source != null && "_used_in" in source) {
-      _unregister_source_usage(source, comp, { exclude: this });
+      _av_layer()._unregister_source_usage(source, comp, { exclude: this });
     }
 
     // Remove chunk block from comp's chunk list
@@ -1343,7 +1317,7 @@ export class Layer extends PropertyGroup {
    */
   copy_to_comp(into_comp: CompItem): Layer {
     // Circular: models.items.composition -> models.layers -> layer
-    if (!(into_comp instanceof CompItem)) {
+    if (!(into_comp instanceof _composition().CompItem)) {
       throw new ValueError("Target composition must be a CompItem.");
     }
     return this._clone_into(into_comp, { duplicate: false });
@@ -1441,7 +1415,7 @@ export class Layer extends PropertyGroup {
 
     // Re-parse cloned chunks into a model instance
     const effect_defs = into_comp._project._effect_param_defs;
-    const new_layer = parse_layer(cloned_list, into_comp, effect_defs);
+    const new_layer = _layer().parse_layer(cloned_list, into_comp, effect_defs);
 
     into_comp._layers.splice(model_idx, 0, new_layer);
 

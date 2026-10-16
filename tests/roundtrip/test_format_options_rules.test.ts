@@ -18,15 +18,7 @@ import {
   ValueError,
 } from "../../src/pyrt/index.ts";
 import { make_tmp_path, raises } from "../../src/pyrt/pytest.ts";
-import {
-  AudioChannels,
-  AudioCodec,
-  MPEGAudioFormat,
-  MPEGMultiplexer,
-  OutputChannels,
-  OutputColorDepth,
-  VideoCodec,
-} from "../../src/py_aep/enums/index.ts";
+import { AudioChannels, AudioCodec, MPEGAudioFormat, MPEGMultiplexer, OutputChannels, OutputColorDepth, VideoCodec } from "../../src/py_aep/enums/index.ts";
 import { parse_format_options } from "../../src/py_aep/parsers/format_options.ts";
 import "../../src/py_aep/binary/_register.ts";
 import { parse_app, parse_project_fresh, SAMPLES_DIR } from "../helpers.ts";

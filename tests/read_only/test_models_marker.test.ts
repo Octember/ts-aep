@@ -6,13 +6,7 @@
 
 import { describe, expect, test } from "bun:test";
 import { isclose, len, py_assert, py_bool, Path } from "../../src/pyrt/index.ts";
-import {
-  get_comp,
-  get_comp_marker_from_json_by_name,
-  get_layer_marker_from_json_by_comp,
-  load_expected,
-  parse_project,
-} from "../conftest.ts";
+import { get_comp, get_comp_marker_from_json_by_name, get_layer_marker_from_json_by_comp, load_expected, parse_project } from "../conftest.ts";
 import type { MarkerValue, Project } from "../../src/py_aep/index.ts";
 
 // Python `Path(__file__).parent.parent.parent` is the repo root. A TS file's

@@ -10,7 +10,7 @@ import { mod } from "../../pyrt/index.ts";
 
 // -- Hue bands (degrees 0-360) ----------------------------------------
 
-const _HUE_BANDS: [number, string][] = [
+export const _HUE_BANDS: [number, string][] = [
   [15, "Red"],
   [45, "Orange"],
   [75, "Yellow"],
@@ -27,7 +27,7 @@ const _HUE_BANDS: [number, string][] = [
 ];
 
 /** Map a hue angle (0-360) to a color name. */
-function _hue_name(h_deg: number): string {
+export function _hue_name(h_deg: number): string {
   for (const [upper, name] of _HUE_BANDS) {
     if (h_deg < upper) {
       return name;
@@ -38,7 +38,7 @@ function _hue_name(h_deg: number): string {
 
 // TODO(pyrt): colorsys.rgb_to_hsv has no pyrt shim; local translation of CPython's
 // colorsys.rgb_to_hsv (same operation order so float results match).
-function _rgb_to_hsv(r: number, g: number, b: number): [number, number, number] {
+export function _rgb_to_hsv(r: number, g: number, b: number): [number, number, number] {
   const maxc = Math.max(r, g, b);
   const minc = Math.min(r, g, b);
   const v = maxc;

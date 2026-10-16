@@ -4,12 +4,7 @@
  * One wrapper class per renderer, selected from the `prda` chunk variant dispatch.
  */
 
-import {
-  AdvancedPrdaChunk,
-  Cinema4DPrdaChunk,
-  ClassicPrdaChunk,
-  RayTracedPrdaChunk,
-} from "../../../binary/misc_chunks.ts";
+import { AdvancedPrdaChunk, Cinema4DPrdaChunk, ClassicPrdaChunk, RayTracedPrdaChunk } from "../../../binary/misc_chunks.ts";
 import { AdvancedRendererOptions } from "./advanced.ts";
 import { Cinema4DRendererOptions } from "./cinema_4d.ts";
 import { ClassicRendererOptions } from "./classic.ts";
@@ -28,7 +23,7 @@ export type RendererOptions =
   | RendererOptionsBase;
 
 // TODO(port): this table reads the imported classes at module-evaluation time (Python does the same at import); a cycle back into this module would leave them undefined.
-const _WRAPPERS: Map<Function, typeof RendererOptionsBase> = new Map<Function, typeof RendererOptionsBase>([
+export const _WRAPPERS: Map<Function, typeof RendererOptionsBase> = new Map<Function, typeof RendererOptionsBase>([
   [ClassicPrdaChunk, ClassicRendererOptions],
   [AdvancedPrdaChunk, AdvancedRendererOptions],
   [Cinema4DPrdaChunk, Cinema4DRendererOptions],
@@ -46,10 +41,4 @@ export function renderer_options_for(body: Chunk, comp: CompItem): RendererOptio
   return new wrapper_cls({ body, comp });
 }
 
-export {
-  AdvancedRendererOptions,
-  Cinema4DRendererOptions,
-  ClassicRendererOptions,
-  RayTracedRendererOptions,
-  RendererOptionsBase,
-};
+export { AdvancedRendererOptions, Cinema4DRendererOptions, ClassicRendererOptions, RayTracedRendererOptions, RendererOptionsBase };

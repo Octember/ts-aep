@@ -17,17 +17,7 @@ import {
 import { approx, make_tmp_path, raises, skip } from "../../src/pyrt/pytest.ts";
 import * as py_aep from "../../src/py_aep/index.ts";
 import { parse as parse_aep } from "../../src/py_aep/index.ts";
-import {
-  AutoOrientType,
-  BlendingMode,
-  FrameBlendingType,
-  KeyframeInterpolationType,
-  Label,
-  LayerQuality,
-  LayerSamplingQuality,
-  LightType,
-  TrackMatteType,
-} from "../../src/py_aep/enums/index.ts";
+import { AutoOrientType, BlendingMode, FrameBlendingType, KeyframeInterpolationType, Label, LayerQuality, LayerSamplingQuality, LightType, TrackMatteType } from "../../src/py_aep/enums/index.ts";
 import { AVLayer, LightLayer, ShapeLayer, TextLayer } from "../../src/py_aep/models/layers/index.ts";
 import type { Layer } from "../../src/py_aep/models/layers/index.ts";
 import { ThreeDModelLayer } from "../../src/py_aep/models/layers/three_d_model_layer.ts";

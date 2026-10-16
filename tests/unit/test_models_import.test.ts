@@ -6,29 +6,8 @@ import "../../src/py_aep/binary/_register.ts";
 import { BytesIO, NotImplementedError, Path, ValueError, b, bytes_, concat, decode, encode, floordiv, py_eq, struct } from "../../src/pyrt/index.ts";
 import { approx, raises } from "../../src/pyrt/pytest.ts";
 import { _FILE_FORMATS } from "../../src/py_aep/data/file_formats.ts";
-import {
-  _PARSERS,
-  _probe_bmp,
-  _probe_dpx_cineon,
-  _probe_gif,
-  _probe_hdr,
-  _probe_heif,
-  _probe_mgjson,
-  _probe_mov,
-  _probe_mp3,
-  _probe_tiff,
-  probe_media,
-} from "../../src/py_aep/resolvers/media_probe.ts";
-import {
-  build_ai_document_opti_data,
-  build_craw_opti_data,
-  build_dpx_opti_data,
-  build_psd_layer_opti_data,
-  build_psd_opti_data,
-  build_rhdr_opti_data,
-  build_text_opti_data,
-  build_tiff_opti_data,
-} from "../../src/py_aep/binary/footage_chunks.ts";
+import { _PARSERS, _probe_bmp, _probe_dpx_cineon, _probe_gif, _probe_hdr, _probe_heif, _probe_mgjson, _probe_mov, _probe_mp3, _probe_tiff, probe_media } from "../../src/py_aep/resolvers/media_probe.ts";
+import { build_ai_document_opti_data, build_craw_opti_data, build_dpx_opti_data, build_psd_layer_opti_data, build_psd_opti_data, build_rhdr_opti_data, build_text_opti_data, build_tiff_opti_data } from "../../src/py_aep/binary/footage_chunks.ts";
 
 const ASSETS = new Path(import.meta.dir, "..", "..", "samples", "assets");
 const BASE = new Path(import.meta.dir, "..", "..", "samples", "models", "folder", "folder.aep");

@@ -34,15 +34,7 @@ import {
   zip,
   type IO,
 } from "../../pyrt/index.ts";
-import {
-  _HEADER_STRUCT,
-  read_bytes,
-  read_fmt,
-  read_pad,
-  write_bytes,
-  write_fmt,
-  write_pad,
-} from "./bin_utils.ts";
+import { _HEADER_STRUCT, read_bytes, read_fmt, read_pad, write_bytes, write_fmt, write_pad } from "./bin_utils.ts";
 import { _decode_fields, _encode_value, _struct_info, type FmtItem } from "./fmt_field.ts";
 import { CHUNK_TYPES, register } from "./registry.ts";
 import type { HeadChunk } from "./item_chunks.ts";

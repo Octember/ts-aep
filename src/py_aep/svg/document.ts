@@ -5,21 +5,21 @@ import { NUMBER_RE, parse_length } from "./_util.ts";
 import { Affine } from "./transform.ts";
 
 // TODO(port): xml.etree.ElementTree.Element has no pyrt shim yet; typed as any.
-type Element = any;
+export type Element = any;
 
 // Python `NUMBER_RE.findall(value)`: the unanchored, global form of the (`^`-anchored) `NUMBER_RE` in _util.ts.
 // TODO(port): CPython's `\d` also matches non-ASCII decimal digits; this uses ASCII `\d`.
-const NUMBER_FINDALL_RE = new RegExp(NUMBER_RE.source.slice(1), "g");
+export const NUMBER_FINDALL_RE = new RegExp(NUMBER_RE.source.slice(1), "g");
 
 // TYPE_CHECKING-only alias in Python.
-type ViewBox = readonly [number, number, number, number];
+export type ViewBox = readonly [number, number, number, number];
 
 /**
  * The `(min_x, min_y, width, height)` of a viewBox attribute, or `null`
  * when it is absent or invalid (not four finite numbers, or a size that is
  * not positive: SVG treats those as an error / no viewBox).
  */
-function _view_box(value: string | null): ViewBox | null {
+export function _view_box(value: string | null): ViewBox | null {
   if (!py_bool(value)) return null;
   const nums = [...value!.matchAll(NUMBER_FINDALL_RE)].map((m) => float(m[0]));
   if (nums.length !== 4 || !nums.every((n) => Number.isFinite(n))) return null;

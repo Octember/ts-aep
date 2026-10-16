@@ -3,12 +3,7 @@ import type { ListChunk } from "../binary/chunk.ts";
 import type { CmtaChunk, IdtaChunk } from "../binary/item_chunks.ts";
 import type { LdatChunk, Lhd3Chunk } from "../binary/ldat_chunks.ts";
 import type { Utf8Chunk } from "../binary/scalar_chunks.ts";
-import {
-  ChunkNotFoundError,
-  filter_by_list_type,
-  find_by_list_type,
-  find_by_type,
-} from "../binary/utils.ts";
+import { ChunkNotFoundError, filter_by_list_type, find_by_list_type, find_by_type } from "../binary/utils.ts";
 import { ItemType } from "../enums/index.ts";
 import { Guide } from "../models/guide.ts";
 import { FolderItem } from "../models/items/folder.ts";

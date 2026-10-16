@@ -19,27 +19,12 @@ import {
   zip,
 } from "../../src/pyrt/index.ts";
 import "../../src/py_aep/binary/_register.ts";
-import {
-  get_comp,
-  get_comp_from_json_by_name,
-  load_expected,
-  parse_project,
-} from "../conftest.ts";
+import { get_comp, get_comp_from_json_by_name, load_expected, parse_project } from "../conftest.ts";
 import { GuideOrientationType } from "../../src/py_aep/enums/index.ts";
-import {
-  AVLayer,
-  CameraLayer,
-  LightLayer,
-  ShapeLayer,
-  TextLayer,
-} from "../../src/py_aep/models/layers/index.ts";
+import { AVLayer, CameraLayer, LightLayer, ShapeLayer, TextLayer } from "../../src/py_aep/models/layers/index.ts";
 import { FileSource } from "../../src/py_aep/models/sources/file.ts";
 import { SolidSource } from "../../src/py_aep/models/sources/solid.ts";
-import {
-  _resolve_controller_source_layer,
-  _walk_source_property,
-  resolve_essential_property_controllers,
-} from "../../src/py_aep/resolvers/essential_properties.ts";
+import { _resolve_controller_source_layer, _walk_source_property, resolve_essential_property_controllers } from "../../src/py_aep/resolvers/essential_properties.ts";
 
 // Python `Path(__file__).parent.parent.parent` is the repo root. A TS file's
 // `import.meta.dir` is already its directory, so two `.parent` steps reach it.

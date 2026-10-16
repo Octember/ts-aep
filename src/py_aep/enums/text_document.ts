@@ -329,12 +329,12 @@ export const LineOrientation = int_enum(
 );
 export type LineOrientation = EnumValue<typeof LineOrientation>;
 
-const _LINE_ORIENTATION_BINARY_MAP: Map<number, LineOrientation> = new Map<number, LineOrientation>([
+export const _LINE_ORIENTATION_BINARY_MAP: Map<number, LineOrientation> = new Map<number, LineOrientation>([
   [0, LineOrientation.HORIZONTAL],
   [1, LineOrientation.VERTICAL_LEFT_TO_RIGHT],
   [2, LineOrientation.VERTICAL_RIGHT_TO_LEFT],
 ]);
-const _LINE_ORIENTATION_TO_BINARY: Map<LineOrientation, number> = new Map<LineOrientation, number>(
+export const _LINE_ORIENTATION_TO_BINARY: Map<LineOrientation, number> = new Map<LineOrientation, number>(
   [..._LINE_ORIENTATION_BINARY_MAP].map(([k, v]) => [v, k] as [LineOrientation, number]),
 );
 

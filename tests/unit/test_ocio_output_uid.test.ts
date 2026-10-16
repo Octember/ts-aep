@@ -11,10 +11,7 @@ import { expect, test } from "bun:test";
 import { Path, ValueError, b, bytes_, py_eq } from "../../src/pyrt/index.ts";
 import { raises } from "../../src/pyrt/pytest.ts";
 import { GUID_SEED, murmurhash3_x64_128 } from "../../src/py_aep/color/murmur3.ts";
-import {
-  ocio_color_space_for_profile_id,
-  ocio_output_profile_id,
-} from "../../src/py_aep/color/ocio.ts";
+import { ocio_color_space_for_profile_id, ocio_output_profile_id } from "../../src/py_aep/color/ocio.ts";
 
 // `Path(__file__).parent.parent.parent`: tests/unit/<file> -> repo root.
 const CONFIG = new Path(import.meta.dir)

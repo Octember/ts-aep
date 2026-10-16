@@ -18,11 +18,7 @@ import { Path, b, bytes_, len, py_eq, struct } from "../../src/pyrt/index.ts";
 import "../../src/py_aep/binary/_register.ts";
 import { parse } from "../../src/py_aep/index.ts";
 import { XmlFormatOptions } from "../../src/py_aep/models/renderqueue/format_options/index.ts";
-import {
-  _LEN_BODY_OFFSET,
-  _LEN_XML_OFFSET,
-  _XML_TERMINATOR,
-} from "../../src/py_aep/models/renderqueue/format_options/xml.ts";
+import { _LEN_BODY_OFFSET, _LEN_XML_OFFSET, _XML_TERMINATOR } from "../../src/py_aep/models/renderqueue/format_options/xml.ts";
 
 const FORMAT_DIR = new Path(import.meta.filename).parent.parent.parent.div("samples", "models", "format_options");
 

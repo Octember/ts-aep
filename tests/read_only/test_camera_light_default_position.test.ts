@@ -32,12 +32,7 @@ import { describe, expect, test } from "bun:test";
 import { approx } from "../../src/pyrt/pytest.ts";
 import { getitem, Path, py_assert, range } from "../../src/pyrt/index.ts";
 import "../../src/py_aep/binary/_register.ts";
-import {
-  get_comp,
-  get_comp_from_json_by_name,
-  load_expected,
-  parse_project,
-} from "../conftest.ts";
+import { get_comp, get_comp_from_json_by_name, load_expected, parse_project } from "../conftest.ts";
 import type { Layer } from "../../src/py_aep/models/layers/index.ts";
 import { Property } from "../../src/py_aep/models/properties/property.ts";
 

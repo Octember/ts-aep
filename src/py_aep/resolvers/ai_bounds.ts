@@ -33,19 +33,8 @@
 
 import { inflateSync } from "node:zlib";
 import { IndirectReference } from "../cos/index.ts";
-import {
-  STD14_EXTENT,
-  STD14_FIRST_CODE,
-  STD14_STANDARD_QUOTES,
-  STD14_WIDTHS,
-} from "../data/std14_metrics.ts";
-import {
-  UnsupportedAiLayersError,
-  _find_ai_icc,
-  _object_offsets,
-  _parse_object_at,
-  read_ai_layer_ocgs,
-} from "./ai_layers.ts";
+import { STD14_EXTENT, STD14_FIRST_CODE, STD14_STANDARD_QUOTES, STD14_WIDTHS } from "../data/std14_metrics.ts";
+import { UnsupportedAiLayersError, _find_ai_icc, _object_offsets, _parse_object_at, read_ai_layer_ocgs } from "./ai_layers.ts";
 import {
   Path,
   type PathLike,
@@ -70,12 +59,12 @@ import {
   py_bool,
 } from "../../pyrt/index.ts";
 
-type Box = [number, number, number, number];
-type Matrix = [number, number, number, number, number, number];
-type Pt = [number, number];
-type Segment = [string, ...Pt[]];
+export type Box = [number, number, number, number];
+export type Matrix = [number, number, number, number, number, number];
+export type Pt = [number, number];
+export type Segment = [string, ...Pt[]];
 /** `(widths, default width, y-min, y-max, two-byte)` in glyph space. */
-type Metrics = [Map<number, number>, number, number, number, boolean];
+export type Metrics = [Map<number, number>, number, number, number, boolean];
 
 /** Uniform expansion applied to a filled path or a shading, in points. */
 export const FILL_PAD = 0.25;
@@ -89,56 +78,56 @@ export const FIXED_MAX = (2 ** 31 - 1) / 65536.0;
  */
 export const EMPTY_BOX: Box = [0.0, 0.0, 1 / 65536.0, 1 / 65536.0];
 
-const _IDENTITY: Matrix = [1.0, 0.0, 0.0, 1.0, 0.0, 0.0];
+export const _IDENTITY: Matrix = [1.0, 0.0, 0.0, 1.0, 0.0, 0.0];
 
 /** Advance assumed for a glyph with no width from any source. */
-const _DEFAULT_WIDTH = 500.0;
+export const _DEFAULT_WIDTH = 500.0;
 
 /** `_font_metrics` for text shown with no `Tf`, i.e. with no font at all. */
-const _NO_FONT_METRICS: Metrics = [new Map(), _DEFAULT_WIDTH, -250.0, 750.0, false];
+export const _NO_FONT_METRICS: Metrics = [new Map(), _DEFAULT_WIDTH, -250.0, 750.0, false];
 
 /**
  * Filters the stream decoder understands. Anything else is a hard stop rather
  * than a silently wrong measurement.
  */
-const _SUPPORTED_FILTERS: ReadonlySet<string> = new Set(["FlateDecode", "Fl"]);
+export const _SUPPORTED_FILTERS: ReadonlySet<string> = new Set(["FlateDecode", "Fl"]);
 
-const _PAINT_OPS: ReadonlySet<string> = new Set(["S", "s", "f", "F", "f*", "B", "B*", "b", "b*", "n"]);
-const _STROKE_OPS: ReadonlySet<string> = new Set(["S", "s", "B", "B*", "b", "b*"]);
+export const _PAINT_OPS: ReadonlySet<string> = new Set(["S", "s", "f", "F", "f*", "B", "B*", "b", "b*", "n"]);
+export const _STROKE_OPS: ReadonlySet<string> = new Set(["S", "s", "B", "B*", "b", "b*"]);
 
 /**
  * Render modes that stroke the glyphs. Modes 3 and 7 are invisible but are
  * still measured - After Effects does not skip them.
  */
-const _STROKING_TEXT_MODES: ReadonlySet<number> = new Set([1, 2, 5, 6]);
+export const _STROKING_TEXT_MODES: ReadonlySet<number> = new Set([1, 2, 5, 6]);
 
 /**
  * Encodings that put `quotesingle` at 39 and `grave` at 96, where the
  * fonts' built-in StandardEncoding puts `quoteright` and `quoteleft`.
  */
-const _ASCII_QUOTE_ENCODINGS: ReadonlySet<string> = new Set(["WinAnsiEncoding", "MacRomanEncoding"]);
+export const _ASCII_QUOTE_ENCODINGS: ReadonlySet<string> = new Set(["WinAnsiEncoding", "MacRomanEncoding"]);
 
-const _DELIMITERS = b("()<>[]{}/%");
-const _WHITESPACE = b(" \t\r\n\f\x00");
-const _NUMBER_START = b("+-.0123456789");
-const NUMBER_CHARS = b("+-.0123456789eE");
-const CLOSERS = b("]>}{");
-const SLASH = b("/");
-const PERCENT = b("%");
-const LPAREN = b("(");
-const RPAREN = b(")");
-const LT = b("<");
-const GT = b(">");
-const LBRACKET = b("[");
-const RBRACKET = b("]");
-const BACKSLASH = b("\\");
-const NEWLINE = b("\n");
-const CARRIAGE_RETURN = b("\r");
-const CRLF = b("\r\n");
-const DICT_END = b(">>");
+export const _DELIMITERS = b("()<>[]{}/%");
+export const _WHITESPACE = b(" \t\r\n\f\x00");
+export const _NUMBER_START = b("+-.0123456789");
+export const NUMBER_CHARS = b("+-.0123456789eE");
+export const CLOSERS = b("]>}{");
+export const SLASH = b("/");
+export const PERCENT = b("%");
+export const LPAREN = b("(");
+export const RPAREN = b(")");
+export const LT = b("<");
+export const GT = b(">");
+export const LBRACKET = b("[");
+export const RBRACKET = b("]");
+export const BACKSLASH = b("\\");
+export const NEWLINE = b("\n");
+export const CARRIAGE_RETURN = b("\r");
+export const CRLF = b("\r\n");
+export const DICT_END = b(">>");
 
 /** Escape bytes after a backslash, keyed by the escape byte (`n`, `r`, `t`, `b`, `f`). */
-const SIMPLE_ESCAPES = new Map<number, Uint8Array>([
+export const SIMPLE_ESCAPES = new Map<number, Uint8Array>([
   [0x6e, b("\n")],
   [0x72, b("\r")],
   [0x74, b("\t")],
@@ -147,21 +136,21 @@ const SIMPLE_ESCAPES = new Map<number, Uint8Array>([
 ]);
 
 /** An image's own space, which its CTM maps onto the page. */
-const _UNIT_SQUARE: Pt[] = [
+export const _UNIT_SQUARE: Pt[] = [
   [0.0, 0.0],
   [1.0, 0.0],
   [1.0, 1.0],
   [0.0, 1.0],
 ];
-const _ROOT_RE = /\/Root[ \t\r\n]+(\d+)[ \t\r\n]+\d+[ \t\r\n]+R/g;
+export const _ROOT_RE = /\/Root[ \t\r\n]+(\d+)[ \t\r\n]+\d+[ \t\r\n]+R/g;
 // `\s` here is bytes-`\s` ([ \t\n\r\f\v]), not JS `\s`, so a 0xA0 byte is not whitespace.
-const _INLINE_IMAGE_END = /[ \t\n\r\f\v\x00]EI[ \t\n\r\f\v\x00]|[ \t\n\r\f\v\x00]EI$/g;
+export const _INLINE_IMAGE_END = /[ \t\n\r\f\v\x00]EI[ \t\n\r\f\v\x00]|[ \t\n\r\f\v\x00]EI$/g;
 
 // --------------------------------------------------------------------------
 // geometry
 
 /** `str(x)` for a content-stream operand: every number there is a Python float (`1.0`). */
-function _operand_str(x: any): string {
+export function _operand_str(x: any): string {
   return typeof x === "number" ? num_str(x, true) : str(x);
 }
 
@@ -171,17 +160,17 @@ function _operand_str(x: any): string {
  * instead, which Python never does here.
  */
 // TODO(pyrt): pyrt min/max take an iterable; a two-argument shim is missing.
-function _min2(a: number, b_: number): number {
+export function _min2(a: number, b_: number): number {
   return b_ < a ? b_ : a;
 }
 
-function _max2(a: number, b_: number): number {
+export function _max2(a: number, b_: number): number {
   return b_ > a ? b_ : a;
 }
 
 /** `sep.join(parts)` for bytes. */
 // TODO(pyrt): bytes_.join concatenates without a separator; a sep-aware join is missing.
-function join_bytes(sep: Uint8Array, parts: Uint8Array[]): Uint8Array {
+export function join_bytes(sep: Uint8Array, parts: Uint8Array[]): Uint8Array {
   const out: Uint8Array[] = [];
   parts.forEach((part, i) => {
     if (i > 0) out.push(sep);
@@ -192,12 +181,12 @@ function join_bytes(sep: Uint8Array, parts: Uint8Array[]): Uint8Array {
 
 /** `bytes.isdigit()`: non-empty and every byte an ASCII digit. */
 // TODO(pyrt): bytes.isdigit has no shim; this is the ASCII-only check CPython performs.
-function _isdigit_bytes(data: Uint8Array): boolean {
+export function _isdigit_bytes(data: Uint8Array): boolean {
   return data.length > 0 && Array.from(data).every((c) => c >= 0x30 && c <= 0x39);
 }
 
 /** Concatenate two PDF matrices: the result applies `a` then `b`. */
-function _mat_mul(a: Matrix, b_: Matrix): Matrix {
+export function _mat_mul(a: Matrix, b_: Matrix): Matrix {
   return [
     a[0] * b_[0] + a[1] * b_[2],
     a[0] * b_[1] + a[1] * b_[3],
@@ -208,12 +197,12 @@ function _mat_mul(a: Matrix, b_: Matrix): Matrix {
   ];
 }
 
-function _apply(m: Matrix, x: number, y: number): Pt {
+export function _apply(m: Matrix, x: number, y: number): Pt {
   return [m[0] * x + m[2] * y + m[4], m[1] * x + m[3] * y + m[5]];
 }
 
 /** A growing axis-aligned bounding box. */
-class _Acc {
+export class _Acc {
   x0: number;
   y0: number;
   x1: number;
@@ -248,14 +237,14 @@ class _Acc {
 }
 
 /** The dictionary of a plain dict or of a `Stream` object. */
-function _as_dict(value: any): Map<string, any> | null {
+export function _as_dict(value: any): Map<string, any> | null {
   if (value instanceof Map) return value;
   const dictionary = getattr(value, "dictionary", null);
   return dictionary instanceof Map ? dictionary : null;
 }
 
 /** Clamp a box to the range the `opti` fixed-point field can store. */
-function _clamp(box: Box): Box {
+export function _clamp(box: Box): Box {
   return [
     _max2(-FIXED_MAX, _min2(FIXED_MAX, box[0])),
     _max2(-FIXED_MAX, _min2(FIXED_MAX, box[1])),
@@ -264,7 +253,7 @@ function _clamp(box: Box): Box {
   ];
 }
 
-function _grow(box: Box, dx: number, dy: number): Box {
+export function _grow(box: Box, dx: number, dy: number): Box {
   return [box[0] - dx, box[1] - dy, box[2] + dx, box[3] + dy];
 }
 
@@ -276,7 +265,7 @@ function _grow(box: Box, dx: number, dy: number): Box {
  * paints nothing, which is what a missing clip yields at the one place the
  * clip is read (`sh`).
  */
-function _intersect(current: Box | null, added: Box | null): Box | null {
+export function _intersect(current: Box | null, added: Box | null): Box | null {
   if (current == null) return added;
   if (added == null) return current;
   const box: Box = [
@@ -292,7 +281,7 @@ function _intersect(current: Box | null, added: Box | null): Box | null {
 // document access
 
 /** Indirect-object and stream access for a PDF-compatible file. */
-class _Document {
+export class _Document {
   _data: Uint8Array;
   _name: string;
   _offsets: Map<number, number>;
@@ -497,7 +486,7 @@ class _Document {
  * unknown barewords and only accepts alphabetic ones, so content-stream
  * operators (`re`, `f*`, `W*`, `'`) would all raise.
  */
-function* _tokenize(data: Uint8Array): Generator<[string, any]> {
+export function* _tokenize(data: Uint8Array): Generator<[string, any]> {
   let pos = 0;
   const size = data.length;
   while (pos < size) {
@@ -590,7 +579,7 @@ function* _tokenize(data: Uint8Array): Generator<[string, any]> {
   }
 }
 
-function _read_literal_string(data: Uint8Array, pos: number): [Uint8Array, number] {
+export function _read_literal_string(data: Uint8Array, pos: number): [Uint8Array, number] {
   pos += 1;
   let depth = 1;
   const out: number[] = [];
@@ -648,7 +637,7 @@ function _read_literal_string(data: Uint8Array, pos: number): [Uint8Array, numbe
  * string inside a `TJ` array has to decode to the same bytes a bare `Tj`
  * operand does, or its glyph codes come out as their own hex digits.
  */
-function _read_hex_string(data: Uint8Array, pos: number): [Uint8Array, number] | null {
+export function _read_hex_string(data: Uint8Array, pos: number): [Uint8Array, number] | null {
   const end = bytes_.find(data, GT, pos);
   if (end < 0) return null;
   let digits = decode(data.subarray(pos + 1, end), "latin-1").replace(/[^0-9A-Fa-f]/g, "");
@@ -656,7 +645,7 @@ function _read_hex_string(data: Uint8Array, pos: number): [Uint8Array, number] |
   return [bytes_.fromhex(digits), end + 1];
 }
 
-function _read_array(data: Uint8Array, pos: number): [any[], number] {
+export function _read_array(data: Uint8Array, pos: number): [any[], number] {
   pos += 1;
   const out: any[] = [];
   const size = data.length;
@@ -675,7 +664,7 @@ function _read_array(data: Uint8Array, pos: number): [any[], number] {
   return [out, pos];
 }
 
-function _read_dict(data: Uint8Array, pos: number): [Map<string, any>, number] {
+export function _read_dict(data: Uint8Array, pos: number): [Map<string, any>, number] {
   pos += 2;
   const out = new Map<string, any>();
   const size = data.length;
@@ -701,7 +690,7 @@ function _read_dict(data: Uint8Array, pos: number): [Map<string, any>, number] {
 }
 
 /** Read one array/dictionary element starting at `pos`. */
-function _next_simple(data: Uint8Array, pos: number): [any, number] | null {
+export function _next_simple(data: Uint8Array, pos: number): [any, number] | null {
   const char = data.subarray(pos, pos + 1);
   const size = data.length;
   if (bytes_eq(char, SLASH)) {
@@ -746,7 +735,7 @@ function _next_simple(data: Uint8Array, pos: number): [any, number] | null {
 // graphics state
 
 /** The subset of the PDF graphics and text state the box depends on. */
-class _GState {
+export class _GState {
   ctm: Matrix = _IDENTITY;
   clip: Box | null = null;
   line_width = 1.0;
@@ -784,7 +773,7 @@ class _GState {
 }
 
 /** The font's base encoding name, empty when it uses its built-in one. */
-function _base_encoding(doc: _Document, font: Map<string, any>): string {
+export function _base_encoding(doc: _Document, font: Map<string, any>): string {
   const encoding = doc.get(font, "Encoding");
   const table = _as_dict(doc.resolve(encoding));
   if (table != null) return str(doc.get(table, "BaseEncoding", ""));
@@ -792,7 +781,7 @@ function _base_encoding(doc: _Document, font: Map<string, any>): string {
 }
 
 /** The advances After Effects supplies for a font with no `/Widths`. */
-function _builtin_widths(doc: _Document, font: Map<string, any>, base: string): Map<number, number> {
+export function _builtin_widths(doc: _Document, font: Map<string, any>, base: string): Map<number, number> {
   const table = dict_get(STD14_WIDTHS, base);
   if (table == null) return new Map();
   const widths = new Map<number, number>();
@@ -813,7 +802,7 @@ function _builtin_widths(doc: _Document, font: Map<string, any>, base: string): 
  * the same values, but a font where they disagree measures by the
  * `/FontBBox`.
  */
-function _font_metrics(doc: _Document, font: Map<string, any> | null): Metrics {
+export function _font_metrics(doc: _Document, font: Map<string, any> | null): Metrics {
   if (!(font instanceof Map)) return _NO_FONT_METRICS;
   const subtype = str(doc.get(font, "Subtype", ""));
   if (subtype === "Type0") return _type0_metrics(doc, font);
@@ -833,7 +822,7 @@ function _font_metrics(doc: _Document, font: Map<string, any> | null): Metrics {
   return [widths, py_or(default_, _DEFAULT_WIDTH), y_min, y_max, false];
 }
 
-function _type0_metrics(doc: _Document, font: Map<string, any>): Metrics {
+export function _type0_metrics(doc: _Document, font: Map<string, any>): Metrics {
   const descendants = doc.get(font, "DescendantFonts");
   const child: any =
     Array.isArray(descendants) && descendants.length > 0
@@ -866,7 +855,7 @@ function _type0_metrics(doc: _Document, font: Map<string, any>): Metrics {
   return [widths, default_, y_min, y_max, true];
 }
 
-function _vertical_extent(
+export function _vertical_extent(
   doc: _Document,
   descriptor: any,
   std: [number, number] | null,
@@ -886,7 +875,7 @@ function _vertical_extent(
 }
 
 /** Strip a subset tag and a style suffix from a `/BaseFont` name. */
-function _base_font(name: string): string {
+export function _base_font(name: string): string {
   return split(split(name, "+").at(-1)!, ",")[0];
 }
 
@@ -894,7 +883,7 @@ function _base_font(name: string): string {
 // the measuring pass
 
 /** Accumulates each optional content group's artwork box. */
-class _Measurer {
+export class _Measurer {
   _doc: _Document;
   boxes: Map<number, _Acc>;
   _stack: number[];
@@ -1295,7 +1284,7 @@ export function read_ai_layer_bounds(file: PathLike, data: Uint8Array | null = n
  * A content-stream colour-space operator: `/CS0 cs` (fill) or `/CS0 CS`
  * (stroke).
  */
-const _COLOR_SPACE_OP_RE = /\/([^ \t\n\r\f\v\/\[\]()<>{}%]+)[ \t\n\r\f\v]+(?:cs|CS)\b/g;
+export const _COLOR_SPACE_OP_RE = /\/([^ \t\n\r\f\v\/\[\]()<>{}%]+)[ \t\n\r\f\v]+(?:cs|CS)\b/g;
 
 /**
  * Return the ICC profile After Effects records for an Illustrator/PDF

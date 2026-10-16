@@ -7,18 +7,7 @@ import "../../src/py_aep/binary/_register.ts";
 import { get_comp } from "../helpers.ts";
 import { parse as parse_aep } from "../../src/py_aep/index.ts";
 import { CosName } from "../../src/py_aep/cos/index.ts";
-import {
-  AutoKernType,
-  BaselineDirection,
-  BoxAutoFitPolicy,
-  BoxFirstBaselineAlignment,
-  BoxVerticalAlignment,
-  DigitSet,
-  LineJoinType,
-  LineOrientation,
-  ParagraphDirection,
-  ParagraphJustification,
-} from "../../src/py_aep/enums/index.ts";
+import { AutoKernType, BaselineDirection, BoxAutoFitPolicy, BoxFirstBaselineAlignment, BoxVerticalAlignment, DigitSet, LineJoinType, LineOrientation, ParagraphDirection, ParagraphJustification } from "../../src/py_aep/enums/index.ts";
 import { contains, getattr, getitem, Path, py_bool, py_eq, ValueError } from "../../src/pyrt/index.ts";
 import { approx, make_tmp_path, raises } from "../../src/pyrt/pytest.ts";
 

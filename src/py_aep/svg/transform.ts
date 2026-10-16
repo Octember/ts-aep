@@ -73,11 +73,11 @@ export class Affine {
 export const IDENTITY = new Affine();
 
 // One transform function: name + parenthesized numeric args.
-const _FUNC_RE = /([a-zA-Z]+)\s*\(([^)]*)\)/g;
+export const _FUNC_RE = /([a-zA-Z]+)\s*\(([^)]*)\)/g;
 
-const _FUNCTIONS: ReadonlySet<string> = new Set(["matrix", "translate", "scale", "rotate", "skewX", "skewY"]);
+export const _FUNCTIONS: ReadonlySet<string> = new Set(["matrix", "translate", "scale", "rotate", "skewX", "skewY"]);
 
-function _numbers(text: string): number[] {
+export function _numbers(text: string): number[] {
   // NUMBER_RE.findall is unanchored in Python; the TS NUMBER_RE carries a leading ^, stripped here.
   return Array.from(text.matchAll(new RegExp(NUMBER_RE.source.replace(/^\^/, ""), "g")), (m) => float(m[0]));
 }
@@ -124,7 +124,7 @@ export function parse_transform(value: string): Affine {
  * by `parse_transform`.
  */
 // TODO(port): Math.sin/Math.cos/Math.tan may differ from CPython's libm in the last ulp.
-function _single_transform(name: string, n: number[]): Affine {
+export function _single_transform(name: string, n: number[]): Affine {
   if (name === "matrix") {
     return new Affine(n[0], n[1], n[2], n[3], n[4], n[5]);
   }

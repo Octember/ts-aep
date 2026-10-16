@@ -8,26 +8,9 @@
  */
 
 import { expect, test } from "bun:test";
-import {
-  _CONDITIONAL_RULES,
-  _FORMAT_RULES,
-  _KIND_RULES,
-  allowed_values,
-} from "../../src/py_aep/data/output_module_rules.ts";
-import {
-  AudioChannels,
-  AudioCodec,
-  FormatKind,
-  OutputAudio,
-  OutputChannels,
-  OutputColorMode,
-  OutputFormat,
-} from "../../src/py_aep/enums/index.ts";
-import {
-  _DEPTH_MINUS,
-  _DEPTH_PLUS,
-  OM_SETTINGS,
-} from "../../src/py_aep/models/renderqueue/output_module.ts";
+import { _CONDITIONAL_RULES, _FORMAT_RULES, _KIND_RULES, allowed_values } from "../../src/py_aep/data/output_module_rules.ts";
+import { AudioChannels, AudioCodec, FormatKind, OutputAudio, OutputChannels, OutputColorMode, OutputFormat } from "../../src/py_aep/enums/index.ts";
+import { _DEPTH_MINUS, _DEPTH_PLUS, OM_SETTINGS } from "../../src/py_aep/models/renderqueue/output_module.ts";
 import {
   dict_get,
   getitem,

@@ -14,13 +14,7 @@ import {
 } from "../../src/pyrt/index.ts";
 import { Gradient } from "../../src/py_aep/models/properties/gradient.ts";
 import { read_psd_layers } from "../../src/py_aep/resolvers/psd_layers.ts";
-import {
-  _instance_box,
-  has_enabled_styles,
-  merged_styles_bounds,
-  parse_layer_styles,
-  read_global_light,
-} from "../../src/py_aep/resolvers/psd_styles.ts";
+import { _instance_box, has_enabled_styles, merged_styles_bounds, parse_layer_styles, read_global_light } from "../../src/py_aep/resolvers/psd_styles.ts";
 import "../../src/py_aep/binary/_register.ts";
 
 // Python: Path(__file__).parent.parent.parent / "samples" / "assets"

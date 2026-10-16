@@ -15,10 +15,10 @@
 import { decode } from "../../pyrt/index.ts";
 import { CosString } from "./cos.ts";
 
-const _UNDEFINED = 0xfffd;
+export const _UNDEFINED = 0xfffd;
 
 /** byte -> unicode code point, for every byte Latin-1 does not already cover. */
-const _OVERRIDES: Map<number, number> = new Map<number, number>([
+export const _OVERRIDES: Map<number, number> = new Map<number, number>([
   [0x18, 0x02d8], // breve
   [0x19, 0x02c7], // caron
   [0x1a, 0x02c6], // circumflex
@@ -90,7 +90,7 @@ export function decode_pdf_text_string(raw: Uint8Array | string): string {
   return raw;
 }
 
-function _from_bytes(raw: Uint8Array): string {
+export function _from_bytes(raw: Uint8Array): string {
   // Latin-1 maps every byte to the same code point, and `str.translate`
   // leaves the ones absent from the table alone - which is exactly the
   // passthrough the other 215 bytes need.
@@ -99,7 +99,7 @@ function _from_bytes(raw: Uint8Array): string {
 
 // TODO(pyrt): str.translate(dict) shim is missing from pyrt; local helper
 // maps each code point through the table and passes unmapped ones through.
-function _translate(text: string, table: Map<number, number>): string {
+export function _translate(text: string, table: Map<number, number>): string {
   let out = "";
   for (const ch of text) {
     const cp = ch.codePointAt(0)!;

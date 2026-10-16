@@ -33,34 +33,34 @@ import type { EnumValue, IO } from "../../pyrt/index.ts";
 export class SyntaxError_ extends PyException {}
 
 // io.SEEK_CUR
-const SEEK_CUR = 1 as const;
+export const SEEK_CUR = 1 as const;
 
 // Python bytes.isspace(): ASCII whitespace only (space, \t, \n, \x0b, \x0c, \r).
-const WS_BYTES = [0x20, 0x09, 0x0a, 0x0b, 0x0c, 0x0d];
+export const WS_BYTES = [0x20, 0x09, 0x0a, 0x0b, 0x0c, 0x0d];
 
-function isspace_b(c: Uint8Array): boolean {
+export function isspace_b(c: Uint8Array): boolean {
   return c.length > 0 && c.every((x) => WS_BYTES.includes(x));
 }
 
 // Python bytes.isdigit(): ASCII digits only.
-function isdigit_b(c: Uint8Array): boolean {
+export function isdigit_b(c: Uint8Array): boolean {
   return c.length > 0 && c.every((x) => x >= 0x30 && x <= 0x39);
 }
 
 // Python bytes.isalpha(): ASCII letters only.
-function isalpha_b(c: Uint8Array): boolean {
+export function isalpha_b(c: Uint8Array): boolean {
   return c.length > 0 && c.every((x) => (x >= 0x41 && x <= 0x5a) || (x >= 0x61 && x <= 0x7a));
 }
 
 // Lexer accumulators are ASCII (digits, signs, hex digits, keywords), so a
 // latin1 string stands in for the Python bytes object while it is built.
-function latin1(c: Uint8Array): string {
+export function latin1(c: Uint8Array): string {
   return String.fromCharCode(...c);
 }
 
 // Python's dataclass repr uses repr() on each field; dicts and lists need to
 // recurse so nested Maps print like Python dicts.
-function repr_field(x: any): string {
+export function repr_field(x: any): string {
   if (x instanceof Map) {
     return `{${[...x].map(([k, v]) => `${repr_field(k)}: ${repr_field(v)}`).join(", ")}}`;
   }
@@ -70,7 +70,7 @@ function repr_field(x: any): string {
 }
 
 // CPython `repr(bytes)`: double quotes when the content has `'` but no `"`.
-function repr_bytes(x: Uint8Array): string {
+export function repr_bytes(x: Uint8Array): string {
   let has_single = false;
   let has_double = false;
   for (const c of x) {
@@ -92,11 +92,11 @@ function repr_bytes(x: Uint8Array): string {
 }
 
 // `str(member)` / `repr(member)` for an Enum member.
-function enum_str(E: any, v: any): string {
+export function enum_str(E: any, v: any): string {
   return `${E.__name__}.${E.name_of(v)}`;
 }
 
-function enum_repr(E: any, v: any): string {
+export function enum_repr(E: any, v: any): string {
   return `<${enum_str(E, v)}: ${v}>`;
 }
 

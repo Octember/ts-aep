@@ -57,7 +57,7 @@ export function parse_viewers(folder_chunks: Chunk[], items: Item[]): Viewer[] {
  * Returns:
  *     A list of [View][py_aep.models.viewer.view.View] objects.
  */
-function _parse_views(block: Chunk[], item: Item | null, viewer: Viewer): View[] {
+export function _parse_views(block: Chunk[], item: Item | null, viewer: Viewer): View[] {
   const fips_chunks = filter_by_type(block, "fips") as FipsChunk[];
   const av_item = item instanceof AVItem ? item : null;
   // Each locked view owns 4 consecutive fips (3D viewport slots).
@@ -88,7 +88,7 @@ function _parse_views(block: Chunk[], item: Item | null, viewer: Viewer): View[]
  *     A [Viewer][py_aep.models.viewer.viewer.Viewer] instance, or `None` if the
  *     block does not contain a recognised viewer type.
  */
-function _build_viewer(block: Chunk[]): Viewer | null {
+export function _build_viewer(block: Chunk[]): Viewer | null {
   let fitt: AsciiChunk;
   try {
     fitt = find_by_type(block, "fitt") as AsciiChunk;

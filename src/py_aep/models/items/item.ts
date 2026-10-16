@@ -1,27 +1,16 @@
 import { requires_version } from "../../ae_version.ts";
 import type { Chunk, ListChunk } from "../../binary/chunk.ts";
 import { CmtaChunk, type IdtaChunk } from "../../binary/item_chunks.ts";
-import {
-  LHD3_BLOCK_GUIDES,
-  LdatChunk,
-  LdatItemType,
-  type Lhd3Chunk,
-  set_lhd3_count,
-} from "../../binary/ldat_chunks.ts";
+import { LHD3_BLOCK_GUIDES, LdatChunk, LdatItemType, type Lhd3Chunk, set_lhd3_count } from "../../binary/ldat_chunks.ts";
 import { build_gide_list } from "../../binary/mutations.ts";
 import type { Utf8Chunk } from "../../binary/scalar_chunks.ts";
-import {
-  ChunkNotFoundError,
-  block_slice,
-  find_by_list_type,
-  find_by_type,
-  index_by_identity,
-} from "../../binary/utils.ts";
+import { ChunkNotFoundError, block_slice, find_by_list_type, find_by_type, index_by_identity } from "../../binary/utils.ts";
 import { Label } from "../../enums/index.ts";
 import {
   IndexError,
   TypeError_,
   ValueError,
+  deferred,
   descriptor,
   dict_pop,
   format,
@@ -29,16 +18,18 @@ import {
   py_assert,
   py_bool,
   py_eq,
-} from "../../pyrt/index.ts";
+} from "../../../pyrt/index.ts";
 import { ChunkField } from "../descriptors.ts";
 import { Guide } from "../guide.ts";
 import { validate_name, validate_string } from "../validators.ts";
 import type { Project } from "../project.ts";
 import type { FolderItem } from "./folder.ts";
 
+const _folder = deferred<typeof import("./folder.ts")>(import.meta.url, "./folder.ts");
+
 // TODO(pyrt): list.remove shim. Python compares with `==` (Item.__eq__ is by
 // id), so the match uses py_eq rather than identity.
-function list_remove<T>(xs: T[], x: T): void {
+export function list_remove<T>(xs: T[], x: T): void {
   const i = xs.findIndex((y) => py_eq(y, x));
   if (i < 0) throw new ValueError("list.remove(x): x not in list");
   xs.splice(i, 1);
@@ -181,11 +172,7 @@ export class Item {
   set parent_folder(value: FolderItem | null) {
     const old_parent = this._parent_folder;
     if (old_parent == null) throw new ValueError("Cannot move the root folder");
-    // TODO(port): Python's deferred `isinstance(value, FolderItem)`. A runtime import of
-    // ./folder.ts here would make folder.ts (extends Item) evaluate before Item exists
-    // when item.ts loads first, so FolderItem is recognised structurally: it is the only
-    // Item subclass owning `_children_container`.
-    if (!(value instanceof Item && "_children_container" in value)) throw new TypeError_("parent_folder must be a FolderItem");
+    if (!(value instanceof _folder().FolderItem)) throw new TypeError_("parent_folder must be a FolderItem");
     if (value === old_parent) return;
     // A folder cannot become its own descendant. Walking up from the
     // target also covers value is self and value under the root.

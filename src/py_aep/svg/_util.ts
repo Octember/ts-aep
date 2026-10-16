@@ -16,9 +16,9 @@ export const NUMBER_RE = /^[-+]?(?:\d*\.\d+|\d+\.?)(?:[eE][-+]?\d+)?/;
 /** The same token allowing a trailing `%` (CSS color / ratio values). */
 export const NUMBER_PCT_RE = /^[-+]?(?:\d*\.\d+|\d+\.?)(?:[eE][-+]?\d+)?%?/;
 /** A length: a number and an optional unit or `%`. */
-const _LENGTH_RE = /^([-+]?(?:\d*\.\d+|\d+\.?)(?:[eE][-+]?\d+)?)\s*(%|[A-Za-z]+)?/;
+export const _LENGTH_RE = /^([-+]?(?:\d*\.\d+|\d+\.?)(?:[eE][-+]?\d+)?)\s*(%|[A-Za-z]+)?/;
 /** CSS absolute units in user units (px): CSS Values 3 fixes 1in = 96px. */
-const _ABSOLUTE_UNITS = new Map<string, number>([
+export const _ABSOLUTE_UNITS = new Map<string, number>([
   ["px", 1.0],
   ["in", 96.0],
   ["cm", 96.0 / 2.54],

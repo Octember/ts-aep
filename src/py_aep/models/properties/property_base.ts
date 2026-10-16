@@ -3,6 +3,7 @@ import {
   ValueError,
   IndexError,
   descriptor,
+  deferred,
   dict_get,
   getattr,
   max,
@@ -27,25 +28,22 @@ import type { MkifChunk } from "../../binary/misc_chunks.ts";
 import type { Layer } from "../layers/layer.ts";
 import type { MaskPropertyGroup } from "./mask_property_group.ts";
 import type { Property } from "./property.ts";
-// Python defers these imports into `_parse_clone` (cycle breakers). They are
-// top-level here, which is the rulebook's rule.
-// TODO(port): property.ts and property_group.ts extend PropertyBase, and this
-// module imports them back (directly and via parsers/). If this module is the
-// first of the cycle to evaluate, `class ... extends PropertyBase` hits the TDZ.
-import { PropertyGroup } from "./property_group.ts";
-import { _parse_mask_atom, parse_property_group } from "../../parsers/property.ts";
-import { parse_property } from "../../parsers/property_value.ts";
-import { parse_effect } from "../../parsers/effect.ts";
+import type { PropertyGroup } from "./property_group.ts";
+
+const _property_group = deferred<typeof import("./property_group.ts")>(import.meta.url, "./property_group.ts");
+const _property = deferred<typeof import("../../parsers/property.ts")>(import.meta.url, "../../parsers/property.ts");
+const _property_value = deferred<typeof import("../../parsers/property_value.ts")>(import.meta.url, "../../parsers/property_value.ts");
+const _effect = deferred<typeof import("../../parsers/effect.ts")>(import.meta.url, "../../parsers/effect.ts");
 
 // TODO(pyrt): `list.index` / `list.remove` raise ValueError when the item is
 // absent and compare with Python `==`. No pyrt list helper exists yet.
-function list_index<T>(xs: T[], x: unknown): number {
+export function list_index<T>(xs: T[], x: unknown): number {
   const i = xs.findIndex((y) => py_eq(y, x));
   if (i < 0) throw new ValueError(`${repr(x)} is not in list`);
   return i;
 }
 
-function list_remove<T>(xs: T[], x: unknown): void {
+export function list_remove<T>(xs: T[], x: unknown): void {
   xs.splice(list_index(xs, x), 1);
 }
 
@@ -62,14 +60,14 @@ export const _INDEXED_GROUP_MATCH_NAMES: ReadonlySet<string> = new Set<string>([
 ]);
 
 // Text animator + selectors expose an enable toggle (canSetEnabled).
-const _TEXT_ANIMATOR_TOGGLEABLE: ReadonlySet<string> = new Set<string>([
+export const _TEXT_ANIMATOR_TOGGLEABLE: ReadonlySet<string> = new Set<string>([
   "ADBE Text Animator",
   "ADBE Text Selector",
   "ADBE Text Wiggly Selector",
   "ADBE Text Expressible Selector",
 ]);
 
-function _validate_enabled(value: boolean, obj: PropertyBase): void {
+export function _validate_enabled(value: boolean, obj: PropertyBase): void {
   validate_bool(value);
   if (!obj.can_set_enabled) {
     throw new AttributeError("'enabled' is read-only when 'can_set_enabled' is False.");
@@ -84,7 +82,7 @@ function _validate_enabled(value: boolean, obj: PropertyBase): void {
  * fallbacks consistent. Explicit user names (stored in tdsn) take
  * precedence and are unaffected.
  */
-function _renumber_mask_auto_names(parent: PropertyGroup): void {
+export function _renumber_mask_auto_names(parent: PropertyGroup): void {
   let i = 1;
   for (const child of parent._properties) {
     if (child._is_mask) {
@@ -104,7 +102,7 @@ function _renumber_mask_auto_names(parent: PropertyGroup): void {
  * -> id 4 `'Mask 4'`). A plain clone keeps the source's id and name,
  * colliding with it.
  */
-function _assign_duplicate_mask_identity(
+export function _assign_duplicate_mask_identity(
   source: PropertyBase,
   new_mask: PropertyBase,
   parent: PropertyGroup,
@@ -677,7 +675,7 @@ export class PropertyBase {
     let result: PropertyBase;
     if (this._is_mask) {
       const mkif = find_by_type(cloned, "mkif") as MkifChunk;
-      result = _parse_mask_atom(
+      result = _property()._parse_mask_atom(
         list_chunk,
         mkif,
         this._property_depth,
@@ -687,9 +685,9 @@ export class PropertyBase {
         layer,
       );
     } else if (list_chunk.list_type === "tdbs") {
-      result = parse_property(list_chunk, this._match_name, comp, this._property_depth, tdmn);
+      result = _property_value().parse_property(list_chunk, this._match_name, comp, this._property_depth, tdmn);
     } else if (list_chunk.list_type === "sspc") {
-      result = parse_effect(
+      result = _effect().parse_effect(
         list_chunk,
         this._match_name,
         this._property_depth,
@@ -699,7 +697,7 @@ export class PropertyBase {
         layer,
       );
     } else if (list_chunk.list_type === "tdgp") {
-      result = parse_property_group(
+      result = _property().parse_property_group(
         list_chunk,
         this._match_name,
         this._property_depth,
@@ -714,7 +712,7 @@ export class PropertyBase {
     // clone_chunk_tree strips synthetic chunks, so synthesized children
     // (e.g. Mask Feather/Opacity) are missing from the clone; re-arm
     // deferred synthesis to fill them on first access, like a fresh parse.
-    if (result instanceof PropertyGroup) {
+    if (result instanceof _property_group().PropertyGroup) {
       result._deferred_ae_major = get_ae_version_major(comp);
     }
     result._parent_property = parent;

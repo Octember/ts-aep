@@ -7,12 +7,7 @@ import { LRDR_CHILD_ORDER, build_rq_settings_list } from "../binary/mutations.ts
 import { ROUT_ITEMS_PER_RQ_ITEM, ArsiChunk, RoutChunk } from "../binary/render_chunks.ts";
 import type { RenderSettingsItem, RoutItem } from "../binary/render_chunks.ts";
 import type { Utf8Chunk } from "../binary/scalar_chunks.ts";
-import {
-  ChunkNotFoundError,
-  find_by_list_type,
-  find_by_type,
-  split_on_type,
-} from "../binary/utils.ts";
+import { ChunkNotFoundError, find_by_list_type, find_by_type, split_on_type } from "../binary/utils.ts";
 import type { CompItem } from "../models/items/composition.ts";
 import { RenderQueue } from "../models/renderqueue/render_queue.ts";
 import { RenderQueueItem } from "../models/renderqueue/render_queue_item.ts";

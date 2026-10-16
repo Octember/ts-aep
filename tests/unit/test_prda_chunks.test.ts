@@ -5,13 +5,7 @@ import { describe, expect, test } from "bun:test";
 import { BytesIO, bytes_, py_eq } from "../../src/pyrt/index.ts";
 import { approx } from "../../src/pyrt/pytest.ts";
 import "../../src/py_aep/binary/_register.ts";
-import {
-  AdvancedPrdaChunk,
-  Cinema4DPrdaChunk,
-  ClassicPrdaChunk,
-  PrdaChunk,
-  RayTracedPrdaChunk,
-} from "../../src/py_aep/binary/misc_chunks.ts";
+import { AdvancedPrdaChunk, Cinema4DPrdaChunk, ClassicPrdaChunk, PrdaChunk, RayTracedPrdaChunk } from "../../src/py_aep/binary/misc_chunks.ts";
 
 const PRDA_CLASSIC_DEFAULT = bytes_.fromhex("000000010000000000000000");
 // big-endian head: version, renderer tag, quality 8, two reserved words

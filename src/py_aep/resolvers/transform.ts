@@ -28,7 +28,7 @@ import { NotImplementedError, ValueError, degrees, float, float_repr, hasattr, m
 
 // TODO(pyrt): math.hypot - local port of CPython 3.12 vector_norm (Veltkamp-split
 // product error stands in for fma; exactly equal to the fma result absent overflow).
-function _frexp_exp(x: number): number {
+export function _frexp_exp(x: number): number {
   const dv = new DataView(new ArrayBuffer(8));
   let ax = Math.abs(x);
   let adj = 0;
@@ -40,7 +40,7 @@ function _frexp_exp(x: number): number {
   return ((dv.getUint32(0) >>> 20) & 0x7ff) - 1022 + adj;
 }
 
-function _dl_mul(x: number, y: number): [number, number] {
+export function _dl_mul(x: number, y: number): [number, number] {
   const z = x * y;
   const cx = 134217729.0 * x;
   const hx = cx - (cx - x);
@@ -52,13 +52,13 @@ function _dl_mul(x: number, y: number): [number, number] {
   return [z, zz];
 }
 
-function _dl_fast_sum(a: number, b: number): [number, number] {
+export function _dl_fast_sum(a: number, b: number): [number, number] {
   const x = a + b;
   const y = a - x + b;
   return [x, y];
 }
 
-function _vector_norm(vec: number[], max_: number, found_nan: boolean): number {
+export function _vector_norm(vec: number[], max_: number, found_nan: boolean): number {
   const n = vec.length;
   if (max_ === Infinity) return max_;
   if (found_nan) return NaN;
@@ -92,7 +92,7 @@ function _vector_norm(vec: number[], max_: number, found_nan: boolean): number {
 }
 
 // TODO(port): matches CPython 3.12's math.hypot algorithm from memory; verify against the interpreter.
-function math_hypot(...args: number[]): number {
+export function math_hypot(...args: number[]): number {
   const vec = args.map((a) => Math.abs(a));
   let max_ = 0.0;
   let found_nan = false;

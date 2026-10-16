@@ -36,20 +36,23 @@
 
 import { PropertyType } from "../enums/general.ts";
 import { PropertyControlType, PropertyValueType } from "../enums/property.ts";
-import { CompItem } from "../models/items/composition.ts";
-import { FootageItem } from "../models/items/footage.ts";
+import type { CompItem } from "../models/items/composition.ts";
 import type { AVLayer } from "../models/layers/av_layer.ts";
-import { Layer } from "../models/layers/layer.ts";
+import type { Layer } from "../models/layers/layer.ts";
 import type { Property } from "../models/properties/property.ts";
 import type { PropertyGroup } from "../models/properties/property_group.ts";
-import { SolidSource } from "../models/sources/solid.ts";
-import { TextDocument } from "../models/text/text_document.ts";
-import { dict_get, float_repr, py_bool, py_eq, py_or } from "../../pyrt/index.ts";
+import { deferred, dict_get, float_repr, py_bool, py_eq, py_or } from "../../pyrt/index.ts";
+
+const _composition = deferred<typeof import("../models/items/composition.ts")>(import.meta.url, "../models/items/composition.ts");
+const _footage = deferred<typeof import("../models/items/footage.ts")>(import.meta.url, "../models/items/footage.ts");
+const _layer = deferred<typeof import("../models/layers/layer.ts")>(import.meta.url, "../models/layers/layer.ts");
+const _solid = deferred<typeof import("../models/sources/solid.ts")>(import.meta.url, "../models/sources/solid.ts");
+const _text_document = deferred<typeof import("../models/text/text_document.ts")>(import.meta.url, "../models/text/text_document.ts");
 
 // AE stores this in a CPrp path node's index to mean "match by name".
-const _BY_NAME_INDEX = 0xffffffff;
+export const _BY_NAME_INDEX = 0xffffffff;
 
-const _TEXT_DOCUMENT = "ADBE Text Document";
+export const _TEXT_DOCUMENT = "ADBE Text Document";
 
 // Essential Graphics controller type ids (see EssentialGraphicsController).
 export const CONTROLLER_CHECKBOX = 1;
@@ -60,7 +63,7 @@ export const CONTROLLER_TEXT = 6;
 // json.dumps parity: CPython's ensure_ascii string encoder (lowercase \uXXXX,
 // every char outside printable ASCII escaped, UTF-16 units match CPython's
 // surrogate pairs).
-function _json_str(s: string): string {
+export function _json_str(s: string): string {
   let out = '"';
   for (let i = 0; i < s.length; i++) {
     const ch = s[i];
@@ -81,7 +84,7 @@ function _json_str(s: string): string {
 // json.dumps parity: an integer-valued number is an int (exact decimal), any
 // other finite number is float.__repr__, and non-finite floats use the
 // NaN/Infinity spellings.
-function _json_num(x: number): string {
+export function _json_num(x: number): string {
   if (Number.isNaN(x)) return "NaN";
   if (x === Infinity) return "Infinity";
   if (x === -Infinity) return "-Infinity";
@@ -89,10 +92,10 @@ function _json_num(x: number): string {
 }
 
 /** The `Layer` that owns `prop`, or `null` if not layer-owned. */
-function _owning_layer(prop: Property): Layer | null {
+export function _owning_layer(prop: Property): Layer | null {
   let group: any = prop.parent_property;
   while (group != null) {
-    if (group instanceof Layer) return group;
+    if (group instanceof _layer().Layer) return group;
     group = group.parent_property;
   }
   return null;
@@ -129,7 +132,7 @@ export class PathNode {
  * (verified across the essential_graphics fixtures: `ADBE Fill-0002` -> 3,
  * every `* Control-0001` -> 1).
  */
-function _effect_param_index(layer: Layer, effect_mn: string, param_mn: string): number | null {
+export function _effect_param_index(layer: Layer, effect_mn: string, param_mn: string): number | null {
   const defs: any = dict_get((layer as any).containing_comp._project._effect_param_defs, effect_mn);
   if (!py_bool(defs)) return null;
   const keys = [...defs.keys()];
@@ -144,13 +147,13 @@ function _effect_param_index(layer: Layer, effect_mn: string, param_mn: string):
  * parT index; the parade itself resolves by name. Duplicate effect
  * instances are fine - the index disambiguates them.
  */
-function _effect_param_path(prop: Property): [PathNode[], Layer] | null {
+export function _effect_param_path(prop: Property): [PathNode[], Layer] | null {
   const effect: any = prop.parent_property;
   if (effect == null || !effect.is_effect) return null;
   const parade: any = effect.parent_property;
   if (parade == null || parade.match_name !== "ADBE Effect Parade") return null;
   const layer: any = parade.parent_property;
-  if (!(layer instanceof Layer)) return null;
+  if (!(layer instanceof _layer().Layer)) return null;
   const effect_index = parade.properties.findIndex((e: any) => e === effect);
   if (effect_index === -1) return null;
   const leaf_index = _effect_param_index(layer, effect.match_name, prop.match_name);
@@ -186,14 +189,14 @@ function _effect_param_path(prop: Property): [PathNode[], Layer] | null {
  * `null` when `prop` is not owned by a layer, an effect node cannot be
  * indexed, or a by-name node is ambiguous.
  */
-function _source_property_path(prop: Property): [PathNode[], Layer] | null {
+export function _source_property_path(prop: Property): [PathNode[], Layer] | null {
   const effect_path = _effect_param_path(prop);
   if (effect_path != null) return effect_path;
 
   const chain: PathNode[] = [];
   let node: any = prop as Property | PropertyGroup;
   let parent: any = prop.parent_property;
-  while (parent != null && !(parent instanceof Layer)) {
+  while (parent != null && !(parent instanceof _layer().Layer)) {
     if (parent.is_effect || parent.match_name === "ADBE Effect Parade") {
       // Effect subtrees are handled by _effect_param_path only; a
       // positional index here would miss the hidden header pard.
@@ -212,7 +215,7 @@ function _source_property_path(prop: Property): [PathNode[], Layer] | null {
     node = parent;
     parent = parent.parent_property;
   }
-  if (!(parent instanceof Layer)) return null;
+  if (!(parent instanceof _layer().Layer)) return null;
   // The layer's top-level group resolves by name too.
   if (parent.properties.filter((c: any) => c.match_name === node.match_name).length !== 1) {
     return null;
@@ -222,7 +225,7 @@ function _source_property_path(prop: Property): [PathNode[], Layer] | null {
 }
 
 /** Serialize a CPrp path into AE's JSON (by-name nodes as `0xFFFFFFFF`). */
-function _path_json(nodes: PathNode[]): string {
+export function _path_json(nodes: PathNode[]): string {
   // json.dumps parity: separators (",", ":"), keys "0".."n" in insertion order.
   const entries = nodes.map((node, i) => {
     const index = node.prop_index != null ? node.prop_index : _BY_NAME_INDEX;
@@ -267,7 +270,7 @@ export function classify_property(prop: Property): number | null {
  * (identical match names, different parade indices) stay independently
  * addable.
  */
-function _already_added(comp: CompItem, layer_id: number, nodes: PathNode[]): boolean {
+export function _already_added(comp: CompItem, layer_id: number, nodes: PathNode[]): boolean {
   const wanted = nodes.map((node) => [node.match_name, node.prop_index]);
   for (const ctrl of (comp as any).motion_graphics_controllers) {
     if (ctrl.source_layer_id !== layer_id) continue;
@@ -332,7 +335,7 @@ export function font_caps_json(prop: Property): string {
   // Python keeps an int for integer-valued sizes and a float otherwise;
   // `_json_num` renders both with the same spelling Python's encoder uses.
   let size: number = 0;
-  if (value instanceof TextDocument) {
+  if (value instanceof _text_document().TextDocument) {
     font = py_or(value.font, "");
     const fs = value.font_size;
     if (fs != null) size = fs;
@@ -366,9 +369,9 @@ export function can_add_layer(layer: AVLayer, comp: CompItem): boolean {
   if (layer.containing_comp !== comp) return false;
   if (!layer.has_video || layer.adjustment_layer || layer.null_layer) return false;
   const source: any = layer.source;
-  if (source instanceof FootageItem) {
-    if (source.main_source instanceof SolidSource) return false;
-  } else if (!(source instanceof CompItem)) {
+  if (source instanceof _footage().FootageItem) {
+    if (source.main_source instanceof _solid().SolidSource) return false;
+  } else if (!(source instanceof _composition().CompItem)) {
     return false;
   }
   // Only an existing MEDIA controller blocks the layer; property

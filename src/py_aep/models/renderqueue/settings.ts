@@ -30,20 +30,20 @@ import type { Preferences } from "../preferences.ts";
 // `isinstance(value, IntEnum)` cannot be answered. This placeholder answers
 // "never an IntEnum member": enum-valued settings then pass through as plain
 // ints, and STRING output shows the number instead of the enum label.
-const IntEnum = {
+export const IntEnum = {
   has(_value: unknown): boolean {
     return false;
   },
 };
 
 // Python `member.label` property; the enum objects expose it as `E.label(member)`.
-function enum_label(enum_class: any, member: any): string {
+export function enum_label(enum_class: any, member: any): string {
   return enum_class.label(member);
 }
 
 // TODO(pyrt): `type(x).__name__` has no pyrt shim. Covers the builtin types
 // this module can receive.
-function py_type_name(value: any): string {
+export function py_type_name(value: any): string {
   if (value == null) return "NoneType";
   if (typeof value === "boolean") return "bool";
   if (typeof value === "number") return Number.isInteger(value) ? "int" : "float";
@@ -55,14 +55,14 @@ function py_type_name(value: any): string {
 }
 
 // TODO(pyrt): `repr()` of a dict (Map) is not in pyrt. Formats `{k!r: v!r, ...}`.
-function repr_map(m: Map<unknown, unknown>): string {
+export function repr_map(m: Map<unknown, unknown>): string {
   const r = (x: unknown): string => (x instanceof Map ? repr_map(x) : repr(x));
   return "{" + [...m].map(([k, v]) => `${r(k)}: ${r(v)}`).join(", ") + "}";
 }
 
 // TODO(pyrt): Python's Mapping `.items()` protocol. dicts are Maps; SettingsView
 // provides its own `items()`.
-function mapping_items(m: Map<string, any> | SettingsView): Array<[string, any]> {
+export function mapping_items(m: Map<string, any> | SettingsView): Array<[string, any]> {
   return m instanceof Map ? [...m.entries()] : m.items();
 }
 
@@ -237,7 +237,7 @@ export class SettingsView {
  *     - An int matching an enum member's value
  *     - A string matching an enum member's label
  */
-function _coerce_enum(enum_class: any, value: any): any {
+export function _coerce_enum(enum_class: any, value: any): any {
   if (enum_class.has(value)) return value;
   if (typeof value === "boolean") {
     // bool is int: settings["Output Audio"] = True would silently
@@ -277,7 +277,7 @@ function _coerce_enum(enum_class: any, value: any): any {
   );
 }
 
-const _RESOLUTION_STRINGS: Map<string, string> = new Map<string, string>([
+export const _RESOLUTION_STRINGS: Map<string, string> = new Map<string, string>([
   // [0, 0] is the "use the comp's own resolution" sentinel (probed AE
   // 2026: getSettings(STRING) reads back "Current Settings").
   [tkey(0, 0), "Current Settings"],
@@ -296,7 +296,7 @@ const _RESOLUTION_STRINGS: Map<string, string> = new Map<string, string>([
 // provided (see build_resize_to_strings); this table is the factory-
 // preset fallback used when it is not, and holds AE's actual strings for
 // a default install.
-const _RESIZE_TO_STRINGS: Map<string, string> = new Map<string, string>([
+export const _RESIZE_TO_STRINGS: Map<string, string> = new Map<string, string>([
   [tkey(3656, 2664), "Cineon Full  •  3656x2664 • 24 fps"],
   [tkey(1828, 1332), "Cineon Half  •  1828x1332 • 24 fps"],
   [tkey(1280, 1080), "DVCPRO HD  •  1280x1080 (1.5) • 29.97 fps"],
@@ -339,7 +339,7 @@ export function build_resize_to_strings(preferences: Preferences): Map<string, s
  * IntEnum values are unwrapped to their integer value.
  * All other types pass through unchanged.
  */
-function _to_number_value(value: any): any {
+export function _to_number_value(value: any): any {
   if (IntEnum.has(value)) return int(value);
   return value;
 }
@@ -353,7 +353,7 @@ function _to_number_value(value: any): any {
  *     resize_map: Resolution -> label map for the "Resize to" key
  *         (the AE-preference-derived map, or the factory fallback).
  */
-function _to_string_value(
+export function _to_string_value(
   key: string,
   value: any,
   resize_map: Map<string, string> = _RESIZE_TO_STRINGS,

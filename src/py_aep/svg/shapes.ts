@@ -31,12 +31,12 @@ import {
 } from "../../pyrt/index.ts";
 
 // Control-point distance for a 90-degree circular arc as a cubic bezier.
-const _KAPPA = 0.5522847498307936;
+export const _KAPPA = 0.5522847498307936;
 
 // The viewport dimension (`LengthContext` attribute) a percentage of each
 // geometry attribute refers to (SVG 1.1 7.10): the width, the height, or the
 // normalized diagonal.
-const _PERCENT_AXIS: Record<string, string> = {
+export const _PERCENT_AXIS: Record<string, string> = {
   x: "width",
   width: "width",
   cx: "width",
@@ -55,7 +55,7 @@ const _PERCENT_AXIS: Record<string, string> = {
 // TODO(pyrt): re.findall shim missing; local helper for NUMBER_RE (no groups,
 // so findall returns whole matches). Fresh "g" regex so a non-global NUMBER_RE
 // still scans every match.
-function findall(re: RegExp, s: string): string[] {
+export function findall(re: RegExp, s: string): string[] {
   // NUMBER_RE is anchored with a leading ^ (for .match); findall scans, so drop it.
   const src = re.source.startsWith("^") ? re.source.slice(1) : re.source;
   return Array.from(s.matchAll(new RegExp(src, "g")), (m) => m[0]);
@@ -65,7 +65,7 @@ function findall(re: RegExp, s: string): string[] {
  * A geometry attribute in user units: units converted and a percentage
  * resolved against `ctx` (kept as the bare number without one).
  */
-function _f(
+export function _f(
   attrs: Map<string, string>,
   key: string,
   ctx: LengthContext | null,
@@ -77,7 +77,7 @@ function _f(
 }
 
 /** An absent or `auto` corner radius, which takes the other radius. */
-function _is_auto(raw: string | null): boolean {
+export function _is_auto(raw: string | null): boolean {
   return raw == null || ["", "auto"].includes(strip(raw));
 }
 
@@ -116,7 +116,7 @@ export function element_subpaths(
   throw new UnsupportedSVGError(`Unsupported drawable element: <${tag}>`);
 }
 
-function _rect(attrs: Map<string, string>, ctx: LengthContext | null): RawSubpath[] {
+export function _rect(attrs: Map<string, string>, ctx: LengthContext | null): RawSubpath[] {
   const [x, y] = [_f(attrs, "x", ctx), _f(attrs, "y", ctx)];
   const [w, h] = [_f(attrs, "width", ctx), _f(attrs, "height", ctx)];
   if (w <= 0 || h <= 0) {
@@ -177,7 +177,7 @@ function _rect(attrs: Map<string, string>, ctx: LengthContext | null): RawSubpat
   return [new RawSubpath(segs, true)];
 }
 
-function _ellipse(
+export function _ellipse(
   tag: string,
   attrs: Map<string, string>,
   ctx: LengthContext | null,
@@ -221,7 +221,7 @@ function _ellipse(
   return [new RawSubpath(segs, true)];
 }
 
-function _poly(attrs: Map<string, string>, closed: boolean): RawSubpath[] {
+export function _poly(attrs: Map<string, string>, closed: boolean): RawSubpath[] {
   const nums = findall(NUMBER_RE, dict_get(attrs, "points", "")).map((n) => float(n));
   const pts = zip(py_slice(nums, 0, null, 2), py_slice(nums, 1, null, 2));
   if (pts.length < 2) {

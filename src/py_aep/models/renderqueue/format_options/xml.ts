@@ -22,17 +22,7 @@ import {
   str,
 } from "../../../../pyrt/index.ts";
 import { CLAMP_DEPENDENTS } from "../../../data/output_module_rules.ts";
-import {
-  AudioCodec,
-  AudioInterleave,
-  DnxResolution,
-  MPEGAudioFormat,
-  MPEGAudioLayer,
-  MPEGMultiplexer,
-  MPEGMuxStreamCompatibility,
-  MPEGProfile,
-  VideoCodec,
-} from "../../../enums/index.ts";
+import { AudioCodec, AudioInterleave, DnxResolution, MPEGAudioFormat, MPEGAudioLayer, MPEGMultiplexer, MPEGMuxStreamCompatibility, MPEGProfile, VideoCodec } from "../../../enums/index.ts";
 import { ChunkField } from "../../descriptors.ts";
 import { _validate_number, validate_enum, validate_int } from "../../validators.ts";
 import { FormatOptionsBase } from "./base.ts";
@@ -40,7 +30,7 @@ import type { RoptChunk } from "../../../binary/render_chunks.ts";
 import type { OutputModule } from "../output_module.ts";
 
 /** Adobe stores FPS as ticks-per-frame with a 254016000000 tick base. */
-const _ADOBE_TICKS_PER_SECOND = 254016000000;
+export const _ADOBE_TICKS_PER_SECOND = 254016000000;
 
 // -- Ropt body layout -------------------------------------------------------
 // The body is a 34-byte header followed by the XML region. Two big-endian
@@ -50,26 +40,26 @@ const _ADOBE_TICKS_PER_SECOND = 254016000000;
 // 'H264' 31/31, 'MooV' 53/53, 'Mp3 ' 23/23, 'wao_' 7/7 - every one with a
 // 34-byte header.
 /** Offset of the u32 holding `len(body)`. */
-const _LEN_BODY_OFFSET = 6;
+export const _LEN_BODY_OFFSET = 6;
 /** Offset of the u32 holding `len(xml region) - 2` (i.e. excluding the NULs). */
-const _LEN_XML_OFFSET = 30;
+export const _LEN_XML_OFFSET = 30;
 
-const _XML_DECLARATION = b('<?xml version="1.0" encoding="UTF-8"?>\n');
-const _XML_NULS = b("\x00\x00");
+export const _XML_DECLARATION = b('<?xml version="1.0" encoding="UTF-8"?>\n');
+export const _XML_NULS = b("\x00\x00");
 /** Every AE-authored body ends `>\n\x00\x00`. */
-const _XML_TERMINATOR = concat(b("\n"), _XML_NULS);
+export const _XML_TERMINATOR = concat(b("\n"), _XML_NULS);
 
 /**
  * An empty element with NO attributes; AE expands these (`<ParamName></ParamName>`)
  * while self-closing the ones that have attributes (`<Foo ObjectRef="1"/>`).
  */
-const _EMPTY_ELEMENT_RE = /<([A-Za-z_][\p{L}\p{N}_.-]*)\/>/gu;
+export const _EMPTY_ELEMENT_RE = /<([A-Za-z_][\p{L}\p{N}_.-]*)\/>/gu;
 
 // XML param -> rules key: params whose writes are gated by the module's
 // format rules (and whose changes re-clamp dependents, see
 // CLAMP_DEPENDENTS). Params not listed here (frame rate, VR fields, ...)
 // validate locally only.
-const _PARAM_RULE_KEYS = new Map<string, string>([
+export const _PARAM_RULE_KEYS = new Map<string, string>([
   ["ADBEAudioBitrate", "Audio Bitrate"],
   ["ADBEAudioCodec", "Audio Codec"],
   ["ADBEMPEGAudioFormat", "Audio Format"],
@@ -84,7 +74,7 @@ const _PARAM_RULE_KEYS = new Map<string, string>([
 // own rules: text and tail model, attribute insertion order, `<a />` spacing
 // for empty elements and ET's escaping. Move it to pyrt/xml_etree.ts when a
 // second module needs it.
-class ETElement {
+export class ETElement {
   tag: string;
   attrib = new Map<string, string>();
   text: string | null = null;
@@ -124,19 +114,19 @@ class ETElement {
   }
 }
 
-const _XML_TOKEN =
+export const _XML_TOKEN =
   /<!--[\s\S]*?-->|<\?[\s\S]*?\?>|<!DOCTYPE[^>]*>|<!\[CDATA\[([\s\S]*?)\]\]>|<\/([^\s>]+)\s*>|<([^\s\/>!?]+)((?:\s+[^\s=\/>]+\s*=\s*(?:"[^"]*"|'[^']*'))*)\s*(\/?)>/g;
-const _XML_ATTR = /([^\s=]+)\s*=\s*(?:"([^"]*)"|'([^']*)')/g;
-const _XML_ENTITY = /&(#x[0-9a-fA-F]+|#[0-9]+|lt|gt|amp|quot|apos);/g;
-const _XML_NAMED_ENTITY: Record<string, string> = { lt: "<", gt: ">", amp: "&", quot: '"', apos: "'" };
+export const _XML_ATTR = /([^\s=]+)\s*=\s*(?:"([^"]*)"|'([^']*)')/g;
+export const _XML_ENTITY = /&(#x[0-9a-fA-F]+|#[0-9]+|lt|gt|amp|quot|apos);/g;
+export const _XML_NAMED_ENTITY: Record<string, string> = { lt: "<", gt: ">", amp: "&", quot: '"', apos: "'" };
 
 /** XML line-end normalisation: expat turns CR and CRLF into LF. */
-function _xml_newlines(s: string): string {
+export function _xml_newlines(s: string): string {
   return s.replace(/\r\n?/g, "\n");
 }
 
 /** Character and entity references, as expat resolves them. */
-function _xml_unescape(s: string): string {
+export function _xml_unescape(s: string): string {
   return s.replace(_XML_ENTITY, (_m: string, e: string) => {
     if (e[0] === "#") {
       const code = e[1] === "x" ? parseInt(e.slice(2), 16) : parseInt(e.slice(1), 10);
@@ -153,7 +143,7 @@ function _xml_unescape(s: string): string {
  */
 // TODO(pyrt): ET.ParseError (a SyntaxError subclass) is not modelled; malformed
 // input raises ValueError with a different message.
-function _xml_fromstring(text: string): ETElement {
+export function _xml_fromstring(text: string): ETElement {
   const stack: ETElement[] = [];
   let root: ETElement | null = null;
   let last = 0;
@@ -202,11 +192,11 @@ function _xml_fromstring(text: string): ETElement {
   return root;
 }
 
-function _xml_escape_cdata(s: string): string {
+export function _xml_escape_cdata(s: string): string {
   return s.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
 }
 
-function _xml_escape_attrib(s: string): string {
+export function _xml_escape_attrib(s: string): string {
   return s
     .replaceAll("&", "&amp;")
     .replaceAll("<", "&lt;")
@@ -218,7 +208,7 @@ function _xml_escape_attrib(s: string): string {
 }
 
 /** ET's `_serialize_xml` with `short_empty_elements=True`. */
-function _xml_serialize(elem: ETElement, out: string[]): void {
+export function _xml_serialize(elem: ETElement, out: string[]): void {
   out.push("<" + elem.tag);
   for (const [k, v] of elem.attrib) out.push(" " + k + '="' + _xml_escape_attrib(v) + '"');
   if (py_bool(elem.text) || elem.children.length > 0) {
@@ -232,7 +222,7 @@ function _xml_serialize(elem: ETElement, out: string[]): void {
   if (py_bool(elem.tail)) out.push(_xml_escape_cdata(elem.tail));
 }
 
-const ET = {
+export const ET = {
   Element: ETElement,
   fromstring: _xml_fromstring,
   /** `ET.SubElement(parent, tag)` */
@@ -254,7 +244,7 @@ const ET = {
 
 /** `type(value).__name__` for the TypeError message. */
 // TODO(pyrt): no pyrt `type()` shim; this covers the value kinds this module sees.
-function _py_type_name(value: any): string {
+export function _py_type_name(value: any): string {
   if (value == null) return "NoneType";
   if (typeof value === "boolean") return "bool";
   if (typeof value === "string") return "str";
@@ -267,7 +257,7 @@ function _py_type_name(value: any): string {
 
 /** `dict(*args).items()` for `ParamsDict.update`. */
 // TODO(pyrt): no pyrt `dict()` constructor shim; covers a mapping, a list of pairs or a plain record.
-function _dict_items(args: any[]): Iterable<[string, string]> {
+export function _dict_items(args: any[]): Iterable<[string, string]> {
   if (args.length === 0) return [];
   const src = args[0];
   if (src instanceof Map) return src.entries();
@@ -276,7 +266,7 @@ function _dict_items(args: any[]): Iterable<[string, string]> {
 }
 
 /** Descriptor for XML enum parameters (read/write). */
-class _EnumParam {
+export class _EnumParam {
   declare _key: string;
   declare _enum_cls: any;
   declare _name: string;
@@ -307,7 +297,7 @@ class _EnumParam {
  * the raw string when it is non-numeric (the binary is trusted, like
  * `_try_enum_or_int` for enums). Writes require an `int`.
  */
-class _ScalarParam {
+export class _ScalarParam {
   declare _key: string;
   declare _name: string;
 
@@ -360,7 +350,7 @@ class _ScalarParam {
  * Returns:
  *     Tuple of (params dict, value-elements dict, param-elements dict).
  */
-function _extract_params(
+export function _extract_params(
   root: ETElement,
 ): [Map<string, string>, Map<string, ETElement>, Map<string, ETElement>] {
   const params = new Map<string, string>();
@@ -381,7 +371,7 @@ function _extract_params(
 }
 
 /** Try to parse an int, then map to an enum; fall back to int. */
-function _try_enum_or_int(enum_cls: any, raw_str: string): any {
+export function _try_enum_or_int(enum_cls: any, raw_str: string): any {
   let raw_value: number;
   try {
     raw_value = int(raw_str);

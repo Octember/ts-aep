@@ -19,11 +19,7 @@ import {
 import type { EnumValue } from "../../src/pyrt/index.ts";
 import { raises } from "../../src/pyrt/pytest.ts";
 import { CosField } from "../../src/py_aep/cos/descriptors.ts";
-import {
-  ChunkField,
-  _materialization_allowed,
-  _suppress_materialization,
-} from "../../src/py_aep/models/descriptors.ts";
+import { ChunkField, _materialization_allowed, _suppress_materialization } from "../../src/py_aep/models/descriptors.ts";
 
 /**
  * `obj.__dict__`: the per-instance attribute dict ChunkField reads parse-time

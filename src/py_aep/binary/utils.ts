@@ -1,18 +1,22 @@
 /** Chunk tree navigation helpers for the binary I/O layer. */
 
-import { Chunk, DeferredListChunk, ListChunk } from "./chunk.ts";
+import type { Chunk } from "./chunk.ts";
+import { DeferredListChunk, ListChunk } from "./chunk.ts";
 import { U4LeChunk, Utf8Chunk } from "./scalar_chunks.ts";
 import {
   PyException,
   TypeError_,
   ValueError,
   b,
+  deferred,
   float_repr,
   getattr,
   len,
   py_bool,
   sorted,
 } from "../../pyrt/index.ts";
+
+const _chunk = deferred<typeof import("./chunk.ts")>(import.meta.url, "./chunk.ts");
 
 export class ChunkNotFoundError extends PyException {
   /** Raised when a required chunk is not found in the AEP chunk tree. */
@@ -115,7 +119,7 @@ export function block_slice(
  * Raises:
  *     ChunkNotFoundError: If no matching chunk is found.
  */
-function _find_anchor_index(chunks: Chunk[], anchor_type: string): number {
+export function _find_anchor_index(chunks: Chunk[], anchor_type: string): number {
   if (anchor_type.startsWith("LIST:")) {
     const lt = anchor_type.slice(5);
     for (const [i, c] of chunks.entries()) {
@@ -384,7 +388,7 @@ export function toggle_flag_chunk(
 
   const existing = container.chunks.flatMap((c, i) => (c.chunk_type === chunk_type ? [i] : []));
   if (enable && !py_bool(existing)) {
-    const new_chunk = new Chunk({ chunk_type, data: b("\x01") });
+    const new_chunk = new (_chunk().Chunk)({ chunk_type, data: b("\x01") });
     const anchors = container.chunks.flatMap((c, i) =>
       after_types.includes(c.chunk_type) ? [i] : [],
     );
@@ -444,7 +448,7 @@ export function recursive_find(
 // position with the last value, and NaN / Infinity / -Infinity are accepted.
 // TODO(port): int/float distinction (`1.0` reads as `1`) and ints beyond 2^53
 // lose precision, so such alas records can differ from Python.
-function json_loads(text: string): any {
+export function json_loads(text: string): any {
   const ws = " \t\n\r";
   let pos = 0;
   const skip = (): void => {
@@ -552,7 +556,7 @@ function json_loads(text: string): any {
 // json.dumps parity: `json.dumps(obj, sort_keys=True, separators=(",", ":"))`
 // with the default `ensure_ascii=True`. The output is written into the AEP
 // file and compared byte-for-byte, so it reproduces Python's spelling exactly.
-function json_dumps_sorted(obj: any): string {
+export function json_dumps_sorted(obj: any): string {
   if (obj == null) return "null";
   if (typeof obj === "boolean") return obj ? "true" : "false";
   if (typeof obj === "number") {
@@ -575,7 +579,7 @@ function json_dumps_sorted(obj: any): string {
 
 // json.dumps parity: string escaping under `ensure_ascii=True`. Escapes are
 // lowercase hex and non-BMP code points become surrogate pairs, as in CPython.
-function json_string(s: string): string {
+export function json_string(s: string): string {
   let out = '"';
   for (const ch of s) {
     const c = ch.codePointAt(0)!;

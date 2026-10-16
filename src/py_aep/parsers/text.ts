@@ -92,7 +92,7 @@ export function parse_fonts(cos_data: Map<string, any>): FontObject[] {
  *
  * Path: `doc["0"]["6"]["0"][0]["0"]["0"]["6"]`
  */
-function _get_first_char_style(doc: Map<string, any>): Map<string, any> | null {
+export function _get_first_char_style(doc: Map<string, any>): Map<string, any> | null {
   const result = cos_get(doc, "0", "6", "0", 0, "0", "0", "6");
   if (result instanceof Map) {
     return result;
@@ -105,7 +105,7 @@ function _get_first_char_style(doc: Map<string, any>): Map<string, any> | null {
  *
  * Path: `doc["0"]["5"]["0"][0]["0"]["0"]["5"]`
  */
-function _get_first_para_style(doc: Map<string, any>): Map<string, any> | null {
+export function _get_first_para_style(doc: Map<string, any>): Map<string, any> | null {
   const result = cos_get(doc, "0", "5", "0", 0, "0", "0", "5");
   if (result instanceof Map) {
     return result;

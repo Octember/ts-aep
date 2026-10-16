@@ -5,10 +5,10 @@ import { ValueError, rstrip } from "../../pyrt/index.ts";
 // pyrt isdigit is Nd-only; Python str.isdigit() also accepts superscripts, subscripts and
 // circled digits (which then make int() raise ValueError).
 // TODO(port): non-Nd isdigit characters beyond these common ranges (e.g. U+1F100..) are not covered
-const _NON_ND_DIGIT_RE = /[\u00B2\u00B3\u00B9\u2070\u2074-\u2079\u2080-\u2089\u2460-\u2468\u2474-\u247C\u2488-\u2490\u24EA\u24F5-\u24FD\u24FF\u2776-\u277E\u2780-\u2788\u278A-\u2792]/u;
-const _ND_RE = /^\p{Nd}$/u;
+export const _NON_ND_DIGIT_RE = /[\u00B2\u00B3\u00B9\u2070\u2074-\u2079\u2080-\u2089\u2460-\u2468\u2474-\u247C\u2488-\u2490\u24EA\u24F5-\u24FD\u24FF\u2776-\u277E\u2780-\u2788\u278A-\u2792]/u;
+export const _ND_RE = /^\p{Nd}$/u;
 
-function isdigit(s: string): boolean {
+export function isdigit(s: string): boolean {
   if (s.length === 0) return false;
   for (const ch of s) {
     if (!_ND_RE.test(ch) && !_NON_ND_DIGIT_RE.test(ch)) return false;
@@ -17,7 +17,7 @@ function isdigit(s: string): boolean {
 }
 
 /** `int(tail)` for a str that passed isdigit(): Unicode Nd digits, arbitrary precision. */
-function _int_digits(tail: string): bigint {
+export function _int_digits(tail: string): bigint {
   const cps = Array.from(tail);
   let out = "";
   for (const ch of cps) {
@@ -33,9 +33,9 @@ function _int_digits(tail: string): bigint {
 
 // Python `\d` on str patterns matches Unicode Nd digits, hence \p{Nd}. Python `$`
 // also matches before one trailing "\n", hence the lookahead.
-const _TRAILING_NUMBER_RE = /(\p{Nd}+)(?=\n?$)/u;
+export const _TRAILING_NUMBER_RE = /(\p{Nd}+)(?=\n?$)/u;
 
-function _next_suffix(prefix: string, existing_names: Set<string>): number | bigint {
+export function _next_suffix(prefix: string, existing_names: Set<string>): number | bigint {
   /**
    * Return the next available numeric suffix for `{prefix}{N}`.
    *

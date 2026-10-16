@@ -109,12 +109,12 @@ export const AlphaMode = int_enum("AlphaMode", {
 });
 export type AlphaMode = EnumValue<typeof AlphaMode>;
 
-const _ALPHA_MODE_BINARY_MAP: Map<number, number> = new Map<number, number>([
+export const _ALPHA_MODE_BINARY_MAP: Map<number, number> = new Map<number, number>([
   [0, AlphaMode.STRAIGHT],
   [1, AlphaMode.PREMULTIPLIED],
   [2, AlphaMode.IGNORE],
 ]);
-const _ALPHA_MODE_TO_BINARY: Map<number, number> = new Map<number, number>(
+export const _ALPHA_MODE_TO_BINARY: Map<number, number> = new Map<number, number>(
   [..._ALPHA_MODE_BINARY_MAP].map(([k, v]) => [v, k] as const),
 );
 
@@ -139,12 +139,12 @@ export const BitsPerChannel = int_enum("BitsPerChannel", {
 });
 export type BitsPerChannel = EnumValue<typeof BitsPerChannel>;
 
-const _BITS_PER_CHANNEL_BINARY_MAP: Map<number, number> = new Map<number, number>([
+export const _BITS_PER_CHANNEL_BINARY_MAP: Map<number, number> = new Map<number, number>([
   [0, BitsPerChannel.EIGHT],
   [1, BitsPerChannel.SIXTEEN],
   [2, BitsPerChannel.THIRTY_TWO],
 ]);
-const _BITS_PER_CHANNEL_TO_BINARY: Map<number, number> = new Map<number, number>(
+export const _BITS_PER_CHANNEL_TO_BINARY: Map<number, number> = new Map<number, number>(
   [..._BITS_PER_CHANNEL_BINARY_MAP].map(([k, v]) => [v, k] as const),
 );
 
@@ -236,7 +236,7 @@ export type BlendingMode = EnumValue<typeof BlendingMode>;
 // (AE_EffectCB.h): 17-22 are MULTIPLY_(NOT_)ALPHA(_LUMA)/ADDITIVE_PREMUL
 // (= stencil/silhouette/luminescent premul), 12/23/24 the classic
 // (< PS 5.5) difference/dodge/burn and 26-28 their PS >= 6.0 variants.
-const _BLENDING_MODE_BINARY_MAP: Map<number, number> = new Map<number, number>([
+export const _BLENDING_MODE_BINARY_MAP: Map<number, number> = new Map<number, number>([
   [0, BlendingMode.NORMAL], // cameras and lights (null layers store 2)
   [2, BlendingMode.NORMAL],
   [3, BlendingMode.DISSOLVE],
@@ -277,7 +277,7 @@ const _BLENDING_MODE_BINARY_MAP: Map<number, number> = new Map<number, number>([
   [38, BlendingMode.DIVIDE],
 ]);
 // Reversed map: last key wins, so NORMAL -> 2 (not 0).
-const _BLENDING_MODE_TO_BINARY: Map<number, number> = new Map<number, number>(
+export const _BLENDING_MODE_TO_BINARY: Map<number, number> = new Map<number, number>(
   [..._BLENDING_MODE_BINARY_MAP].map(([k, v]) => [v, k] as const),
 );
 // Dancing Dissolve has no transfer-mode value of its own - it is Dissolve plus
@@ -416,12 +416,12 @@ export const FieldSeparationType = int_enum("FieldSeparationType", {
 });
 export type FieldSeparationType = EnumValue<typeof FieldSeparationType>;
 
-const _FIELD_SEP_BINARY_MAP: Map<number, number> = new Map<number, number>([
+export const _FIELD_SEP_BINARY_MAP: Map<number, number> = new Map<number, number>([
   [0, FieldSeparationType.OFF],
   [1, FieldSeparationType.UPPER_FIELD_FIRST],
   [2, FieldSeparationType.LOWER_FIELD_FIRST],
 ]);
-const _FIELD_SEP_TO_BINARY: Map<number, number> = new Map<number, number>(
+export const _FIELD_SEP_TO_BINARY: Map<number, number> = new Map<number, number>(
   [..._FIELD_SEP_BINARY_MAP].map(([k, v]) => [v, k] as const),
 );
 
@@ -445,11 +445,11 @@ export const FootageTimecodeDisplayStartType = int_enum("FootageTimecodeDisplayS
 });
 export type FootageTimecodeDisplayStartType = EnumValue<typeof FootageTimecodeDisplayStartType>;
 
-const _FOOTAGE_TIMECODE_BINARY_MAP: Map<number, number> = new Map<number, number>([
+export const _FOOTAGE_TIMECODE_BINARY_MAP: Map<number, number> = new Map<number, number>([
   [0, FootageTimecodeDisplayStartType.FTCS_START_0],
   [1, FootageTimecodeDisplayStartType.FTCS_USE_SOURCE_MEDIA],
 ]);
-const _FOOTAGE_TIMECODE_TO_BINARY: Map<number, number> = new Map<number, number>(
+export const _FOOTAGE_TIMECODE_TO_BINARY: Map<number, number> = new Map<number, number>(
   [..._FOOTAGE_TIMECODE_BINARY_MAP].map(([k, v]) => [v, k] as const),
 );
 
@@ -563,7 +563,7 @@ export const GpuAccelType = int_enum("GpuAccelType", {
 });
 export type GpuAccelType = EnumValue<typeof GpuAccelType>;
 
-const _GPU_UUID_TO_ENUM: Map<string, number> = new Map<string, number>([
+export const _GPU_UUID_TO_ENUM: Map<string, number> = new Map<string, number>([
   ["7ee0ab59-822d-44cc-ac10-16279d041016", GpuAccelType.CUDA],
   ["f33089e2-1ede-47c1-8a9e-b232bb1cc1a4", GpuAccelType.SOFTWARE],
   ["6ed1497e-17ad-4a5b-846f-52bb81e20104", GpuAccelType.METAL],
@@ -571,7 +571,7 @@ const _GPU_UUID_TO_ENUM: Map<string, number> = new Map<string, number>([
   ["c4471277-d5d1-4ea7-a36c-b93ac76dfd41", GpuAccelType.VULKAN],
   ["cd99cfc1-bf65-4cb7-ab70-a8f5ea50e8f4", GpuAccelType.DIRECTX],
 ]);
-const _GPU_ENUM_TO_UUID: Map<number, string> = new Map<number, string>(
+export const _GPU_ENUM_TO_UUID: Map<number, string> = new Map<number, string>(
   [..._GPU_UUID_TO_ENUM].map(([k, v]) => [v, k] as const),
 );
 
@@ -596,11 +596,11 @@ export const GuideOrientationType = int_enum("GuideOrientationType", {
 });
 export type GuideOrientationType = EnumValue<typeof GuideOrientationType>;
 
-const _GUIDE_ORIENTATION_BINARY_MAP: Map<number, number> = new Map<number, number>([
+export const _GUIDE_ORIENTATION_BINARY_MAP: Map<number, number> = new Map<number, number>([
   [2, GuideOrientationType.HORIZONTAL],
   [1, GuideOrientationType.VERTICAL],
 ]);
-const _GUIDE_ORIENTATION_TO_BINARY: Map<number, number> = new Map<number, number>(
+export const _GUIDE_ORIENTATION_TO_BINARY: Map<number, number> = new Map<number, number>(
   [..._GUIDE_ORIENTATION_BINARY_MAP].map(([k, v]) => [v, k] as const),
 );
 
@@ -834,12 +834,12 @@ export const MaskMotionBlur = int_enum("MaskMotionBlur", {
 });
 export type MaskMotionBlur = EnumValue<typeof MaskMotionBlur>;
 
-const _MASK_MOTION_BLUR_BINARY_MAP: Map<number, number> = new Map<number, number>([
+export const _MASK_MOTION_BLUR_BINARY_MAP: Map<number, number> = new Map<number, number>([
   [0, MaskMotionBlur.SAME_AS_LAYER],
   [1, MaskMotionBlur.OFF],
   [2, MaskMotionBlur.ON],
 ]);
-const _MASK_MOTION_BLUR_TO_BINARY: Map<number, number> = new Map<number, number>(
+export const _MASK_MOTION_BLUR_TO_BINARY: Map<number, number> = new Map<number, number>(
   [..._MASK_MOTION_BLUR_BINARY_MAP].map(([k, v]) => [v, k] as const),
 );
 
@@ -922,7 +922,7 @@ export const PulldownPhase = int_enum("PulldownPhase", {
 });
 export type PulldownPhase = EnumValue<typeof PulldownPhase>;
 
-const _PULLDOWN_BINARY_MAP: Map<number, number> = new Map<number, number>([
+export const _PULLDOWN_BINARY_MAP: Map<number, number> = new Map<number, number>([
   [0, PulldownPhase.OFF],
   [1, PulldownPhase.WSSWW],
   [2, PulldownPhase.SSWWW],
@@ -935,7 +935,7 @@ const _PULLDOWN_BINARY_MAP: Map<number, number> = new Map<number, number>([
   [9, PulldownPhase.SWWWW_24P_ADVANCE],
   [10, PulldownPhase.WWWWS_24P_ADVANCE],
 ]);
-const _PULLDOWN_TO_BINARY: Map<number, number> = new Map<number, number>(
+export const _PULLDOWN_TO_BINARY: Map<number, number> = new Map<number, number>(
   [..._PULLDOWN_BINARY_MAP].map(([k, v]) => [v, k] as const),
 );
 
@@ -1098,7 +1098,7 @@ export const ViewerType = int_enum("ViewerType", {
 });
 export type ViewerType = EnumValue<typeof ViewerType>;
 
-const _VIEWER_STRING_MAP: Map<string, number> = new Map<string, number>([
+export const _VIEWER_STRING_MAP: Map<string, number> = new Map<string, number>([
   ["AE Composition", ViewerType.VIEWER_COMPOSITION],
   ["AE Layer", ViewerType.VIEWER_LAYER],
   ["AE Footage", ViewerType.VIEWER_FOOTAGE],

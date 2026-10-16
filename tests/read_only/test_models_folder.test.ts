@@ -7,12 +7,7 @@
 
 import { describe, expect, test } from "bun:test";
 import "../../src/py_aep/binary/_register.ts";
-import {
-  get_folder,
-  get_folder_from_json_by_name,
-  load_expected,
-  parse_project,
-} from "../conftest.ts";
+import { get_folder, get_folder_from_json_by_name, load_expected, parse_project } from "../conftest.ts";
 import { Path, len, py_bool } from "../../src/pyrt/index.ts";
 
 // Python `Path(__file__).parent.parent.parent` is the repo root. A TS file's

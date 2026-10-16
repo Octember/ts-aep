@@ -32,7 +32,7 @@ export const OutputChannels = int_enum("OutputChannels", {
 });
 export type OutputChannels = EnumValue<typeof OutputChannels>;
 
-const _OUTPUT_CHANNELS_LABELS: Map<number, string> = new Map<number, string>([
+export const _OUTPUT_CHANNELS_LABELS: Map<number, string> = new Map<number, string>([
   [0, "RGB"],
   [1, "RGB + Alpha"],
   [2, "Alpha"],
@@ -67,7 +67,7 @@ export const OutputColorDepth = int_enum("OutputColorDepth", {
 });
 export type OutputColorDepth = EnumValue<typeof OutputColorDepth>;
 
-const _OUTPUT_COLOR_DEPTH_LABELS: Map<number, string> = new Map<number, string>([
+export const _OUTPUT_COLOR_DEPTH_LABELS: Map<number, string> = new Map<number, string>([
   [-32, "Floating Point Gray"],
   [8, "256 Colors"],
   [24, "Millions of Colors"],
@@ -97,7 +97,7 @@ export const OutputColorMode = int_enum("OutputColorMode", {
 });
 export type OutputColorMode = EnumValue<typeof OutputColorMode>;
 
-const _OUTPUT_COLOR_MODE_LABELS: Map<number, string> = new Map<number, string>([
+export const _OUTPUT_COLOR_MODE_LABELS: Map<number, string> = new Map<number, string>([
   [0, "Straight (Unmatted)"],
   [1, "Premultiplied (Matted)"],
 ]);
@@ -121,7 +121,7 @@ export const OutputAudio = int_enum("OutputAudio", {
 });
 export type OutputAudio = EnumValue<typeof OutputAudio>;
 
-const _OUTPUT_AUDIO_LABELS: Map<number, string> = new Map<number, string>([
+export const _OUTPUT_AUDIO_LABELS: Map<number, string> = new Map<number, string>([
   [1, "Off"],
   [2, "On"],
   [3, "Auto"],
@@ -214,7 +214,7 @@ export const OutputFormat = int_enum("OutputFormat", {
 });
 export type OutputFormat = EnumValue<typeof OutputFormat>;
 
-const _OUTPUT_FORMAT_LABELS: Map<number, string> = new Map<number, string>([
+export const _OUTPUT_FORMAT_LABELS: Map<number, string> = new Map<number, string>([
   [0, "AIFF"],
   [1, "AVI"],
   [2, "DPX/Cineon Sequence"],
@@ -235,7 +235,7 @@ const _OUTPUT_FORMAT_LABELS: Map<number, string> = new Map<number, string>([
 
 // Explicit classification (see FormatKind): never derive this from names -
 // OM/template names are user-defined and the binary has no category flag.
-const _OUTPUT_FORMAT_KINDS: Map<number, FormatKind> = new Map<number, FormatKind>([
+export const _OUTPUT_FORMAT_KINDS: Map<number, FormatKind> = new Map<number, FormatKind>([
   [OutputFormat.AIFF, FormatKind.AUDIO],
   [OutputFormat.AVI, FormatKind.MOVIE],
   [OutputFormat.DPX_CINEON_SEQUENCE, FormatKind.SEQUENCE],
@@ -254,7 +254,7 @@ const _OUTPUT_FORMAT_KINDS: Map<number, FormatKind> = new Map<number, FormatKind
   [OutputFormat.WAV, FormatKind.AUDIO],
 ]);
 
-const _FORMAT_ID_TO_OUTPUT_FORMAT: Map<string, number> = new Map<string, number>([
+export const _FORMAT_ID_TO_OUTPUT_FORMAT: Map<string, number> = new Map<string, number>([
   ["AIFF", OutputFormat.AIFF],
   [".AVI", OutputFormat.AVI],
   ["sDPX", OutputFormat.DPX_CINEON_SEQUENCE],
@@ -273,7 +273,7 @@ const _FORMAT_ID_TO_OUTPUT_FORMAT: Map<string, number> = new Map<string, number>
   ["wao_", OutputFormat.WAV],
 ]);
 
-const _OUTPUT_FORMAT_TO_FORMAT_ID: Map<number, string> = new Map<number, string>(
+export const _OUTPUT_FORMAT_TO_FORMAT_ID: Map<number, string> = new Map<number, string>(
   Array.from(_FORMAT_ID_TO_OUTPUT_FORMAT, ([k, v]) => [v, k] as [number, string]),
 );
 
@@ -309,7 +309,7 @@ export const AudioBitDepth = int_enum("AudioBitDepth", {
 });
 export type AudioBitDepth = EnumValue<typeof AudioBitDepth>;
 
-const _AUDIO_BIT_DEPTH_LABELS: Map<number, string> = new Map<number, string>([
+export const _AUDIO_BIT_DEPTH_LABELS: Map<number, string> = new Map<number, string>([
   [1, "8 Bit"],
   [2, "16 Bit"],
   [3, "24 Bit"],
@@ -342,7 +342,7 @@ export const AudioChannels = int_enum("AudioChannels", {
 });
 export type AudioChannels = EnumValue<typeof AudioChannels>;
 
-const _AUDIO_CHANNELS_LABELS: Map<number, string> = new Map<number, string>([
+export const _AUDIO_CHANNELS_LABELS: Map<number, string> = new Map<number, string>([
   [1, "Mono"],
   [2, "Stereo"],
 ]);
@@ -365,7 +365,7 @@ export const ResizeQuality = int_enum("ResizeQuality", {
 });
 export type ResizeQuality = EnumValue<typeof ResizeQuality>;
 
-const _RESIZE_QUALITY_LABELS: Map<number, string> = new Map<number, string>([
+export const _RESIZE_QUALITY_LABELS: Map<number, string> = new Map<number, string>([
   [0, "Low"],
   [1, "High"],
 ]);
@@ -452,7 +452,7 @@ export const ConvertToLinearLight = int_enum("ConvertToLinearLight", {
 });
 export type ConvertToLinearLight = EnumValue<typeof ConvertToLinearLight>;
 
-const _CONVERT_TO_LINEAR_LIGHT_LABELS: Map<number, string> = new Map<number, string>([
+export const _CONVERT_TO_LINEAR_LIGHT_LABELS: Map<number, string> = new Map<number, string>([
   [0, "Off"],
   [1, "On"],
   [2, "On for 32 bpc"],

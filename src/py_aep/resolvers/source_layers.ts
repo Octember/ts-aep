@@ -15,21 +15,9 @@ import {
   sorted,
   type PathLike,
 } from "../../pyrt/index.ts";
-import {
-  AI_COMP_EXTENSIONS,
-  PSD_COMP_EXTENSIONS,
-} from "../data/file_formats.ts";
-import {
-  read_ai_layer_ocgs,
-  read_ai_layers,
-  type AiLayer,
-} from "./ai_layers.ts";
-import {
-  PsdGroup,
-  read_psd_layers,
-  type PsdLayer,
-  type PsdNode,
-} from "./psd_layers.ts";
+import { AI_COMP_EXTENSIONS, PSD_COMP_EXTENSIONS } from "../data/file_formats.ts";
+import { read_ai_layer_ocgs, read_ai_layers, type AiLayer } from "./ai_layers.ts";
+import { PsdGroup, read_psd_layers, type PsdLayer, type PsdNode } from "./psd_layers.ts";
 
 /**
  * Return a PSD's leaf layers in document order (bottom layer first).
@@ -143,7 +131,7 @@ export function layer_index_for_stored(
   );
 }
 
-function _out_of_range(
+export function _out_of_range(
   file: PathLike,
   layer_index: number,
   names: string[],

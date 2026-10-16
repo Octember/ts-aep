@@ -5,10 +5,12 @@ import { LEGACY_NAME_FORMAT } from "../binary/chunk.ts";
 import type { HeadChunk } from "../binary/item_chunks.ts";
 import { ChunkField } from "./descriptors.ts";
 import { validate_ae_version, validate_u1 } from "./validators.ts";
-import { Project } from "./project.ts";
+import type { Project } from "./project.ts";
 import type { Preferences } from "./preferences.ts";
 import type { Viewer } from "./viewer/viewer.ts";
-import { descriptor, int, repr, split, str, ValueError, type Path } from "../../pyrt/index.ts";
+import { deferred, descriptor, int, repr, split, str, ValueError, type Path } from "../../pyrt/index.ts";
+
+const _project = deferred<typeof import("./project.ts")>(import.meta.url, "./project.ts");
 
 // Version-gated parts After Effects expects from the format version alone,
 // whatever the file holds. Measured on AE 2026: projects relabelled across
@@ -16,10 +18,10 @@ import { descriptor, int, repr, split, str, ValueError, type Path } from "../../
 // is damaged", "missing data in file"), and so does an AE 16 project relabelled
 // 22 (without the AE 17 Media Replacement folder id), while relabels between
 // 15 and 16, 17 and 18, 18 and 22, and among 23-26 open unchanged.
-const _LAYOUT_PARTS = ["matte layer id", "media replacement folder id"] as const;
+export const _LAYOUT_PARTS = ["matte layer id", "media replacement folder id"] as const;
 
 /** A version whose file layout matches the project's. */
-function _validate_version(value: any, obj: Application): void {
+export function _validate_version(value: any, obj: Application): void {
   validate_ae_version(value);
   const current = obj._head.ae_version_major;
   const target = int(split(str(value), ".", 1)[0]);
@@ -133,7 +135,7 @@ export class Application {
    * See `py_aep.new`.
    */
   static _new(version: string, ae_preferences_dir: Path | null = null, platform: string | null = null): Application {
-    const project = Project._new(version, ae_preferences_dir, platform);
+    const project = _project().Project._new(version, ae_preferences_dir, platform);
     return new this({ _head: project._head, project, active_viewer: null });
   }
 

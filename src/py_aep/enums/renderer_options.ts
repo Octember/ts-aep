@@ -38,7 +38,7 @@ export const ShadowMapResolution = int_enum(
 );
 export type ShadowMapResolution = EnumValue<typeof ShadowMapResolution>;
 
-const _SHADOW_MAP_RESOLUTION_LABELS: Map<number, string> = new Map<number, string>([
+export const _SHADOW_MAP_RESOLUTION_LABELS: Map<number, string> = new Map<number, string>([
   [0, "Comp Size"],
   [1, "250"],
   [2, "500"],
@@ -74,7 +74,7 @@ export const EnvironmentLightShadowResolution = int_enum(
 );
 export type EnvironmentLightShadowResolution = EnumValue<typeof EnvironmentLightShadowResolution>;
 
-const _ENV_LIGHT_SHADOW_RESOLUTION_LABELS: Map<number, string> = new Map<number, string>([
+export const _ENV_LIGHT_SHADOW_RESOLUTION_LABELS: Map<number, string> = new Map<number, string>([
   [0, "Half (2MB)"],
   [1, "Full (16MB)"],
   [2, "Double (128MB)"],

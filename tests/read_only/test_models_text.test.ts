@@ -10,18 +10,7 @@ import { len, Path, py_eq } from "../../src/pyrt/index.ts";
 import { parse as parse_aep } from "../../src/py_aep/index.ts";
 import "../../src/py_aep/binary/_register.ts";
 import { get_comp } from "../conftest.ts";
-import {
-  AutoKernType,
-  BaselineDirection,
-  DigitSet,
-  FontBaselineOption,
-  FontCapsOption,
-  LeadingType,
-  LineJoinType,
-  LineOrientation,
-  ParagraphDirection,
-  ParagraphJustification,
-} from "../../src/py_aep/enums/index.ts";
+import { AutoKernType, BaselineDirection, DigitSet, FontBaselineOption, FontCapsOption, LeadingType, LineJoinType, LineOrientation, ParagraphDirection, ParagraphJustification } from "../../src/py_aep/enums/index.ts";
 
 // Path(__file__).parent x3 is the TS root (this file lives in tests/read_only).
 const SAMPLES_DIR = new Path(import.meta.path).parent.parent.parent.div("samples", "models", "layer");

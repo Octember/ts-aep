@@ -23,23 +23,9 @@ import {
   zip,
 } from "../../src/pyrt/index.ts";
 import "../../src/py_aep/binary/_register.ts";
-import {
-  get_comp,
-  get_comp_from_json_by_name,
-  get_first_layer,
-  get_layer,
-  load_expected,
-  parse_project,
-} from "../conftest.ts";
+import { get_comp, get_comp_from_json_by_name, get_first_layer, get_layer, load_expected, parse_project } from "../conftest.ts";
 import { Project, parse as parse_aep } from "../../src/py_aep/index.ts";
-import {
-  KeyframeInterpolationType,
-  MaskFeatherFalloff,
-  MaskMode,
-  MaskMotionBlur,
-  PropertyType,
-  PropertyValueType,
-} from "../../src/py_aep/enums/index.ts";
+import { KeyframeInterpolationType, MaskFeatherFalloff, MaskMode, MaskMotionBlur, PropertyType, PropertyValueType } from "../../src/py_aep/enums/index.ts";
 import { MaskPropertyGroup, Property, PropertyGroup } from "../../src/py_aep/models/index.ts";
 import type { Layer } from "../../src/py_aep/models/index.ts";
 

@@ -11,12 +11,12 @@ import { NUMBER_PCT_RE, clamp01 } from "./_util.ts";
 
 // Python: `if TYPE_CHECKING: Rgba = tuple[float, float, float, float]`.
 // A type-checker-only name, so it has no runtime value here either.
-type Rgba = readonly [number, number, number, number];
+export type Rgba = readonly [number, number, number, number];
 
 // SVG/CSS named colors (the full set), as 0-255 RGB.
 // A Map, not an object: the key is arbitrary user input, so "constructor" and
 // "__proto__" must miss rather than hit Object.prototype.
-const _NAMED = new Map<string, readonly [number, number, number]>([
+export const _NAMED = new Map<string, readonly [number, number, number]>([
   ["aliceblue", [240, 248, 255]],
   ["antiquewhite", [250, 235, 215]],
   ["aqua", [0, 255, 255]],
@@ -168,21 +168,21 @@ const _NAMED = new Map<string, readonly [number, number, number]>([
 ]);
 
 // Python `re.match` anchors at the start of the string, hence the `^`.
-const _RGB_RE = /^rgba?\(([^)]*)\)/i;
-const _HSL_RE = /^hsla?\(([^)]*)\)/i;
+export const _RGB_RE = /^rgba?\(([^)]*)\)/i;
+export const _HSL_RE = /^hsla?\(([^)]*)\)/i;
 
 // TODO(pyrt): `re.findall` has no shim yet. This local stand-in returns each
 // full match, which is what Python does because NUMBER_PCT_RE has no groups.
 // TODO(port): Python `\d` also matches non-ASCII Unicode digits, which JS `\d`
 // does not, so a token like "٥" is skipped here. Only matters if _util's regex is ASCII.
-function findall(re: RegExp, s: string): string[] {
+export function findall(re: RegExp, s: string): string[] {
   const flags = re.flags.includes("g") ? re.flags : re.flags + "g";
   // _util.ts anchors its patterns with `^` (re.match emulation); findall scans, so drop the anchor.
   const source = re.source.startsWith("^") ? re.source.slice(1) : re.source;
   return Array.from(s.matchAll(new RegExp(source, flags)), (m) => m[0]);
 }
 
-function _component(token: string, scale: number = 255.0): number {
+export function _component(token: string, scale: number = 255.0): number {
   token = strip(token);
   if (token.endsWith("%")) return float(token.slice(0, -1)) / 100.0;
   return float(token) / scale;
@@ -224,7 +224,7 @@ export function parse_color(value: string | null, current: Rgba = [0.0, 0.0, 0.0
   return null;
 }
 
-function _parse_hex(h: string): Rgba | null {
+export function _parse_hex(h: string): Rgba | null {
   // Python `len` and `h[i:j]` count code points, so work on code points here.
   let cps = Array.from(h);
   if (len(cps) === 3 || len(cps) === 4) cps = cps.flatMap((c) => [c, c]);
@@ -250,7 +250,7 @@ function _parse_hex(h: string): Rgba | null {
   return [r, g, b, a];
 }
 
-function _parse_hsl(v: string): Rgba | null {
+export function _parse_hsl(v: string): Rgba | null {
   const m = _HSL_RE.exec(v);
   if (!m) return null;
   const parts = findall(NUMBER_PCT_RE, m[1]);

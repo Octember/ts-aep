@@ -14,12 +14,7 @@ import { default_sequence_fps, label_index } from "../preferences.ts";
 import { FileSource } from "../sources/file.ts";
 import { PlaceholderSource } from "../sources/placeholder.ts";
 import { SolidSource } from "../sources/solid.ts";
-import {
-  validate_name,
-  validate_one_of,
-  validate_pixel_aspect,
-  validate_positive_int,
-} from "../validators.ts";
+import { validate_name, validate_one_of, validate_pixel_aspect, validate_positive_int } from "../validators.ts";
 import { AVItem } from "./av_item.ts";
 import {
   Path,

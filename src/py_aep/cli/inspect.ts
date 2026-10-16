@@ -41,8 +41,8 @@ import {
 
 // TODO(pyrt): builtin print(..., file=sys.stderr). console.log/console.error
 // match print's trailing newline.
-const sys = { stderr: process.stderr };
-function print(text: string, kw: { file?: unknown } = {}): void {
+export const sys = { stderr: process.stderr };
+export function print(text: string, kw: { file?: unknown } = {}): void {
   if (kw.file === sys.stderr) console.error(text);
   else console.log(text);
 }
@@ -51,7 +51,7 @@ function print(text: string, kw: { file?: unknown } = {}): void {
 
 
 /** Return size or value detail for a leaf chunk. */
-function _chunk_detail(chunk: Chunk): string {
+export function _chunk_detail(chunk: Chunk): string {
   const val = getattr(chunk, "value", null);
   if (val != null) {
     let v = repr(val);
@@ -94,7 +94,7 @@ export function print_tree(chunk: Chunk, depth: number = 0, max_depth: number = 
  * @param index 0-based item index within `LIST:Fold`.
  * @returns Exit code (0 on success, 1 on error).
  */
-function _inspect_item(path: Path, index: number): number {
+export function _inspect_item(path: Path, index: number): number {
   const fp = new BytesIO(path.read_bytes());
   const [rifx, _] = read_aep(fp);
 
@@ -148,7 +148,7 @@ function _inspect_item(path: Path, index: number): number {
  * @param path Path to the `.aep` file.
  * @returns Exit code.
  */
-function _item_summary(path: Path): number {
+export function _item_summary(path: Path): number {
   const fp = new BytesIO(path.read_bytes());
   const [rifx, _] = read_aep(fp);
 
@@ -181,7 +181,7 @@ function _item_summary(path: Path): number {
  * @param path Path to the `.aep` file.
  * @returns Exit code.
  */
-function _list_chunks(path: Path): number {
+export function _list_chunks(path: Path): number {
   const fp = new BytesIO(path.read_bytes());
   const [rifx, _xmp] = read_aep(fp);
 
@@ -209,7 +209,7 @@ function _list_chunks(path: Path): number {
  * @param chunk_path Full or partial chunk path (e.g. `LIST:Fold/ftts`).
  * @returns Exit code.
  */
-function _dump_chunk(path: Path, chunk_path: string): number {
+export function _dump_chunk(path: Path, chunk_path: string): number {
   const chunks = extract_leaf_chunks(path);
 
   if (!chunks.has(chunk_path)) {
@@ -246,9 +246,9 @@ function _dump_chunk(path: Path, chunk_path: string): number {
 // error exit status 2. Help and usage layout are simplified and not
 // byte-identical to argparse (TODO(port)). Value-conversion errors say
 // "invalid value" where argparse says "invalid int value" (TODO(port)).
-const NEGATIVE_NUMBER = /^-\d+$|^-\d*\.\d+$/;
+export const NEGATIVE_NUMBER = /^-\d+$|^-\d*\.\d+$/;
 
-type ArgSpec = {
+export type ArgSpec = {
   dest: string;
   flag: string | null;
   positional: boolean;
@@ -259,7 +259,7 @@ type ArgSpec = {
   help: string;
 };
 
-class ArgumentParser {
+export class ArgumentParser {
   private readonly prog: string;
   private readonly description: string;
   private readonly epilog: string;
@@ -371,7 +371,7 @@ class ArgumentParser {
   }
 }
 
-const argparse = { ArgumentParser, RawDescriptionHelpFormatter: "RawDescriptionHelpFormatter" };
+export const argparse = { ArgumentParser, RawDescriptionHelpFormatter: "RawDescriptionHelpFormatter" };
 
 /** CLI entry point for aep-inspect command. */
 export function main(): number {

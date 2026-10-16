@@ -9,53 +9,19 @@ import { to_f4, truncate_utf8 } from "../binary/bin_utils.ts";
 import { write_aep } from "../binary/chunk.ts";
 import type { Chunk } from "../binary/chunk.ts";
 import { ListChunk } from "../binary/chunk.ts";
-import {
-  build_ai_layer_opti_data,
-  build_psd_flattened_opti_data,
-  build_text_opti_data,
-} from "../binary/footage_chunks.ts";
+import { build_ai_layer_opti_data, build_psd_flattened_opti_data, build_text_opti_data } from "../binary/footage_chunks.ts";
 import { HeadChunk, NhedChunk, NnhdChunk, TimeDisplayPrefItem } from "../binary/item_chunks.ts";
 import { DwgaChunk } from "../binary/misc_chunks.ts";
 import { CpidChunk, FdtaChunk, SvapChunk, WsnmChunk, WsnsChunk } from "../binary/project_chunks.ts";
 import { F8Chunk, U1Chunk, U2Chunk, U4Chunk, U4LeChunk, Utf8Chunk } from "../binary/scalar_chunks.ts";
-import {
-  PENDING_ASCENDCOUNT,
-  ChunkNotFoundError,
-  dump_alas,
-  filter_by_type,
-  find_by_list_type,
-  find_by_type,
-  index_by_identity,
-  recursive_find,
-  toggle_flag_chunk,
-} from "../binary/utils.ts";
+import { PENDING_ASCENDCOUNT, ChunkNotFoundError, dump_alas, filter_by_type, find_by_list_type, find_by_type, index_by_identity, recursive_find, toggle_flag_chunk } from "../binary/utils.ts";
 import type { LdtaChunk } from "../binary/layer_chunks.ts";
 import type { RenderSettingsItem } from "../binary/render_chunks.ts";
-import {
-  build_icc_envelope,
-  build_ocio_display_envelope,
-  envelope_profile_name,
-} from "../color/envelope.ts";
+import { build_icc_envelope, build_ocio_display_envelope, envelope_profile_name } from "../color/envelope.ts";
 import { IccProfileLibrary, icc_profile_description, icc_profile_id } from "../color/icc.ts";
-import {
-  list_config_color_spaces,
-  ocio_color_profile_envelope,
-  require_ocio_config,
-  resolve_ocio_config,
-} from "../color/ocio.ts";
+import { list_config_color_spaces, ocio_color_profile_envelope, require_ocio_config, resolve_ocio_config } from "../color/ocio.ts";
 import { AI_COMP_EXTENSIONS, EPS_COMP_EXTENSIONS, PSD_COMP_EXTENSIONS } from "../data/file_formats.ts";
-import {
-  BitsPerChannel,
-  ColorManagementSystem,
-  FeetFramesFilmType,
-  FootageTimecodeDisplayStartType,
-  FramesCountType,
-  GpuAccelType,
-  ImportAsType,
-  LutInterpolationMethod,
-  PREFType,
-  TimeDisplayType,
-} from "../enums/index.ts";
+import { BitsPerChannel, ColorManagementSystem, FeetFramesFilmType, FootageTimecodeDisplayStartType, FramesCountType, GpuAccelType, ImportAsType, LutInterpolationMethod, PREFType, TimeDisplayType } from "../enums/index.ts";
 import { adobe_color_profile_names } from "../enums/mappings.ts";
 import { EMPTY_BOX, footage_size, read_ai_layer_bounds } from "../resolvers/ai_bounds.ts";
 import { read_ai_layer_ocgs } from "../resolvers/ai_layers.ts";
@@ -65,23 +31,10 @@ import { MediaInfo } from "../resolvers/media_probe.ts";
 import { platform_path, relative_path_counts } from "../resolvers/platform_paths.ts";
 import { FlattenedPsdError, PsdGroup, PsdLayer, read_psd_layers } from "../resolvers/psd_layers.ts";
 import { parse_vector_mask } from "../resolvers/psd_paths.ts";
-import {
-  has_enabled_styles,
-  parse_layer_styles,
-  read_global_light,
-} from "../resolvers/psd_styles.ts";
+import { has_enabled_styles, parse_layer_styles, read_global_light } from "../resolvers/psd_styles.ts";
 import type { PsdLayerStyles } from "../resolvers/psd_styles.ts";
 import { LayerGroupSpec, LayerSpec } from "../synthesis/layer.ts";
-import {
-  _ADV_BLEND_SPECS,
-  _BLEND_OPTIONS_SPECS,
-  _LAYER_STYLE_CHILD_SPECS,
-  _STYLE_ANGLE_SUFFIXES,
-  _STYLE_ENUM_SUFFIXES,
-  _STYLE_HINT_BOUNDS,
-  _STYLE_HINT_BOUNDS_EXCEPTIONS,
-  PropSpec,
-} from "../synthesis/property.ts";
+import { _ADV_BLEND_SPECS, _BLEND_OPTIONS_SPECS, _LAYER_STYLE_CHILD_SPECS, _STYLE_ANGLE_SUFFIXES, _STYLE_ENUM_SUFFIXES, _STYLE_HINT_BOUNDS, _STYLE_HINT_BOUNDS_EXCEPTIONS, PropSpec } from "../synthesis/property.ts";
 import { ChunkField } from "./descriptors.ts";
 import { ImportOptions } from "./import_options.ts";
 import { CompItem } from "./items/composition.ts";
@@ -99,28 +52,12 @@ import { Shape } from "./properties/shape.ts";
 import { RenderQueue } from "./renderqueue/render_queue.ts";
 import type { AVLayer } from "./layers/av_layer.ts";
 import type { Layer } from "./layers/layer.ts";
-import { PlaceholderSource } from "./sources/placeholder.ts";
 import { PSD_LAYER_STYLES_C8, FileSource, ai_document_profile, check_footage_size, named_media_profile, psd_layer_footage } from "./sources/file.ts";
 import { _replace_layer_font } from "./text/ranges.ts";
 import type { FontObject } from "./text/font_object.ts";
 import type { TextDocument } from "./text/text_document.ts";
-import {
-  _validate_number,
-  validate_bool,
-  validate_enum,
-  validate_font_name,
-  validate_one_of,
-  validate_path,
-  validate_path_does_not_exist,
-  validate_path_exists,
-  validate_string,
-  validate_u4,
-} from "./validators.ts";
-import { UnsupportedSVGError, read_svg } from "../svg/index.ts";
-import { build_shape_layer_contents } from "../svg/build.ts";
-import { effect_definition_entries } from "../parsers/effect.ts";
+import { _validate_number, validate_bool, validate_enum, validate_font_name, validate_one_of, validate_path, validate_path_does_not_exist, validate_path_exists, validate_string, validate_u4 } from "./validators.ts";
 import type { OutputModuleTemplate } from "../parsers/templates.ts";
-import { parse_output_templates, parse_render_templates } from "../parsers/templates.ts";
 
 import {
   ValueError,
@@ -156,25 +93,32 @@ import {
   descriptor,
   format,
   float_repr,
+  deferred,
 } from "../../pyrt/index.ts";
 import type { PathLike } from "../../pyrt/index.ts";
 
+const _effect = deferred<typeof import("../parsers/effect.ts")>(import.meta.url, "../parsers/effect.ts");
+const _templates = deferred<typeof import("../parsers/templates.ts")>(import.meta.url, "../parsers/templates.ts");
+const _placeholder = deferred<typeof import("./sources/placeholder.ts")>(import.meta.url, "./sources/placeholder.ts");
+const _svg = deferred<typeof import("../svg/index.ts")>(import.meta.url, "../svg/index.ts");
+const _build = deferred<typeof import("../svg/build.ts")>(import.meta.url, "../svg/build.ts");
+
 /** `itertools.count(start)` (the clip-run counter). */
 // TODO(port): itertools has no pyrt shim; a local generator stands in for `count`.
-function* count(start = 0): Generator<number> {
+export function* count(start = 0): Generator<number> {
   for (let i = start; ; i++) yield i;
 }
 
 /** `json.loads` for an object: a dict is a Map, insertion order kept. */
 // json.dumps parity: `json_loads` / `json_dumps` below reproduce Python's
 // separators and ensure_ascii escaping for the cms and alas records.
-function json_loads(text: string): Map<string, any> {
+export function json_loads(text: string): Map<string, any> {
   return new Map(Object.entries(JSON.parse(text)));
 }
 
 // json.dumps parity: ensure_ascii escapes every char outside space..~ as \uXXXX
 // (per UTF-16 unit, which is how Python spells astral characters too).
-function json_str(s: string): string {
+export function json_str(s: string): string {
   let out = '"';
   for (let i = 0; i < s.length; i++) {
     const ch = s[i];
@@ -197,7 +141,7 @@ function json_str(s: string): string {
  */
 // TODO(port): int/float distinction. A float with an integral value (1.0) that
 // came from JSON parses to a JS number and is written as `1`, not `1.0`.
-function json_dumps(value: any): string {
+export function json_dumps(value: any): string {
   if (value == null) return "null";
   if (typeof value === "boolean") return value ? "true" : "false";
   if (typeof value === "number") return Number.isInteger(value) ? String(value) : float_repr(value);
@@ -209,17 +153,17 @@ function json_dumps(value: any): string {
 
 // TODO(port): xml.etree.ElementTree has no pyrt shim. The XMP packet is parsed
 // and serialized by these two stubs, which fail loudly until an XML library is picked.
-function ET_fromstring(_text: string): any {
+export function ET_fromstring(_text: string): any {
   throw new NotImplementedError("xml.etree.ElementTree.fromstring is not ported");
 }
 
-function ET_tostring(_el: any): string {
+export function ET_tostring(_el: any): string {
   throw new NotImplementedError("xml.etree.ElementTree.tostring is not ported");
 }
 
 /** Python `type(x).__name__` for an error message. */
 // TODO(port): no pyrt shim for `type(x).__name__`; approximated from JS types.
-function py_type_name(x: any): string {
+export function py_type_name(x: any): string {
   if (x == null) return "NoneType";
   if (typeof x === "boolean") return "bool";
   if (typeof x === "number") return Number.isInteger(x) ? "int" : "float";
@@ -236,7 +180,7 @@ function py_type_name(x: any): string {
  * read their overrides from (same non-enumerable Map as `descriptors.ts`).
  */
 // TODO(pyrt): no shim for `obj.__dict__`; a non-enumerable Map per instance stands in for it.
-function instance_dict(obj: any): Map<string, any> {
+export function instance_dict(obj: any): Map<string, any> {
   if (!Object.prototype.hasOwnProperty.call(obj, "__dict__")) {
     Object.defineProperty(obj, "__dict__", { value: new Map<string, any>(), enumerable: false });
   }
@@ -244,13 +188,13 @@ function instance_dict(obj: any): Map<string, any> {
 }
 
 /** `isinstance(x, (list, tuple))` as used by the port. */
-function is_list_or_tuple(x: any): boolean {
+export function is_list_or_tuple(x: any): boolean {
   return Array.isArray(x);
 }
 
-const _validate_expression_engine = validate_one_of(["extendscript", "javascript-1.0"]);
+export const _validate_expression_engine = validate_one_of(["extendscript", "javascript-1.0"]);
 
-function _validate_gpu_accel_type(value: GpuAccelType | string, obj: Project): void {
+export function _validate_gpu_accel_type(value: GpuAccelType | string, obj: Project): void {
   /** Accept a `GpuAccelType` or a renderer UUID string (what the getter
    * returns for an id it does not recognise). */
   if (typeof value === "string") {
@@ -260,7 +204,7 @@ function _validate_gpu_accel_type(value: GpuAccelType | string, obj: Project): v
   }
 }
 
-function _font_post_script_name(font: FontObject | string): string {
+export function _font_post_script_name(font: FontObject | string): string {
   /** The PostScript name of a `replace_font` argument. */
   if (typeof font === "string") {
     validate_font_name(font);
@@ -278,12 +222,12 @@ function _font_post_script_name(font: FontObject | string): string {
 // factory default, not a preference: verified by deleting every AE pref
 // file and cold-starting AE (regenerated factory prefs, "Composition
 // Settings7" empty) - a layered PSD still imported at 29.97 fps / 30 s.
-const _LAYERED_COMP_FRAME_RATE = 29.97;
-const _LAYERED_COMP_DURATION_SECONDS = 30.0;
+export const _LAYERED_COMP_FRAME_RATE = 29.97;
+export const _LAYERED_COMP_DURATION_SECONDS = 30.0;
 
 /** Wrap a setter with `@requires_version(N)`: the setter body is passed to the
  * decorator factory once, at module load, and invoked with the project as `this`. */
-const _set_linearize_working_space = requires_version(16)(function linearize_working_space(
+export const _set_linearize_working_space = requires_version(16)(function linearize_working_space(
   this: Project,
   value: boolean,
 ): void {
@@ -293,7 +237,7 @@ const _set_linearize_working_space = requires_version(16)(function linearize_wor
   toggle_flag_chunk(this._rifx, "lnrp", value, { after_types: ["lnrb", "cpid"] });
 });
 
-const _set_expression_engine = requires_version(16)(function expression_engine(
+export const _set_expression_engine = requires_version(16)(function expression_engine(
   this: Project,
   value: string,
 ): void {
@@ -308,7 +252,7 @@ const _set_expression_engine = requires_version(16)(function expression_engine(
   }
 });
 
-const _set_color_management_system = requires_version(24)(function color_management_system(
+export const _set_color_management_system = requires_version(24)(function color_management_system(
   this: Project,
   value: any,
 ): void {
@@ -316,7 +260,7 @@ const _set_color_management_system = requires_version(24)(function color_managem
   this._update_cms_setting("colorManagementSystem", int(value));
 });
 
-const _set_lut_interpolation_method = requires_version(24)(function lut_interpolation_method(
+export const _set_lut_interpolation_method = requires_version(24)(function lut_interpolation_method(
   this: Project,
   value: any,
 ): void {
@@ -324,7 +268,7 @@ const _set_lut_interpolation_method = requires_version(24)(function lut_interpol
   this._update_cms_setting("lutInterpolationMethod", int(value));
 });
 
-const _set_ocio_configuration_file = requires_version(24)(function ocio_configuration_file(
+export const _set_ocio_configuration_file = requires_version(24)(function ocio_configuration_file(
   this: Project,
   value: PathLike,
 ): void {
@@ -591,7 +535,7 @@ export class Project {
      * walk is computed lazily on first lookup and reused across adds.
      */
     if (this._effect_definitions_cache == null) {
-      this._effect_definitions_cache = effect_definition_entries(this._rifx.chunks);
+      this._effect_definitions_cache = _effect().effect_definition_entries(this._rifx.chunks);
     }
     return this._effect_definitions_cache;
   }
@@ -1297,7 +1241,7 @@ export class Project {
       name = "Placeholder";
     }
 
-    const source = PlaceholderSource._new(name, width, height, frame_rate, duration);
+    const source = _placeholder().PlaceholderSource._new(name, width, height, frame_rate, duration);
     const item = FootageItem._new(source, { project: this, parent_folder: this.root_folder });
 
     // Insert into root folder's chunk tree and register
@@ -1501,7 +1445,7 @@ export class Project {
 
   /** Import an SVG as a cropped comp (one shape layer of its art). */
   _import_svg_cropped(file: Path): CompItem {
-    const doc = read_svg(file);
+    const doc = _svg().read_svg(file);
     // AE truncates the canvas to whole pixels (2434.9 -> 2434).
     const width = int(doc.width);
     const height = int(doc.height);
@@ -1509,7 +1453,7 @@ export class Project {
       // AE's own import refuses a canvas under 1 px a side ("width and
       // height must be > 0") but builds 1 to 3 px compositions, below
       // the 4 px `addComp` floor (AE 2026).
-      throw new UnsupportedSVGError(
+      throw new (_svg().UnsupportedSVGError)(
         `SVG canvas ${format(doc.width, "g")} x ${format(doc.height, "g")} is outside the ` +
           "1 to 30000 px composition size range (width / height or " +
           "viewBox missing, invalid or out of range)",
@@ -1532,7 +1476,7 @@ export class Project {
     (transform.__getitem__("ADBE Anchor Point") as Property).value = [0.0, 0.0, 0.0];
     (transform.__getitem__("ADBE Position") as Property).value = [0.0, 0.0, 0.0];
     const contents = layer.property("ADBE Root Vectors Group") as PropertyGroup;
-    build_shape_layer_contents(contents, doc.drawables);
+    _build().build_shape_layer_contents(contents, doc.drawables);
     return comp;
   }
 
@@ -2350,7 +2294,7 @@ export class Project {
     if (this._render_templates_cache != null) return this._render_templates_cache;
 
     const prefs_dir = this._require_prefs_dir("render settings");
-    const [templates, default_index] = parse_render_templates(prefs_dir);
+    const [templates, default_index] = _templates().parse_render_templates(prefs_dir);
     this._default_render_template_index = default_index;
 
     this._render_templates_cache = templates;
@@ -2371,7 +2315,7 @@ export class Project {
     if (this._output_templates_cache != null) return this._output_templates_cache;
 
     const prefs_dir = this._require_prefs_dir("output module");
-    const [templates] = parse_output_templates(prefs_dir);
+    const [templates] = _templates().parse_output_templates(prefs_dir);
 
     this._output_templates_cache = templates;
     return this._output_templates_cache;
@@ -2642,7 +2586,7 @@ descriptor(
  * AE sums the two 16.16 edges in 32 bits, so artwork near the 32768 pt
  * limit wraps to the far side of the page; py keeps the true centre.
  */
-function _ai_cropped_transform(
+export function _ai_cropped_transform(
   box: [number, number, number, number],
   page_height: number,
 ): [[number, number], [number, number]] {
@@ -2656,7 +2600,7 @@ function _ai_cropped_transform(
 }
 
 /** Get the list of effect names used in the project. */
-function _get_effect_names(root_chunks: Chunk[]): string[] {
+export function _get_effect_names(root_chunks: Chunk[]): string[] {
   const pefl_chunk = find_by_list_type(root_chunks, "Pefl");
   const pjef_chunks = filter_by_type(pefl_chunk.chunks, "pjef");
   return pjef_chunks.map((chunk) => (chunk as Utf8Chunk).value);
@@ -2672,13 +2616,13 @@ function _get_effect_names(root_chunks: Chunk[]): string[] {
 // scalar-stamped here although `_style_leaf_canon` leaves the spec
 // uncanonized, the 2D point rows come from the psd_styles_offset_phase
 // fixture, and the blend-options leaves are keyed by full match name.
-const _STYLE_TDB4_ENUM: any[] = [0x0001, null, 0x04, 0x04, 0x04, null, null, false];
-const _STYLE_TDB4_SCALAR: any[] = [0xffff, null, null, null, null, null, null, false];
-const _STYLE_TDB4_ANGLE: any[] = [0xffff, 0xff, 0xff, 0x04, 0x06, null, null, false];
-const _STYLE_TDB4_TOGGLE: any[] = [0xffff, null, 0x04, 0x04, 0x04, null, null, false];
-const _STYLE_TDB4_POINT: any[] = [0xffff, 0xff, 0xff, 0x04, 0x06, 3, false, true];
+export const _STYLE_TDB4_ENUM: any[] = [0x0001, null, 0x04, 0x04, 0x04, null, null, false];
+export const _STYLE_TDB4_SCALAR: any[] = [0xffff, null, null, null, null, null, null, false];
+export const _STYLE_TDB4_ANGLE: any[] = [0xffff, 0xff, 0xff, 0x04, 0x06, null, null, false];
+export const _STYLE_TDB4_TOGGLE: any[] = [0xffff, null, 0x04, 0x04, 0x04, null, null, false];
+export const _STYLE_TDB4_POINT: any[] = [0xffff, 0xff, 0xff, 0x04, 0x06, 3, false, true];
 
-const _STYLE_TDB4_CANON = new Map<string, any[]>();
+export const _STYLE_TDB4_CANON = new Map<string, any[]>();
 for (const k of _STYLE_ENUM_SUFFIXES) _STYLE_TDB4_CANON.set(k, _STYLE_TDB4_ENUM);
 for (const k of _STYLE_ANGLE_SUFFIXES) _STYLE_TDB4_CANON.set(k, _STYLE_TDB4_ANGLE);
 for (const k of _STYLE_HINT_BOUNDS.keys()) _STYLE_TDB4_CANON.set(k, _STYLE_TDB4_SCALAR);
@@ -2697,7 +2641,7 @@ _STYLE_TDB4_CANON.set("ADBE B Channel Blend", _STYLE_TDB4_TOGGLE);
 _STYLE_TDB4_CANON.set("ADBE Blend Interior", _STYLE_TDB4_TOGGLE);
 
 /** Apply the AE tdb4 canon to a just-written Layer Styles leaf. */
-function _stamp_style_tdb4(leaf: Property, match_name: string, timebase: number, point_aspect: number): void {
+export function _stamp_style_tdb4(leaf: Property, match_name: string, timebase: number, point_aspect: number): void {
   const tdb4 = (leaf as any)._tdb4;
   if (tdb4 == null) return;
   const canon = py_or(
@@ -2731,7 +2675,7 @@ function _stamp_style_tdb4(leaf: Property, match_name: string, timebase: number,
 // write a parameter leaf only when its value differs from these (AE 2026);
 // the synthesis tables are the byte-verified source, and only the Layer
 // Styles + Blend Options tables can carry keys the resolver emits.
-const _STYLE_SPEC_DEFAULTS = new Map<string, any>();
+export const _STYLE_SPEC_DEFAULTS = new Map<string, any>();
 for (const spec_list of _LAYER_STYLE_CHILD_SPECS.values()) {
   for (const spec of spec_list) {
     if (spec.value != null) _STYLE_SPEC_DEFAULTS.set(spec.match_name, spec.value);
@@ -2742,7 +2686,7 @@ for (const spec of [..._BLEND_OPTIONS_SPECS, ..._ADV_BLEND_SPECS]) {
 }
 
 /** Map of match name -> leaf under `group`, first-in-tree-order. */
-function _style_leaf_map(group: PropertyGroup): Map<string, Property> {
+export function _style_leaf_map(group: PropertyGroup): Map<string, Property> {
   const leaves = new Map<string, Property>();
   for (const child of group.properties) {
     if (child instanceof PropertyGroup) {
@@ -2769,7 +2713,7 @@ function _style_leaf_map(group: PropertyGroup): Map<string, Property> {
  * 0x01, enabled style 0x01, absent style 0x02; plain skeleton: 0x03 and
  * 0x02 - functional bits, fixture-pinned).
  */
-function _serialize_import_layer_styles(layer: Layer, styles: PsdLayerStyles | null, source_name: string): void {
+export function _serialize_import_layer_styles(layer: Layer, styles: PsdLayerStyles | null, source_name: string): void {
   const container = layer.__getitem__("ADBE Layer Styles") as PropertyGroup;
   // AE enables the container + Blend Options chain when any style is
   // enabled OR the layer carries blend-options data (a Photoshop Fill

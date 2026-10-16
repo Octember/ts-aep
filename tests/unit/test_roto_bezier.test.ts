@@ -7,11 +7,7 @@ import { describe, expect, test } from "bun:test";
 
 import { approx } from "../../src/pyrt/pytest.ts";
 import { py_bool, py_eq } from "../../src/pyrt/index.ts";
-import {
-  DEFAULT_TENSION,
-  keyframe_tensions,
-  roto_bezier_tangents,
-} from "../../src/py_aep/resolvers/roto_bezier.ts";
+import { DEFAULT_TENSION, keyframe_tensions, roto_bezier_tangents } from "../../src/py_aep/resolvers/roto_bezier.ts";
 
 function _flat(points: number[][]): number[] {
   return points.flatMap((point) => point);

@@ -26,12 +26,7 @@ import {
   py_bool,
   type PathLike,
 } from "../../pyrt/index.ts";
-import {
-  CosParser,
-  IndirectObject,
-  IndirectReference,
-  decode_pdf_text_string,
-} from "../cos/index.ts";
+import { CosParser, IndirectObject, IndirectReference, decode_pdf_text_string } from "../cos/index.ts";
 // TODO(port): `SyntaxError` is caught here as the COS lexer's own error class
 // (cos.ts `SyntaxError_`), imported from the module rather than the index.
 import { SyntaxError_ } from "../cos/cos.ts";
@@ -73,13 +68,13 @@ export const _OBJ_HEADER_WINDOW = 64;
  * Latin-1 text with one character per byte, so regex match offsets are the
  * byte offsets of the Python `bytes` patterns (`rb"..."`).
  */
-function latin1(data: Uint8Array): string {
+export function latin1(data: Uint8Array): string {
   return Buffer.from(data).toString("latin1");
 }
 
 // TODO(pyrt): no RecursionError shim. A pathologically nested COS object
 // overflows the JS stack, which surfaces as a RangeError about the call stack.
-function is_malformed(exc: unknown): boolean {
+export function is_malformed(exc: unknown): boolean {
   return (
     exc instanceof SyntaxError_ ||
     (exc instanceof RangeError && /call stack/.test(exc.message))
@@ -250,7 +245,7 @@ export function read_ai_layer_ocgs(
 /** `isinstance(x, (str, bytes))`. A `CosString` is a `str` subclass in Python,
  * so it is a `String` object here, not a primitive.
  */
-function is_str_or_bytes(x: any): boolean {
+export function is_str_or_bytes(x: any): boolean {
   return typeof x === "string" || x instanceof String || x instanceof Uint8Array;
 }
 
@@ -275,7 +270,7 @@ export const _STREAM_RE = /stream\r?\n([\s\S]*?)\r?\nendstream/g;
 
 // TODO(port): zlib.error parity. Node's inflateSync throws for any corrupt
 // stream, so every inflate failure is treated as Python's zlib.error here.
-function inflate_or_null(body: string): Uint8Array | null {
+export function inflate_or_null(body: string): Uint8Array | null {
   try {
     return inflateSync(Buffer.from(body, "latin1"));
   } catch {

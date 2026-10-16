@@ -11,12 +11,7 @@ import { describe, expect, test } from "bun:test";
 
 import { approx as pytest_approx, raises, warns } from "../../src/pyrt/pytest.ts";
 import { b, bytes_, encode, getitem, len, py_eq, range, sorted } from "../../src/pyrt/index.ts";
-import {
-  STD14_EXTENT,
-  STD14_FIRST_CODE,
-  STD14_STANDARD_QUOTES,
-  STD14_WIDTHS,
-} from "../../src/py_aep/data/std14_metrics.ts";
+import { STD14_EXTENT, STD14_FIRST_CODE, STD14_STANDARD_QUOTES, STD14_WIDTHS } from "../../src/py_aep/data/std14_metrics.ts";
 import { EMPTY_BOX, footage_size, read_ai_layer_bounds } from "../../src/py_aep/resolvers/ai_bounds.ts";
 import { UnsupportedAiLayersError } from "../../src/py_aep/resolvers/ai_layers.ts";
 

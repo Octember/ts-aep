@@ -4,13 +4,7 @@ import { describe, expect, test } from "bun:test";
 
 import { approx, raises, skip } from "../../src/pyrt/pytest.ts";
 import { Path, b, getitem, min, py_eq, sorted, zip } from "../../src/pyrt/index.ts";
-import {
-  GradientPaint,
-  SolidPaint,
-  SvgDocument,
-  UnsupportedSVGError,
-  read_svg,
-} from "../../src/py_aep/svg/index.ts";
+import { GradientPaint, SolidPaint, SvgDocument, UnsupportedSVGError, read_svg } from "../../src/py_aep/svg/index.ts";
 import { parse_color } from "../../src/py_aep/svg/colors.ts";
 import { parse_path } from "../../src/py_aep/svg/path_data.ts";
 import { cubics_to_subpath, element_subpaths } from "../../src/py_aep/svg/shapes.ts";

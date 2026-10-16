@@ -13,17 +13,16 @@ import { ChunkNotFoundError, find_by_list_type, find_by_type, index_by_identity 
 import { VF_AXIS_PREFIX } from "../../data/match_names.ts";
 import { UNITS_TEXT_MAP } from "../../data/units.ts";
 import { can_add_property } from "../../resolvers/motion_graphics.ts";
-import { resolve_essential_property_source, resolve_essential_property_controller } from "../../resolvers/essential_properties.ts";
 import { _USE_VALUE, PropSpec } from "../../synthesis/property.ts";
 import { ChunkField } from "../descriptors.ts";
 import { TextDocument } from "../text/text_document.ts";
 import { _validate_number, validate_bool, validate_enum, validate_f8, validate_name, validate_number, validate_sequence, validate_text } from "../validators.ts";
-import { AVItem } from "../items/av_item.ts";
-import { FootageItem } from "../items/footage.ts";
-import { FolderItem } from "../items/folder.ts";
-import { CompItem } from "../items/composition.ts";
-import { AVLayer } from "../layers/av_layer.ts";
-import { Project } from "../project.ts";
+import type { AVItem } from "../items/av_item.ts";
+import type { FootageItem } from "../items/footage.ts";
+import type { FolderItem } from "../items/folder.ts";
+import type { CompItem } from "../items/composition.ts";
+import type { AVLayer } from "../layers/av_layer.ts";
+import type { Project } from "../project.ts";
 import { Curves } from "./curves.ts";
 import type { Gradient } from "./gradient.ts";
 import { Keyframe, _check_time_units, _timebase_units } from "./keyframe.ts";
@@ -33,9 +32,15 @@ import { _ALWAYS_MODIFIED, _CANVARY_OVERRIDES, _ISSPATIAL_OVERRIDES, _NAME_OVERR
 import { _EMPTY_CDAT_PAD, GRADIENT_KIND, MARKER_KIND, ORIENTATION_KIND, SHAPE_KIND, TEXT_KIND, type ParallelKind } from "./parallel.ts";
 import { PropertyBase } from "./property_base.ts";
 import { Shape } from "./shape.ts";
-import { _insert_before_group_end, type PropertyGroup } from "./property_group.ts";
+import type { PropertyGroup } from "./property_group.ts";
 import { type MaskPropertyGroup } from "./mask_property_group.ts";
-import { deepcopy, dict_get, getitem, isclose, py_bool, py_eq, py_or, py_and, sorted, warn, int, round, floordiv, TypeError_, ValueError, KeyError, IndexError, AttributeError, NotImplementedError, py_assert, contains, repr, hasattr, getattr, min, max, range, enumerate, zip, len, float, lshift, rshift, and, or, b, descriptor } from "../../../pyrt/index.ts";
+import { deferred, deepcopy, dict_get, getitem, isclose, py_bool, py_eq, py_or, py_and, sorted, warn, int, round, floordiv, TypeError_, ValueError, KeyError, IndexError, AttributeError, NotImplementedError, py_assert, contains, repr, hasattr, getattr, min, max, range, enumerate, zip, len, float, lshift, rshift, and, or, b, descriptor } from "../../../pyrt/index.ts";
+
+const _property_group = deferred<typeof import("./property_group.ts")>(import.meta.url, "./property_group.ts");
+const _av_item = deferred<typeof import("../items/av_item.ts")>(import.meta.url, "../items/av_item.ts");
+const _footage = deferred<typeof import("../items/footage.ts")>(import.meta.url, "../items/footage.ts");
+const _folder = deferred<typeof import("../items/folder.ts")>(import.meta.url, "../items/folder.ts");
+const _essential_properties = deferred<typeof import("../../resolvers/essential_properties.ts")>(import.meta.url, "../../resolvers/essential_properties.ts");
 
 // TODO(pyrt): `list_mul` is Python `[x] * n` for a list; no pyrt shim exists.
 export function list_mul<T>(xs: T[], n: number): T[] {
@@ -479,8 +484,8 @@ export class Property extends PropertyBase {
     });
     const tdgp = parent_property._tdgp;
     if (tdgp != null) {
-      _insert_before_group_end(tdgp, _tdmn);
-      _insert_before_group_end(tdgp, _tdbs);
+      _property_group()._insert_before_group_end(tdgp, _tdmn);
+      _property_group()._insert_before_group_end(tdgp, _tdbs);
     }
 
     const prop = new this({
@@ -2805,7 +2810,7 @@ export class Property extends PropertyBase {
         "This property does not support media replacement " + "(can_set_alternate_source is False).",
       );
     }
-    if (!(source instanceof AVItem)) {
+    if (!(source instanceof _av_item().AVItem)) {
       throw new TypeError_(`alternate source must be an AVItem, not ${type_name(source)}`);
     }
     if (this._composition == null || !this._composition._project.items.has(source.id)) {
@@ -2819,7 +2824,7 @@ export class Property extends PropertyBase {
           "alternate source (is_media_replacement_compatible is False).",
       );
     }
-    if (source instanceof FootageItem) {
+    if (source instanceof _footage().FootageItem) {
       this._blsi.value = this._build_replacement_wrapper(source).id;
     } else {
       this._blsi.value = source.id;
@@ -2872,7 +2877,7 @@ export class Property extends PropertyBase {
    * source-property path by match name.
    */
   get essential_property_source(): Property | PropertyGroup | AVLayer | null {
-    return resolve_essential_property_source(this);
+    return _essential_properties().resolve_essential_property_source(this);
   }
 
   /** `True` if the property is the Menu property of a Dropdown Menu Control effect. */
@@ -4565,7 +4570,7 @@ export class _EssentialOverrideProperty extends Property {
   _override_controller_name(): string | null {
     const cached = this._ov_ctrl_name !== undefined ? this._ov_ctrl_name : _UNSET;
     if (cached !== _UNSET) return cached as string | null;
-    const controller = resolve_essential_property_controller(this);
+    const controller = _essential_properties().resolve_essential_property_controller(this);
     const name = controller != null ? controller.name : null;
     this._ov_ctrl_name = name;
     return name;
@@ -4662,7 +4667,7 @@ export class _EssentialOverrideProperty extends Property {
 export function _find_or_create_wrapper_folder(project: Project): FolderItem {
   const root = project.root_folder;
   for (const item of project.items.values()) {
-    if (item instanceof FolderItem && item.name === "Media Replacement Comps" && item.parent_folder === root) {
+    if (item instanceof _folder().FolderItem && item.name === "Media Replacement Comps" && item.parent_folder === root) {
       return item;
     }
   }

@@ -9,12 +9,7 @@
 import { expect, test } from "bun:test";
 import { parse_app, SAMPLES_DIR } from "../helpers.ts";
 import { GetSettingsFormat, OutputColorDepth } from "../../src/py_aep/enums/index.ts";
-import {
-  CineonFormatOptions,
-  JpegFormatOptions,
-  OpenExrFormatOptions,
-  PngFormatOptions,
-} from "../../src/py_aep/models/renderqueue/format_options.ts";
+import { CineonFormatOptions, JpegFormatOptions, OpenExrFormatOptions, PngFormatOptions } from "../../src/py_aep/models/renderqueue/format_options/index.ts";
 import { Path, sorted } from "../../src/pyrt/index.ts";
 
 const _CORPUS_ROOTS = [

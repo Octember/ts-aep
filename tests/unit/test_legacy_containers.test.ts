@@ -9,13 +9,7 @@
 import { expect, test } from "bun:test";
 import "../../src/py_aep/binary/_register.ts";
 import * as py_aep from "../../src/py_aep/index.ts";
-import {
-  ContainerChunk,
-  ListChunk,
-  read_chunks,
-  write_aep,
-  write_chunk,
-} from "../../src/py_aep/binary/chunk.ts";
+import { ContainerChunk, ListChunk, read_chunks, write_aep, write_chunk } from "../../src/py_aep/binary/chunk.ts";
 import { HeadChunk, NhedChunk } from "../../src/py_aep/binary/item_chunks.ts";
 import { DwgaChunk } from "../../src/py_aep/binary/misc_chunks.ts";
 import { TDSN_SENTINEL, TdsnChunk } from "../../src/py_aep/binary/property_chunks.ts";

@@ -8,20 +8,10 @@ import { BytesIO, KeyError, TypeError_, ValueError, getitem, py_assert, py_bool,
 import { approx, make_tmp_path, raises } from "../../src/pyrt/pytest.ts";
 import * as py_aep from "../../src/py_aep/index.ts";
 import { BitsPerChannel, PREFType } from "../../src/py_aep/enums/index.ts";
-import {
-  psd_comp_layer_styles,
-  psd_footage_dimensions,
-  psd_footage_layer_styles,
-} from "../../src/py_aep/models/preferences.ts";
+import { psd_comp_layer_styles, psd_footage_dimensions, psd_footage_layer_styles } from "../../src/py_aep/models/preferences.ts";
 import { recursive_find } from "../../src/py_aep/binary/utils.ts";
 import { _RESIZE_TO_STRINGS, build_resize_to_strings } from "../../src/py_aep/models/renderqueue/settings.ts";
-import {
-  PrefsFile,
-  decode_pref_bool,
-  decode_pref_number,
-  decode_pref_string,
-  find_prefs_file,
-} from "../../src/py_aep/parsers/prefs.ts";
+import { PrefsFile, decode_pref_bool, decode_pref_number, decode_pref_string, find_prefs_file } from "../../src/py_aep/parsers/prefs.ts";
 
 const MACHINE = PREFType.PREF_Type_MACHINE_SPECIFIC;
 const INDEP = PREFType.PREF_Type_MACHINE_INDEPENDENT;

@@ -24,15 +24,7 @@ import type { EnumValue, IO } from "../../pyrt/index.ts";
 import { read_bytes, write_bytes } from "./bin_utils.ts";
 import { BitField } from "./bitfield.ts";
 import { Chunk } from "./chunk.ts";
-import {
-  FmtItem,
-  bytes_field,
-  f4_field,
-  f8_field,
-  u1_field,
-  u4_field,
-  u8_field,
-} from "./fmt_field.ts";
+import { FmtItem, bytes_field, f4_field, f8_field, u1_field, u4_field, u8_field } from "./fmt_field.ts";
 import { register } from "./registry.ts";
 import { OutputModuleSettingsItem, RenderSettingsItem } from "./render_chunks.ts";
 
@@ -61,7 +53,7 @@ export const LdatItemType = int_enum("LdatItemType", {
 export type LdatItemType = EnumValue<typeof LdatItemType>;
 
 // Dispatch table: (item_type_raw, item_size) -> LdatItemType
-const _ITEM_TYPE_MAP = new Map<string, LdatItemType>([
+export const _ITEM_TYPE_MAP = new Map<string, LdatItemType>([
   [tkey(1, 2246), LdatItemType.lrdr],
   [tkey(1, 128), LdatItemType.litm],
   [tkey(2, 16), LdatItemType.gide],
@@ -77,7 +69,7 @@ const _ITEM_TYPE_MAP = new Map<string, LdatItemType>([
 ]);
 
 // num_value for multi-dimensional / spatial keyframe types
-const _NUM_VALUE = new Map<number, number>([
+export const _NUM_VALUE = new Map<number, number>([
   [LdatItemType.three_d, 3],
   [LdatItemType.three_d_spatial, 3],
   [LdatItemType.two_d, 2],
@@ -511,7 +503,7 @@ descriptor(LdatItem, "temporal_continuous", new BitField("_key_flags", 3));
 // ---------------------------------------------------------------------------
 
 /** Dispatch item reading by type. */
-function _read_item(data: Uint8Array, item_type: LdatItemType): FmtItem | LdatItem {
+export function _read_item(data: Uint8Array, item_type: LdatItemType): FmtItem | LdatItem {
   if (item_type === LdatItemType.lrdr) return RenderSettingsItem.frombytes(data);
   if (item_type === LdatItemType.litm) return OutputModuleSettingsItem.frombytes(data);
   if (item_type === LdatItemType.shape) return ShapePoint.frombytes(data);

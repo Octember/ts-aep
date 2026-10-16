@@ -2,97 +2,27 @@ import { randomUUID } from "node:crypto";
 
 import { ae_writes, get_ae_version_major, requires_version } from "../../ae_version.ts";
 import { DeferredListChunk, ListChunk, type Chunk } from "../../binary/chunk.ts";
-import {
-  _duration_units,
-  _frame_units,
-  build_cps2,
-  build_item_view_chunks,
-  build_layer_view_block,
-  build_new_comp_item,
-} from "../../binary/comp_skeleton.ts";
-import {
-  WORK_AREA_TO_END,
-  type CdtaChunk,
-  frame_grid,
-  layer_timebase,
-  rescale_ticks,
-} from "../../binary/composition_chunks.ts";
+import { _duration_units, _frame_units, build_cps2, build_item_view_chunks, build_layer_view_block, build_new_comp_item } from "../../binary/comp_skeleton.ts";
+import { WORK_AREA_TO_END, type CdtaChunk, frame_grid, layer_timebase, rescale_ticks } from "../../binary/composition_chunks.ts";
 import type { CmtaChunk, IdtaChunk } from "../../binary/item_chunks.ts";
-import {
-  _LDTA_SOURCE_ID_END,
-  _LDTA_SOURCE_ID_OFFSET,
-  type LdtaChunk,
-} from "../../binary/layer_chunks.ts";
+import { _LDTA_SOURCE_ID_END, _LDTA_SOURCE_ID_OFFSET, type LdtaChunk } from "../../binary/layer_chunks.ts";
 import { _PRDA_VARIANTS, PguiChunk, type PrdaChunk, type PrinChunk } from "../../binary/misc_chunks.ts";
-import {
-  build_checkbox_cctl,
-  build_color_cctl,
-  build_media_cctl,
-  build_ovg2,
-  build_slider_cctl,
-  build_source_alternate_extras,
-  build_text_cctl,
-  clone_chunk_tree,
-  collect_layer_ref_tdpi_ids,
-  remap_layer_ref_tdpi,
-  rewrite_owner_tdpi,
-  strip_synthetic,
-} from "../../binary/mutations.ts";
-import {
-  TDSN_SENTINEL,
-  CdatChunk,
-  Tdb4Chunk,
-  TdmnChunk,
-  TdsbChunk,
-  TdsnChunk,
-} from "../../binary/property_chunks.ts";
-import {
-  F8Chunk,
-  S4Chunk,
-  type U1Chunk,
-  type U4Chunk,
-  type U4LeChunk,
-  type Utf8Chunk,
-} from "../../binary/scalar_chunks.ts";
-import {
-  ChunkNotFoundError,
-  block_slice,
-  filter_by_list_type,
-  filter_by_type,
-  find_by_list_type,
-  find_by_type,
-  index_by_identity,
-  recursive_find,
-} from "../../binary/utils.ts";
-import {
-  Label,
-  LayerType,
-  LineOrientation,
-  ParametricMeshType,
-  PREFType,
-} from "../../enums/index.ts";
+import { build_checkbox_cctl, build_color_cctl, build_media_cctl, build_ovg2, build_slider_cctl, build_source_alternate_extras, build_text_cctl, clone_chunk_tree, collect_layer_ref_tdpi_ids, remap_layer_ref_tdpi, rewrite_owner_tdpi, strip_synthetic } from "../../binary/mutations.ts";
+import { TDSN_SENTINEL, CdatChunk, Tdb4Chunk, TdmnChunk, TdsbChunk, TdsnChunk } from "../../binary/property_chunks.ts";
+import { F8Chunk, S4Chunk, type U1Chunk, type U4Chunk, type U4LeChunk, type Utf8Chunk } from "../../binary/scalar_chunks.ts";
+import { ChunkNotFoundError, block_slice, filter_by_list_type, filter_by_type, find_by_list_type, find_by_type, index_by_identity, recursive_find } from "../../binary/utils.ts";
+import { Label, LayerType, LineOrientation, ParametricMeshType, PREFType } from "../../enums/index.ts";
 import { parse_essential_graphics } from "../../parsers/essential_graphics.ts";
-import {
-  CONTROLLER_CHECKBOX,
-  CONTROLLER_COLOR,
-  CONTROLLER_SLIDER,
-  can_add_layer,
-  font_caps_json,
-  media_controller_path,
-  property_controller_plan,
-  type PathNode,
-  type PropertyControllerPlan,
-} from "../../resolvers/motion_graphics.ts";
-import {
-  _CAMERA_LIGHT_TRANSFORM_SKIP,
-  _OMITTED_EMPTY_GROUPS,
-} from "../../synthesis/property.ts";
+import { CONTROLLER_CHECKBOX, CONTROLLER_COLOR, CONTROLLER_SLIDER, can_add_layer, font_caps_json, media_controller_path, property_controller_plan, type PathNode, type PropertyControllerPlan } from "../../resolvers/motion_graphics.ts";
+import { _CAMERA_LIGHT_TRANSFORM_SKIP, _OMITTED_EMPTY_GROUPS } from "../../synthesis/property.ts";
 import {
   at,
   Fraction,
   b,
   bytes_,
   bytes_eq,
+  deferred,
+  descriptor,
   dict_get,
   enumerate,
   float,
@@ -110,12 +40,9 @@ import {
   str,
   ValueError,
   zip,
-} from "../../pyrt/index.ts";
+} from "../../../pyrt/index.ts";
 import { ChunkField } from "../descriptors.ts";
-import {
-  EssentialGraphicsController,
-  SourcePropertyRef,
-} from "../essential_graphics.ts";
+import { EssentialGraphicsController, SourcePropertyRef } from "../essential_graphics.ts";
 import { AVLayer, _unregister_source_usage } from "../layers/av_layer.ts";
 import { CameraLayer } from "../layers/camera_layer.ts";
 import type { Layer } from "../layers/layer.ts";
@@ -125,65 +52,47 @@ import { ShapeLayer } from "../layers/shape_layer.ts";
 import { TextLayer } from "../layers/text_layer.ts";
 import { ThreeDModelLayer } from "../layers/three_d_model_layer.ts";
 import { auto_name } from "../naming.ts";
-import {
-  apply_text_style_prefs,
-  default_still_out_point,
-  default_synthetic_out_point,
-  label_index,
-} from "../preferences.ts";
+import { apply_text_style_prefs, default_still_out_point, default_synthetic_out_point, label_index } from "../preferences.ts";
 import { Property } from "../properties/property.ts";
 import { PropertyGroup } from "../properties/property_group.ts";
 import { FileSource } from "../sources/file.ts";
 import { PlaceholderSource } from "../sources/placeholder.ts";
 import { SolidSource } from "../sources/solid.ts";
 import { TextDocument } from "../text/text_document.ts";
-import {
-  _validate_number,
-  validate_box_size,
-  validate_comp_duration,
-  validate_comp_frame_rate,
-  validate_duration,
-  validate_footage_dimension,
-  validate_name,
-  validate_one_of,
-  validate_pixel_aspect,
-  validate_rgb_color,
-  validate_sequence,
-  validate_string,
-  validate_text,
-  validate_vector2,
-} from "../validators.ts";
+import { _validate_number, validate_box_size, validate_comp_duration, validate_comp_frame_rate, validate_duration, validate_footage_dimension, validate_name, validate_one_of, validate_pixel_aspect, validate_rgb_color, validate_sequence, validate_string, validate_text, validate_vector2 } from "../validators.ts";
 import { AVItem } from "./av_item.ts";
 import { FootageItem } from "./footage.ts";
 import type { FolderItem } from "./folder.ts";
-import { renderer_options_for, type RendererOptions } from "./renderer_options/index.ts";
-import { parse_item } from "../../parsers/item.ts";
-import { parse_layer } from "../../parsers/layer.ts";
-import { _get_markers } from "../../parsers/composition.ts";
+import type { RendererOptions } from "./renderer_options/index.ts";
 import type { Project } from "../project.ts";
 import type { MarkerValue } from "../properties/marker.ts";
 
+const _item = deferred<typeof import("../../parsers/item.ts")>(import.meta.url, "../../parsers/item.ts");
+const _layer = deferred<typeof import("../../parsers/layer.ts")>(import.meta.url, "../../parsers/layer.ts");
+const _composition = deferred<typeof import("../../parsers/composition.ts")>(import.meta.url, "../../parsers/composition.ts");
+const _renderer_options = deferred<typeof import("./renderer_options/index.ts")>(import.meta.url, "./renderer_options/index.ts");
+
 // The binary prin chunk stores internal plugin match_names (e.g. ADBE Escher)
 // but ExtendScript exposes different module names (e.g. ADBE Advanced 3d).
-const _RENDERER_BINARY_TO_EXTENDSCRIPT: Map<string, string> = new Map([
+export const _RENDERER_BINARY_TO_EXTENDSCRIPT: Map<string, string> = new Map([
   ["ADBE Escher", "ADBE Advanced 3d"],
   ["ADBE Calder", "ADBE Calder"],
   ["ADBE Ernst", "ADBE Ernst"],
   ["ADBE Picasso", "ADBE Picasso"],
 ]);
 
-const _RENDERER_EXTENDSCRIPT_TO_BINARY: Map<string, string> = new Map(
+export const _RENDERER_EXTENDSCRIPT_TO_BINARY: Map<string, string> = new Map(
   [..._RENDERER_BINARY_TO_EXTENDSCRIPT].map(([k, v]) => [v, k] as const),
 );
 
-const _RENDERER_DISPLAY_NAMES: Map<string, string> = new Map([
+export const _RENDERER_DISPLAY_NAMES: Map<string, string> = new Map([
   ["ADBE Escher", "Classic 3D"],
   ["ADBE Calder", "Advanced 3D"],
   ["ADBE Ernst", "Cinema 4D"],
   ["ADBE Picasso", "Ray-traced 3D"],
 ]);
 
-const _LAYER_BOUNDARY_TYPES: ReadonlySet<string> = new Set([
+export const _LAYER_BOUNDARY_TYPES: ReadonlySet<string> = new Set([
   "Layr",
   "DLay",
   "SLay",
@@ -192,19 +101,19 @@ const _LAYER_BOUNDARY_TYPES: ReadonlySet<string> = new Set([
   "CIFO",
 ]);
 
-const _validate_renderer = validate_one_of([..._RENDERER_EXTENDSCRIPT_TO_BINARY.keys()]);
+export const _validate_renderer = validate_one_of([..._RENDERER_EXTENDSCRIPT_TO_BINARY.keys()]);
 
 // The NTSC internal timebase (23.976, 29.97, 59.94 fps and their multiples).
-const _NTSC_TIMEBASE = 23976;
+export const _NTSC_TIMEBASE = 23976;
 
 // On the NTSC timebase AE keeps a display start stored as a float32 time
 // (`displayStartTime = 52 / 29.97`) on the frame it is a hair past: 1/10000
 // of a frame is the best fit to 490 such starts per rate measured on AE 2026
 // (472 match; AE's own rounding of the rest is not reproduced). On every other
 // timebase the same measurement is exact with no tolerance.
-const _NTSC_FRAME_TOLERANCE = new Fraction(1, 10000);
+export const _NTSC_FRAME_TOLERANCE = new Fraction(1, 10000);
 
-function _grid(cdta: CdtaChunk): [number, number] {
+export function _grid(cdta: CdtaChunk): [number, number] {
   /**
    * The composition's frame grid: `(timebase, units per frame)` from its
    * frame rate (`frame_grid`), as AE derives it on open. The stored 16.16
@@ -214,7 +123,7 @@ function _grid(cdta: CdtaChunk): [number, number] {
   return frame_grid(cdta.frame_rate);
 }
 
-function _grid_rate(cdta: CdtaChunk): number {
+export function _grid_rate(cdta: CdtaChunk): number {
   /** Frames per second of the composition's frame grid. */
   const [timebase, units_per_frame] = _grid(cdta);
   return timebase / units_per_frame;
@@ -223,34 +132,34 @@ function _grid_rate(cdta: CdtaChunk): number {
 // TODO(pyrt): Fraction has no arithmetic operators. These two helpers are the
 // exact rational `math.ceil` / `math.floor` over `num / den` (den > 0) that the
 // Python code takes of `Fraction` expressions.
-function _ceil_ratio(num: bigint, den: bigint): number {
+export function _ceil_ratio(num: bigint, den: bigint): number {
   const q = num / den;
   return Number(num % den !== 0n && num > 0n ? q + 1n : q);
 }
 
-function _floor_ratio(num: bigint, den: bigint): number {
+export function _floor_ratio(num: bigint, den: bigint): number {
   const q = num / den;
   return Number(num % den !== 0n && num < 0n ? q - 1n : q);
 }
 
 /** `math.ceil(k * Fraction(*_grid(cdta)))` */
-function _ceil_k_grid(k: number, cdta: CdtaChunk): number {
+export function _ceil_k_grid(k: number, cdta: CdtaChunk): number {
   const [timebase, units_per_frame] = _grid(cdta);
   return _ceil_ratio(BigInt(k) * BigInt(timebase), BigInt(units_per_frame));
 }
 
 /** `math.floor(k * Fraction(*_grid(cdta)))` */
-function _floor_k_grid(k: number, cdta: CdtaChunk): number {
+export function _floor_k_grid(k: number, cdta: CdtaChunk): number {
   const [timebase, units_per_frame] = _grid(cdta);
   return _floor_ratio(BigInt(k) * BigInt(timebase), BigInt(units_per_frame));
 }
 
 // TODO(pyrt): Fraction has no operators; exact `Fraction(n, d) * k >= rhs` for d > 0.
-function _ratio_scaled_ge(n: number, d: number, k: number, rhs: number): boolean {
+export function _ratio_scaled_ge(n: number, d: number, k: number, rhs: number): boolean {
   return BigInt(n) * BigInt(k) >= BigInt(rhs) * BigInt(d);
 }
 
-function _frame_number(cdta: CdtaChunk, dividend: number, divisor: number): number {
+export function _frame_number(cdta: CdtaChunk, dividend: number, divisor: number): number {
   /**
    * The frame a stored comp time falls on, as After Effects reports
    * `displayStartFrame` / `frameTime`.
@@ -284,7 +193,7 @@ function _frame_number(cdta: CdtaChunk, dividend: number, divisor: number): numb
 }
 
 // Top-level layer groups not every release writes: (match name, part).
-const _VERSION_GATED_GROUPS = [
+export const _VERSION_GATED_GROUPS = [
   ["ADBE Layer Sets", "layer sets"],
   ["ADBE Source Options Group", "source options"],
 ] as const;
@@ -307,7 +216,7 @@ const _VERSION_GATED_GROUPS = [
  * Group end markers are already present in each tdgp (added during
  * synthesis) and get flipped to non-synthetic by _ensure_materialized().
  */
-function _materialize_layer(layer: Layer): void {
+export function _materialize_layer(layer: Layer): void {
   const cam_light = ["ADBE Camera Layer", "ADBE Light Layer"].includes(layer.match_name);
 
   function _materialize_prop(prop: Property, in_transform: boolean): void {
@@ -400,7 +309,7 @@ function _materialize_layer(layer: Layer): void {
  * with zero), which is what this reproduces: the `LIST:OvG2` is replaced
  * by the empty one AE writes for a layer that has never had an override.
  */
-function _drop_essential_overrides(layer: Layer): void {
+export function _drop_essential_overrides(layer: Layer): void {
   const root = layer._tdgp;
   if (root == null) {
     return;
@@ -439,7 +348,7 @@ function _drop_essential_overrides(layer: Layer): void {
  * `LIST:OvG2(CprC)` after the Layer Overrides tdmn and `blsv`/`blsi`
  * after the Layer Source Alternate tdmn.
  */
-function _insert_layer_skeleton_extras(layer: Layer): void {
+export function _insert_layer_skeleton_extras(layer: Layer): void {
   const root = layer._tdgp;
   if (root == null) {
     return;
@@ -494,7 +403,7 @@ function _insert_layer_skeleton_extras(layer: Layer): void {
  * `CLId` at the duplicate. Layer-side OvG2 override uuids are NOT
  * touched: they reference controllers of other (source) comps.
  */
-function _rewrite_eg_identity(
+export function _rewrite_eg_identity(
   cloned_item: ListChunk,
   old_comp_id: number,
   new_comp_id: number,
@@ -1319,7 +1228,7 @@ export class CompItem extends AVItem {
     // Insert right after the original's block, then build the model
     // through the normal parse path (registers it in project.items).
     container.splice(end, 0, ...cloned_block);
-    const new_comp = parse_item(cloned_item, project, parent) as CompItem;
+    const new_comp = _item().parse_item(cloned_item, project, parent) as CompItem;
     parent.items.splice(parent.items.indexOf(this) + 1, 0, new_comp);
 
     // Register the duplicate on its layer sources' used_in if linking
@@ -1406,7 +1315,7 @@ export class CompItem extends AVItem {
 
     const parsed_layers: Layer[] = [];
     for (const layer_chunk of layer_chunks) {
-      parsed_layers.push(parse_layer(layer_chunk, this, effect_param_defs));
+      parsed_layers.push(_layer().parse_layer(layer_chunk, this, effect_param_defs));
     }
 
     this._layers = parsed_layers;
@@ -1424,7 +1333,7 @@ export class CompItem extends AVItem {
     const child_chunks = this._deferred_child_chunks;
     this._deferred_child_chunks = null;
 
-    this._marker_property = _get_markers(child_chunks, this);
+    this._marker_property = _composition()._get_markers(child_chunks, this);
     const eg_result = parse_essential_graphics(child_chunks);
     if (eg_result != null) {
       this._eg_template_name_utf8 = eg_result[0];
@@ -1863,7 +1772,7 @@ export class CompItem extends AVItem {
    * Read / Write.
    */
   get renderer_options(): RendererOptions {
-    return renderer_options_for(this._prda, this);
+    return _renderer_options().renderer_options_for(this._prda, this);
   }
 
   set renderer_options(value: Map<string, any>) {
@@ -2647,7 +2556,7 @@ export class CompItem extends AVItem {
     for (const block of final_blocks) {
       new_comp._item_list.chunks.splice(insert_at, 0, ...block);
       insert_at += len(block);
-      const new_layer = parse_layer(block[0] as ListChunk, new_comp, effect_defs);
+      const new_layer = _layer().parse_layer(block[0] as ListChunk, new_comp, effect_defs);
       new_comp._layers.push(new_layer);
     }
     new_comp._invalidate_layer_cache();

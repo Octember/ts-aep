@@ -31,38 +31,9 @@ import { approx, make_tmp_path, raises } from "../../src/pyrt/pytest.ts";
 import { parse as parse_aep } from "../../src/py_aep/index.ts";
 import "../../src/py_aep/binary/_register.ts";
 import { ListChunk, read_aep, write_aep } from "../../src/py_aep/binary/chunk.ts";
-import {
-  ArsiChunk,
-  CineonRoptChunk,
-  JpegRoptChunk,
-  OpenExrRoptChunk,
-  OutputModuleSettingsItem,
-  PngRoptChunk,
-  ROUT_ITEMS_PER_RQ_ITEM,
-  RenderSettingsItem,
-  RoptChunk,
-  RouuChunk,
-  TargaRoptChunk,
-  TiffRoptChunk,
-} from "../../src/py_aep/binary/render_chunks.ts";
+import { ArsiChunk, CineonRoptChunk, JpegRoptChunk, OpenExrRoptChunk, OutputModuleSettingsItem, PngRoptChunk, ROUT_ITEMS_PER_RQ_ITEM, RenderSettingsItem, RoptChunk, RouuChunk, TargaRoptChunk, TiffRoptChunk } from "../../src/py_aep/binary/render_chunks.ts";
 import { find_by_list_type, recursive_find } from "../../src/py_aep/binary/utils.ts";
-import {
-  AudioBitDepth,
-  AudioChannels,
-  ColorManagementSystem,
-  FieldRender,
-  FrameRateSetting,
-  GetSettingsFormat,
-  LogType,
-  MotionBlurSetting,
-  OutputAudio,
-  OutputColorDepth,
-  PostRenderAction,
-  RenderQuality,
-  ResizeQuality,
-  RQItemStatus,
-  TimeSpanSource,
-} from "../../src/py_aep/enums/index.ts";
+import { AudioBitDepth, AudioChannels, ColorManagementSystem, FieldRender, FrameRateSetting, GetSettingsFormat, LogType, MotionBlurSetting, OutputAudio, OutputColorDepth, PostRenderAction, RenderQuality, ResizeQuality, RQItemStatus, TimeSpanSource } from "../../src/py_aep/enums/index.ts";
 import { profile_id_for_name } from "../../src/py_aep/enums/mappings.ts";
 import { RenderQueueItem } from "../../src/py_aep/models/renderqueue/render_queue_item.ts";
 import { _parse_id_hex_section } from "../../src/py_aep/parsers/templates.ts";

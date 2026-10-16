@@ -67,7 +67,7 @@ export const STD14_EXTENT: Map<string, [number, number]> = new Map<string, [numb
   ["TimesNewRoman", [-218.0, 898.0]],
 ]);
 
-const _MONOSPACE: readonly number[] = new Array<number>(STD14_LAST_CODE - STD14_FIRST_CODE + 1).fill(600);
+export const _MONOSPACE: readonly number[] = new Array<number>(STD14_LAST_CODE - STD14_FIRST_CODE + 1).fill(600);
 
 /**
  * Advances in glyph space for codes `STD14_FIRST_CODE`..`STD14_LAST_CODE`,

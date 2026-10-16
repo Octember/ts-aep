@@ -9,16 +9,7 @@ import { describe, expect, test } from "bun:test";
 
 import { ValueError, enumerate, float_repr, py_assert, zip } from "../../src/pyrt/index.ts";
 import { approx, raises } from "../../src/pyrt/pytest.ts";
-import {
-  Mat4,
-  _rotate_x,
-  _rotate_y,
-  _rotate_z,
-  _translation,
-  build_local_matrix,
-  compose_orientation,
-  decompose_transform,
-} from "../../src/py_aep/resolvers/transform.ts";
+import { Mat4, _rotate_x, _rotate_y, _rotate_z, _translation, build_local_matrix, compose_orientation, decompose_transform } from "../../src/py_aep/resolvers/transform.ts";
 
 // ------------------------------------------------------------------
 // Helpers

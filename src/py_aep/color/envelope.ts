@@ -45,7 +45,7 @@ export const OCIO_TYPE_COLORSPACE = 2;
 // `outer["x"]` raises KeyError on a miss. Python also accepts NaN/Infinity
 // literals, which JSON.parse rejects, and Object.entries reorders
 // integer-like keys, which Python dicts would not.
-function json_loads(text: string): any {
+export function json_loads(text: string): any {
   return JSON.parse(text, (_key, value) =>
     value !== null && typeof value === "object" && !Array.isArray(value)
       ? new Map(Object.entries(value))
@@ -55,7 +55,7 @@ function json_loads(text: string): any {
 
 // json.dumps parity: string escaping as CPython's `encode_basestring`
 // with ensure_ascii=False (only `"`, `\`, and control characters are escaped).
-const JSON_ESCAPES = new Map<string, string>([
+export const JSON_ESCAPES = new Map<string, string>([
   ['"', '\\"'],
   ["\\", "\\\\"],
   ["\b", "\\b"],
@@ -65,7 +65,7 @@ const JSON_ESCAPES = new Map<string, string>([
   ["\t", "\\t"],
 ]);
 
-function _json_str(s: string): string {
+export function _json_str(s: string): string {
   let out = '"';
   for (const c of s) {
     const esc = JSON_ESCAPES.get(c);
@@ -79,7 +79,7 @@ function _json_str(s: string): string {
 // json.dumps parity: compact (`,` / `:`) serializer for the fixed envelope
 // records below. Plain objects keep insertion order because none of their keys
 // is integer-like.
-function _json_dumps(obj: unknown): string {
+export function _json_dumps(obj: unknown): string {
   if (obj === null || obj === undefined) return "null";
   if (obj === true) return "true";
   if (obj === false) return "false";
@@ -98,7 +98,7 @@ function _json_dumps(obj: unknown): string {
   );
 }
 
-function _compact(obj: object): string {
+export function _compact(obj: object): string {
   /**
    * Serialize `obj` exactly as AE does: compact, no whitespace.
    *
@@ -109,11 +109,11 @@ function _compact(obj: object): string {
   return _json_dumps(obj);
 }
 
-function _b64(text: string): string {
+export function _b64(text: string): string {
   return Buffer.from(encode(text, "utf-8")).toString("base64");
 }
 
-function _envelope(color_profile_data_b64: string, name: string, profile_type: number): string {
+export function _envelope(color_profile_data_b64: string, name: string, profile_type: number): string {
   /**
    * Wrap pre-encoded `colorProfileData` in the outer envelope.
    *

@@ -26,7 +26,7 @@ import type { Utf8Chunk } from "../../../binary/scalar_chunks.ts";
 
 /** `json.dumps` string encoding with `ensure_ascii=True` (lowercase `\uXXXX`). */
 // json.dumps parity
-function _json_string(s: string): string {
+export function _json_string(s: string): string {
   let out = '"';
   for (let i = 0; i < s.length; i++) {
     const c = s.charCodeAt(i);
@@ -49,7 +49,7 @@ function _json_string(s: string): string {
  * taken from `JSON.stringify` (which leaves non-ASCII unescaped).
  */
 // json.dumps parity
-function _json_dumps_compact(value: any): string {
+export function _json_dumps_compact(value: any): string {
   if (value == null) return "null";
   if (value === true) return "true";
   if (value === false) return "false";
@@ -76,7 +76,7 @@ function _json_dumps_compact(value: any): string {
  * so later `.get` / `.pop` / item assignment and re-serialization keep the
  * insertion order.
  */
-function _json_loads(text: string): any {
+export function _json_loads(text: string): any {
   return JSON.parse(text, (_key, value) =>
     value !== null && typeof value === "object" && !Array.isArray(value)
       ? new Map(Object.entries(value))

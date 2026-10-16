@@ -34,17 +34,17 @@ import { collapse_continuation_lines, parse_hex_value } from "./prefs.ts";
 
 // Render settings prefs format:
 // RenderSettingsItem is 2182 bytes in prefs (2246 in AEP, difference = 64).
-const _RS_PREFS_ITEM_SIZE = 2182;
-const _RS_AEP_ITEM_SIZE = 2246;
-const _RS_ITEM_SIZE_DIFF = _RS_AEP_ITEM_SIZE - _RS_PREFS_ITEM_SIZE;
-const _HEADER_SIZE = 32; // bytes before first item
+export const _RS_PREFS_ITEM_SIZE = 2182;
+export const _RS_AEP_ITEM_SIZE = 2246;
+export const _RS_ITEM_SIZE_DIFF = _RS_AEP_ITEM_SIZE - _RS_PREFS_ITEM_SIZE;
+export const _HEADER_SIZE = 32; // bytes before first item
 
 // Output module prefs format:
 // OutputModuleSettingsItem is 128 bytes (same in prefs and AEP).
-const _OM_PREFS_ITEM_SIZE = 128;
+export const _OM_PREFS_ITEM_SIZE = 128;
 
 // TODO(pyrt): no `re` shim; local helper standing in for Python's re.escape.
-function _re_escape(text: string): string {
+export function _re_escape(text: string): string {
   return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
@@ -84,7 +84,7 @@ export class OutputModuleTemplate {
 }
 
 /** Extract a hex/ASCII value from a preference section. */
-function _extract_section_value(lines: string[], key: string): Uint8Array | null {
+export function _extract_section_value(lines: string[], key: string): Uint8Array | null {
   for (const [i, line] of enumerate(lines)) {
     if (!line.includes(key)) continue;
     const m = new RegExp('^\\s*"' + _re_escape(key) + '"\\s*=\\s*([^\\n]+)').exec(line);
@@ -161,7 +161,7 @@ export function parse_render_templates(prefs_dir: Path): [RenderSettingsItem[], 
 }
 
 /** Extract an integer value from a preference line like `"Key" = 42`. */
-function _extract_int_value(lines: string[], key: string): number | null {
+export function _extract_int_value(lines: string[], key: string): number | null {
   for (const line of lines) {
     // TODO(port): Python `\d` matches Unicode decimal digits; JS `\d` is ASCII only.
     const m = new RegExp('^\\s*"' + _re_escape(key) + '"\\s*=\\s*"?(\\d+)"?').exec(line);
@@ -267,7 +267,7 @@ export function parse_output_templates(prefs_dir: Path): [OutputModuleTemplate[]
  * Returns:
  *     A dict mapping template index to decoded raw bytes.
  */
-function _parse_id_hex_section(text: string, section: string, id_prefix: string): Map<number, Uint8Array> {
+export function _parse_id_hex_section(text: string, section: string, id_prefix: string): Map<number, Uint8Array> {
   const entries = new Map<number, Uint8Array>();
   let current_idx: number | null = null;
   let current_value = "";
@@ -316,7 +316,7 @@ function _parse_id_hex_section(text: string, section: string, id_prefix: string)
 }
 
 /** Extract template names from Output Module Spec Strings section. */
-function _extract_template_names(lines: string[]): Map<number, string> {
+export function _extract_template_names(lines: string[]): Map<number, string> {
   const names = new Map<number, string>();
   for (const line of lines) {
     // TODO(port): Python `\d` matches Unicode decimal digits; JS `\d` is ASCII only.

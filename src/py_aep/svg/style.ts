@@ -11,7 +11,7 @@ import { contains, dict_get, py_bool, sorted, split, strip } from "../../pyrt/in
 
 // Presentation properties py_aep tracks (the paintable subset plus the text
 // properties needed to outline `<text>`/`<tspan>`).
-const _TRACKED: readonly string[] = [
+export const _TRACKED: readonly string[] = [
   "fill",
   "fill-opacity",
   "fill-rule",
@@ -75,7 +75,7 @@ export class CssRule {
 
 // TODO(pyrt): no `re` shim; the Python `re` calls below are written inline
 // with JS RegExp (`matchAll` stands for `findall`, `exec` for `search`).
-const _RULE_RE = /([^{}]+)\{([^{}]*)\}/g;
+export const _RULE_RE = /([^{}]+)\{([^{}]*)\}/g;
 
 export function parse_css(text: string): CssRule[] {
   /** Parse a `<style>` block into rules (comma groups split out).
@@ -100,7 +100,7 @@ export function parse_css(text: string): CssRule[] {
   return rules;
 }
 
-const _IMPORTANT_RE = /\s*!\s*important\s*$/i;
+export const _IMPORTANT_RE = /\s*!\s*important\s*$/i;
 
 export function _split_declarations(
   body: string,
@@ -127,7 +127,7 @@ export function _split_declarations(
   return [out, important];
 }
 
-const _SEL_TOKEN_RE = /([#.]?)([A-Za-z0-9_*-]+)/g;
+export const _SEL_TOKEN_RE = /([#.]?)([A-Za-z0-9_*-]+)/g;
 
 export function _specificity(selector: string): [number, number, number] {
   let ids = 0;

@@ -4,7 +4,7 @@ import { TypeError_, descriptor, split, str } from "../../../pyrt/index.ts";
 import { CosField } from "../../cos/descriptors.ts";
 
 /** Decode the COS design vector (16.16 fixed-point ints) to floats. */
-function _design_vector_from_cos(raw: number[]): number[] {
+export function _design_vector_from_cos(raw: number[]): number[] {
   if (raw == null || typeof (raw as any)[Symbol.iterator] !== "function") {
     throw new TypeError_("object is not iterable");
   }
@@ -98,7 +98,7 @@ export class FontObject {
 
 // TODO(pyrt): `obj.__dict__[name] = value` has no shim. An own data property
 // shadows the prototype accessor, which is what the Python write does.
-function instance_dict_set(obj: any, name: string, value: any): void {
+export function instance_dict_set(obj: any, name: string, value: any): void {
   Object.defineProperty(obj, name, { value, writable: true, enumerable: true, configurable: true });
 }
 

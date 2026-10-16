@@ -1,11 +1,11 @@
 /** Variable-font design-axis reading via fontTools. */
 
-import fontkit from "fontkit";
+import * as fontkit from "fontkit";
 
 import { ValueError, float, py_or, str } from "../../pyrt/index.ts";
 import type { PathLike } from "../../pyrt/index.ts";
 
-type _PathLike = PathLike;
+export type _PathLike = PathLike;
 
 /** One design axis of a variable font (an `fvar` table entry). */
 export class FontDesignAxis {

@@ -32,7 +32,7 @@ import { range } from "../../pyrt/index.ts";
 // ---------------------------------------------------------------------------
 
 // 1-D scalar property (sliders, rotations, opacity).
-const _TDB4_SCALAR: Record<string, any> = {
+export const _TDB4_SCALAR: Record<string, any> = {
   value_hint_type: 1,
   value_hint_flag: 255,
   cvot_flags: 255,
@@ -42,7 +42,7 @@ const _TDB4_SCALAR: Record<string, any> = {
 };
 
 // Boolean / checkbox property.
-const _TDB4_BOOL: Record<string, any> = {
+export const _TDB4_BOOL: Record<string, any> = {
   value_hint_type: 65535,
   cvot_flags: 4,
   time_base: "$TB",
@@ -51,7 +51,7 @@ const _TDB4_BOOL: Record<string, any> = {
 };
 
 // 3-D spatial point (Anchor Point / Position).
-const _TDB4_SPATIAL: Record<string, any> = {
+export const _TDB4_SPATIAL: Record<string, any> = {
   dimensions: 3,
   spatial_static_flags: 15,
   pad2a: 3,
@@ -71,7 +71,7 @@ const _TDB4_SPATIAL: Record<string, any> = {
 // Shared property nodes
 // ---------------------------------------------------------------------------
 
-function _bool_prop(
+export function _bool_prop(
   match_name: string,
   value: number,
 ): [string, string, Record<string, any>] {
@@ -88,7 +88,7 @@ function _bool_prop(
 }
 
 /** Material-options slider with 0-100 bounds. */
-function _coefficient_prop(
+export function _coefficient_prop(
   match_name: string,
   value: number,
 ): [string, string, Record<string, any>] {
@@ -106,7 +106,7 @@ function _coefficient_prop(
   ];
 }
 
-const _ANCHOR_POINT: [string, string, Record<string, any>] = [
+export const _ANCHOR_POINT: [string, string, Record<string, any>] = [
   "prop",
   "ADBE Anchor Point",
   {
@@ -117,7 +117,7 @@ const _ANCHOR_POINT: [string, string, Record<string, any>] = [
   },
 ];
 
-function _position_prop(
+export function _position_prop(
   x: any,
   y: any,
   z: any,
@@ -135,7 +135,7 @@ function _position_prop(
 }
 
 // X / Y / Z separation followers (ADBE Position_0 / _1 / _2).
-const _SPLIT_POSITIONS: [string, string, Record<string, any>][] = [
+export const _SPLIT_POSITIONS: [string, string, Record<string, any>][] = [
   ...range(3),
 ].map(
   (i): [string, string, Record<string, any>] => [
@@ -152,7 +152,7 @@ const _SPLIT_POSITIONS: [string, string, Record<string, any>][] = [
   ],
 );
 
-const _SCALE: [string, string, Record<string, any>] = [
+export const _SCALE: [string, string, Record<string, any>] = [
   "prop",
   "ADBE Scale",
   {
@@ -165,7 +165,7 @@ const _SCALE: [string, string, Record<string, any>] = [
   },
 ];
 
-const _ROTATE_Z: [string, string, Record<string, any>] = [
+export const _ROTATE_Z: [string, string, Record<string, any>] = [
   "prop",
   "ADBE Rotate Z",
   {
@@ -176,7 +176,7 @@ const _ROTATE_Z: [string, string, Record<string, any>] = [
   },
 ];
 
-const _OPACITY: [string, string, Record<string, any>] = [
+export const _OPACITY: [string, string, Record<string, any>] = [
   "prop",
   "ADBE Opacity",
   {
@@ -189,13 +189,13 @@ const _OPACITY: [string, string, Record<string, any>] = [
   },
 ];
 
-const _ENVIR_APPEAR: [string, string, Record<string, any>] = _bool_prop(
+export const _ENVIR_APPEAR: [string, string, Record<string, any>] = _bool_prop(
   "ADBE Envir Appear in Reflect",
   1.0,
 );
 
 /** `node` restricted to the releases that write the `gate` part. */
-function _gated(
+export function _gated(
   node: [string, string, Record<string, any>],
   gate: string,
 ): [string, string, Record<string, any>] {
@@ -208,7 +208,7 @@ function _gated(
 // Custom View 1-3)
 // ---------------------------------------------------------------------------
 
-function _view_layer(
+export function _view_layer(
   list_type: string,
   name: string,
   position: [any, any, any] | null,
@@ -268,7 +268,7 @@ function _view_layer(
 // The unique `Markers` (SecL) layer
 // ---------------------------------------------------------------------------
 
-const _LAYER_STYLE_NAMES: string[] = [
+export const _LAYER_STYLE_NAMES: string[] = [
   "dropShadow",
   "innerShadow",
   "outerGlow",
@@ -281,7 +281,7 @@ const _LAYER_STYLE_NAMES: string[] = [
   "frameFX",
 ];
 
-const _MARKERS_LAYER: Record<string, any> = {
+export const _MARKERS_LAYER: Record<string, any> = {
   list_type: "SecL",
   name: "Markers",
   ldta: {

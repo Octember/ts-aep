@@ -25,13 +25,7 @@ import {
 import { approx, make_tmp_path, raises, warns } from "../../src/pyrt/pytest.ts";
 import { AlphaMode, FieldSeparationType, ImportAsType, PulldownPhase, parse as parse_aep } from "../../src/py_aep/index.ts";
 import { write_chunk } from "../../src/py_aep/binary/chunk.ts";
-import {
-  build_ai_layer_opti_data,
-  build_generic_opti_data,
-  build_psd_flattened_opti_data,
-  build_psd_layer_opti_data,
-  build_text_opti_data,
-} from "../../src/py_aep/binary/footage_chunks.ts";
+import { build_ai_layer_opti_data, build_generic_opti_data, build_psd_flattened_opti_data, build_psd_layer_opti_data, build_text_opti_data } from "../../src/py_aep/binary/footage_chunks.ts";
 import { CURRENT_VALUE, ImportOptions } from "../../src/py_aep/models/import_options.ts";
 import { CompItem } from "../../src/py_aep/models/items/composition.ts";
 import { FolderItem } from "../../src/py_aep/models/items/folder.ts";
@@ -41,15 +35,7 @@ import type { Project } from "../../src/py_aep/models/project.ts";
 import { FileSource, ai_document_profile } from "../../src/py_aep/models/sources/file.ts";
 import { read_ai_layers, UnsupportedAiLayersError } from "../../src/py_aep/resolvers/ai_layers.ts";
 import { probe_media } from "../../src/py_aep/resolvers/media_probe.ts";
-import {
-  FlattenedPsdError,
-  PsdGroup,
-  PsdLayer,
-  UnsupportedPsdLayersError,
-  _build_layer_tree,
-  _Record,
-  read_psd_layers,
-} from "../../src/py_aep/resolvers/psd_layers.ts";
+import { FlattenedPsdError, PsdGroup, PsdLayer, UnsupportedPsdLayersError, _build_layer_tree, _Record, read_psd_layers } from "../../src/py_aep/resolvers/psd_layers.ts";
 import { get_file_format, platform_source_format } from "../../src/py_aep/data/file_formats.ts";
 import { Label } from "../../src/py_aep/enums/index.ts";
 import { ai_layer_opti_boxes, parse_project_fresh } from "../helpers.ts";

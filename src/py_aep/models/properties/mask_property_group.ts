@@ -13,21 +13,20 @@ import { validate_bool, validate_rgb_color } from "../validators.ts";
 // a deferred import inside PropertyGroup's mask-atom method. If property_group.ts
 // evaluates first, PropertyGroup is still undefined here and the class definition throws.
 import { PropertyGroup, _insert_before_group_end } from "./property_group.ts";
-// TODO(port): Python imports parse_properties inside _materialize_mask_shape to break a
-// cycle. Hoisted to top level per the rulebook; safe only because it is used at call time.
-import { parse_properties } from "../../parsers/property.ts";
-import { descriptor, getattr, len, mod, py_assert, py_bool, zip } from "../../../pyrt/index.ts";
+import { deferred, descriptor, getattr, len, mod, py_assert, py_bool, zip } from "../../../pyrt/index.ts";
 import type { Utf8Chunk } from "../../binary/scalar_chunks.ts";
 import type { AVLayer } from "../layers/av_layer.ts";
 import type { Property } from "./property.ts";
 import type { Shape } from "./shape.ts";
+
+const _property = deferred<typeof import("../../parsers/property.ts")>(import.meta.url, "../../parsers/property.ts");
 
 // Mask outline colors cycled by creation index for new masks. AE picks
 // from the label colors via an app-global counter that persists across
 // sessions, so its exact choice is not reproducible from file content;
 // py_aep cycles the same palette deterministically instead (RGB bytes,
 // observed on AE 2026 defaults).
-const _MASK_COLOR_CYCLE: readonly (readonly [number, number, number])[] = [
+export const _MASK_COLOR_CYCLE: readonly (readonly [number, number, number])[] = [
   [30, 64, 30],
   [181, 56, 56],
   [228, 216, 76],
@@ -321,7 +320,7 @@ export class MaskPropertyGroup extends PropertyGroup {
 
     // Rebind the Mask Path child to the inserted om-s via the canonical
     // parser, so its value and tdsb reflect the materialized path.
-    const parsed = parse_properties(
+    const parsed = _property().parse_properties(
       [["ADBE Mask Shape", [tdmn, oms]]],
       this.property_depth + 1,
       new Map(),

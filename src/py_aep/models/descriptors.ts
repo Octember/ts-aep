@@ -32,7 +32,7 @@ export const _materialization_allowed = new ContextVar<boolean>("_materializatio
 });
 
 /** Run `body` with descriptor writes forbidden; restores the previous state after. */
-function _run_suppressed<R>(body: () => R): R {
+export function _run_suppressed<R>(body: () => R): R {
   const token = _materialization_allowed.set(false);
   try {
     return body();
@@ -69,7 +69,7 @@ export function _suppress_materialization() {
  */
 // TODO(pyrt): no isinstance-for-enum shim; a py_enum object is recognised by its helper set.
 // TODO(port): pyrt's int_enum and py_enum are the same object, so a non-int enum also passes the IntEnum check.
-function is_enum(x: any): boolean {
+export function is_enum(x: any): boolean {
   return x != null && typeof x === "object" && "__members__" in x && typeof x.has === "function";
 }
 
@@ -92,7 +92,7 @@ export function _enum_class(transform: ((...args: any[]) => any) | null | undefi
  * bound to the enum (its `__self__`); a py_enum method needs `this` bound
  * the same way, and `_enum_class` finds the enum through `__self__`.
  */
-function bound_enum_method(enum_cls: any, name: string, dflt: any): any {
+export function bound_enum_method(enum_cls: any, name: string, dflt: any): any {
   const m = getattr(enum_cls, name, dflt);
   if (m === dflt || typeof m !== "function") return m;
   return Object.assign(m.bind(enum_cls), { __self__: enum_cls });
@@ -159,7 +159,7 @@ export function _validate_enum_member(enum_cls: any, value: any, public_name: st
  * live in. It is created on first use and is not enumerable.
  */
 // TODO(pyrt): no shim for `obj.__dict__`; a non-enumerable Map per instance stands in for it.
-function instance_dict(obj: any): Map<string, any> {
+export function instance_dict(obj: any): Map<string, any> {
   if (!Object.prototype.hasOwnProperty.call(obj, "__dict__")) {
     Object.defineProperty(obj, "__dict__", { value: new Map<string, any>(), enumerable: false });
   }

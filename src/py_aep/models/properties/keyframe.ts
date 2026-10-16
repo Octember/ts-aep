@@ -1,14 +1,6 @@
 import { KeyframeInterpolationType, Label } from "../../enums/index.ts";
 import { frame_grid } from "../../binary/composition_chunks.ts";
-import {
-  _DEFAULT_INFLUENCE,
-  auto_path_speed,
-  auto_spatial_tangents,
-  auto_temporal_speeds,
-  color_auto_speed,
-  color_distance,
-  linear_path_speed,
-} from "../../resolvers/interpolation.ts";
+import { _DEFAULT_INFLUENCE, auto_path_speed, auto_spatial_tangents, auto_temporal_speeds, color_auto_speed, color_distance, linear_path_speed } from "../../resolvers/interpolation.ts";
 import { ChunkField } from "../descriptors.ts";
 import { TextDocument } from "../text/text_document.ts";
 import { validate_bool, validate_int, validate_number, validate_sequence } from "../validators.ts";
@@ -17,12 +9,12 @@ import { KeyframeEase } from "./keyframe_ease.ts";
 import { MarkerValue } from "./marker.ts";
 import { TEXT_KIND } from "./parallel.ts";
 import { Shape } from "./shape.ts";
-import { _validate_key_value } from "./property.ts";
 import type { LdatItem } from "../../binary/ldat_chunks.ts";
 import type { Curves } from "./curves.ts";
 import type { Property } from "./property.ts";
 import {
   ValueError,
+  deferred,
   descriptor,
   float,
   getattr,
@@ -32,11 +24,13 @@ import {
   zip,
 } from "../../../pyrt/index.ts";
 
+const _property = deferred<typeof import("./property.ts")>(import.meta.url, "./property.ts");
+
 // TYPE_CHECKING: `_ValueType = Union[list[float], float, Curves, Gradient, MarkerValue, Shape, TextDocument, None]`
-type _ValueType = number[] | number | Curves | Gradient | MarkerValue | Shape | TextDocument | null;
+export type _ValueType = number[] | number | Curves | Gradient | MarkerValue | Shape | TextDocument | null;
 
 /** sentinel: read value from _ldat_item */
-const _VALUE_FROM_CHUNK: unique symbol = Symbol("_VALUE_FROM_CHUNK");
+export const _VALUE_FROM_CHUNK: unique symbol = Symbol("_VALUE_FROM_CHUNK");
 
 /**
  * Reject an interpolation type the owning property cannot use.
@@ -45,7 +39,7 @@ const _VALUE_FROM_CHUNK: unique symbol = Symbol("_VALUE_FROM_CHUNK");
  * params) would otherwise accept a LINEAR/BEZIER byte AE never writes.
  * An unbound keyframe has no property to ask, so it is left alone.
  */
-function _validate_interpolation_type(value: KeyframeInterpolationType, keyframe: Keyframe): void {
+export function _validate_interpolation_type(value: KeyframeInterpolationType, keyframe: Keyframe): void {
   const prop = keyframe._property;
   if (prop == null) return;
   // Raises for an out-of-enum value before the descriptor's own
@@ -66,12 +60,12 @@ function _validate_interpolation_type(value: KeyframeInterpolationType, keyframe
  * in the file are a hair off for a decimal rate (12.3456 fps gave
  * 24691, where AE counts 24692 units per second).
  */
-function _timebase_units(frame_rate: number): number {
+export function _timebase_units(frame_rate: number): number {
   return float(frame_grid(frame_rate)[0]);
 }
 
 /** Refuse a keyframe time that does not fit the 32-bit time field. */
-function _check_time_units(units: number): void {
+export function _check_time_units(units: number): void {
   if (!(-0x80000000 <= units && units <= 0x7fffffff)) {
     throw new ValueError(
       `keyframe time out of supported range: ${units} units ` +
@@ -89,7 +83,7 @@ function _check_time_units(units: number): void {
  * caller sees the mistake rather than getting a write that appears to
  * succeed and does not.
  */
-function _validate_roving(value: boolean, keyframe: Keyframe): void {
+export function _validate_roving(value: boolean, keyframe: Keyframe): void {
   validate_bool(value);
   if (!value) return;
   const prop = keyframe._property;
@@ -645,7 +639,7 @@ export class Keyframe {
       // Reuse the property's value validation (numeric bounds + finite
       // check); it is a no-op for complex value types. Keeps NaN/inf and
       // out-of-range values out of keyframe floats just as `.value=` does.
-      _validate_key_value(prop, value);
+      _property()._validate_key_value(prop, value);
 
       // Replacing a TEXT keyframe's value must mutate the EXISTING
       // btdk-wired TextDocument in place (text documents live in the
@@ -1270,7 +1264,7 @@ descriptor(
 );
 
 /** Compute the constant speed between two adjacent keyframes. */
-function _segment_speed(kf_a: Keyframe, kf_b: Keyframe): number[] {
+export function _segment_speed(kf_a: Keyframe, kf_b: Keyframe): number[] {
   // Seconds rather than whole frames: two keyframes can sit inside the
   // same frame at different sub-frame times, and rounding them together
   // would report a zero-length segment. LAYER seconds, because AE stores

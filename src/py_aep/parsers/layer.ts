@@ -3,13 +3,7 @@ import type { Chunk, ListChunk } from "../binary/chunk.ts";
 import type { CmtaChunk } from "../binary/item_chunks.ts";
 import type { LdtaChunk } from "../binary/layer_chunks.ts";
 import type { Utf8Chunk } from "../binary/scalar_chunks.ts";
-import {
-  ChunkNotFoundError,
-  filter_by_list_type,
-  filter_by_type,
-  find_by_list_type,
-  find_by_type,
-} from "../binary/utils.ts";
+import { ChunkNotFoundError, filter_by_list_type, filter_by_type, find_by_list_type, find_by_type } from "../binary/utils.ts";
 import { LayerType } from "../enums/index.ts";
 import { _suppress_materialization } from "../models/descriptors.ts";
 import { AVLayer } from "../models/layers/av_layer.ts";
@@ -29,7 +23,7 @@ import type { Layer } from "../models/layers/layer.ts";
 // classes eagerly. models/layers/layer.ts imports this module, so if this
 // module is the first of the cycle to load, a class can still be in its TDZ
 // here. Python has the same eager table; the ESM cycle is the only new risk.
-const _LAYER_CLASSES: Map<number, typeof Layer> = new Map<number, typeof Layer>([
+export const _LAYER_CLASSES: Map<number, typeof Layer> = new Map<number, typeof Layer>([
   [LayerType.AV, AVLayer],
   [LayerType.LIGHT, LightLayer],
   [LayerType.CAMERA, CameraLayer],
@@ -52,7 +46,7 @@ const _LAYER_CLASSES: Map<number, typeof Layer> = new Map<number, typeof Layer>(
  *     A list of controller UUID strings from the OvG2/CPrp/Utf8 entries;
  *     each matches an `EssentialGraphicsController.uuid` on the source comp.
  */
-function _parse_ovg2_uuids(tdgp_chunks: Chunk[]): string[] {
+export function _parse_ovg2_uuids(tdgp_chunks: Chunk[]): string[] {
   const uuids: string[] = [];
   for (const ovg2_list of filter_by_list_type(tdgp_chunks, "OvG2")) {
     for (const cprp of filter_by_list_type(ovg2_list.chunks, "CPrp")) {

@@ -9,7 +9,7 @@ import { gunzipSync } from "node:zlib";
 import { BytesIO, bytes_, len, py_assert } from "../../pyrt/index.ts";
 import { CosParser } from "./cos.ts";
 
-let _COS_TEMPLATE_CACHE: any | null = null;
+export let _COS_TEMPLATE_CACHE: any | null = null;
 
 /** Parse and cache the COS template from the gzip blob. */
 export function get_cos_template(): any {

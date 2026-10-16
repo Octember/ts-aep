@@ -52,16 +52,16 @@ import {
 import type { Path } from "../../pyrt/index.ts";
 
 /** `data[i]` on bytes: negative indexes count from the end; IndexError text is CPython's bytes message. */
-function _byte_at(data: Uint8Array, i: number): number {
+export function _byte_at(data: Uint8Array, i: number): number {
   const j = i < 0 ? data.length + i : i;
   if (j < 0 || j >= data.length) throw new IndexError("index out of range");
   return data[j];
 }
 
 /** `io.SEEK_SET` / `io.SEEK_CUR` / `io.SEEK_END` */
-const SEEK_SET = 0;
-const SEEK_CUR = 1;
-const SEEK_END = 2;
+export const SEEK_SET = 0;
+export const SEEK_CUR = 1;
+export const SEEK_END = 2;
 
 /** Footage metadata read from a media-file header (a NamedTuple; keyword construction). */
 export interface MediaInfoFields {
@@ -122,7 +122,7 @@ export interface MediaInfoFields {
   channel_names: readonly string[];
 }
 
-const MEDIA_INFO_DEFAULTS: MediaInfoFields = {
+export const MEDIA_INFO_DEFAULTS: MediaInfoFields = {
   width: 0,
   height: 0,
   duration: 0.0,
@@ -196,7 +196,7 @@ export class MediaInfo implements MediaInfoFields {
 }
 
 /** AE's depth for grayscale pixels by bits per sample (AE 2026 imports of grayscale PNG, TIFF and PSD files). */
-const _GRAY_DEPTHS: Map<number, number> = new Map([
+export const _GRAY_DEPTHS: Map<number, number> = new Map([
   [1, 1],
   [2, 34],
   [4, 36],
@@ -206,7 +206,7 @@ const _GRAY_DEPTHS: Map<number, number> = new Map([
 ]);
 
 /** AE's depth for RGB pixels, or RGBA when `has_alpha` (24 / 48 / 96 and 32 / 64 / 128 at 8 / 16 / 32 bits per channel). */
-function _color_depth(has_alpha: boolean, bits_per_channel: number): number {
+export function _color_depth(has_alpha: boolean, bits_per_channel: number): number {
   return (has_alpha ? 4 : 3) * bits_per_channel;
 }
 
@@ -215,7 +215,7 @@ function _color_depth(has_alpha: boolean, bits_per_channel: number): number {
  * alpha a grayscale one stays gray (bilevel: 0) and an indexed one keeps
  * its bits per sample (AE 2026).
  */
-function _image_depth(has_alpha: boolean, bits: number, kw: { gray?: boolean; indexed?: boolean } = {}): number {
+export function _image_depth(has_alpha: boolean, bits: number, kw: { gray?: boolean; indexed?: boolean } = {}): number {
   const { gray = false, indexed = false } = kw;
   if (has_alpha || !(gray || indexed)) return _color_depth(has_alpha, bits);
   if (indexed) return bits;
@@ -227,7 +227,7 @@ function _image_depth(has_alpha: boolean, bits: number, kw: { gray?: boolean; in
  * reads through.
  */
 // TODO(pyrt): file-object shim (`open(path, "rb")`); pyrt only has BytesIO.
-class _OsFile {
+export class _OsFile {
   private readonly fd: number;
   private pos = 0;
 
@@ -296,7 +296,7 @@ class _OsFile {
   }
 }
 
-class _BoundedReader {
+export class _BoundedReader {
   private readonly _fp: _OsFile;
   private readonly _size: number;
 
@@ -396,7 +396,7 @@ export function probe_media(file: Path, data: Uint8Array | null = null): MediaIn
 // PNG - IHDR (still image)
 // ---------------------------------------------------------------------------
 
-const _PNG_SIGNATURE = b("\x89PNG\r\n\x1a\n");
+export const _PNG_SIGNATURE = b("\x89PNG\r\n\x1a\n");
 
 export function _probe_png(fp: IO): MediaInfo {
   const sig = fp.read(8);
@@ -435,7 +435,7 @@ export function _probe_png(fp: IO): MediaInfo {
  * the first chunk after IHDR. Both chunks precede the image data, so the
  * scan stops there.
  */
-function _png_color_chunks(fp: IO): [boolean, Uint8Array | null] {
+export function _png_color_chunks(fp: IO): [boolean, Uint8Array | null] {
   let has_trns = false;
   let icc_profile: Uint8Array | null = null;
   for (;;) {
@@ -460,7 +460,7 @@ function _png_color_chunks(fp: IO): [boolean, Uint8Array | null] {
  * the deflated profile. An unreadable one counts as absent, the way AE
  * treats it.
  */
-function _png_iccp(body: Uint8Array): Uint8Array | null {
+export function _png_iccp(body: Uint8Array): Uint8Array | null {
   const split = bytes_.find(body, 0); // body.find(b"\x00")
   if (split < 0 || !bytes_eq(bytes_.slice(body, split + 1, split + 2), b("\x00"))) return null; // 0 = deflate
   try {
@@ -479,7 +479,7 @@ function _png_iccp(body: Uint8Array): Uint8Array | null {
  * `RF64` and `BW64` carry the same WAVE payload as `RIFF` but move the 64-bit
  * sizes into a `ds64` chunk, which lets them exceed 4 GB. AE imports both.
  */
-const _WAV_RIFF_IDS = [b("RIFF"), b("RF64"), b("BW64")];
+export const _WAV_RIFF_IDS = [b("RIFF"), b("RF64"), b("BW64")];
 
 export function _probe_wav(fp: IO): MediaInfo {
   const riff_id = fp.read(4);
@@ -531,7 +531,7 @@ export function _probe_wav(fp: IO): MediaInfo {
 // ---------------------------------------------------------------------------
 
 /** Decode an 80-bit IEEE-754 extended float (big-endian, AIFF sampleRate). */
-function _read_extended(b_: Uint8Array): number {
+export function _read_extended(b_: Uint8Array): number {
   const exp = ((_byte_at(b_, 0) << 8) | _byte_at(b_, 1)) & 0x7fff;
   const mant = bytes_.int_from_bytes(b_.slice(2, 10), "big");
   if (exp === 0 && mant === 0) return 0.0;
@@ -573,9 +573,9 @@ export function _probe_aiff(fp: IO): MediaInfo {
 // EXR - header attributes (still image; sequences handled by the caller)
 // ---------------------------------------------------------------------------
 
-const _EXR_MAGIC = b("\x76\x2f\x31\x01");
+export const _EXR_MAGIC = b("\x76\x2f\x31\x01");
 
-function _read_cstr(fp: IO): Uint8Array {
+export function _read_cstr(fp: IO): Uint8Array {
   const out: number[] = [];
   for (;;) {
     const c = fp.read(1);
@@ -585,7 +585,7 @@ function _read_cstr(fp: IO): Uint8Array {
 }
 
 /** Version-field flag of a multi-part EXR (one header per part, then a 0 byte). */
-const _EXR_MULTIPART = 0x1000;
+export const _EXR_MULTIPART = 0x1000;
 
 export function _probe_exr(fp: IO): MediaInfo {
   if (!bytes_eq(fp.read(4), _EXR_MAGIC)) throw new ValueError("Not a valid EXR file (bad magic)");
@@ -625,7 +625,7 @@ export function _probe_exr(fp: IO): MediaInfo {
 }
 
 /** The attributes `_probe_exr` uses from one EXR part header. */
-function _read_exr_header(fp: IO): Map<string, any> {
+export function _read_exr_header(fp: IO): Map<string, any> {
   const out = new Map<string, any>();
   for (;;) {
     const name = _read_cstr(fp);
@@ -658,7 +658,7 @@ function _read_exr_header(fp: IO): Map<string, any> {
  * A chlist is a sequence of null-terminated channel names, each followed
  * by 16 bytes of channel data, terminated by an empty name.
  */
-function _exr_channel_names(value: Uint8Array): string[] {
+export function _exr_channel_names(value: Uint8Array): string[] {
   const names: string[] = [];
   let pos = 0;
   while (pos < value.length) {
@@ -678,7 +678,7 @@ function _exr_channel_names(value: Uint8Array): string[] {
  * Colour channels per TIFF PhotometricInterpretation; a sample beyond them is
  * alpha. Modes: 0/1 bilevel+greyscale, 2 RGB, 3 palette, 5 CMYK, 6 YCbCr.
  */
-const _TIFF_BASE_CHANNELS: Map<number, number> = new Map([
+export const _TIFF_BASE_CHANNELS: Map<number, number> = new Map([
   [0, 1],
   [1, 1],
   [2, 3],
@@ -688,27 +688,27 @@ const _TIFF_BASE_CHANNELS: Map<number, number> = new Map([
 ]);
 
 /** Struct codes for the IFD value types BigTIFF stores dimensions in. */
-const _BIGTIFF_VALUE_FMT: Map<number, string> = new Map([
+export const _BIGTIFF_VALUE_FMT: Map<number, string> = new Map([
   [3, "H"],
   [4, "I"],
   [16, "Q"],
 ]);
 
 /** TIFF tag 34675: the embedded ICC profile. */
-const _TIFF_ICC_TAG = 0x8773;
+export const _TIFF_ICC_TAG = 0x8773;
 
 /** TIFF tag 37724: Photoshop's layer data (a layered TIFF saved by Photoshop). */
-const _TIFF_PHOTOSHOP_LAYERS_TAG = 0x935c;
+export const _TIFF_PHOTOSHOP_LAYERS_TAG = 0x935c;
 
 /** The signature tag 37724 opens with, ahead of PSD additional-info blocks. */
-const _PHOTOSHOP_DATA_HEADER = b("Adobe Photoshop Document Data Block\x00");
+export const _PHOTOSHOP_DATA_HEADER = b("Adobe Photoshop Document Data Block\x00");
 
 /**
  * The Photoshop colour mode a TIFF reads as, per PhotometricInterpretation
  * (a 1-bit grayscale TIFF is bitmap; CIELab is Lab). Measured on AE 2026
  * (footage_depth.aep, photoshop_modes.aep).
  */
-const _TIFF_COLOR_MODES: Map<number, number> = new Map([
+export const _TIFF_COLOR_MODES: Map<number, number> = new Map([
   [0, 1],
   [1, 1],
   [2, 3],
@@ -725,7 +725,7 @@ const _TIFF_COLOR_MODES: Map<number, number> = new Map([
  * `Layr` block (`Lr16`/`Lr32` at 16/32 bits) opens with the signed layer
  * count. 0 when no such block is found.
  */
-function _tiff_photoshop_layer_count(fp: IO, en: string, offset: number, length: number): number {
+export function _tiff_photoshop_layer_count(fp: IO, en: string, offset: number, length: number): number {
   if (length < _PHOTOSHOP_DATA_HEADER.length) return 0;
   const end = offset + length;
   fp.seek(offset);
@@ -766,7 +766,7 @@ function _tiff_photoshop_layer_count(fp: IO, en: string, offset: number, length:
  * (tag 37724), `None` when the file has none; without it AE counts an
  * image with an alpha sample as one layer.
  */
-function _tiff_media_info(
+export function _tiff_media_info(
   fp: IO,
   en: string,
   width: number,
@@ -1013,7 +1013,7 @@ export function _probe_bmp(fp: IO): MediaInfo {
 // ---------------------------------------------------------------------------
 
 /** Seek past a chain of GIF data sub-blocks, up to its 0-length terminator. */
-function _skip_gif_sub_blocks(fp: IO): void {
+export function _skip_gif_sub_blocks(fp: IO): void {
   for (;;) {
     const size = fp.read(1);
     if (size.length === 0 || size[0] === 0) return;
@@ -1028,7 +1028,7 @@ function _skip_gif_sub_blocks(fp: IO): void {
  * colour table. AE plays an animated GIF at the rate the Graphic Control
  * Extension delays imply, so they decide both duration and frame rate.
  */
-function _gif_frame_timing(fp: IO): [number, number] {
+export function _gif_frame_timing(fp: IO): [number, number] {
   let frames = 0;
   let delay = 0;
   for (;;) {
@@ -1122,7 +1122,7 @@ export const PSB_8BYTE_KEYS: ReadonlySet<string> = new Set(
  * Layer Info block is empty: 16/32-bit documents use Lr16/Lr32, and some
  * writers use Layr.
  */
-const _LAYER_RECORD_KEYS: readonly Uint8Array[] = [b("Lr16"), b("Lr32"), b("Layr")];
+export const _LAYER_RECORD_KEYS: readonly Uint8Array[] = [b("Lr16"), b("Lr32"), b("Layr")];
 
 /**
  * Walk a PSD/PSB stream to its layer records.
@@ -1186,7 +1186,7 @@ export function psd_layer_record_count(fp: IO, is_psb: boolean): [number, number
  * color for CMYK.
  * Modes: 0 Bitmap, 1 Grayscale, 2 Indexed, 3 RGB, 4 CMYK, 8 Duotone, 9 Lab.
  */
-const _PSD_BASE_CHANNELS: Map<number, number> = new Map([
+export const _PSD_BASE_CHANNELS: Map<number, number> = new Map([
   [0, 1],
   [1, 1],
   [2, 1],
@@ -1236,7 +1236,7 @@ export function* iter_image_resources(fp: IO): Generator<[number, Uint8Array]> {
  * fraction when it imports (sspc 4/3, psd_layer_styles_single fixture),
  * so the ratio is re-rationalized the same way here.
  */
-function _psd_image_resources(fp: IO): [number, Uint8Array | null] {
+export function _psd_image_resources(fp: IO): [number, Uint8Array | null] {
   const start = fp.tell();
   let ratio = 1.0;
   let icc_profile: Uint8Array | null = null;
@@ -1305,7 +1305,7 @@ export function _probe_psd(fp: IO): MediaInfo {
 }
 
 /** Whether the layer record at `fp` has a transparency channel (id -1). */
-function _psd_record_has_transparency(fp: IO, is_psb: boolean): boolean {
+export function _psd_record_has_transparency(fp: IO, is_psb: boolean): boolean {
   fp.seek(16, SEEK_CUR); // the record's bounds
   const count = struct.unpack(">H", fp.read(2))[0];
   const entry = 2 + (is_psb ? 8 : 4); // channel id + data length
@@ -1354,7 +1354,7 @@ export function pixel_buffer_size(width: number, height: number, channels: numbe
 // ---------------------------------------------------------------------------
 
 /** Yield (type, body_start, atom_end) for each atom in [start, end). */
-function* _atoms(data: Uint8Array, start: number, end: number): Generator<[Uint8Array, number, number]> {
+export function* _atoms(data: Uint8Array, start: number, end: number): Generator<[Uint8Array, number, number]> {
   let pos = start;
   while (pos + 8 <= end) {
     let size = bytes_.int_from_bytes(bytes_.slice(data, pos, pos + 4), "big");
@@ -1375,11 +1375,11 @@ function* _atoms(data: Uint8Array, start: number, end: number): Generator<[Uint8
 }
 
 // TODO(port): 8-byte fields come back as `number`; values above 2^53 lose precision (none occur in media headers).
-function _u(data: Uint8Array, off: number, n: number): number {
+export function _u(data: Uint8Array, off: number, n: number): number {
   return bytes_.int_from_bytes(bytes_.slice(data, off, off + n), "big");
 }
 
-function _s(data: Uint8Array, off: number, n: number): number {
+export function _s(data: Uint8Array, off: number, n: number): number {
   return bytes_.int_from_bytes(bytes_.slice(data, off, off + n), "big", true);
 }
 
@@ -1389,7 +1389,7 @@ function _s(data: Uint8Array, off: number, n: number): number {
  * Other bodies are seeked over, so the bulk of the file (`mdat`, often
  * gigabytes) is never read into memory.
  */
-function* _top_level_atoms(fp: IO, wanted: Uint8Array): Generator<Uint8Array> {
+export function* _top_level_atoms(fp: IO, wanted: Uint8Array): Generator<Uint8Array> {
   fp.seek(0, SEEK_END);
   const file_end = fp.tell();
   fp.seek(0);
@@ -1416,7 +1416,7 @@ function* _top_level_atoms(fp: IO, wanted: Uint8Array): Generator<Uint8Array> {
 }
 
 /** Return the body of the top-level `moov` atom, or `b""` if absent. */
-function _read_moov(fp: IO): Uint8Array {
+export function _read_moov(fp: IO): Uint8Array {
   const r = _top_level_atoms(fp, b("moov")).next();
   return r.done ? new Uint8Array(0) : r.value;
 }
@@ -1430,7 +1430,7 @@ function _read_moov(fp: IO): Uint8Array {
  * for both `tkhd` versions). Only the a/b/c/d terms decide whether x maps
  * onto y; a half turn leaves them on the diagonal and needs no swap.
  */
-function _tkhd_axes_swapped(data: Uint8Array, end: number): boolean {
+export function _tkhd_axes_swapped(data: Uint8Array, end: number): boolean {
   const matrix = end - 44;
   if (matrix < 0) return false;
   const a = _s(data, matrix, 4);
@@ -1448,7 +1448,7 @@ function _tkhd_axes_swapped(data: Uint8Array, end: number): boolean {
  * Reading only the first run also reports the wrong rate for variable frame
  * rate media, where the runs alternate.
  */
-function _stts_totals(data: Uint8Array, body: number, end: number): [number, number] {
+export function _stts_totals(data: Uint8Array, body: number, end: number): [number, number] {
   let samples = 0;
   let ticks = 0;
   for (const i of range(_u(data, body + 4, 4))) {
@@ -1462,13 +1462,13 @@ function _stts_totals(data: Uint8Array, body: number, end: number): [number, num
 }
 
 /** `tfhd` / `trun` flag bits naming the fields that are actually present. */
-const _TFHD_BASE_OFFSET = 0x000001;
-const _TFHD_SAMPLE_DESC = 0x000002;
-const _TFHD_DEFAULT_DURATION = 0x000008;
-const _TRUN_DATA_OFFSET = 0x000001;
-const _TRUN_FIRST_SAMPLE_FLAGS = 0x000004;
+export const _TFHD_BASE_OFFSET = 0x000001;
+export const _TFHD_SAMPLE_DESC = 0x000002;
+export const _TFHD_DEFAULT_DURATION = 0x000008;
+export const _TRUN_DATA_OFFSET = 0x000001;
+export const _TRUN_FIRST_SAMPLE_FLAGS = 0x000004;
 /** Per-sample `trun` fields, in the order they are stored. */
-const _TRUN_SAMPLE_FIELDS: readonly number[] = [0x000100, 0x000200, 0x000400, 0x000800];
+export const _TRUN_SAMPLE_FIELDS: readonly number[] = [0x000100, 0x000200, 0x000400, 0x000800];
 
 /**
  * Return `(sample_count, total_ticks)` from one track's movie fragments.
@@ -1478,7 +1478,7 @@ const _TRUN_SAMPLE_FIELDS: readonly number[] = [0x000100, 0x000200, 0x000400, 0x
  * the `trun`. AE reads these, so a fragmented `.mp4` that py_aep reported as
  * 0 s / 0 fps imports in AE with its real duration and rate.
  */
-function _fragment_totals(fp: IO, track_id: number): [number, number] {
+export function _fragment_totals(fp: IO, track_id: number): [number, number] {
   let samples = 0;
   let ticks = 0;
   for (const moof of _top_level_atoms(fp, b("moof"))) {
@@ -1656,7 +1656,7 @@ export function _probe_mov(fp: IO, undecodable: ReadonlySet<string> = new Set())
 }
 
 /** The fields a video `stsd` sample entry contributes to `MediaInfo`. */
-class _VideoSampleEntry {
+export class _VideoSampleEntry {
   declare readonly codec: Uint8Array;
   declare readonly width: number;
   declare readonly height: number;
@@ -1675,12 +1675,12 @@ class _VideoSampleEntry {
 }
 
 /** Apple ProRes sample-entry codes. AE decodes ProRes at 16 bits per channel (AE 2026 imports of its own ProRes 422 and 4444 renders). */
-const _PRORES_CODECS: ReadonlySet<string> = new Set(
+export const _PRORES_CODECS: ReadonlySet<string> = new Set(
   [b("apco"), b("apcs"), b("apcn"), b("apch"), b("ap4h"), b("ap4x")].map((k) => bytes_.hex(k)),
 );
 
 /** H.264 profiles whose sequence parameter set carries the bit depth. */
-const _AVC_HIGH_PROFILES: ReadonlySet<number> = new Set([100, 110, 122, 244, 44, 83, 86, 118, 128, 138, 139, 134, 135]);
+export const _AVC_HIGH_PROFILES: ReadonlySet<number> = new Set([100, 110, 122, 244, 44, 83, 86, 118, 128, 138, 139, 134, 135]);
 
 /**
  * Luma bit depth of the first sequence parameter set of an `avcC` box.
@@ -1688,7 +1688,7 @@ const _AVC_HIGH_PROFILES: ReadonlySet<number> = new Set([100, 110, 122, 244, 44,
  * AE decodes H.264 above 8 bits at 16 bits per channel (a High 10
  * `mov_23_976.mov` caches depth 48, 8-bit High profile files 24).
  */
-function _avc_bit_depth(data: Uint8Array, body: number, end: number): number {
+export function _avc_bit_depth(data: Uint8Array, body: number, end: number): number {
   if (body + 8 > end || !(_byte_at(data, body + 5) & 0x1f)) return 8;
   const sps_end = Math.min(body + 8 + _u(data, body + 6, 2), end);
   // Drop the NAL header byte and the emulation-prevention bytes.
@@ -1704,7 +1704,7 @@ function _avc_bit_depth(data: Uint8Array, body: number, end: number): number {
 }
 
 /** Read one unsigned Exp-Golomb code from a bit string: `(value, end)`. */
-function _exp_golomb(bits: string, pos: number): [number, number] {
+export function _exp_golomb(bits: string, pos: number): [number, number] {
   let zeros = 0;
   while (pos + zeros < bits.length && bits[pos + zeros] === "0") zeros += 1;
   const start = pos + zeros;
@@ -1712,7 +1712,7 @@ function _exp_golomb(bits: string, pos: number): [number, number] {
 }
 
 /** Decode the first sample description as a video sample entry. */
-function _parse_stsd(data: Uint8Array, body: number, end: number): _VideoSampleEntry {
+export function _parse_stsd(data: Uint8Array, body: number, end: number): _VideoSampleEntry {
   const entry = body + 8; // skip version/flags(4) + entry_count(4)
   if (entry + 16 > end) return new _VideoSampleEntry();
   const entry_size = _u(data, entry, 4);
@@ -1748,7 +1748,7 @@ function _parse_stsd(data: Uint8Array, body: number, end: number): _VideoSampleE
  * only once verified, since under-claiming a codec AE *can* decode breaks
  * the footage too (AE warns and renders nothing).
  */
-const _MP4_UNDECODABLE_CODECS: ReadonlySet<string> = new Set([b("vp09"), b("av01")].map((k) => bytes_.hex(k)));
+export const _MP4_UNDECODABLE_CODECS: ReadonlySet<string> = new Set([b("vp09"), b("av01")].map((k) => bytes_.hex(k)));
 
 /**
  * Probe an `.mp4`.
@@ -1791,7 +1791,7 @@ export function _probe_mp4(fp: IO): MediaInfo {
 // FBX - 3D scene (AE renders at fixed defaults; dims are not in the file)
 // ---------------------------------------------------------------------------
 
-const _FBX_MAGIC = b("Kaydara FBX Binary  \x00\x1a\x00");
+export const _FBX_MAGIC = b("Kaydara FBX Binary  \x00\x1a\x00");
 
 export function _probe_fbx(fp: IO): MediaInfo {
   if (!bytes_eq(fp.read(_FBX_MAGIC.length), _FBX_MAGIC)) throw new ValueError("Not a binary FBX file (bad magic)");
@@ -1824,7 +1824,7 @@ export function _probe_data(fp: IO): MediaInfo {
  * Naive (zoneless) calendar datetime as microseconds since 1970-01-01, or
  * `null` when the fields are not a valid datetime (`datetime()` raises).
  */
-function _naive_datetime_us(y: number, mo: number, d: number, h: number, mi: number, s: number, us: number): number | null {
+export function _naive_datetime_us(y: number, mo: number, d: number, h: number, mi: number, s: number, us: number): number | null {
   const leap = (y % 4 === 0 && y % 100 !== 0) || y % 400 === 0;
   const dim = [31, leap ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
   if (!(1 <= y && y <= 9999) || !(1 <= mo && mo <= 12) || !(1 <= d && d <= dim[mo - 1])) return null;
@@ -1853,7 +1853,7 @@ function _naive_datetime_us(y: number, mo: number, d: number, h: number, mi: num
  * ISO-8601 shapes (date, optional `T`/space time to the second, optional
  * 3- or 6-digit fraction); CPython 3.12 accepts a few more.
  */
-function _parse_mgjson_time(t: string): number | null {
+export function _parse_mgjson_time(t: string): number | null {
   if (typeof t !== "string") throw new AttributeError(`'${_json_type(t)}' object has no attribute 'strip'`);
   let s = strip(t);
   // Drop a trailing 'Z' or numeric UTC offset (+HH:MM / +HHMM); the span
@@ -1895,7 +1895,7 @@ function _parse_mgjson_time(t: string): number | null {
 }
 
 /** CPython type name of a parsed JSON value (for error messages). */
-function _json_type(x: any): string {
+export function _json_type(x: any): string {
   if (x === null) return "NoneType";
   if (typeof x === "boolean") return "bool";
   if (typeof x === "number") return Number.isInteger(x) ? "int" : "float";
@@ -1904,7 +1904,7 @@ function _json_type(x: any): string {
 }
 
 /** `d.get(key, default)` on a parsed JSON value; a non-dict has no `.get`. */
-function _json_get(d: any, key: string, default_: any = null): any {
+export function _json_get(d: any, key: string, default_: any = null): any {
   if (d === null || typeof d !== "object" || Array.isArray(d)) {
     throw new AttributeError(`'${_json_type(d)}' object has no attribute 'get'`);
   }
@@ -1912,7 +1912,7 @@ function _json_get(d: any, key: string, default_: any = null): any {
 }
 
 /** `iter(x)` on a parsed JSON value: list items, str characters, dict keys. */
-function _json_iter(x: any): any[] {
+export function _json_iter(x: any): any[] {
   if (Array.isArray(x)) return x;
   if (typeof x === "string") return Array.from(x);
   if (x !== null && typeof x === "object") return Object.keys(x);
@@ -1920,7 +1920,7 @@ function _json_iter(x: any): any[] {
 }
 
 /** Python truthiness of a parsed JSON value (an empty dict is falsy). */
-function _json_truthy(x: any): boolean {
+export function _json_truthy(x: any): boolean {
   if (x !== null && typeof x === "object" && !Array.isArray(x)) return Object.keys(x).length > 0;
   return py_bool(x);
 }
@@ -1930,7 +1930,7 @@ function _json_truthy(x: any): boolean {
  * dropped, a UTF-16 BOM or an ASCII-first NUL pattern selects UTF-16.
  */
 // TODO(port): UTF-32 JSON documents (BOM or NUL pattern) fall through to UTF-8 and fail to parse; pyrt has no UTF-32 codec.
-function _json_text(raw: Uint8Array): string {
+export function _json_text(raw: Uint8Array): string {
   const n = raw.length;
   if (n >= 2 && ((raw[0] === 0xff && raw[1] === 0xfe) || (raw[0] === 0xfe && raw[1] === 0xff))) {
     return decode(raw, "utf-16", "strict");
@@ -1976,13 +1976,13 @@ export function _probe_mgjson(fp: IO): MediaInfo {
 // MP3 - MPEG audio frame header (audio only)
 // ---------------------------------------------------------------------------
 
-const _MP3_SR: Map<number, number[]> = new Map([
+export const _MP3_SR: Map<number, number[]> = new Map([
   [3, [44100, 48000, 32000]],
   [2, [22050, 24000, 16000]],
   [0, [11025, 12000, 8000]],
 ]);
-const _MP3_BR_M1_L3 = [0, 32, 40, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320, 0];
-const _MP3_BR_M2_L3 = [0, 8, 16, 24, 32, 40, 48, 56, 64, 80, 96, 112, 128, 144, 160, 0];
+export const _MP3_BR_M1_L3 = [0, 32, 40, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320, 0];
+export const _MP3_BR_M2_L3 = [0, 8, 16, 24, 32, 40, 48, 56, 64, 80, 96, 112, 128, 144, 160, 0];
 
 /**
  * Byte offset of the audio data after a leading ID3v2 tag (0 if absent).
@@ -1991,7 +1991,7 @@ const _MP3_BR_M2_L3 = [0, 8, 16, 24, 32, 40, 48, 56, 64, 80, 96, 112, 128, 144, 
  * covers neither the 10-byte header nor the optional 10-byte ID3v2.4 footer
  * that flag bit 4 announces.
  */
-function _skip_id3v2(raw: Uint8Array): number {
+export function _skip_id3v2(raw: Uint8Array): number {
   if (bytes_eq(bytes_.slice(raw, 0, 3), b("ID3")) && raw.length >= 10) {
     const s = bytes_.slice(raw, 6, 10);
     const size = ((s[0] & 0x7f) << 21) | ((s[1] & 0x7f) << 14) | ((s[2] & 0x7f) << 7) | (s[3] & 0x7f);
@@ -2006,7 +2006,7 @@ function _skip_id3v2(raw: Uint8Array): number {
  * The frame-size coefficient is samples-per-frame/8 (1152/8=144 for MPEG-1,
  * 576/8=72 for MPEG-2/2.5).
  */
-function _mp3_frame_size(header: number): number {
+export function _mp3_frame_size(header: number): number {
   const version = (header >>> 19) & 0x3; // 3=MPEG1, 2=MPEG2, 0=MPEG2.5
   const layer = (header >>> 17) & 0x3; // 1 = Layer III
   const bitrate_i = (header >>> 12) & 0xf;
@@ -2027,7 +2027,7 @@ function _mp3_frame_size(header: number): number {
  * is what keeps a footer-bearing or sloppily tagged file - where the audio
  * does not begin at the tag boundary - from reporting a zero duration.
  */
-function _find_mp3_frame(window: Uint8Array): number {
+export function _find_mp3_frame(window: Uint8Array): number {
   const n = window.length;
   if (n >= 4 && window[0] === 0xff && (window[1] & 0xe0) === 0xe0 && _mp3_frame_size(Number(struct.unpack_from(">I", window, 0)[0]))) {
     return 0;
@@ -2109,13 +2109,13 @@ export function _probe_mp3(fp: IO): MediaInfo {
 // ---------------------------------------------------------------------------
 
 /** ADTS sampling-frequency index -> Hz (indices 13-15 are reserved/explicit). */
-const _AAC_SR: readonly number[] = [96000, 88200, 64000, 48000, 44100, 32000, 24000, 22050, 16000, 12000, 11025, 8000, 7350];
+export const _AAC_SR: readonly number[] = [96000, 88200, 64000, 48000, 44100, 32000, 24000, 22050, 16000, 12000, 11025, 8000, 7350];
 
 /**
  * 13-bit ADTS frame length: low 2 bits of byte 3, all of byte 4, high 3
  * bits of byte 5.
  */
-function _adts_frame_len(raw: Uint8Array, pos: number): number {
+export function _adts_frame_len(raw: Uint8Array, pos: number): number {
   return ((raw[pos + 3] & 0x03) << 11) | (raw[pos + 4] << 3) | (raw[pos + 5] >> 5);
 }
 
@@ -2127,7 +2127,7 @@ function _adts_frame_len(raw: Uint8Array, pos: number): number {
  * least a full header - enough to reject a coincidental `0xFF 0xFx` byte pair
  * in non-ADTS data.
  */
-function _is_adts_header(raw: Uint8Array, pos: number, n: number): boolean {
+export function _is_adts_header(raw: Uint8Array, pos: number, n: number): boolean {
   return (
     pos + 7 <= n &&
     raw[pos] === 0xff &&
@@ -2195,7 +2195,7 @@ export function _probe_aac(fp: IO): MediaInfo {
 // ---------------------------------------------------------------------------
 
 // TODO(port): lzma.decompress(format=FORMAT_ALONE) has no node:zlib equivalent and pyrt has no LZMA decoder.
-function _lzma_alone_decompress(data: Uint8Array): Uint8Array {
+export function _lzma_alone_decompress(data: Uint8Array): Uint8Array {
   throw new NotImplementedError(`LZMA (FORMAT_ALONE) decoding is not ported yet (${data.length} bytes)`);
 }
 
@@ -2248,7 +2248,7 @@ export function _probe_swf(fp: IO): MediaInfo {
 // MPEG-1/2 program stream - sequence header + picture-start-code count
 // ---------------------------------------------------------------------------
 
-const _MPEG_FR: Map<number, number> = new Map([
+export const _MPEG_FR: Map<number, number> = new Map([
   [1, 24000 / 1001],
   [2, 24.0],
   [3, 25.0],
@@ -2267,7 +2267,7 @@ const _MPEG_FR: Map<number, number> = new Map([
  * not the (16/9)/(720/480) = 1.1852 the frame size alone would give. Every
  * other frame size measured square. Values verified against AE 2026.
  */
-const _MPEG_D1_PIXEL_ASPECT: Map<string, number> = new Map([
+export const _MPEG_D1_PIXEL_ASPECT: Map<string, number> = new Map([
   [tkey(720, 480, 2), 10 / 11],
   [tkey(720, 480, 3), 40 / 33],
   [tkey(720, 576, 2), 128 / 117],
@@ -2275,7 +2275,7 @@ const _MPEG_D1_PIXEL_ASPECT: Map<string, number> = new Map([
 ]);
 
 /** Offset of a PES packet's payload, skipping its variable-length header. */
-function _pes_payload_start(data: Uint8Array, pos: number, end: number): number {
+export function _pes_payload_start(data: Uint8Array, pos: number, end: number): number {
   let p = pos + 6;
   if (p < end && (data[p] & 0xc0) === 0x80) {
     // MPEG-2 PES: flags(2) + header len
@@ -2307,7 +2307,7 @@ function _pes_payload_start(data: Uint8Array, pos: number, end: number): number 
  * padding that precedes a pack or PES header. Counting the raw file was off
  * by one in both directions on the measured fixtures.
  */
-function _mpeg_video_es(data: Uint8Array): [Uint8Array, boolean] {
+export function _mpeg_video_es(data: Uint8Array): [Uint8Array, boolean] {
   const parts: Uint8Array[] = [];
   let has_audio = false;
   let pos = 0;
@@ -2387,7 +2387,7 @@ export function _probe_mpeg(fp: IO): MediaInfo {
  * read a byte at a time up to the newline (the same bytes `io` returns).
  */
 // TODO(pyrt): BytesIO.readline is missing; the fallback below reads byte by byte.
-function _readline(fp: IO): Uint8Array {
+export function _readline(fp: IO): Uint8Array {
   const native = (fp as any).readline;
   if (typeof native === "function") return native.call(fp, -1);
   const out: number[] = [];
@@ -2401,7 +2401,7 @@ function _readline(fp: IO): Uint8Array {
 }
 
 /** `for raw in fp:` - each line of the stream, newline included. */
-function* _iter_lines(fp: IO): Generator<Uint8Array> {
+export function* _iter_lines(fp: IO): Generator<Uint8Array> {
   for (;;) {
     const line = _readline(fp);
     if (line.length === 0) return;
@@ -2411,7 +2411,7 @@ function* _iter_lines(fp: IO): Generator<Uint8Array> {
 
 /** `bytes.split()` with no separator: runs of ASCII whitespace (space, \t, \n, \r, \v, \f). */
 // TODO(pyrt): bytes split-on-whitespace is missing from pyrt bytes_ (only split(sep) exists).
-function _split_ws(data: Uint8Array): Uint8Array[] {
+export function _split_ws(data: Uint8Array): Uint8Array[] {
   const is_ws = (c: number): boolean => c === 0x20 || (c >= 0x09 && c <= 0x0d);
   const out: Uint8Array[] = [];
   let i = 0;
@@ -2426,7 +2426,7 @@ function _split_ws(data: Uint8Array): Uint8Array[] {
 }
 
 /** Latin-1 view of bytes, so a byte regex runs as a string regex. */
-function _latin1(data: Uint8Array): string {
+export function _latin1(data: Uint8Array): string {
   return Buffer.from(data.buffer, data.byteOffset, data.length).toString("latin1");
 }
 
@@ -2461,7 +2461,7 @@ export function _probe_hdr(fp: IO): MediaInfo {
 // Canon CRW (CIFF) - Camera Raw still
 // ---------------------------------------------------------------------------
 
-const _CIFF_IMAGE_INFO = 0x1810;
+export const _CIFF_IMAGE_INFO = 0x1810;
 
 export function _probe_crw(fp: IO): MediaInfo {
   const data = fp.read();
@@ -2482,7 +2482,7 @@ export function _probe_crw(fp: IO): MediaInfo {
 }
 
 /** The body of the first `wanted` record in the CIFF heap `[start, end)`. */
-function _ciff_record(data: Uint8Array, order: string, start: number, end: number, wanted: number): Uint8Array | null {
+export function _ciff_record(data: Uint8Array, order: string, start: number, end: number, wanted: number): Uint8Array | null {
   const [table_rel] = struct.unpack(order + "I", bytes_.slice(data, end - 4, end));
   const table = table_rel + start;
   const [count] = struct.unpack(order + "H", bytes_.slice(data, table, table + 2));
@@ -2511,11 +2511,11 @@ function _ciff_record(data: Uint8Array, order: string, start: number, end: numbe
 // AI / EPS / PDF - vector page dimensions (still image, TEXT source format)
 // ---------------------------------------------------------------------------
 
-const _MEDIABOX_RE =
+export const _MEDIABOX_RE =
   /\/MediaBox[ \t\n\r\f\v]*\[[ \t\n\r\f\v]*([\d.+-]+)[ \t\n\r\f\v]+([\d.+-]+)[ \t\n\r\f\v]+([\d.+-]+)[ \t\n\r\f\v]+([\d.+-]+)[ \t\n\r\f\v]*\]/;
 
 /** AE 2026 caches AI/EPS/PDF footage, and each of its layers, as 8-bit RGBA. */
-const _VECTOR_DEPTH = _color_depth(true, 8);
+export const _VECTOR_DEPTH = _color_depth(true, 8);
 
 export function _probe_pdf(fp: IO): MediaInfo {
   const m = _MEDIABOX_RE.exec(_latin1(fp.read()));
@@ -2575,14 +2575,14 @@ export function _probe_text(fp: IO): MediaInfo {
 // WMV / ASF - header objects (dims exact; duration/fps are decoder-derived)
 // ---------------------------------------------------------------------------
 
-const _ASF_HEADER = bytes_.fromhex("3026B2758E66CF11A6D900AA0062CE6C");
-const _ASF_FILE_PROPS = bytes_.fromhex("A1DCAB8C47A9CF118EE400C00C205365");
-const _ASF_STREAM_PROPS = bytes_.fromhex("9107DCB7B7A9CF118EE600C00C205365");
-const _ASF_HEADER_EXTENSION = bytes_.fromhex("B503BF5F2EA9CF118EE300C00C205365");
-const _ASF_EXT_STREAM_PROPS = bytes_.fromhex("CBA5E61472C632438399A96952065B5A");
-const _ASF_METADATA = bytes_.fromhex("EACBF8C5AF5B77488467AA8C44FA4CCA");
-const _ASF_VIDEO_PREFIX = bytes_.fromhex("C0EF19BC"); // first 4 LE bytes of the video GUID
-const _ASF_AUDIO_PREFIX = bytes_.fromhex("409E69F8"); // first 4 LE bytes of the audio GUID
+export const _ASF_HEADER = bytes_.fromhex("3026B2758E66CF11A6D900AA0062CE6C");
+export const _ASF_FILE_PROPS = bytes_.fromhex("A1DCAB8C47A9CF118EE400C00C205365");
+export const _ASF_STREAM_PROPS = bytes_.fromhex("9107DCB7B7A9CF118EE600C00C205365");
+export const _ASF_HEADER_EXTENSION = bytes_.fromhex("B503BF5F2EA9CF118EE300C00C205365");
+export const _ASF_EXT_STREAM_PROPS = bytes_.fromhex("CBA5E61472C632438399A96952065B5A");
+export const _ASF_METADATA = bytes_.fromhex("EACBF8C5AF5B77488467AA8C44FA4CCA");
+export const _ASF_VIDEO_PREFIX = bytes_.fromhex("C0EF19BC"); // first 4 LE bytes of the video GUID
+export const _ASF_AUDIO_PREFIX = bytes_.fromhex("409E69F8"); // first 4 LE bytes of the audio GUID
 
 /**
  * Yield `(guid, payload_start, payload_end)` for each ASF header object.
@@ -2593,7 +2593,7 @@ const _ASF_AUDIO_PREFIX = bytes_.fromhex("409E69F8"); // first 4 LE bytes of the
  * 46 bytes in - object GUID(16) + size(8) + a reserved GUID(16) + a reserved
  * u2 + the extension data size u4.
  */
-function* _asf_objects(body: Uint8Array, start: number, end: number): Generator<[Uint8Array, number, number]> {
+export function* _asf_objects(body: Uint8Array, start: number, end: number): Generator<[Uint8Array, number, number]> {
   let pos = start;
   while (pos + 24 <= end) {
     const guid = bytes_.slice(body, pos, pos + 16);
@@ -2610,7 +2610,7 @@ function* _asf_objects(body: Uint8Array, start: number, end: number): Generator<
  * BOOL is 16-bit here (only the Extended Content Description Object widens
  * it to 32), so 2 and 5 share a code.
  */
-const _ASF_INT_TYPES: Map<number, string> = new Map([
+export const _ASF_INT_TYPES: Map<number, string> = new Map([
   [2, "<H"],
   [3, "<I"],
   [4, "<Q"],
@@ -2624,7 +2624,7 @@ const _ASF_INT_TYPES: Map<number, string> = new Map([
  * This is where AE finds a WMV's pixel aspect (`AspectRatioX`/`AspectRatioY`)
  * and its frame count (`NumberOfFrames`).
  */
-function _asf_metadata(body: Uint8Array, start: number, end: number): Map<string, number> {
+export function _asf_metadata(body: Uint8Array, start: number, end: number): Map<string, number> {
   const out = new Map<string, number>();
   if (start + 2 > end) return out;
   let pos = start + 2;
@@ -2724,7 +2724,7 @@ export function _probe_wmv(fp: IO): MediaInfo {
 }
 
 /** `_color_depth` for a file of `bit_depth` bits per channel: AE decodes anything deeper than 8 bits at 16 (AE 2026: 10- and 12-bit DPX are 48). */
-function _deep_color_depth(has_alpha: boolean, bit_depth: number): number {
+export function _deep_color_depth(has_alpha: boolean, bit_depth: number): number {
   return _color_depth(has_alpha, bit_depth <= 8 ? 8 : 16);
 }
 
@@ -2803,7 +2803,7 @@ export function _probe_dpx_cineon(fp: IO): MediaInfo {
 }
 
 /** HEIF brands `_probe_heif` accepts in `ftyp`, as `bytes_.hex` keys. */
-const _HEIF_BRANDS: ReadonlySet<string> = new Set([b("heic"), b("heix"), b("mif1"), b("heif")].map((k) => bytes_.hex(k)));
+export const _HEIF_BRANDS: ReadonlySet<string> = new Set([b("heic"), b("heix"), b("mif1"), b("heif")].map((k) => bytes_.hex(k)));
 
 /**
  * Probe a HEIF/HEIC (ISO/IEC 23008-12) still image.

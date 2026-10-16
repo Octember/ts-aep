@@ -12,7 +12,7 @@
  */
 
 // TODO(port): fontTools TTFont → fontkit 2.0.4 (already a dependency). Parity risk: fontkit addresses glyphs by id, not name.
-import fontkit from "fontkit";
+import * as fontkit from "fontkit";
 import { type CubicSeg, RawSubpath } from "./path_data.ts";
 import { cubics_to_subpath } from "./shapes.ts";
 import { Affine } from "./transform.ts";
@@ -30,7 +30,7 @@ import {
 } from "../../pyrt/index.ts";
 
 /** Parsed-font cache keyed by file path (one parse per font per process). */
-const _font_cache = new Map<string, any>();
+export const _font_cache = new Map<string, any>();
 
 /**
  * One styled run of text within a `<text>` (the parent text or a `<tspan>`).
@@ -77,7 +77,7 @@ export class TextRun {
   }
 }
 
-function _load_font(path: Path, font_number = 0): any {
+export function _load_font(path: Path, font_number = 0): any {
   const key = `${fspath(path)}#${font_number}`;
   let font = dict_get(_font_cache, key);
   if (font == null) {
@@ -96,7 +96,7 @@ function _load_font(path: Path, font_number = 0): any {
  * to cubics for us and decomposes composite glyphs, so only straight and
  * cubic segments reach `_lineTo` / `_curveToOne`.
  */
-class _CubicContourPen {
+export class _CubicContourPen {
   // TODO(port): fontTools BasePen base class dropped. `_draw_glyph` drives these
   // methods from fontkit path commands; fontkit already emits implied on-curve
   // points and decomposes composite glyphs.
@@ -167,7 +167,7 @@ class _CubicContourPen {
 }
 
 /** fontTools `glyph.draw(pen)` over fontkit's path commands. */
-function _draw_glyph(glyph: any, pen: _CubicContourPen): void {
+export function _draw_glyph(glyph: any, pen: _CubicContourPen): void {
   for (const { command, args } of glyph.path.commands) {
     if (command === "moveTo") {
       pen._moveTo([args[0], args[1]]);
@@ -183,18 +183,18 @@ function _draw_glyph(glyph: any, pen: _CubicContourPen): void {
   }
 }
 
-function _glyph_contours(glyph_set: any, glyph_name: number): RawSubpath[] {
+export function _glyph_contours(glyph_set: any, glyph_name: number): RawSubpath[] {
   const pen = new _CubicContourPen(glyph_set);
   _draw_glyph(glyph_set.getGlyph(glyph_name), pen);
   return pen.contours;
 }
 
 /** `gname in glyph_set`: a mapped glyph id that exists in the font. */
-function _in_glyph_set(glyph_set: any, gname: number | null): boolean {
+export function _in_glyph_set(glyph_set: any, gname: number | null): boolean {
   return gname != null && gname < glyph_set.numGlyphs;
 }
 
-function _glyphs(font: any, text: string): [(number | null)[], number[], number, any] {
+export function _glyphs(font: any, text: string): [(number | null)[], number[], number, any] {
   // `getBestCmap()` is None for a font with no Unicode cmap subtable (the
   // Windows symbol faces Wingdings/Webdings/Symbol/Marlett, and similar). Treat
   // it as empty so every char maps to no glyph and the run is dropped, matching
@@ -223,7 +223,7 @@ function _glyphs(font: any, text: string): [(number | null)[], number[], number,
 }
 
 /** Advance width of a run's text in user units (incl. letter-spacing). */
-function _advance_width(
+export function _advance_width(
   run: TextRun,
   glyphs: [(number | null)[], number[], number, any],
 ): number {
@@ -233,7 +233,7 @@ function _advance_width(
 }
 
 /** Outline one run starting at `(pen_x, pen_y)`; return (subpaths, end_x). */
-function _outline_run(
+export function _outline_run(
   run: TextRun,
   pen_x: number,
   pen_y: number,
@@ -315,7 +315,7 @@ export function outline_runs(
 }
 
 /** Sample a cubic bezier into points (excluding the start point). */
-function _flatten_cubic(seg: CubicSeg, steps = 16): [number, number][] {
+export function _flatten_cubic(seg: CubicSeg, steps = 16): [number, number][] {
   const [x0, y0, c1x, c1y, c2x, c2y, x3, y3] = seg;
   const pts: [number, number][] = [];
   for (let i = 1; i <= steps; i++) {
@@ -331,7 +331,7 @@ function _flatten_cubic(seg: CubicSeg, steps = 16): [number, number][] {
 }
 
 /** Flatten a raw subpath's cubics into a polyline (path-local coords). */
-function _polyline(raw: RawSubpath): [number, number][] {
+export function _polyline(raw: RawSubpath): [number, number][] {
   const segs = raw.segments;
   if (!py_bool(segs)) return [];
   const pts: [number, number][] = [[segs[0][0], segs[0][1]]];
@@ -341,7 +341,7 @@ function _polyline(raw: RawSubpath): [number, number][] {
   return pts;
 }
 
-function _arc_lengths(pts: [number, number][]): number[] {
+export function _arc_lengths(pts: [number, number][]): number[] {
   const cum = [0.0];
   for (let i = 1; i < pts.length; i++) {
     // TODO(port): CPython math.hypot is correctly rounded; V8 Math.hypot may differ in the last bit.
@@ -353,7 +353,7 @@ function _arc_lengths(pts: [number, number][]): number[] {
 }
 
 /** Point and tangent angle at arc-length `dist` along the polyline. */
-function _point_at(
+export function _point_at(
   pts: [number, number][],
   cum: number[],
   dist: number,

@@ -8,7 +8,7 @@
  * Fonts are not bundled.
  */
 
-import fontkit from "fontkit";
+import * as fontkit from "fontkit";
 import { homedir } from "node:os";
 import {
   Path,
@@ -24,7 +24,7 @@ import {
 
 /** `Path.home()` */
 // TODO(pyrt): Path.home() is missing from pyrt/pathlib.ts; local helper until it lands.
-function home(): Path {
+export function home(): Path {
   return new Path(homedir());
 }
 
@@ -95,7 +95,7 @@ export function _set_font_dirs(fn: (() => Path[]) | null): void {
 export function _set_index(v: Map<string, Map<string, [Path, number]>> | null): void {
   _index = v;
 }
-let _font_dirs_override: (() => Path[]) | null = null;
+export let _font_dirs_override: (() => Path[]) | null = null;
 
 /** The standard OS font directories that exist on this machine. */
 export function _font_dirs(): Path[] {
@@ -128,7 +128,7 @@ export function _font_dirs(): Path[] {
 }
 
 /** fontTools name IDs -> fontkit `getName` keys. */
-const NAME_KEYS = new Map<number, string>([
+export const NAME_KEYS = new Map<number, string>([
   [1, "fontFamily"],
   [2, "fontSubfamily"],
   [5, "version"],

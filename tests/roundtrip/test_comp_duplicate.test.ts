@@ -42,12 +42,7 @@ import type { Chunk } from "../../src/py_aep/binary/chunk.ts";
 import "../../src/py_aep/binary/_register.ts";
 import type { LdtaChunk } from "../../src/py_aep/binary/layer_chunks.ts";
 import type { S4Chunk, Utf8Chunk } from "../../src/py_aep/binary/scalar_chunks.ts";
-import {
-  filter_by_list_type,
-  filter_by_type,
-  find_by_list_type,
-  recursive_find,
-} from "../../src/py_aep/binary/utils.ts";
+import { filter_by_list_type, filter_by_type, find_by_list_type, recursive_find } from "../../src/py_aep/binary/utils.ts";
 import type { CompItem } from "../../src/py_aep/models/items/composition.ts";
 import type { Project } from "../../src/py_aep/index.ts";
 import { parse_project_fresh } from "../helpers.ts";

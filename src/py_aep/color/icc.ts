@@ -245,7 +245,7 @@ export class IccProfileLibrary {
   }
 }
 
-let _default_library: IccProfileLibrary | null = null;
+export let _default_library: IccProfileLibrary | null = null;
 
 /**
  * Return a shared `IccProfileLibrary` over the standard Adobe Color dirs.

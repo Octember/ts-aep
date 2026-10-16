@@ -11,7 +11,7 @@ import { Keyframe } from "../models/properties/keyframe.ts";
 import { Property } from "../models/properties/property.ts";
 import type { CompItem } from "../models/items/composition.ts";
 
-const logger = {
+export const logger = {
   debug() {},
   info() {},
   warning: (m: string) => warn(m),
@@ -129,7 +129,7 @@ export const parse_property = _suppress_materialization().decorate(function pars
  *     tdbs_child_chunks: The child chunks of the TDBS chunk.
  *     frame_rate: The frame rate of the parent composition.
  */
-function _parse_keyframes(tdbs_child_chunks: Chunk[], frame_rate: number): Keyframe[] {
+export function _parse_keyframes(tdbs_child_chunks: Chunk[], frame_rate: number): Keyframe[] {
   let list_chunk: ListChunk;
   try {
     list_chunk = find_by_list_type(tdbs_child_chunks, "list");

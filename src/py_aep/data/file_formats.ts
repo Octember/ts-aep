@@ -105,7 +105,7 @@ export function platform_source_format(fmt: FileFormat, kw: { windows: boolean }
   return fmt.source_format;
 }
 
-const _FILE_FORMATS: Map<string, FileFormat> = new Map<string, FileFormat>([
+export const _FILE_FORMATS: Map<string, FileFormat> = new Map<string, FileFormat>([
   [".exr", new FileFormat("oEXR", true, "exr")],
   [".mov", new FileFormat("MOoV", false, "generic", false, true)],
   [".m4v", new FileFormat("MOoV", false, "generic", false, true)],
@@ -188,12 +188,12 @@ const _FILE_FORMATS: Map<string, FileFormat> = new Map<string, FileFormat>([
 //   - `.mov` accepts PROJECT (a QuickTime file may carry an AE project).
 // Extensions not in `samples/assets/` (`.ai`, `.pdf`, `.aet`, `.jpeg`, `.tiff`)
 // follow documented AE behavior / format aliases and are marked below.
-const _FOOTAGE = ImportAsType.FOOTAGE;
-const _COMP = ImportAsType.COMP;
-const _CROPPED = ImportAsType.COMP_CROPPED_LAYERS;
-const _PROJECT = ImportAsType.PROJECT;
+export const _FOOTAGE = ImportAsType.FOOTAGE;
+export const _COMP = ImportAsType.COMP;
+export const _CROPPED = ImportAsType.COMP_CROPPED_LAYERS;
+export const _PROJECT = ImportAsType.PROJECT;
 
-const _IMPORT_AS_TYPES: Map<string, ReadonlySet<ImportAsType>> = new Map<
+export const _IMPORT_AS_TYPES: Map<string, ReadonlySet<ImportAsType>> = new Map<
   string,
   ReadonlySet<ImportAsType>
 >([

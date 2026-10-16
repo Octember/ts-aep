@@ -8,14 +8,7 @@ import { describe, expect, test } from "bun:test";
 import { parse_app } from "../conftest.ts";
 
 import type { Application } from "../../src/py_aep/index.ts";
-import {
-  build_project_node,
-  format_dot,
-  format_json,
-  format_mermaid,
-  format_text,
-  type Node,
-} from "../../src/py_aep/cli/visualize.ts";
+import { build_project_node, format_dot, format_json, format_mermaid, format_text, type Node } from "../../src/py_aep/cli/visualize.ts";
 import { Path, len } from "../../src/pyrt/index.ts";
 
 // TODO(pyrt): io.StringIO shim is missing from src/pyrt; local helper until it lands.

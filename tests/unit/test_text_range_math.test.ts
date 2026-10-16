@@ -12,18 +12,7 @@ import { raises } from "../../src/pyrt/pytest.ts";
 import "../../src/py_aep/binary/_register.ts";
 import { CosField, CosName } from "../../src/py_aep/cos/index.ts";
 import { CosString } from "../../src/py_aep/cos/cos.ts";
-import {
-  CHARACTER_RANGE_OOB,
-  CharacterRange,
-  ComposedLineRange,
-  RangeField,
-  _composed_line_spans,
-  _merge_adjacent_runs,
-  _snap_to_pairs,
-  _split_run_array,
-  u16_len,
-  u16_slice,
-} from "../../src/py_aep/models/text/ranges.ts";
+import { CHARACTER_RANGE_OOB, CharacterRange, ComposedLineRange, RangeField, _composed_line_spans, _merge_adjacent_runs, _snap_to_pairs, _split_run_array, u16_len, u16_slice } from "../../src/py_aep/models/text/ranges.ts";
 import { TextDocument } from "../../src/py_aep/models/text/text_document.ts";
 import {
   TypeError_,

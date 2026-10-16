@@ -5,7 +5,7 @@
 
 import { AttributeError, TypeError_, getattr, getitem, hasattr, int } from "../pyrt/index.ts";
 
-type F = (...args: any[]) => any;
+export type F = (...args: any[]) => any;
 
 // The After Effects majors whose saves contain each version-gated part of a
 // new project, item or layer, as `(first, last)` (`last` None: still
@@ -13,7 +13,7 @@ type F = (...args: any[]) => any;
 // created ones (samples/versions, emptier_2018.aep). AE 16-18 are not available to measure: a part AE 15
 // lacks and AE 22 writes keeps its pre-gate behaviour there (first = 16),
 // and a part AE 15 and AE 22 agree on is taken to hold for 16-18 as well.
-const _WRITTEN_BY = new Map<string, readonly [number, number | null]>([
+export const _WRITTEN_BY = new Map<string, readonly [number, number | null]>([
   // Root chunks of a new project: the JavaScript expression engine
   // (`LIST:ExEn`), the Media Replacement folder id (`mrid`, read from
   // format 93.22), color management (`pcms` / `PwCs`) and `pdvc`.

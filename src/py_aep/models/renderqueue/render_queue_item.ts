@@ -1,23 +1,6 @@
 // Port of py_aep/models/renderqueue/render_queue_item.py
 
-import {
-  ColorDepthSetting,
-  DiskCacheSetting,
-  EffectsSetting,
-  FieldRender,
-  FrameBlendingSetting,
-  FrameRateSetting,
-  GetSettingsFormat,
-  GuideLayers,
-  LogType,
-  MotionBlurSetting,
-  ProxyUseSetting,
-  PulldownSetting,
-  RenderQuality,
-  RQItemStatus,
-  SoloSwitchesSetting,
-  TimeSpanSource,
-} from "../../enums/index.ts";
+import { ColorDepthSetting, DiskCacheSetting, EffectsSetting, FieldRender, FrameBlendingSetting, FrameRateSetting, GetSettingsFormat, GuideLayers, LogType, MotionBlurSetting, ProxyUseSetting, PulldownSetting, RenderQuality, RQItemStatus, SoloSwitchesSetting, TimeSpanSource } from "../../enums/index.ts";
 import { ContainerChunk, ListChunk } from "../../binary/chunk.ts";
 import { LHD3_BLOCK_SINGLE, set_lhd3_count, type LdatChunk, type Lhd3Chunk } from "../../binary/ldat_chunks.ts";
 import { build_om_container, build_rout_block, clone_chunk_tree } from "../../binary/mutations.ts";
@@ -27,20 +10,13 @@ import { find_by_type, index_by_identity, split_on_type } from "../../binary/uti
 import { ChunkField } from "../descriptors.ts";
 import type { CompItem } from "../items/composition.ts";
 import type { Project } from "../project.ts";
-import {
-  _validate_number,
-  validate_bool,
-  validate_positive_int,
-  validate_positive_number,
-  validate_sequence,
-  validate_string,
-} from "../validators.ts";
-import { OutputModule } from "./output_module.ts";
+import { _validate_number, validate_bool, validate_positive_int, validate_positive_number, validate_sequence, validate_string } from "../validators.ts";
+import type { OutputModule } from "./output_module.ts";
 import { SettingsView, settings_to_number, settings_to_string } from "./settings.ts";
 import type { RenderQueue } from "./render_queue.ts";
-import { parse_output_module } from "../../parsers/output_module.ts";
 import {
   deepcopy,
+  deferred,
   descriptor,
   float,
   float_repr,
@@ -55,12 +31,15 @@ import {
   ValueError,
 } from "../../../pyrt/index.ts";
 
+const _output_module = deferred<typeof import("./output_module.ts")>(import.meta.url, "./output_module.ts");
+const _parsers_output_module = deferred<typeof import("../../parsers/output_module.ts")>(import.meta.url, "../../parsers/output_module.ts");
+
 // TODO(port): Python `datetime` (naive) and `timedelta` have no pyrt shim. The epoch is kept
 // as a UTC `Date`, which is the same instant for a naive datetime.
-const _AEP_EPOCH = new Date(Date.UTC(1904, 0, 1));
+export const _AEP_EPOCH = new Date(Date.UTC(1904, 0, 1));
 
 /** Convert Mac HFS+ epoch timestamp to datetime, or None if 0. */
-function _start_time_from_binary(value: number): Date | null {
+export function _start_time_from_binary(value: number): Date | null {
   if (!value) return null;
   // TODO(port): timedelta keeps microseconds; a Date keeps whole milliseconds only.
   return new Date(_AEP_EPOCH.getTime() + value * 1000);
@@ -71,7 +50,7 @@ function _start_time_from_binary(value: number): Date | null {
  * 2 in an empty queue (AE 2026: ids 9 and 3 -> an added item gets 10, a
  * duplicate after it 11).
  */
-function _next_item_id(rq: RenderQueue): number {
+export function _next_item_id(rq: RenderQueue): number {
   return max(
     rq.items.map((item) => item._ldat.item_id),
     null,
@@ -83,7 +62,7 @@ function _next_item_id(rq: RenderQueue): number {
  * The render settings view: AE marks the item's render settings as
  * written by a script on every `setSettings` (AE 2026).
  */
-class _RenderSettingsView extends SettingsView {
+export class _RenderSettingsView extends SettingsView {
   __setitem__(key: string, value: any): void {
     super.__setitem__(key, value);
     (this._owner as RenderQueueItem)._ldat.settings_written = 1;
@@ -306,7 +285,7 @@ export class RenderQueueItem {
    *     The newly created [OutputModule][].
    */
   add(): OutputModule {
-    const [om, lom_chunks] = OutputModule._new({
+    const [om, lom_chunks] = _output_module().OutputModule._new({
       render_settings_ldat: this._ldat,
       parent: this,
     });
@@ -942,7 +921,7 @@ export class RenderQueueItem {
 
     const output_modules: OutputModule[] = [];
     for (const [i, om_group] of om_groups.entries()) {
-      const om = parse_output_module(om_group, new_om_ldat.items[i], new_item);
+      const om = _parsers_output_module().parse_output_module(om_group, new_om_ldat.items[i], new_item);
       output_modules.push(om);
     }
     new_item._output_modules = output_modules;

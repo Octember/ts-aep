@@ -12,20 +12,7 @@ import type { IO } from "../../pyrt/index.ts";
 import { read_bytes } from "./bin_utils.ts";
 import { BitField } from "./bitfield.ts";
 import { Chunk } from "./chunk.ts";
-import {
-  FmtItem,
-  ascii_field,
-  bool_field,
-  bytes_field,
-  f4_field,
-  f8_field,
-  items_field,
-  s2_field,
-  s4_field,
-  u1_field,
-  u2_field,
-  u4_field,
-} from "./fmt_field.ts";
+import { FmtItem, ascii_field, bool_field, bytes_field, f4_field, f8_field, items_field, s2_field, s4_field, u1_field, u2_field, u4_field } from "./fmt_field.ts";
 import { register } from "./registry.ts";
 
 // ---------------------------------------------------------------------------
@@ -247,7 +234,7 @@ define(RayTracedPrdaChunk, {
 
 // Body size -> variant. Sizes are distinct per renderer, so size alone
 // discriminates without needing the sibling `prin` chunk's match name.
-const _PRDA_VARIANTS = new Map<string, [typeof PrdaChunk, number]>([
+export const _PRDA_VARIANTS = new Map<string, [typeof PrdaChunk, number]>([
   ["ADBE Escher", [ClassicPrdaChunk, 12]],
   ["ADBE Picasso", [RayTracedPrdaChunk, 16]],
   ["ADBE Ernst", [Cinema4DPrdaChunk, 20]],
@@ -554,7 +541,7 @@ register("fips")(FipsChunk);
 // getter-only `PardChunk.property_control_type` that these subclasses shadow. Python lets a
 // subclass attrs field replace the base property, so mirror that with a writable data
 // property on each subclass prototype (applied after `_PARD_VARIANTS` below).
-function shadow_property(cls: Function, name: string): void {
+export function shadow_property(cls: Function, name: string): void {
   Object.defineProperty(cls.prototype, name, {
     configurable: true,
     enumerable: true,
@@ -681,7 +668,7 @@ define(GenericPardChunk, {
 });
 
 /** `bytes(list_of_ints)`: raises like CPython outside 0..255 instead of wrapping. */
-function _bytes_from_ints(value: number[]): Uint8Array {
+export function _bytes_from_ints(value: number[]): Uint8Array {
   const out = new Uint8Array(value.length);
   for (let i = 0; i < value.length; i++) {
     const v = value[i];
@@ -1169,7 +1156,7 @@ define(OtlnChunk, {
 });
 register("otln")(OtlnChunk);
 
-const _PARD_VARIANTS = new Map<number, typeof PardChunk>([
+export const _PARD_VARIANTS = new Map<number, typeof PardChunk>([
   [0, GenericPardChunk],
   [1, IntegerPardChunk],
   [2, ScalarPardChunk],
@@ -1236,7 +1223,7 @@ define(FeatherPointItem, {
   tension: f4_field({ default: 0.0 }),
 });
 
-const _FTH5_ITEM_SIZE = 32;
+export const _FTH5_ITEM_SIZE = 32;
 
 /** Variable-width mask feather points (32 bytes per point). */
 export class Fth5Chunk extends Chunk {

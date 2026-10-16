@@ -13,7 +13,7 @@
  * effect with a generated per-project match name (`Pseudo/@@...`).
  */
 
-type EffectControl = { name: string; layer_param: string | null; part: string };
+export type EffectControl = { name: string; layer_param: string | null; part: string };
 
 export const EXPRESSION_CONTROLS: Map<string, EffectControl> = new Map<string, EffectControl>([
   ["ADBE Slider Control", {

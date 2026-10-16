@@ -1,12 +1,6 @@
 /** Parser for Essential Graphics panel data (LIST:CIF3 chunks). */
 
-import {
-  ChunkNotFoundError,
-  filter_by_type,
-  filter_by_list_type,
-  find_by_type,
-  find_by_list_type,
-} from "../binary/utils.ts";
+import { ChunkNotFoundError, filter_by_type, filter_by_list_type, find_by_type, find_by_list_type } from "../binary/utils.ts";
 import type { U4Chunk, Utf8Chunk } from "../binary/scalar_chunks.ts";
 import type { Chunk, ListChunk } from "../binary/chunk.ts";
 import { _suppress_materialization } from "../models/descriptors.ts";
@@ -14,7 +8,7 @@ import { EssentialGraphicsController, SourcePropertyRef } from "../models/essent
 import { at, int, py_bool, sorted } from "../../pyrt/index.ts";
 
 // AE stores 0xFFFFFFFF in a CPrp path node's `index` to mean "match by name".
-const _BY_NAME_INDEX = 0xffffffff;
+export const _BY_NAME_INDEX = 0xffffffff;
 
 /**
  * Parse a controller's `CPrp` path JSON into root-to-leaf refs.

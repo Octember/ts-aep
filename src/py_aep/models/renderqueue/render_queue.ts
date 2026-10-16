@@ -3,10 +3,13 @@ import { LHD3_BLOCK_SINGLE, set_lhd3_count, type LdatChunk, type Lhd3Chunk } fro
 import { build_rq_settings_list } from "../../binary/mutations.ts";
 import { RhedChunk } from "../../binary/project_chunks.ts";
 import { ArsiChunk, RoutChunk } from "../../binary/render_chunks.ts";
-import { getattr, len, TypeError_ } from "../../pyrt/index.ts";
-import { CompItem } from "../items/composition.ts";
+import { deferred, getattr, len, TypeError_ } from "../../../pyrt/index.ts";
+import type { CompItem } from "../items/composition.ts";
 import type { Project } from "../project.ts";
-import { RenderQueueItem } from "./render_queue_item.ts";
+import type { RenderQueueItem } from "./render_queue_item.ts";
+
+const _composition = deferred<typeof import("../items/composition.ts")>(import.meta.url, "../items/composition.ts");
+const _render_queue_item = deferred<typeof import("./render_queue_item.ts")>(import.meta.url, "./render_queue_item.ts");
 
 /**
  * Clear the `synthetic` flag on a chunk and its container subtree.
@@ -18,7 +21,7 @@ import { RenderQueueItem } from "./render_queue_item.ts";
  * subtree so the populated queue is serialized. A no-op for a normal AE file
  * whose `LRdr` is already fully present and non-synthetic.
  */
-function _ensure_materialized(chunk: Chunk): void {
+export function _ensure_materialized(chunk: Chunk): void {
   chunk.synthetic = false;
   const children = getattr(chunk, "chunks", null);
   if (children != null) {
@@ -157,12 +160,12 @@ export class RenderQueue {
    *     The newly created {@link RenderQueueItem}.
    */
   add(comp: CompItem): RenderQueueItem {
-    if (!(comp instanceof CompItem)) {
+    if (!(comp instanceof _composition().CompItem)) {
       throw new TypeError_("comp must be a CompItem");
     }
 
     // Create the new RQ item with all backing chunks
-    const rqi = RenderQueueItem._new(comp, { parent: this });
+    const rqi = _render_queue_item().RenderQueueItem._new(comp, { parent: this });
 
     // Materialize any synthesized scaffold the parser left synthetic (an
     // empty-queue ldat, or - for a queue-less file - the whole LRdr tree),

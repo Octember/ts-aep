@@ -1,11 +1,6 @@
 import { ValueError, num_str } from "../../../pyrt/index.ts";
 import { PlaceholderOptiChunk, SspcChunk } from "../../binary/footage_chunks.ts";
-import {
-  validate_duration,
-  validate_footage_dimension,
-  validate_frame_rate,
-  validate_opti_name,
-} from "../validators.ts";
+import { validate_duration, validate_footage_dimension, validate_frame_rate, validate_opti_name } from "../validators.ts";
 import { FootageSource } from "./footage.ts";
 
 import type { ListChunk } from "../../binary/chunk.ts";

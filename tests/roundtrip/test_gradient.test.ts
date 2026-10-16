@@ -3,11 +3,7 @@
 import { expect, test } from "bun:test";
 
 import { parse } from "../../src/py_aep/index.ts";
-import {
-  Gradient,
-  GradientAlphaStop,
-  GradientColorStop,
-} from "../../src/py_aep/models/properties/gradient.ts";
+import { Gradient, GradientAlphaStop, GradientColorStop } from "../../src/py_aep/models/properties/gradient.ts";
 import { parse_gradient_xml } from "../../src/py_aep/parsers/gradient.ts";
 import { approx, make_tmp_path } from "../../src/pyrt/pytest.ts";
 import { hasattr, py_eq } from "../../src/pyrt/index.ts";

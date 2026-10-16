@@ -3,15 +3,7 @@
 import { PREFType } from "../enums/general.ts";
 import { AutoKernType, ParagraphJustification } from "../enums/text_document.ts";
 import { parse_comp_presets, type CompPreset } from "../parsers/comp_presets.ts";
-import {
-  PrefsFile,
-  decode_pref_bool,
-  decode_pref_number,
-  decode_pref_string,
-  find_prefs_file,
-  parse_hex_value,
-  parse_number_text,
-} from "../parsers/prefs.ts";
+import { PrefsFile, decode_pref_bool, decode_pref_number, decode_pref_string, find_prefs_file, parse_hex_value, parse_number_text } from "../parsers/prefs.ts";
 import { validate_bool, validate_enum, validate_name, validate_number } from "./validators.ts";
 import type { TextDocument } from "./text/text_document.ts";
 import {
@@ -40,12 +32,12 @@ import {
   zip,
 } from "../../pyrt/index.ts";
 
-const _validate_pref_type = validate_enum(PREFType);
+export const _validate_pref_type = validate_enum(PREFType);
 
 // Tombstone marking a key removed by delete_pref (masks the file value).
-const _DELETED: unique symbol = Symbol("_DELETED");
+export const _DELETED: unique symbol = Symbol("_DELETED");
 
-const _LABEL_INDICES_SECTION = "Label Preference Indices Section 5";
+export const _LABEL_INDICES_SECTION = "Label Preference Indices Section 5";
 
 /**
  * Resolve a default label color index from the label preferences.
@@ -83,7 +75,7 @@ export function default_sequence_fps(preferences: Preferences): number {
   return float(value);
 }
 
-const _CHOOSE_LAYER_SECTION = "Choose Layer Dialog";
+export const _CHOOSE_LAYER_SECTION = "Choose Layer Dialog";
 
 // AE's PSD/PSB import-dialog popup indices, probed in AE 2026 by toggling
 // each dropdown and re-reading the machine-specific prefs. These are dialog
@@ -91,15 +83,15 @@ const _CHOOSE_LAYER_SECTION = "Choose Layer Dialog";
 // there ({merge:0, ignore:1} here vs the c9 {ignore:0, merge:1}). AE's own
 // importFile follows the last sticky choice, so py_aep uses them to fill an
 // unset ImportOptions field.
-const _PSD_COMP_LAYER_STYLES: Map<number, string> = new Map<number, string>([
+export const _PSD_COMP_LAYER_STYLES: Map<number, string> = new Map<number, string>([
   [0, "editable"],
   [1, "merge"],
 ]);
-const _PSD_FOOTAGE_LAYER_STYLES: Map<number, string> = new Map<number, string>([
+export const _PSD_FOOTAGE_LAYER_STYLES: Map<number, string> = new Map<number, string>([
   [0, "merge"],
   [1, "ignore"],
 ]);
-const _PSD_FOOTAGE_DIMENSIONS: Map<number, string> = new Map<number, string>([
+export const _PSD_FOOTAGE_DIMENSIONS: Map<number, string> = new Map<number, string>([
   [0, "layer"],
   [1, "document"],
 ]);
@@ -108,7 +100,7 @@ const _PSD_FOOTAGE_DIMENSIONS: Map<number, string> = new Map<number, string>([
  * Resolve a `Choose Layer Dialog` popup index to its string value, or
  * `None` when the preference is unset (or holds an unknown index).
  */
-function _choose_layer_pref(preferences: Preferences, key: string, mapping: Map<number, string>): string | null {
+export function _choose_layer_pref(preferences: Preferences, key: string, mapping: Map<number, string>): string | null {
   if (!preferences.have_pref(_CHOOSE_LAYER_SECTION, key, PREFType.PREF_Type_MACHINE_SPECIFIC)) {
     return null;
   }
@@ -147,17 +139,17 @@ export function psd_footage_dimensions(preferences: Preferences): string | null 
   return _choose_layer_pref(preferences, "PSD Dimensions Popup", _PSD_FOOTAGE_DIMENSIONS);
 }
 
-const _TEXT_STYLE_SECTION = "Text Style Sheet";
-const _PARA_SHEET_SECTION = "Text Paragraph Sheet";
-const _TXT = PREFType.PREF_Type_MACHINE_SPECIFIC_TEXT;
+export const _TEXT_STYLE_SECTION = "Text Style Sheet";
+export const _PARA_SHEET_SECTION = "Text Paragraph Sheet";
+export const _TXT = PREFType.PREF_Type_MACHINE_SPECIFIC_TEXT;
 
 // The horizontal/vertical scale preferences are percentages, while the
 // document stores (and ExtendScript reports) a fraction.
-const _SCALE_PERCENT = 100.0;
+export const _SCALE_PERCENT = 100.0;
 
 // AE's factory Character/Paragraph panel values, used when the preference
 // file is unavailable (a project parsed without an `ae_preferences_dir`).
-const _FACTORY_CHAR_STYLE = {
+export const _FACTORY_CHAR_STYLE = {
   font: "MyriadPro-Regular",
   font_size: 36.0,
   faux_bold: false,
@@ -180,12 +172,12 @@ const _FACTORY_CHAR_STYLE = {
 } as const;
 
 // AE names the Character panel's kerning modes in prose.
-const _AUTO_KERN_BY_PREF: Map<string, AutoKernType> = new Map<string, AutoKernType>([
+export const _AUTO_KERN_BY_PREF: Map<string, AutoKernType> = new Map<string, AutoKernType>([
   ["No Auto Kerning", AutoKernType.NO_AUTO_KERN],
   ["Metric Auto Kerning", AutoKernType.METRIC_KERN],
   ["Optical Auto Kerning", AutoKernType.OPTICAL_KERN],
 ]);
-const _FACTORY_PARA_STYLE = {
+export const _FACTORY_PARA_STYLE = {
   justification: ParagraphJustification.LEFT_JUSTIFY,
   first_line_indent: 0.0,
   start_indent: 0.0,
@@ -197,14 +189,14 @@ const _FACTORY_PARA_STYLE = {
 } as const;
 
 // AE writes the horizontal half of "Justification" before a `|`.
-const _JUSTIFICATION_BY_PREF: Map<string, ParagraphJustification> = new Map<string, ParagraphJustification>([
+export const _JUSTIFICATION_BY_PREF: Map<string, ParagraphJustification> = new Map<string, ParagraphJustification>([
   ["Left", ParagraphJustification.LEFT_JUSTIFY],
   ["Center", ParagraphJustification.CENTER_JUSTIFY],
   ["Right", ParagraphJustification.RIGHT_JUSTIFY],
 ]);
 
 /** Build `(number, flag)` readers over one machine-specific text sheet. */
-function _sheet_readers(
+export function _sheet_readers(
   preferences: Preferences,
   section: string,
 ): [(key: string, fallback: number) => number, (key: string, fallback: boolean) => boolean] {
@@ -310,7 +302,7 @@ export function default_paragraph_style(preferences: Preferences): Record<string
  * value), meaning "composition duration". Semantics probed in AE 2026:
  * `75/25` gives new layers a 3-second span.
  */
-function _default_out_point(preferences: Preferences, key: string): number | null {
+export function _default_out_point(preferences: Preferences, key: string): number | null {
   const raw = preferences.get_pref_as_string("Main Pref Section v2", key, PREFType.PREF_Type_MACHINE_INDEPENDENT, {
     default: "0/0",
   });
@@ -442,7 +434,7 @@ export function default_synthetic_out_point(preferences: Preferences): number | 
 
 // TODO(port): Python's `type(x).__name__` has no pyrt shim; this covers the JS shapes the
 // setters below can receive. int vs float cannot be told apart for integral JS numbers.
-function py_type_name(x: unknown): string {
+export function py_type_name(x: unknown): string {
   if (x == null) return "NoneType";
   if (typeof x === "boolean") return "bool";
   if (typeof x === "number") return Number.isInteger(x) ? "int" : "float";

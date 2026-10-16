@@ -11,13 +11,13 @@
 
 import { py_eq } from "../../pyrt/index.ts";
 
-const _DRIVE = /^([A-Za-z]):[\\\/]?(.*)$/s;
-const _UNC = /^(?:\\\\|\/\/)[^\\\/]+[\\\/]([^\\\/]+)[\\\/]?(.*)$/s;
+export const _DRIVE = /^([A-Za-z]):[\\\/]?(.*)$/s;
+export const _UNC = /^(?:\\\\|\/\/)[^\\\/]+[\\\/]([^\\\/]+)[\\\/]?(.*)$/s;
 
 // TODO(pyrt): pathlib.PurePath / PurePosixPath / PureWindowsPath are not in pyrt. These are
 // local stand-ins covering only what this module uses: `.parts`, `/ "_"`, isinstance and type
 // identity. Parsing follows CPython's posixpath/ntpath for the inputs `_pure_path` admits.
-class PurePath {
+export class PurePath {
   parts: string[];
 
   constructor(parts: string[]) {
@@ -30,11 +30,11 @@ class PurePath {
   }
 }
 
-class PurePosixPath extends PurePath {}
+export class PurePosixPath extends PurePath {}
 
-class PureWindowsPath extends PurePath {}
+export class PureWindowsPath extends PurePath {}
 
-function _is_posix(path: string): boolean {
+export function _is_posix(path: string): boolean {
   return path.startsWith("/") && !path.startsWith("//");
 }
 
@@ -83,13 +83,13 @@ export function platform_path(path: string, kw: { windows: boolean }): string {
   return rest !== "" || root === "" ? `${root}/${rest}` : root;
 }
 
-function _posix_parts(path: string): string[] {
+export function _posix_parts(path: string): string[] {
   // CPython's PurePosixPath: a single leading root, then components with
   // empty and "." segments dropped.
   return ["/", ...path.split("/").filter((c) => c !== "" && c !== ".")];
 }
 
-function _windows_parts(path: string): string[] {
+export function _windows_parts(path: string): string[] {
   // CPython 3.12 ntpath.splitroot + pathlib: separators normalised to `\`, the
   // drive and root form one leading part, empty and "." components dropped.
   const normp = path.replace(/\//g, "\\");
@@ -123,7 +123,7 @@ function _windows_parts(path: string): string[] {
   return drv_root !== "" ? [drv_root, ...comps] : comps;
 }
 
-function _pure_path(path: string): PurePath | null {
+export function _pure_path(path: string): PurePath | null {
   if (_is_posix(path)) {
     return new PurePosixPath(_posix_parts(path));
   }
@@ -135,7 +135,7 @@ function _pure_path(path: string): PurePath | null {
 
 /** How many leading parts name the volume: the drive or UNC share, or
  * on macOS `/Volumes/<name>` (else the root). */
-function _volume_parts(path: PurePath): number {
+export function _volume_parts(path: PurePath): number {
   if (path instanceof PurePosixPath) {
     return path.parts.length > 2 && path.parts[1] === "Volumes" ? 3 : 1;
   }

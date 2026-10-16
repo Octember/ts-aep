@@ -11,42 +11,16 @@ import {
   py_cmp,
   repr,
   round,
-} from "../../pyrt/index.ts";
+} from "../../../pyrt/index.ts";
 import { to_dividend_divisor } from "../../binary/bin_utils.ts";
-import {
-  ChunkNotFoundError,
-  find_by_type,
-  find_chunks_after,
-  toggle_flag_chunk,
-} from "../../binary/utils.ts";
-import {
-  PROFILE_TYPE_OCIO,
-  build_icc_envelope,
-  parse_envelope,
-} from "../../color/envelope.ts";
+import { ChunkNotFoundError, find_by_type, find_chunks_after, toggle_flag_chunk } from "../../binary/utils.ts";
+import { PROFILE_TYPE_OCIO, build_icc_envelope, parse_envelope } from "../../color/envelope.ts";
 import { default_icc_library } from "../../color/icc.ts";
-import {
-  ocio_color_profile_envelope,
-  require_ocio_config,
-} from "../../color/ocio.ts";
-import {
-  AlphaMode,
-  FieldSeparationType,
-  LinearLightMode,
-  PulldownPhase,
-} from "../../enums/index.ts";
-import {
-  map_media_color_space,
-  profile_id_for_name,
-} from "../../enums/mappings.ts";
+import { ocio_color_profile_envelope, require_ocio_config } from "../../color/ocio.ts";
+import { AlphaMode, FieldSeparationType, LinearLightMode, PulldownPhase } from "../../enums/index.ts";
+import { map_media_color_space, profile_id_for_name } from "../../enums/mappings.ts";
 import { ChunkField } from "../descriptors.ts";
-import {
-  _validate_number,
-  validate_bool,
-  validate_conform_frame_rate,
-  validate_rgb_color,
-  validate_string,
-} from "../validators.ts";
+import { _validate_number, validate_bool, validate_conform_frame_rate, validate_rgb_color, validate_string } from "../validators.ts";
 
 import type { ListChunk } from "../../binary/chunk.ts";
 import type { SspcChunk } from "../../binary/footage_chunks.ts";
@@ -56,7 +30,7 @@ import type { IccProfileLibrary } from "../../color/icc.ts";
 import type { Project } from "../project.ts";
 
 /** `apid` value meaning "no profile assigned" (the media's own profile wins). */
-const _UNASSIGNED_PROFILE = bytes_.repeat(b("\xff"), 16);
+export const _UNASSIGNED_PROFILE = bytes_.repeat(b("\xff"), 16);
 
 /**
  * `LIST:CLRS` records and the first file version (format, minor) that has
@@ -65,7 +39,7 @@ const _UNASSIGNED_PROFILE = bytes_.repeat(b("\xff"), 16);
  * it (clrs_ae20XX.aep fixtures) - and `Mcsp`/`ocsp` arrived with 93.40
  * (samples/versions: absent from the AE 2018 project, present from AE 2022).
  */
-const _CLRS_RECORDS_SINCE: ReadonlyArray<readonly [string, readonly [number, number]]> = [
+export const _CLRS_RECORDS_SINCE: ReadonlyArray<readonly [string, readonly [number, number]]> = [
   ["hdrm", [96, 9]],
   ["Mcsp", [93, 40]],
   ["ocsp", [93, 40]],
@@ -78,7 +52,7 @@ const _CLRS_RECORDS_SINCE: ReadonlyArray<readonly [string, readonly [number, num
  * writing a mode over it would claim an alpha channel the media does not
  * have. AE greys the whole alpha section out for such footage.
  */
-function _validate_has_alpha(value: any, instance: any = null): void {
+export function _validate_has_alpha(value: any, instance: any = null): void {
   if (instance != null && !instance.has_alpha) {
     throw new ValueError(
       "cannot set alpha_mode: the footage has no alpha channel " +
@@ -88,7 +62,7 @@ function _validate_has_alpha(value: any, instance: any = null): void {
 }
 
 /** The smallest non-zero conform rate After Effects can open a project with. */
-const _MIN_CONFORM_FRAME_RATE = 0.0005;
+export const _MIN_CONFORM_FRAME_RATE = 0.0005;
 
 /**
  * Move an image sequence to `rate`, keeping its frame count.
@@ -98,7 +72,7 @@ const _MIN_CONFORM_FRAME_RATE = 0.0005;
  * 29.9700012) and leaves the fraction unreduced: 12 frames is 12/24 at
  * 24 fps, 1200/2997 at 29.97 (measured on AE 2026).
  */
-function _retime_sequence(sspc: SspcChunk, rate: number): void {
+export function _retime_sequence(sspc: SspcChunk, rate: number): void {
   const frames = round(sspc.duration * sspc.native_frame_rate);
   sspc.native_frame_rate = rate;
   _store_frames_over_rate(sspc, frames, round(rate, 3));
@@ -108,7 +82,7 @@ function _retime_sequence(sspc: SspcChunk, rate: number): void {
  * Store a sequence's duration as AE does: `frames` over `rate`, the
  * fraction unreduced (3/30, not 1/10, in every AE-authored sequence).
  */
-function _store_frames_over_rate(sspc: SspcChunk, frames: number, rate: number): void {
+export function _store_frames_over_rate(sspc: SspcChunk, frames: number, rate: number): void {
   const [rate_num, rate_den] = to_dividend_divisor(rate);
   if (frames * rate_den <= 0xffffffff) {
     sspc.duration_dividend = frames * rate_den;

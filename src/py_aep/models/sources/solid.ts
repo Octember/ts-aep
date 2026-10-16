@@ -1,13 +1,9 @@
+import { descriptor } from "../../../pyrt/index.ts";
 import { str } from "../../../pyrt/index.ts";
 import { SoliOptiChunk, SspcChunk } from "../../binary/footage_chunks.ts";
 import { solid_color_name } from "../../resolvers/solid.ts";
-import { ChunkField, descriptor } from "../descriptors.ts";
-import {
-  validate_opti_name,
-  validate_pixel_aspect,
-  validate_rgb_color,
-  validate_solid_dimension,
-} from "../validators.ts";
+import { ChunkField } from "../descriptors.ts";
+import { validate_opti_name, validate_pixel_aspect, validate_rgb_color, validate_solid_dimension } from "../validators.ts";
 import { FootageSource } from "./footage.ts";
 
 import type { ListChunk } from "../../binary/chunk.ts";

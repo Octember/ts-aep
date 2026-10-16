@@ -23,9 +23,9 @@ import type { PropertyGroup } from "../properties/property_group.ts";
  * `type(old) is not cls` check below true when an option is unset and no
  * class maps to the mesh type.
  */
-const NoneType = Symbol("NoneType");
+export const NoneType = Symbol("NoneType");
 
-function _type_of(x: any): any {
+export function _type_of(x: any): any {
   return x == null ? NoneType : x.constructor;
 }
 

@@ -4,13 +4,7 @@ import type { ListChunk } from "../binary/chunk.ts";
 import type { LdatChunk } from "../binary/ldat_chunks.ts";
 import type { Fth5Chunk, OmtnChunk, ShphChunk } from "../binary/misc_chunks.ts";
 import type { CdatChunk, OtdaChunk, TdmnChunk } from "../binary/property_chunks.ts";
-import {
-  ChunkNotFoundError,
-  filter_by_list_type,
-  filter_by_type,
-  find_by_list_type,
-  find_by_type,
-} from "../binary/utils.ts";
+import { ChunkNotFoundError, filter_by_list_type, filter_by_type, find_by_list_type, find_by_type } from "../binary/utils.ts";
 import { CosParser } from "../cos/index.ts";
 // Python's builtin `SyntaxError` as raised by `CosParser`.
 import { SyntaxError_ } from "../cos/cos.ts";
@@ -35,7 +29,7 @@ export const logger = {
 
 // TODO(pyrt): no shim for `obj.__dict__`; the same non-enumerable Map per instance
 // that `ChunkField.__get__` / `__set__` (models/descriptors.ts) read and pop overrides from.
-function instance_dict_set(obj: any, name: string, value: any): void {
+export function instance_dict_set(obj: any, name: string, value: any): void {
   if (!Object.prototype.hasOwnProperty.call(obj, "__dict__")) {
     Object.defineProperty(obj, "__dict__", { value: new Map<string, any>(), enumerable: false });
   }
@@ -101,7 +95,7 @@ export function parse_orientation(
   return prop;
 }
 
-function _parse_shape_shap(shap_chunk: ListChunk, layer: Layer | null, mask_path: Property | null): Shape {
+export function _parse_shape_shap(shap_chunk: ListChunk, layer: Layer | null, mask_path: Property | null): Shape {
   /**
    * Parse a single shape path from a `shap` LIST chunk.
    *

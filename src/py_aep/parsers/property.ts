@@ -5,31 +5,22 @@ import type { Chunk } from "../binary/chunk.ts";
 import type { MkifChunk } from "../binary/misc_chunks.ts";
 import type { TdmnChunk, TdsbChunk, TdsnChunk, VfdnChunk } from "../binary/property_chunks.ts";
 import type { U4Chunk, Utf8Chunk } from "../binary/scalar_chunks.ts";
-import {
-  ChunkNotFoundError,
-  filter_by_list_type,
-  filter_by_type,
-  find_by_list_type,
-  find_by_type,
-} from "../binary/utils.ts";
+import { ChunkNotFoundError, filter_by_list_type, filter_by_type, find_by_list_type, find_by_type } from "../binary/utils.ts";
 import { VF_AXIS_PREFIX } from "../data/match_names.ts";
 import { _suppress_materialization } from "../models/descriptors.ts";
 import { MaskPropertyGroup } from "../models/properties/mask_property_group.ts";
-import { Property, _EssentialOverrideProperty } from "../models/properties/property.ts";
+import type { Property } from "../models/properties/property.ts";
 import { PropertyGroup } from "../models/properties/property_group.ts";
 import type { CompItem } from "../models/items/composition.ts";
 import type { Layer } from "../models/layers/layer.ts";
 import { parse_effect } from "./effect.ts";
 import { parse_markers } from "./marker.ts";
 import { parse_property } from "./property_value.ts";
-import {
-  parse_gradient,
-  parse_orientation,
-  parse_shape,
-  parse_text_document,
-} from "./specialized_properties.ts";
+import { parse_gradient, parse_orientation, parse_shape, parse_text_document } from "./specialized_properties.ts";
 import { get_chunks_by_match_name, get_match_name_runs } from "./utils.ts";
-import { dict_get, enumerate, py_bool, warn, zip } from "../../pyrt/index.ts";
+import { deferred, dict_get, enumerate, py_bool, warn, zip } from "../../pyrt/index.ts";
+
+const _property = deferred<typeof import("../models/properties/property.ts")>(import.meta.url, "../models/properties/property.ts");
 
 // `logging.getLogger(__name__)`: this module logs nothing today, so only the
 // warning path is wired to pyrt `warn`.
@@ -390,10 +381,10 @@ export function _reclass_override_leaves(group: PropertyGroup): void {
   for (const child of group.properties) {
     if (child instanceof PropertyGroup) {
       _reclass_override_leaves(child);
-    } else if (child.constructor === Property) {
+    } else if (child.constructor === _property().Property) {
       // TODO(port): `child.__class__ = ...` is a prototype swap in JS too, but
       // V8 deoptimizes objects whose prototype changes after construction.
-      Object.setPrototypeOf(child, _EssentialOverrideProperty.prototype);
+      Object.setPrototypeOf(child, _property()._EssentialOverrideProperty.prototype);
     }
   }
 }

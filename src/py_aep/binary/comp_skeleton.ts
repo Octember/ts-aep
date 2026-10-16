@@ -17,21 +17,8 @@ import { CdtaChunk, CsctChunk, frame_grid } from "./composition_chunks.ts";
 import { IdtaChunk } from "./item_chunks.ts";
 import { LdtaChunk } from "./layer_chunks.ts";
 import { ClassicPrdaChunk, PrinChunk } from "./misc_chunks.ts";
-import {
-  build_gide_list,
-  build_item_id_chunks,
-  build_ovdg,
-  build_ovg2,
-} from "./mutations.ts";
-import {
-  CdatChunk,
-  OtdaChunk,
-  Tdb4Chunk,
-  TdmnChunk,
-  TdsbChunk,
-  TdsnChunk,
-  TdumChunk,
-} from "./property_chunks.ts";
+import { build_gide_list, build_item_id_chunks, build_ovdg, build_ovg2 } from "./mutations.ts";
+import { CdatChunk, OtdaChunk, Tdb4Chunk, TdmnChunk, TdsbChunk, TdsnChunk, TdumChunk } from "./property_chunks.ts";
 import { S2Chunk, S4Chunk, U1Chunk, U4Chunk, Utf8Chunk } from "./scalar_chunks.ts";
 import { b, bytes_, float, floordiv, len, repr, round, ValueError } from "../../pyrt/index.ts";
 

@@ -48,22 +48,22 @@ import {
 } from "../../pyrt/index.ts";
 
 // TODO(pyrt): builtin print(). console.log matches print's trailing newline.
-function print(...args: unknown[]): void {
+export function print(...args: unknown[]): void {
   console.log(args.map((a) => str(a)).join(" "));
 }
 
 // TODO(pyrt): print(..., file=sys.stderr).
-function eprint(message: string): void {
+export function eprint(message: string): void {
   console.error(message);
 }
 
 // TODO(pyrt): int.bit_length(). Only reached with a positive power-of-two xor of two bytes.
-function bit_length(n: number): number {
+export function bit_length(n: number): number {
   return n === 0 ? 0 : Math.abs(n).toString(2).length;
 }
 
 // TODO(pyrt): format spec `b` (binary) is not supported by pyrt format(). This is the `08b` case.
-function bin8(x: number): string {
+export function bin8(x: number): string {
   const sign = x < 0 ? "-" : "";
   return sign + Math.abs(x).toString(2).padStart(8 - sign.length, "0");
 }
@@ -789,11 +789,11 @@ export function print_multi_results(
  * `ensure_ascii` escaping, and `float_repr` float spelling.
  */
 // TODO(port): int-valued floats print as `1` here but `1.0` in Python. Output has none today.
-function json_str(s: string): string {
+export function json_str(s: string): string {
   return JSON.stringify(s).replace(/[\u007f-￿]/g, (c) => "\\u" + c.charCodeAt(0).toString(16).padStart(4, "0"));
 }
 
-function json_dumps(value: unknown, indent: number): string {
+export function json_dumps(value: unknown, indent: number): string {
   const pad = (n: number): string => " ".repeat(indent * n);
   const enc = (v: any, level: number): string => {
     if (v == null) return "null";
@@ -884,14 +884,14 @@ export function _report_suppressed(suppressed: number, exact: boolean): void {
 // TODO(pyrt): argparse. The helpers below cover only this CLI's option set,
 // including argparse's prefix matching, `--opt=value`, `--`, the exit-2 error
 // path and "unrecognized arguments". The help layout is hand-written, not generated.
-const PROG = "aep-compare";
-const OPTIONS = ["--help", "--json", "--filter", "--context", "--exact"];
+export const PROG = "aep-compare";
+export const OPTIONS = ["--help", "--json", "--filter", "--context", "--exact"];
 
-const USAGE =
+export const USAGE =
   `usage: ${PROG} [-h] [--json] [--filter FILTER] [--context N] [--exact]\n` +
   `                   files [files ...]`;
 
-const HELP = `${USAGE}
+export const HELP = `${USAGE}
 
 Compare After Effects project files (.aep)
 
@@ -934,18 +934,18 @@ export class SystemExit extends Error {
 }
 
 /** argparse's `parser.error`: usage plus message to stderr, exit status 2. */
-function parser_error(message: string): never {
+export function parser_error(message: string): never {
   eprint(USAGE);
   eprint(`${PROG}: error: ${message}`);
   throw new SystemExit(2);
 }
 
-function is_negative_number(arg: string): boolean {
+export function is_negative_number(arg: string): boolean {
   return /^-\d+$|^-\d*\.\d+$/.test(arg);
 }
 
 /** Long-option prefix matching as argparse does by default (allow_abbrev). */
-function resolve_option(name: string): string | null {
+export function resolve_option(name: string): string | null {
   if (name === "-h") return "--help";
   if (!name.startsWith("--")) return null;
   if (OPTIONS.includes(name)) return name;
@@ -954,7 +954,7 @@ function resolve_option(name: string): string | null {
   return hits.length === 1 ? hits[0] : null;
 }
 
-type Args = {
+export type Args = {
   files: Path[];
   json: boolean;
   filter: string | null;
@@ -962,7 +962,7 @@ type Args = {
   exact: boolean;
 };
 
-function parse_args(argv: string[]): Args {
+export function parse_args(argv: string[]): Args {
   const out: Args = { files: [], json: false, filter: null, context: 0, exact: false };
   const positionals: string[] = [];
   const extras: string[] = [];

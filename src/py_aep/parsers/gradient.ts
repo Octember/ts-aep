@@ -9,14 +9,10 @@ import {
   range,
   warn,
 } from "../../pyrt/index.ts";
-import {
-  Gradient,
-  GradientAlphaStop,
-  GradientColorStop,
-} from "../models/properties/gradient.ts";
+import { Gradient, GradientAlphaStop, GradientColorStop } from "../models/properties/gradient.ts";
 import type { Utf8Chunk } from "../binary/scalar_chunks.ts";
 
-const logger = {
+export const logger = {
   debug() {},
   info() {},
   warning: (m: string) => warn(m),
@@ -26,9 +22,9 @@ const logger = {
 // subset this file uses: `tag`, `.text` (leading character data, null when there is
 // none), `find` / `findall` over direct children, and iteration over children.
 // `fromstring` parses well-formed XML and throws `ParseError` otherwise.
-class ParseError extends Error {}
+export class ParseError extends Error {}
 
-class Element {
+export class Element {
   text: string | null = null;
   readonly children: Element[] = [];
 
@@ -50,14 +46,14 @@ class Element {
   }
 }
 
-const XML_NAME = "[A-Za-z_][\\w.:-]*";
-const START_TAG = new RegExp(
+export const XML_NAME = "[A-Za-z_][\\w.:-]*";
+export const START_TAG = new RegExp(
   `<(${XML_NAME})((?:\\s+${XML_NAME}\\s*=\\s*(?:"[^"<]*"|'[^'<]*'))*)\\s*(/?)>`,
   "y",
 );
-const END_TAG = new RegExp(`</(${XML_NAME})\\s*>`, "y");
-const ENTITY_TOKEN = /&(?!#x[0-9a-fA-F]+;|#[0-9]+;|[A-Za-z]+;)/;
-const NAMED_ENTITIES: Record<string, string> = {
+export const END_TAG = new RegExp(`</(${XML_NAME})\\s*>`, "y");
+export const ENTITY_TOKEN = /&(?!#x[0-9a-fA-F]+;|#[0-9]+;|[A-Za-z]+;)/;
+export const NAMED_ENTITIES: Record<string, string> = {
   lt: "<",
   gt: ">",
   amp: "&",
@@ -66,7 +62,7 @@ const NAMED_ENTITIES: Record<string, string> = {
 };
 
 /** Decode character and entity references in a text run. */
-function decode_text(raw: string): string {
+export function decode_text(raw: string): string {
   if (ENTITY_TOKEN.test(raw)) throw new ParseError("not well-formed (invalid token)");
   return raw.replace(/&(#x[0-9a-fA-F]+|#[0-9]+|[A-Za-z]+);/g, (_m, ent: string) => {
     if (ent[0] === "#") {
@@ -80,7 +76,7 @@ function decode_text(raw: string): string {
 }
 
 // TODO(pyrt): ElementTree.fromstring shim missing (see the Element note above).
-function fromstring(text: string): Element {
+export function fromstring(text: string): Element {
   // expat normalizes \r\n and lone \r to \n in character data
   text = text.replace(/\r\n?/g, "\n");
   let pos = 0;
@@ -204,7 +200,7 @@ export function parse_gradient_xml(utf8: Utf8Chunk): Gradient | null {
  * Returns a dict mapping key text to the value element (the second
  * child of each prop.pair).
  */
-function _get_pairs(prop_list_elem: Element): Map<string, Element> {
+export function _get_pairs(prop_list_elem: Element): Map<string, Element> {
   const pairs = new Map<string, Element>();
   for (const pair of prop_list_elem.findall("prop.pair")) {
     const key_elem = pair.find("key");
@@ -219,14 +215,14 @@ function _get_pairs(prop_list_elem: Element): Map<string, Element> {
 }
 
 /** Get text content from a <string> element. */
-function _get_string_value(elem: Element | null): string | null {
+export function _get_string_value(elem: Element | null): string | null {
   if (elem == null) return null;
   if (elem.tag === "string") return elem.text;
   return null;
 }
 
 /** Parse the 'Color Stops' prop.list into GradientColorStop objects. */
-function _parse_color_stops(color_stops_elem: Element | null): GradientColorStop[] {
+export function _parse_color_stops(color_stops_elem: Element | null): GradientColorStop[] {
   if (color_stops_elem == null) return [];
 
   const pairs = _get_pairs(color_stops_elem);
@@ -254,7 +250,7 @@ function _parse_color_stops(color_stops_elem: Element | null): GradientColorStop
 }
 
 /** Parse the 'Alpha Stops' prop.list into GradientAlphaStop objects. */
-function _parse_alpha_stops(alpha_stops_elem: Element | null): GradientAlphaStop[] {
+export function _parse_alpha_stops(alpha_stops_elem: Element | null): GradientAlphaStop[] {
   if (alpha_stops_elem == null) return [];
 
   const pairs = _get_pairs(alpha_stops_elem);
@@ -279,7 +275,7 @@ function _parse_alpha_stops(alpha_stops_elem: Element | null): GradientAlphaStop
 }
 
 /** Parse an <array> element containing <float> children. */
-function _parse_float_array(array_elem: Element): number[] {
+export function _parse_float_array(array_elem: Element): number[] {
   const floats: number[] = [];
   for (const child of array_elem) {
     if (child.tag === "float" && child.text != null) {

@@ -1,74 +1,26 @@
 // Port of py_aep/models/renderqueue/output_module.py
 
-import {
-  AudioBitDepth,
-  AudioChannels,
-  AudioCodec,
-  AudioSampleRate,
-  CineonFileFormat,
-  ColorManagementSystem,
-  ConvertToLinearLight,
-  GetSettingsFormat,
-  MPEGAudioFormat,
-  MPEGAudioLayer,
-  MPEGMultiplexer,
-  OutputAudio,
-  OutputChannels,
-  OutputColorDepth,
-  OutputColorMode,
-  OutputFormat,
-  PostRenderAction,
-  PostRenderActionSetting,
-  ResizeQuality,
-  RQItemStatus,
-  VideoCodec,
-} from "../../enums/index.ts";
+import { AudioBitDepth, AudioChannels, AudioCodec, AudioSampleRate, CineonFileFormat, ColorManagementSystem, ConvertToLinearLight, GetSettingsFormat, MPEGAudioFormat, MPEGAudioLayer, MPEGMultiplexer, OutputAudio, OutputChannels, OutputColorDepth, OutputColorMode, OutputFormat, PostRenderAction, PostRenderActionSetting, ResizeQuality, RQItemStatus, VideoCodec } from "../../enums/index.ts";
 // TODO(port): AudioCodec, VideoCodec, MPEGAudioFormat, MPEGAudioLayer and MPEGMultiplexer are
 // not imported by the Python module. They are imported here because `_rules_context` and
 // `validate_state` check `isinstance(value, IntEnum)` on values read from the XML format options,
 // and an enum-class membership test is the only way to tell a decoded member from a raw fallback.
 import { map_output_audio, map_output_color_space, profile_id_for_name } from "../../enums/mappings.ts";
-import {
-  ocio_color_space_for_profile_id,
-  ocio_output_profile_id,
-  require_ocio_config,
-  resolve_ocio_config,
-} from "../../color/ocio.ts";
+import { ocio_color_space_for_profile_id, ocio_output_profile_id, require_ocio_config, resolve_ocio_config } from "../../color/ocio.ts";
 import { allowed_values, constrained_keys } from "../../data/output_module_rules.ts";
 import { parse_format_options } from "../../parsers/format_options.ts";
 import { FORMAT_ID_EXTENSIONS, VIDEO_CODEC_NAMES, resolve_output_filename, resolve_time_span } from "../../resolvers/output.ts";
 import { platform_path } from "../../resolvers/platform_paths.ts";
 import { ChunkField } from "../descriptors.ts";
 import { CompItem } from "../items/composition.ts";
-import {
-  _validate_number,
-  validate_bool,
-  validate_enum,
-  validate_sequence,
-  validate_string,
-} from "../validators.ts";
-import {
-  CineonFormatOptions,
-  PngFormatOptions,
-  XmlFormatOptions,
-  type JpegFormatOptions,
-  type OpenExrFormatOptions,
-  type TargaFormatOptions,
-  type TiffFormatOptions,
-} from "./format_options/index.ts";
+import { _validate_number, validate_bool, validate_enum, validate_sequence, validate_string } from "../validators.ts";
+import { CineonFormatOptions, PngFormatOptions, XmlFormatOptions, type JpegFormatOptions, type OpenExrFormatOptions, type TargaFormatOptions, type TiffFormatOptions } from "./format_options/index.ts";
 import { SettingsView, build_resize_to_strings, settings_to_number, settings_to_string } from "./settings.ts";
 import { LHD3_BLOCK_SINGLE, set_lhd3_count, type LdatChunk, type Lhd3Chunk } from "../../binary/ldat_chunks.ts";
 import { HdrmChunk } from "../../binary/misc_chunks.ts";
 import { OutputModuleSettingsItem, RoptChunk, RouuChunk, TiffRoptChunk, type RenderSettingsItem } from "../../binary/render_chunks.ts";
 import { Utf8Chunk } from "../../binary/scalar_chunks.ts";
-import {
-  PENDING_ASCENDCOUNT,
-  alas_platform,
-  build_als2_list,
-  dump_alas,
-  find_by_type,
-  index_by_identity,
-} from "../../binary/utils.ts";
+import { PENDING_ASCENDCOUNT, alas_platform, build_als2_list, dump_alas, find_by_type, index_by_identity } from "../../binary/utils.ts";
 import type { Chunk } from "../../binary/chunk.ts";
 import type { OutputModuleTemplate } from "../../parsers/templates.ts";
 import type { Project } from "../project.ts";
@@ -99,7 +51,7 @@ import {
 
 // TODO(port): Python's `isinstance(x, bool) or isinstance(x, int)` accepts bools as ints.
 // `is_int` keeps that so raw bool fields still count as ints in the checks below.
-function is_int(v: unknown): boolean {
+export function is_int(v: unknown): boolean {
   return (typeof v === "number" && Number.isInteger(v)) || typeof v === "boolean";
 }
 
@@ -109,7 +61,7 @@ function is_int(v: unknown): boolean {
  * as a decoded enum member only when it belongs to the enum class that owns its key. A raw
  * out-of-enum fallback fails the membership test, as it does in Python.
  */
-const _KEY_ENUM = new Map<string, any>([
+export const _KEY_ENUM = new Map<string, any>([
   ["Channels", OutputChannels],
   ["Audio Channels", AudioChannels],
   ["Audio Sample Rate", AudioSampleRate],
@@ -125,7 +77,7 @@ const _KEY_ENUM = new Map<string, any>([
   ["Audio Bit Depth", AudioBitDepth],
 ]);
 
-function _is_enum_member(key: string, value: unknown): boolean {
+export function _is_enum_member(key: string, value: unknown): boolean {
   return getitem(_KEY_ENUM, key).has(value);
 }
 
@@ -135,7 +87,7 @@ function _is_enum_member(key: string, value: unknown): boolean {
  * taking the member, `name` is `name_of`). Values that are not members of the key's enum
  * (ints, strings, bools) fall through to `str(v)`.
  */
-function _label_or_name(key: string | null, v: any): string {
+export function _label_or_name(key: string | null, v: any): string {
   const E = key == null ? null : _KEY_ENUM.get(key);
   if (E != null && E.has(v)) {
     const label = typeof E.label === "function" ? E.label(v) : null;
@@ -146,7 +98,7 @@ function _label_or_name(key: string | null, v: any): string {
 }
 
 /** Python `getattr(v, "name", None) or str(v)` (see `_label_or_name`). */
-function _name_or_str(key: string | null, v: any): string {
+export function _name_or_str(key: string | null, v: any): string {
   const E = key == null ? null : _KEY_ENUM.get(key);
   if (E != null && E.has(v)) return E.name_of(v);
   return str(v);
@@ -154,14 +106,14 @@ function _name_or_str(key: string | null, v: any): string {
 
 // TODO(port): `{value!r}` of an IntEnum member is `<Cls.NAME: n>` in Python but a raw int stays
 // `n`; both are the same number here, so a member of the key's enum always reprs as a member.
-function _value_repr(key: string, v: any): string {
+export function _value_repr(key: string, v: any): string {
   const E = _KEY_ENUM.get(key);
   if (E != null && E.has(v)) return `<${E.__name__}.${E.name_of(v)}: ${v}>`;
   return repr(v);
 }
 
 /** Factory for crop validators that check range and final dimension. */
-function _validate_crop(peer_field: string, dimension: string): (value: number, obj: OutputModule) => void {
+export function _validate_crop(peer_field: string, dimension: string): (value: number, obj: OutputModule) => void {
   const range_check = _validate_number({ min: -30000, max: 30000, integer: true });
 
   return (value: number, obj: OutputModule): void => {
@@ -180,12 +132,12 @@ function _validate_crop(peer_field: string, dimension: string): (value: number, 
 }
 
 // Depth pairs: no-alpha <-> alpha
-const _DEPTH_PLUS = new Map<number, number>([
+export const _DEPTH_PLUS = new Map<number, number>([
   [24, 32],
   [48, 64],
   [96, 128],
 ]);
-const _DEPTH_MINUS = new Map<number, number>([
+export const _DEPTH_MINUS = new Map<number, number>([
   [32, 24],
   [64, 48],
   [128, 96],
@@ -193,7 +145,7 @@ const _DEPTH_MINUS = new Map<number, number>([
 
 // Audio sample encoding (1=unsigned PCM, 2=signed PCM, 3=float) AE stores
 // for each bytes-per-sample while the audio format has no channel count yet.
-const _AUDIO_ENCODINGS = new Map<number, number>([
+export const _AUDIO_ENCODINGS = new Map<number, number>([
   [1, 1],
   [2, 2],
   [4, 3],
@@ -203,7 +155,7 @@ const _AUDIO_ENCODINGS = new Map<number, number>([
  * After Effects has no 24-bit audio output: AE 2026 crashes when a
  * script sets it and reads a stored 24-bit format back as 16 Bit.
  */
-function _reject_24_bit_audio(value: any, obj: OutputModule): void {
+export function _reject_24_bit_audio(value: any, obj: OutputModule): void {
   if (value === AudioBitDepth.TWENTY_FOUR_BIT) {
     throw new ValueError(
       "Audio Bit Depth 24 Bit is not available: After Effects has no " +
@@ -220,7 +172,7 @@ function _reject_24_bit_audio(value: any, obj: OutputModule): void {
  * fields whose forgiving read transform hides the enum class from
  * `ChunkField`).
  */
-function _validate_for_format(
+export function _validate_for_format(
   key: string,
   pre: ((value: any, obj: OutputModule) => void) | null = null,
 ): (value: any, obj: OutputModule) => void {
@@ -235,7 +187,7 @@ function _validate_for_format(
 // isinstance lambdas; every writer is a raw write (validation bypass).
 
 // TODO(pyrt): JSON objects decode to Maps (RULEBOOK: dict -> Map), recursively.
-function _json_to_maps(v: any): any {
+export function _json_to_maps(v: any): any {
   if (Array.isArray(v)) return v.map(_json_to_maps);
   if (v !== null && typeof v === "object") {
     return new Map(Object.entries(v).map(([k, x]): [string, any] => [k, _json_to_maps(x)]));
@@ -243,7 +195,7 @@ function _json_to_maps(v: any): any {
   return v;
 }
 
-function _xml_options_of(om: OutputModule, attr: string): any {
+export function _xml_options_of(om: OutputModule, attr: string): any {
   const fo = om._format_options;
   if (fo instanceof XmlFormatOptions) {
     return getattr(fo, attr);
@@ -251,7 +203,7 @@ function _xml_options_of(om: OutputModule, attr: string): any {
   return null;
 }
 
-function _set_xml_param_raw(om: OutputModule, param_key: string, value: number): void {
+export function _set_xml_param_raw(om: OutputModule, param_key: string, value: number): void {
   const fo = om._format_options;
   if (fo instanceof XmlFormatOptions) {
     fo._set_param(param_key, str(value));

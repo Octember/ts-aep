@@ -33,7 +33,7 @@
  * Python 3.7 (no wheels), where the resolver reports unsupported.
  */
 
-import fontkit from "fontkit";
+import * as fontkit from "fontkit";
 import type { Path } from "../../pyrt/index.ts";
 import {
   at,
@@ -69,11 +69,11 @@ import type { TextDocument } from "../models/text/text_document.ts";
 // `hb.shape`, `glyph_infos`, ...) need a binding assigned to `hb` before any
 // composition runs. While it is null every composition is refused, the same
 // as Python without uharfbuzz (`hb is None`).
-let hb: any = null;
+export let hb: any = null;
 
-const _AUTO_LEADING_FACTOR = 1.2;
-const _FAUX_BOLD_ADVANCE = 0.027;
-const _SMALL_CAPS_SCALE = 0.7;
+export const _AUTO_LEADING_FACTOR = 1.2;
+export const _FAUX_BOLD_ADVANCE = 0.027;
+export const _SMALL_CAPS_SCALE = 0.7;
 
 // TODO(pyrt): unicodedata.bidirectional / unicodedata.combining have no shim.
 // These approximate them with script and general-category properties: R/AL/AN
@@ -82,22 +82,22 @@ const _SMALL_CAPS_SCALE = 0.7;
 // tables. The script approximation also flags some non-letter Arabic-block
 // characters that Bidi_Class marks as ON/CS/NSM, so it can refuse text
 // Python accepts.
-const _RTL_BIDI_SCRIPT =
+export const _RTL_BIDI_SCRIPT =
   /[\p{Script=Hebrew}\p{Script=Arabic}\p{Script=Syriac}\p{Script=Thaana}\p{Script=Nko}\p{Script=Samaritan}\p{Script=Mandaic}\p{Script=Adlam}]/u;
 
 // The font index is process-lifetime, so an indexed file can vanish
 // (CoreSync eviction, uninstall) before its first shaping; those opens
 // must refuse, not leak OS/HarfBuzz errors into innocuous reads.
-const _FONT_OPEN_ERRORS: any[] = [OSError];
+export const _FONT_OPEN_ERRORS: any[] = [OSError];
 if (hb != null && "HarfBuzzError" in hb) {
   _FONT_OPEN_ERRORS.push(hb.HarfBuzzError);
 }
 
-function _bidirectional_is_rtl(char: string): boolean {
+export function _bidirectional_is_rtl(char: string): boolean {
   return _RTL_BIDI_SCRIPT.test(char);
 }
 
-function _is_combining(char: string): boolean {
+export function _is_combining(char: string): boolean {
   return /\p{M}/u.test(char);
 }
 
@@ -107,7 +107,7 @@ function _is_combining(char: string): boolean {
  * TODO(port): Node's fs failures are plain `Error`s carrying a `code`, not
  * `OSError` instances; the `code` check stands in for Python's OSError.
  */
-function _is_font_open_error(exc: unknown): boolean {
+export function _is_font_open_error(exc: unknown): boolean {
   if (_FONT_OPEN_ERRORS.some((cls) => exc instanceof cls)) return true;
   return exc instanceof Error && "code" in exc;
 }
@@ -127,8 +127,8 @@ export class ComposedLines {
   }
 }
 
-const _hb_cache = new Map<string, [any, number]>();
-const _ascender_cache = new Map<string, number>();
+export const _hb_cache = new Map<string, [any, number]>();
+export const _ascender_cache = new Map<string, number>();
 
 export function _resolve_face(ps_name: string): [Path, number] {
   const resolved = resolve_postscript(ps_name);
@@ -199,7 +199,7 @@ export function _ascender_ratio(ps_name: string): number {
 }
 
 /** Per-character composition inputs decoded from one style run. */
-class _CharStyle {
+export class _CharStyle {
   declare font: string;
   declare size: number;
   declare tracking: number;

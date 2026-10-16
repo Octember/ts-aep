@@ -15,10 +15,10 @@ import { register } from "./registry.ts";
 
 // The largest internal timebase AE picks a units-per-frame for: 99.99 fps
 // gets 39996 (400 units a frame), 78.125 fps 20000 rather than 40000.
-const _TIMEBASE_LIMIT = 40000;
+export const _TIMEBASE_LIMIT = 40000;
 
 // The finest timebase AE counts a composition's or a layer's time in.
-const _MAX_TIMEBASE = 115200;
+export const _MAX_TIMEBASE = 115200;
 
 /**
  * `work_area_end_dividend` of a work area that runs to the end of the
@@ -28,23 +28,23 @@ export const WORK_AREA_TO_END = 0xffffffff;
 
 // TODO(pyrt): the Fraction shim has no arithmetic, comparison or floor.
 // These exact helpers work on its bigint `n` / `d` for `frame_grid`.
-function frac_mul(a: Fraction, b: Fraction): Fraction {
+export function frac_mul(a: Fraction, b: Fraction): Fraction {
   return new Fraction(a.n * b.n, a.d * b.d);
 }
 
-function frac_div(a: Fraction, k: number): Fraction {
+export function frac_div(a: Fraction, k: number): Fraction {
   return new Fraction(a.n, a.d * BigInt(k));
 }
 
-function frac_lt(a: Fraction, k: number): boolean {
+export function frac_lt(a: Fraction, k: number): boolean {
   return a.n < BigInt(k) * a.d;
 }
 
-function frac_gt(a: Fraction, k: number): boolean {
+export function frac_gt(a: Fraction, k: number): boolean {
   return a.n > BigInt(k) * a.d;
 }
 
-function frac_floor(a: Fraction): number {
+export function frac_floor(a: Fraction): number {
   let q = a.n / a.d;
   if (a.n < 0n && q * a.d !== a.n) q -= 1n;
   return Number(q);

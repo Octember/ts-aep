@@ -2,14 +2,7 @@
 
 import { describe, expect, test } from "bun:test";
 import { load_expected, parse_project } from "../conftest.ts";
-import {
-  ValidationResult,
-  compare_layer,
-  compare_project_level,
-  compare_property,
-  to_dict,
-  validate_aep,
-} from "../../src/py_aep/cli/validate.ts";
+import { ValidationResult, compare_layer, compare_project_level, compare_property, to_dict, validate_aep } from "../../src/py_aep/cli/validate.ts";
 import { BlendingMode } from "../../src/py_aep/enums/index.ts";
 import "../../src/py_aep/binary/_register.ts";
 import { Path, contains, dict_get, getitem, len, py_bool, py_eq } from "../../src/pyrt/index.ts";

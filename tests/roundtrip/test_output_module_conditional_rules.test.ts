@@ -12,12 +12,7 @@ import { int, Path, ValueError } from "../../src/pyrt/index.ts";
 import { make_tmp_path, raises } from "../../src/pyrt/pytest.ts";
 import { parse_project_fresh } from "../helpers.ts";
 import "../../src/py_aep/binary/_register.ts";
-import {
-  AudioBitDepth,
-  AudioChannels,
-  OutputChannels,
-  OutputColorDepth,
-} from "../../src/py_aep/enums/index.ts";
+import { AudioBitDepth, AudioChannels, OutputChannels, OutputColorDepth } from "../../src/py_aep/enums/index.ts";
 
 // `Path(__file__).parent.parent.parent`: `import.meta.dir` is this test's
 // directory (tests/roundtrip), so two `.parent` hops reach the package root.

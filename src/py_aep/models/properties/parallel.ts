@@ -13,39 +13,34 @@
  * output pairs (`aep-compare` ground-truth workflow).
  */
 
-import { b, float, NotImplementedError, py_bool, TypeError_ } from "../../../pyrt/index.ts";
+import { b, deferred, float, NotImplementedError, py_bool, TypeError_ } from "../../../pyrt/index.ts";
 import { type Chunk, ListChunk } from "../../binary/chunk.ts";
 import { LdatItemType, type LdatItem } from "../../binary/ldat_chunks.ts";
-import {
-  build_parallel_ldat_item,
-  clone_chunk_tree,
-  set_orientation_item_values,
-} from "../../binary/mutations.ts";
+import { build_parallel_ldat_item, clone_chunk_tree, set_orientation_item_values } from "../../binary/mutations.ts";
 import { CdatChunk, OtdaChunk } from "../../binary/property_chunks.ts";
 import { Utf8Chunk } from "../../binary/scalar_chunks.ts";
 import { PropertyControlType, PropertyValueType } from "../../enums/index.ts";
 import { Gradient } from "./gradient.ts";
 import { MarkerValue } from "./marker.ts";
 import { Shape } from "./shape.ts";
-// Deferred imports in Python (models <-> parsers is a cycle); ESM tolerates
-// the cycle because nothing here runs at module-evaluation time.
-import { parse_marker } from "../../parsers/marker.ts";
-import { _parse_shape_shap } from "../../parsers/specialized_properties.ts";
-import { parse_gradient_xml } from "../../parsers/gradient.ts";
 import type { Keyframe } from "./keyframe.ts";
 import type { Property } from "./property.ts";
+
+const _marker = deferred<typeof import("../../parsers/marker.ts")>(import.meta.url, "../../parsers/marker.ts");
+const _specialized_properties = deferred<typeof import("../../parsers/specialized_properties.ts")>(import.meta.url, "../../parsers/specialized_properties.ts");
+const _gradient = deferred<typeof import("../../parsers/gradient.ts")>(import.meta.url, "../../parsers/gradient.ts");
 
 // TODO(pyrt): no shim for `obj.__dict__`; the same non-enumerable Map per
 // instance that `ChunkField` (descriptors.ts) reads its overrides from.
 // `dimensions` is a read-only ChunkField, so a plain assignment would throw.
-function instance_dict_set(obj: any, name: string, value: any): void {
+export function instance_dict_set(obj: any, name: string, value: any): void {
   if (!Object.prototype.hasOwnProperty.call(obj, "__dict__")) {
     Object.defineProperty(obj, "__dict__", { value: new Map<string, any>(), enumerable: false });
   }
   obj.__dict__.set(name, value);
 }
 
-const _EMPTY_CDAT_PAD = b("\x00\x00\x00\x00");
+export const _EMPTY_CDAT_PAD = b("\x00\x00\x00\x00");
 
 /**
  * Descriptor for one complex property kind. Stateless singleton.
@@ -151,7 +146,7 @@ export class ParallelKind {
   on_wrap(prop: Property): void {}
 }
 
-class _OrientationKind extends ParallelKind {
+export class _OrientationKind extends ParallelKind {
   name = "orientation";
   wrapper_type = "otst";
   container_type = "otky";
@@ -213,7 +208,7 @@ class _OrientationKind extends ParallelKind {
   }
 }
 
-class _MarkerKind extends ParallelKind {
+export class _MarkerKind extends ParallelKind {
   name = "marker";
   wrapper_type = "mrst";
   container_type = "mrky";
@@ -255,7 +250,7 @@ class _MarkerKind extends ParallelKind {
   }
 
   wrap_value_chunk(prop: Property, value_chunk: Chunk): any {
-    return parse_marker(value_chunk as ListChunk);
+    return _marker().parse_marker(value_chunk as ListChunk);
   }
 
   bind_keyframe(value: any, kf: Keyframe): void {
@@ -279,7 +274,7 @@ class _MarkerKind extends ParallelKind {
   }
 }
 
-class _ShapeKind extends ParallelKind {
+export class _ShapeKind extends ParallelKind {
   name = "shape";
   wrapper_type = "om-s";
   container_type = "omks";
@@ -308,7 +303,7 @@ class _ShapeKind extends ParallelKind {
   }
 
   wrap_value_chunk(prop: Property, value_chunk: Chunk): any {
-    return _parse_shape_shap(
+    return _specialized_properties()._parse_shape_shap(
       value_chunk as ListChunk,
       prop._containing_layer,
       prop.match_name === "ADBE Mask Shape" ? prop : null,
@@ -316,7 +311,7 @@ class _ShapeKind extends ParallelKind {
   }
 }
 
-class _GradientKind extends ParallelKind {
+export class _GradientKind extends ParallelKind {
   name = "gradient";
   wrapper_type = "GCst";
   container_type = "GCky";
@@ -337,7 +332,7 @@ class _GradientKind extends ParallelKind {
   }
 
   wrap_value_chunk(prop: Property, value_chunk: Chunk): any {
-    return parse_gradient_xml(value_chunk as Utf8Chunk);
+    return _gradient().parse_gradient_xml(value_chunk as Utf8Chunk);
   }
 
   on_wrap(prop: Property): void {
@@ -360,7 +355,7 @@ class _GradientKind extends ParallelKind {
  * per keyframe), so the add / remove / animate algorithms are the
  * dedicated text paths on [Property][], not the generic container ones.
  */
-class _TextKind extends ParallelKind {
+export class _TextKind extends ParallelKind {
   name = "text";
   wrapper_type = "btds";
   container_type = null;

@@ -20,40 +20,23 @@
 
 import { dict_get, getattr, py_bool } from "../../pyrt/index.ts";
 import { LayerType, PropertyControlType, PropertyValueType } from "../enums/index.ts";
-import {
-  _CAMERA_NO_EXPRESSION,
-  _CANSETEXPR_2D_ONLY,
-  _CANSETEXPR_3D_ONLY,
-  _CANSETEXPR_EXTRUSION_DEPTHS,
-  _CANSETEXPR_FALSE_OVERRIDES,
-  _CANSETEXPR_RENDERER_3D_ONLY,
-  _LIGHT_AMBIENT_NO_EXPRESSION,
-  _LIGHT_ENVIRONMENT_NO_EXPRESSION,
-  _LIGHT_NO_EXPRESSION,
-  _LIGHT_PARALLEL_NO_EXPRESSION,
-  _LIGHT_POINT_NO_EXPRESSION,
-  _LIGHT_SPOT_NO_EXPRESSION,
-  _MODEL_LAYER_HIDDEN_MATERIALS,
-  _PARAMETRIC_MESH_CHECKBOX_STREAMS,
-  _PARAMETRIC_MESH_GROUP_TYPE,
-  _PARAMETRIC_MESH_NO_EXPRESSION,
-} from "../models/properties/overrides.ts";
+import { _CAMERA_NO_EXPRESSION, _CANSETEXPR_2D_ONLY, _CANSETEXPR_3D_ONLY, _CANSETEXPR_EXTRUSION_DEPTHS, _CANSETEXPR_FALSE_OVERRIDES, _CANSETEXPR_RENDERER_3D_ONLY, _LIGHT_AMBIENT_NO_EXPRESSION, _LIGHT_ENVIRONMENT_NO_EXPRESSION, _LIGHT_NO_EXPRESSION, _LIGHT_PARALLEL_NO_EXPRESSION, _LIGHT_POINT_NO_EXPRESSION, _LIGHT_SPOT_NO_EXPRESSION, _MODEL_LAYER_HIDDEN_MATERIALS, _PARAMETRIC_MESH_CHECKBOX_STREAMS, _PARAMETRIC_MESH_GROUP_TYPE, _PARAMETRIC_MESH_NO_EXPRESSION } from "../models/properties/overrides.ts";
 import type { Property } from "../models/properties/property.ts";
 
 // PVT sets where can_set_expression is always True / False regardless
 // of other signals.
-const _PVT_ALWAYS_TRUE: ReadonlySet<number> = new Set<number>([
+export const _PVT_ALWAYS_TRUE: ReadonlySet<number> = new Set<number>([
   PropertyValueType.TEXT_DOCUMENT,
   PropertyValueType.SHAPE,
 ]);
-const _PVT_ALWAYS_FALSE: ReadonlySet<number> = new Set<number>([
+export const _PVT_ALWAYS_FALSE: ReadonlySet<number> = new Set<number>([
   PropertyValueType.NO_VALUE,
   PropertyValueType.MARKER,
 ]);
 
 // Effect parameter types that never take an expression: a layer or mask
 // reference, and group markers.
-const _NON_EXPRESSION_PARAM_TYPES: ReadonlySet<number> = new Set<number>([
+export const _NON_EXPRESSION_PARAM_TYPES: ReadonlySet<number> = new Set<number>([
   PropertyControlType.LAYER,
   PropertyControlType.PAINT_GROUP,
   PropertyControlType.MASK,
@@ -62,16 +45,16 @@ const _NON_EXPRESSION_PARAM_TYPES: ReadonlySet<number> = new Set<number>([
 ]);
 
 // Hidden, but still expressionable: AE exempts these paint streams.
-const _HIDDEN_BUT_EXPRESSIONABLE: ReadonlySet<string> = new Set<string>([
+export const _HIDDEN_BUT_EXPRESSIONABLE: ReadonlySet<string> = new Set<string>([
   "ADBE Paint Transfer Mode",
   "ADBE Paint Duration",
 ]);
 
 // `CompItem.renderer` of Classic 3D, which draws a 3D layer as a flat plane.
-const _CLASSIC_3D = "ADBE Advanced 3d";
+export const _CLASSIC_3D = "ADBE Advanced 3d";
 
 // Shape stroke Line Join value for a miter join.
-const _MITER_JOIN = 1;
+export const _MITER_JOIN = 1;
 
 /**
  * Compute `can_set_expression` for a property.
@@ -234,7 +217,7 @@ export function resolve_can_set_expression(prop: Property): boolean {
 }
 
 /** Determine can_set_expression for a property on a light layer. */
-function _can_set_expression_light(layer: any, mn: string): boolean {
+export function _can_set_expression_light(layer: any, mn: string): boolean {
   if (_LIGHT_NO_EXPRESSION.has(mn)) {
     return false;
   }
@@ -271,7 +254,7 @@ function _can_set_expression_light(layer: any, mn: string): boolean {
  *   to the layer's ACTIVE mesh type; checkbox toggles (caps / invert
  *   slice) are expressionable regardless of active type.
  */
-function _can_set_expression_parametric_mesh(
+export function _can_set_expression_parametric_mesh(
   prop: Property,
   layer: any,
   mn: string,

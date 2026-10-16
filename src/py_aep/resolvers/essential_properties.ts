@@ -7,21 +7,21 @@
  * each equal to an `EssentialGraphicsController.uuid` on the source composition.
  */
 
-import { KeyError, dict_get, len, py_bool } from "../../pyrt/index.ts";
+import { KeyError, dict_get, deferred, len, py_bool } from "../../pyrt/index.ts";
 import { PropertyType } from "../enums/general.ts";
-// Python imports CompItem / AVLayer / PropertyGroup locally inside functions:
-// models/ have proven layer<->comp circular references. Here they are
-// top-level imports, which is safe because they are only used at call time,
-// never while this module evaluates.
-import { CompItem } from "../models/items/composition.ts";
-import { AVLayer } from "../models/layers/av_layer.ts";
+import type { CompItem } from "../models/items/composition.ts";
+import type { AVLayer } from "../models/layers/av_layer.ts";
 import type { EssentialGraphicsController, SourcePropertyRef } from "../models/essential_graphics.ts";
 import type { Project } from "../models/project.ts";
 import type { Property } from "../models/properties/property.ts";
-import { PropertyGroup } from "../models/properties/property_group.ts";
+import type { PropertyGroup } from "../models/properties/property_group.ts";
+
+const _composition = deferred<typeof import("../models/items/composition.ts")>(import.meta.url, "../models/items/composition.ts");
+const _av_layer = deferred<typeof import("../models/layers/av_layer.ts")>(import.meta.url, "../models/layers/av_layer.ts");
+const _property_group = deferred<typeof import("../models/properties/property_group.ts")>(import.meta.url, "../models/properties/property_group.ts");
 
 /** Essential Graphics controller type for a Media Replacement slot. */
-const _MEDIA_REPLACEMENT_CONTROLLER_TYPE = 14;
+export const _MEDIA_REPLACEMENT_CONTROLLER_TYPE = 14;
 
 /**
  * Return the source-comp controllers a precomp layer's Essential
@@ -37,7 +37,7 @@ export function resolve_essential_property_controllers(layer: AVLayer): Essentia
   const uuids = layer.essential_property_uuids;
   if (!py_bool(uuids)) return [];
   const source = layer.source;
-  if (!(source instanceof CompItem)) return [];
+  if (!(source instanceof _composition().CompItem)) return [];
   const by_uuid = new Map(source.motion_graphics_controllers.map((c) => [c.uuid, c] as const));
   return uuids.filter((uuid) => by_uuid.has(uuid)).map((uuid) => by_uuid.get(uuid)!);
 }
@@ -49,12 +49,12 @@ export function resolve_essential_property_controllers(layer: AVLayer): Essentia
  * Returns `null` when the controller stores no source comp/layer, the comp
  * is missing, or no layer matches the stored `layer_id`.
  */
-function _resolve_controller_source_layer(project: Project, controller: EssentialGraphicsController): AVLayer | null {
+export function _resolve_controller_source_layer(project: Project, controller: EssentialGraphicsController): AVLayer | null {
   if (controller.source_comp_id == null || controller.source_layer_id == null) return null;
   const comp = dict_get(project.items, controller.source_comp_id);
-  if (!(comp instanceof CompItem)) return null;
+  if (!(comp instanceof _composition().CompItem)) return null;
   const layer = dict_get(comp.layers_by_id, controller.source_layer_id);
-  return layer instanceof AVLayer ? layer : null;
+  return layer instanceof _av_layer().AVLayer ? layer : null;
 }
 
 /**
@@ -70,7 +70,7 @@ function _resolve_controller_source_layer(project: Project, controller: Essentia
  * name - a disagreement (stale index) returns `null` so the caller falls
  * back to by-name resolution.
  */
-function _resolve_indexed_child(group: PropertyGroup, ref: SourcePropertyRef, project: Project): Property | PropertyGroup | null {
+export function _resolve_indexed_child(group: PropertyGroup, ref: SourcePropertyRef, project: Project): Property | PropertyGroup | null {
   if (ref.prop_index == null) return null;
   if (group.is_effect) {
     const defs = dict_get(project._effect_param_defs, group.match_name);
@@ -110,11 +110,11 @@ function _resolve_indexed_child(group: PropertyGroup, ref: SourcePropertyRef, pr
  * behavior. Returns `null` if any node fails to resolve (missing child,
  * or the path descends past a leaf).
  */
-function _walk_source_property(source_layer: AVLayer, path: SourcePropertyRef[]): Property | PropertyGroup | null {
+export function _walk_source_property(source_layer: AVLayer, path: SourcePropertyRef[]): Property | PropertyGroup | null {
   const project = source_layer.containing_comp._project;
   let cur: Property | PropertyGroup = source_layer;
   for (const ref of path) {
-    if (!(cur instanceof PropertyGroup)) return null;
+    if (!(cur instanceof _property_group().PropertyGroup)) return null;
     let child: Property | PropertyGroup | null = null;
     if (ref.prop_index != null) child = _resolve_indexed_child(cur, ref, project);
     if (child == null) {
@@ -134,7 +134,7 @@ function _walk_source_property(source_layer: AVLayer, path: SourcePropertyRef[])
  * Pre-order position of `target` among all descendants (groups + leaves)
  * of `root`, or `null` if not found. Matches the flat OvG2 UUID ordering.
  */
-function _preorder_index(root: PropertyGroup, target: Property): number | null {
+export function _preorder_index(root: PropertyGroup, target: Property): number | null {
   const counter = [0];
 
   function rec(group: PropertyGroup): number | null {
@@ -142,7 +142,7 @@ function _preorder_index(root: PropertyGroup, target: Property): number | null {
       const pos = counter[0];
       counter[0] += 1;
       if (child === target) return pos;
-      if (child instanceof PropertyGroup) {
+      if (child instanceof _property_group().PropertyGroup) {
         const found = rec(child);
         if (found != null) return found;
       }
@@ -170,13 +170,13 @@ export function resolve_essential_property_controller(prop: Property): Essential
   }
   if (root == null) return null;
   const layer = root._parent_property;
-  if (!(layer instanceof AVLayer)) return null;
+  if (!(layer instanceof _av_layer().AVLayer)) return null;
   const idx = _preorder_index(root, prop);
   if (idx == null) return null;
   const uuids = layer.essential_property_uuids;
   if (idx >= len(uuids)) return null;
   const source = layer.source;
-  if (!(source instanceof CompItem)) return null;
+  if (!(source instanceof _composition().CompItem)) return null;
   return source.motion_graphics_controllers.find((c) => c.uuid === uuids[idx]) ?? null;
 }
 

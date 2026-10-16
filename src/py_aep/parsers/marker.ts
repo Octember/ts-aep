@@ -8,12 +8,7 @@ import type { ListChunk } from "../binary/chunk.ts";
 import type { TdmnChunk } from "../binary/property_chunks.ts";
 import type { NmhdChunk } from "../binary/misc_chunks.ts";
 import type { Utf8Chunk } from "../binary/scalar_chunks.ts";
-import {
-  filter_by_list_type,
-  filter_by_type,
-  find_by_list_type,
-  find_by_type,
-} from "../binary/utils.ts";
+import { filter_by_list_type, filter_by_type, find_by_list_type, find_by_type } from "../binary/utils.ts";
 import { PropertyValueType } from "../enums/index.ts";
 import { MarkerValue } from "../models/properties/marker.ts";
 import type { Property } from "../models/properties/property.ts";

@@ -30,10 +30,10 @@ import { merged_styles_bounds } from "./psd_styles.ts";
 import { cubic_range } from "./shape_bounds.ts";
 import type { PsdLayer } from "./psd_layers.ts";
 
-type _Box = [number, number, number, number];
+export type _Box = [number, number, number, number];
 
 // AE measures a vector mask's extent on a 1/64 px grid.
-const _SUBPIXEL = 64;
+export const _SUBPIXEL = 64;
 
 /**
  * The `(left, top, right, bottom)` content box AE gives `layer`'s
@@ -83,7 +83,7 @@ export function psd_layer_box(
 }
 
 /** The pixel extent of an enabled, non-inverted vector mask, or `None`. */
-function _path_box(layer: PsdLayer, canvas_w: number, canvas_h: number): _Box | null {
+export function _path_box(layer: PsdLayer, canvas_w: number, canvas_h: number): _Box | null {
   const block = layer.vector_mask;
   if (block == null || block.length < 8) {
     return null;
@@ -129,17 +129,17 @@ function _path_box(layer: PsdLayer, canvas_w: number, canvas_h: number): _Box | 
   ];
 }
 
-function _floor_edge(value: number): number {
+export function _floor_edge(value: number): number {
   // TODO(port): math.floor/math.ceil raise on inf/NaN in Python; Math.floor/ceil return them.
   return Math.floor(Math.ceil(value * _SUBPIXEL) / _SUBPIXEL);
 }
 
-function _ceil_edge(value: number): number {
+export function _ceil_edge(value: number): number {
   // TODO(port): math.floor/math.ceil raise on inf/NaN in Python; Math.floor/ceil return them.
   return Math.ceil(Math.floor(value * _SUBPIXEL) / _SUBPIXEL);
 }
 
-function _intersect(a: _Box, b: _Box): _Box {
+export function _intersect(a: _Box, b: _Box): _Box {
   const box: _Box = [Math.max(a[0], b[0]), Math.max(a[1], b[1]), Math.min(a[2], b[2]), Math.min(a[3], b[3])];
   if (box[2] <= box[0] || box[3] <= box[1]) {
     return [0, 0, 0, 0];

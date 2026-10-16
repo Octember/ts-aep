@@ -4,168 +4,22 @@
 // registration imports at the end of binary/chunk.py).
 import "./binary/_register.ts";
 
-import { BytesIO, Path, fspath, py_bool, type PathLike } from "../pyrt/index.ts";
-import {
-  AlphaMode,
-  AudioBitDepth,
-  AudioChannels,
-  AudioSampleRate,
-  AutoKernType,
-  AutoOrientType,
-  BaselineDirection,
-  BitsPerChannel,
-  BlendingMode,
-  BoxAutoFitPolicy,
-  BoxFirstBaselineAlignment,
-  BoxVerticalAlignment,
-  ChannelType,
-  CloseOptions,
-  ColorDepthSetting,
-  ColorManagementSystem,
-  ComposerEngine,
-  CTFontTechnology,
-  CTFontType,
-  CTScript,
-  DigitSet,
-  DiskCacheSetting,
-  EffectsSetting,
-  EnvironmentLightShadowResolution,
-  FastPreviewType,
-  FeetFramesFilmType,
-  FieldRender,
-  FieldSeparationType,
-  FillLightingCorrectionType,
-  FillMethodType,
-  FillOutputDepthType,
-  FillRangeType,
-  FontBaselineOption,
-  FontCapsOption,
-  FootageTimecodeDisplayStartType,
-  FrameBlendingSetting,
-  FrameBlendingType,
-  FrameRateSetting,
-  FramesCountType,
-  GetSettingsFormat,
-  GpuAccelType,
-  GuideLayers,
-  GuideOrientationType,
-  ImportAsType,
-  KeyframeInterpolationType,
-  Label,
-  Language,
-  LayerQuality,
-  LayerSamplingQuality,
-  LeadingType,
-  LightType,
-  LinearLightMode,
-  LineJoinType,
-  LineOrientation,
-  LogType,
-  LoopMode,
-  LutInterpolationMethod,
-  MaskFeatherFalloff,
-  MaskMode,
-  MaskMotionBlur,
-  MotionBlurSetting,
-  OutputAudio,
-  OutputChannels,
-  OutputColorDepth,
-  OutputColorMode,
-  OutputFormat,
-  ParagraphDirection,
-  ParagraphJustification,
-  ParametricMeshType,
-  PlayMode,
-  PostRenderAction,
-  PREFType,
-  ProjectThread,
-  PropertyControlType,
-  PropertyType,
-  PropertyValueType,
-  ProxyUseSetting,
-  PulldownMethod,
-  PulldownPhase,
-  PulldownSetting,
-  PurgeTarget,
-  RenderQuality,
-  ResizeQuality,
-  ResolveType,
-  RQItemStatus,
-  ShadowMapResolution,
-  SoloSwitchesSetting,
-  TimeDisplayType,
-  TimeSpanSource,
-  ToolType,
-  TrackMatteType,
-  ViewerType,
-} from "./enums/index.ts";
-import {
-  CURRENT_VALUE,
-  AdvancedRendererOptions,
-  Application,
-  AVItem,
-  AVLayer,
-  CameraLayer,
-  Cinema4DRendererOptions,
-  CineonFormatOptions,
-  ClassicRendererOptions,
-  CompItem,
-  FeatherPoint,
-  FileSource,
-  FolderItem,
-  FontObject,
-  FootageItem,
-  FootageSource,
-  Guide,
-  ImportOptions,
-  Item,
-  JpegFormatOptions,
-  Keyframe,
-  KeyframeEase,
-  Layer,
-  LightLayer,
-  MarkerValue,
-  MaskPropertyGroup,
-  OpenExrFormatOptions,
-  OutputModule,
-  ParametricMeshLayer,
-  PlaceholderSource,
-  PngFormatOptions,
-  Preferences,
-  Project,
-  Property,
-  PropertyBase,
-  PropertyGroup,
-  RayTracedRendererOptions,
-  RendererOptionsBase,
-  RenderQueue,
-  RenderQueueItem,
-  SettingsView,
-  Shape,
-  ShapeLayer,
-  SolidSource,
-  TargaFormatOptions,
-  TextDocument,
-  TextLayer,
-  ThreeDModelLayer,
-  TiffFormatOptions,
-  View,
-  Viewer,
-  ViewOptions,
-  XmlFormatOptions,
-} from "./models/index.ts";
+import { deferred, BytesIO, Path, fspath, py_bool, type PathLike } from "../pyrt/index.ts";
+import { AlphaMode, AudioBitDepth, AudioChannels, AudioSampleRate, AutoKernType, AutoOrientType, BaselineDirection, BitsPerChannel, BlendingMode, BoxAutoFitPolicy, BoxFirstBaselineAlignment, BoxVerticalAlignment, ChannelType, CloseOptions, ColorDepthSetting, ColorManagementSystem, ComposerEngine, CTFontTechnology, CTFontType, CTScript, DigitSet, DiskCacheSetting, EffectsSetting, EnvironmentLightShadowResolution, FastPreviewType, FeetFramesFilmType, FieldRender, FieldSeparationType, FillLightingCorrectionType, FillMethodType, FillOutputDepthType, FillRangeType, FontBaselineOption, FontCapsOption, FootageTimecodeDisplayStartType, FrameBlendingSetting, FrameBlendingType, FrameRateSetting, FramesCountType, GetSettingsFormat, GpuAccelType, GuideLayers, GuideOrientationType, ImportAsType, KeyframeInterpolationType, Label, Language, LayerQuality, LayerSamplingQuality, LeadingType, LightType, LinearLightMode, LineJoinType, LineOrientation, LogType, LoopMode, LutInterpolationMethod, MaskFeatherFalloff, MaskMode, MaskMotionBlur, MotionBlurSetting, OutputAudio, OutputChannels, OutputColorDepth, OutputColorMode, OutputFormat, ParagraphDirection, ParagraphJustification, ParametricMeshType, PlayMode, PostRenderAction, PREFType, ProjectThread, PropertyControlType, PropertyType, PropertyValueType, ProxyUseSetting, PulldownMethod, PulldownPhase, PulldownSetting, PurgeTarget, RenderQuality, ResizeQuality, ResolveType, RQItemStatus, ShadowMapResolution, SoloSwitchesSetting, TimeDisplayType, TimeSpanSource, ToolType, TrackMatteType, ViewerType } from "./enums/index.ts";
+import { CURRENT_VALUE, AdvancedRendererOptions, Application, AVItem, AVLayer, CameraLayer, Cinema4DRendererOptions, CineonFormatOptions, ClassicRendererOptions, CompItem, FeatherPoint, FileSource, FolderItem, FontObject, FootageItem, FootageSource, Guide, ImportOptions, Item, JpegFormatOptions, Keyframe, KeyframeEase, Layer, LightLayer, MarkerValue, MaskPropertyGroup, OpenExrFormatOptions, OutputModule, ParametricMeshLayer, PlaceholderSource, PngFormatOptions, Preferences, Project, Property, PropertyBase, PropertyGroup, RayTracedRendererOptions, RendererOptionsBase, RenderQueue, RenderQueueItem, SettingsView, Shape, ShapeLayer, SolidSource, TargaFormatOptions, TextDocument, TextLayer, ThreeDModelLayer, TiffFormatOptions, View, Viewer, ViewOptions, XmlFormatOptions } from "./models/index.ts";
 import { validate_ae_release, validate_platform } from "./models/validators.ts";
 import { CompPreset } from "./parsers/comp_presets.ts";
 import { list_layers } from "./resolvers/source_layers.ts";
-import { read_aep } from "./binary/chunk.ts";
-import { parse_app } from "./parsers/application.ts";
-import { parse_project } from "./parsers/project.ts";
+
+const _chunk = deferred<typeof import("./binary/chunk.ts")>(import.meta.url, "./binary/chunk.ts");
+const _application = deferred<typeof import("./parsers/application.ts")>(import.meta.url, "./parsers/application.ts");
+const _project = deferred<typeof import("./parsers/project.ts")>(import.meta.url, "./parsers/project.ts");
 
 // TODO(port): Python reads the version from the installed package metadata
 // (`importlib.metadata.version("py_aep")`) and falls back to "0.0.0" when the
 // package is not installed. The TS port has no package metadata lookup, so it
 // always reports the fallback.
-const __version__ = "0.0.0";
+export const __version__ = "0.0.0";
 
 /**
  * Parse an After Effects (.aep) project file and return an [Application][] instance.
@@ -199,7 +53,7 @@ const __version__ = "0.0.0";
  * print(app.version)
  * ```
  */
-function parse(
+export function parse(
   aep_file_path: string | PathLike,
   kw: { ae_preferences_dir?: string | PathLike | null; platform?: string | null } = {},
 ): Application {
@@ -213,17 +67,17 @@ function parse(
   const prefs_path = py_bool(ae_preferences_dir) ? new Path(ae_preferences_dir) : null;
   // `with open(file_path, "rb") as f:`
   const f = new BytesIO(new Path(file_path).read_bytes());
-  const [rifx, xmp] = read_aep(f, { defer_list_types: _DEFERRED_LIST_TYPES });
-  const project = parse_project(rifx, xmp, file_path, prefs_path);
+  const [rifx, xmp] = _chunk().read_aep(f, { defer_list_types: _DEFERRED_LIST_TYPES });
+  const project = _project().parse_project(rifx, xmp, file_path, prefs_path);
   if (platform != null) {
     project._platform = platform;
   }
-  return parse_app(rifx, project);
+  return _application().parse_app(rifx, project);
 }
 
 // Default target version: the AE build the empty-project skeleton was
 // captured from (AE 2026).
-const _DEFAULT_NEW_VERSION = "26.0x67";
+export const _DEFAULT_NEW_VERSION = "26.0x67";
 
 /**
  * Creates a new project in After Effects, replicating the File > New > New Project
@@ -262,7 +116,7 @@ const _DEFAULT_NEW_VERSION = "26.0x67";
  * app.project.save("new_project.aep")
  * ```
  */
-function new_(
+export function new_(
   version: string = _DEFAULT_NEW_VERSION,
   kw: { ae_preferences_dir?: string | PathLike | null; platform?: string | null } = {},
 ): Application {
@@ -275,155 +129,4 @@ function new_(
   return Application._new(version, prefs_path, platform);
 }
 
-export {
-  __version__,
-  AdvancedRendererOptions,
-  AlphaMode,
-  Application,
-  AudioBitDepth,
-  AudioChannels,
-  AudioSampleRate,
-  AutoKernType,
-  AutoOrientType,
-  AVItem,
-  AVLayer,
-  BaselineDirection,
-  BitsPerChannel,
-  BlendingMode,
-  BoxAutoFitPolicy,
-  BoxFirstBaselineAlignment,
-  BoxVerticalAlignment,
-  CameraLayer,
-  ChannelType,
-  Cinema4DRendererOptions,
-  CineonFormatOptions,
-  ClassicRendererOptions,
-  CloseOptions,
-  ColorDepthSetting,
-  ColorManagementSystem,
-  CompPreset,
-  CompItem,
-  ComposerEngine,
-  CTFontTechnology,
-  CTFontType,
-  CTScript,
-  DigitSet,
-  DiskCacheSetting,
-  EffectsSetting,
-  EnvironmentLightShadowResolution,
-  FastPreviewType,
-  FeatherPoint,
-  FeetFramesFilmType,
-  FieldRender,
-  FieldSeparationType,
-  FileSource,
-  FillLightingCorrectionType,
-  FillMethodType,
-  FillOutputDepthType,
-  FillRangeType,
-  FolderItem,
-  FontBaselineOption,
-  FontCapsOption,
-  FontObject,
-  FootageItem,
-  FootageSource,
-  FootageTimecodeDisplayStartType,
-  FrameBlendingSetting,
-  FrameBlendingType,
-  FrameRateSetting,
-  FramesCountType,
-  GetSettingsFormat,
-  GpuAccelType,
-  GuideOrientationType,
-  GuideLayers,
-  Guide,
-  ImportAsType,
-  ImportOptions,
-  Item,
-  CURRENT_VALUE,
-  JpegFormatOptions,
-  Keyframe,
-  KeyframeEase,
-  KeyframeInterpolationType,
-  Label,
-  Language,
-  Layer,
-  LayerQuality,
-  LayerSamplingQuality,
-  LeadingType,
-  LightLayer,
-  LightType,
-  LinearLightMode,
-  LineJoinType,
-  LineOrientation,
-  list_layers,
-  LogType,
-  LoopMode,
-  LutInterpolationMethod,
-  MarkerValue,
-  MaskFeatherFalloff,
-  MaskMode,
-  MaskMotionBlur,
-  MaskPropertyGroup,
-  MotionBlurSetting,
-  new_ as new,
-  OpenExrFormatOptions,
-  OutputAudio,
-  OutputChannels,
-  OutputColorDepth,
-  OutputColorMode,
-  OutputFormat,
-  OutputModule,
-  ParametricMeshLayer,
-  ParametricMeshType,
-  ParagraphDirection,
-  ParagraphJustification,
-  parse,
-  PlaceholderSource,
-  PlayMode,
-  PngFormatOptions,
-  PostRenderAction,
-  Preferences,
-  PREFType,
-  Project,
-  ProjectThread,
-  Property,
-  PropertyBase,
-  PropertyControlType,
-  PropertyGroup,
-  PropertyType,
-  PropertyValueType,
-  ProxyUseSetting,
-  PulldownMethod,
-  PulldownPhase,
-  PulldownSetting,
-  PurgeTarget,
-  RayTracedRendererOptions,
-  RendererOptionsBase,
-  RenderQuality,
-  RenderQueue,
-  RenderQueueItem,
-  ResizeQuality,
-  ResolveType,
-  RQItemStatus,
-  SettingsView,
-  ShadowMapResolution,
-  Shape,
-  ShapeLayer,
-  SolidSource,
-  SoloSwitchesSetting,
-  TargaFormatOptions,
-  TextDocument,
-  TextLayer,
-  ThreeDModelLayer,
-  TiffFormatOptions,
-  TimeDisplayType,
-  TimeSpanSource,
-  ToolType,
-  TrackMatteType,
-  View,
-  Viewer,
-  ViewerType,
-  ViewOptions,
-  XmlFormatOptions,
-};
+export { AdvancedRendererOptions, AlphaMode, Application, AudioBitDepth, AudioChannels, AudioSampleRate, AutoKernType, AutoOrientType, AVItem, AVLayer, BaselineDirection, BitsPerChannel, BlendingMode, BoxAutoFitPolicy, BoxFirstBaselineAlignment, BoxVerticalAlignment, CameraLayer, ChannelType, Cinema4DRendererOptions, CineonFormatOptions, ClassicRendererOptions, CloseOptions, ColorDepthSetting, ColorManagementSystem, CompPreset, CompItem, ComposerEngine, CTFontTechnology, CTFontType, CTScript, DigitSet, DiskCacheSetting, EffectsSetting, EnvironmentLightShadowResolution, FastPreviewType, FeatherPoint, FeetFramesFilmType, FieldRender, FieldSeparationType, FileSource, FillLightingCorrectionType, FillMethodType, FillOutputDepthType, FillRangeType, FolderItem, FontBaselineOption, FontCapsOption, FontObject, FootageItem, FootageSource, FootageTimecodeDisplayStartType, FrameBlendingSetting, FrameBlendingType, FrameRateSetting, FramesCountType, GetSettingsFormat, GpuAccelType, GuideOrientationType, GuideLayers, Guide, ImportAsType, ImportOptions, Item, CURRENT_VALUE, JpegFormatOptions, Keyframe, KeyframeEase, KeyframeInterpolationType, Label, Language, Layer, LayerQuality, LayerSamplingQuality, LeadingType, LightLayer, LightType, LinearLightMode, LineJoinType, LineOrientation, list_layers, LogType, LoopMode, LutInterpolationMethod, MarkerValue, MaskFeatherFalloff, MaskMode, MaskMotionBlur, MaskPropertyGroup, MotionBlurSetting, new_ as new, OpenExrFormatOptions, OutputAudio, OutputChannels, OutputColorDepth, OutputColorMode, OutputFormat, OutputModule, ParametricMeshLayer, ParametricMeshType, ParagraphDirection, ParagraphJustification, PlaceholderSource, PlayMode, PngFormatOptions, PostRenderAction, Preferences, PREFType, Project, ProjectThread, Property, PropertyBase, PropertyControlType, PropertyGroup, PropertyType, PropertyValueType, ProxyUseSetting, PulldownMethod, PulldownPhase, PulldownSetting, PurgeTarget, RayTracedRendererOptions, RendererOptionsBase, RenderQuality, RenderQueue, RenderQueueItem, ResizeQuality, ResolveType, RQItemStatus, SettingsView, ShadowMapResolution, Shape, ShapeLayer, SolidSource, SoloSwitchesSetting, TargaFormatOptions, TextDocument, TextLayer, ThreeDModelLayer, TiffFormatOptions, TimeDisplayType, TimeSpanSource, ToolType, TrackMatteType, View, Viewer, ViewerType, ViewOptions, XmlFormatOptions };

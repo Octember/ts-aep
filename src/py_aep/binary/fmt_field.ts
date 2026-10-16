@@ -13,6 +13,7 @@ import {
   b,
   bytes_,
   concat,
+  deferred,
   decode,
   dict_get,
   encode,
@@ -31,7 +32,8 @@ import {
   type Attribute,
   type FieldSpec,
 } from "../../pyrt/index.ts";
-import { Chunk } from "./chunk.ts";
+
+const _chunk = deferred<typeof import("./chunk.ts")>(import.meta.url, "./chunk.ts");
 
 export type _StructInfo = [
   string,
@@ -264,8 +266,8 @@ export function _struct_info_uncached(cls: Function): _StructInfo | null {
    * - `expected_size`: pre-computed `struct.calcsize('>' + fmt)`.
    */
   const base_names: ReadonlySet<string> =
-    cls === Chunk || Chunk.isPrototypeOf(cls)
-      ? new Set(fields(Chunk).map((f) => f.name))
+    cls === _chunk().Chunk || _chunk().Chunk.isPrototypeOf(cls)
+      ? new Set(fields(_chunk().Chunk).map((f) => f.name))
       : new Set();
   const fmt_parts: string[] = [];
   const data_fields: Attribute[] = [];

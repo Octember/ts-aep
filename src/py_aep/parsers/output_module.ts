@@ -1,11 +1,6 @@
 import type { RouuChunk } from "../binary/render_chunks.ts";
 import type { Utf8Chunk } from "../binary/scalar_chunks.ts";
-import {
-  ChunkNotFoundError,
-  filter_by_type,
-  find_by_list_type,
-  find_by_type,
-} from "../binary/utils.ts";
+import { ChunkNotFoundError, filter_by_type, find_by_list_type, find_by_type } from "../binary/utils.ts";
 import { _suppress_materialization } from "../models/descriptors.ts";
 import { OutputModule } from "../models/renderqueue/output_module.ts";
 import type { RenderQueueItem } from "../models/renderqueue/render_queue_item.ts";

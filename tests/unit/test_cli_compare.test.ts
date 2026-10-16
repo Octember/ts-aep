@@ -9,18 +9,7 @@ import { describe, expect, test } from "bun:test";
 
 import "../../src/py_aep/binary/_register.ts";
 import { format_hex_dump } from "../../src/py_aep/cli/_chunk_helpers.ts";
-import {
-  ByteDifference,
-  ChunkDifference,
-  MultiFileDifference,
-  _compare_chunk_dicts,
-  _gradient_xml_only_float_diff,
-  _multi_only_float_diff,
-  _only_float_diff,
-  compare_binary_data,
-  filter_differences,
-  to_json_output,
-} from "../../src/py_aep/cli/compare.ts";
+import { ByteDifference, ChunkDifference, MultiFileDifference, _compare_chunk_dicts, _gradient_xml_only_float_diff, _multi_only_float_diff, _only_float_diff, compare_binary_data, filter_differences, to_json_output } from "../../src/py_aep/cli/compare.ts";
 import { CdatChunk } from "../../src/py_aep/binary/property_chunks.ts";
 import { ShphChunk } from "../../src/py_aep/binary/misc_chunks.ts";
 import { Utf8Chunk } from "../../src/py_aep/binary/scalar_chunks.ts";

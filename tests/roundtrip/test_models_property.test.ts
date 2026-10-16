@@ -28,24 +28,8 @@ import { approx, make_tmp_path, raises } from "../../src/pyrt/pytest.ts";
 import { get_comp, get_first_layer, get_layer, parse_project_fresh } from "../helpers.ts";
 
 import { parse as parse_aep, new as py_aep_new, Project } from "../../src/py_aep/index.ts";
-import {
-  KeyframeInterpolationType,
-  Label,
-  MaskFeatherFalloff,
-  MaskMode,
-  MaskMotionBlur,
-  PropertyControlType,
-  PropertyType,
-} from "../../src/py_aep/enums/index.ts";
-import {
-  AVLayer,
-  Keyframe,
-  Layer,
-  MaskPropertyGroup,
-  Property,
-  PropertyGroup,
-  Shape,
-} from "../../src/py_aep/models/index.ts";
+import { KeyframeInterpolationType, Label, MaskFeatherFalloff, MaskMode, MaskMotionBlur, PropertyControlType, PropertyType } from "../../src/py_aep/enums/index.ts";
+import { AVLayer, Keyframe, Layer, MaskPropertyGroup, Property, PropertyGroup, Shape } from "../../src/py_aep/models/index.ts";
 import { ShapeLayer, TextLayer } from "../../src/py_aep/models/layers/index.ts";
 import { _baked_effect_def } from "../../src/py_aep/models/properties/property_group.ts";
 import { build_expression_control } from "../../src/py_aep/binary/mutations.ts";

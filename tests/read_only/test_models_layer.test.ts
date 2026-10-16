@@ -22,26 +22,9 @@ import {
   zip,
 } from "../../src/pyrt/index.ts";
 import "../../src/py_aep/binary/_register.ts";
-import {
-  get_comp,
-  get_first_layer,
-  get_layer,
-  get_layer_from_json,
-  get_layer_from_json_by_comp,
-  load_expected,
-  parse_project,
-} from "../conftest.ts";
+import { get_comp, get_first_layer, get_layer, get_layer_from_json, get_layer_from_json_by_comp, load_expected, parse_project } from "../conftest.ts";
 import { parse as parse_aep } from "../../src/py_aep/index.ts";
-import {
-  AutoOrientType,
-  BlendingMode,
-  FrameBlendingType,
-  LayerQuality,
-  LayerSamplingQuality,
-  LightType,
-  PropertyType,
-  TrackMatteType,
-} from "../../src/py_aep/enums/index.ts";
+import { AutoOrientType, BlendingMode, FrameBlendingType, LayerQuality, LayerSamplingQuality, LightType, PropertyType, TrackMatteType } from "../../src/py_aep/enums/index.ts";
 import { AVLayer, CameraLayer, LightLayer, ShapeLayer, TextLayer } from "../../src/py_aep/models/layers/index.ts";
 import { ThreeDModelLayer } from "../../src/py_aep/models/layers/three_d_model_layer.ts";
 import { Property } from "../../src/py_aep/models/properties/property.ts";

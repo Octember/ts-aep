@@ -11,27 +11,8 @@ import "../../src/py_aep/binary/_register.ts";
 import { parse_project } from "../conftest.ts";
 import { CineonRoptChunk, OpenExrRoptChunk } from "../../src/py_aep/binary/render_chunks.ts";
 import { find_by_type } from "../../src/py_aep/binary/utils.ts";
-import {
-  AudioCodec,
-  CineonFileFormat,
-  Hdr10ColorPrimaries,
-  JpegFormatType,
-  MPEGAudioFormat,
-  MPEGMultiplexer,
-  MPEGMuxStreamCompatibility,
-  OpenExrCompression,
-  PngCompression,
-  VideoCodec,
-} from "../../src/py_aep/enums/index.ts";
-import {
-  CineonFormatOptions,
-  JpegFormatOptions,
-  OpenExrFormatOptions,
-  PngFormatOptions,
-  TargaFormatOptions,
-  TiffFormatOptions,
-  XmlFormatOptions,
-} from "../../src/py_aep/models/renderqueue/format_options/index.ts";
+import { AudioCodec, CineonFileFormat, Hdr10ColorPrimaries, JpegFormatType, MPEGAudioFormat, MPEGMultiplexer, MPEGMuxStreamCompatibility, OpenExrCompression, PngCompression, VideoCodec } from "../../src/py_aep/enums/index.ts";
+import { CineonFormatOptions, JpegFormatOptions, OpenExrFormatOptions, PngFormatOptions, TargaFormatOptions, TiffFormatOptions, XmlFormatOptions } from "../../src/py_aep/models/renderqueue/format_options/index.ts";
 
 // Python `Path(__file__).parent.parent.parent` is the repo root. A TS file's
 // `import.meta.dir` is already its directory, so two `.parent` steps reach it.

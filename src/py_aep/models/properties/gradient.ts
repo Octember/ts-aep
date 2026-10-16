@@ -18,11 +18,7 @@ import {
 } from "../../../pyrt/index.ts";
 import { to_f4 } from "../../binary/bin_utils.ts";
 import { Utf8Chunk } from "../../binary/scalar_chunks.ts";
-import {
-  validate_normalized_float,
-  validate_positive_int,
-  validate_rgb_color,
-} from "../validators.ts";
+import { validate_normalized_float, validate_positive_int, validate_rgb_color } from "../validators.ts";
 
 /**
  * Descriptor triggering gradient XML serialization on write.
@@ -30,7 +26,7 @@ import {
  * Used on `GradientColorStop`, `GradientAlphaStop`, and `Gradient` to
  * automatically re-serialize gradient XML when a field is modified.
  */
-class _GradientField<T = any> {
+export class _GradientField<T = any> {
   static _VALIDATORS: Map<string, (value: any, instance?: any) => void> = new Map<
     string,
     (value: any, instance?: any) => void
@@ -398,12 +394,12 @@ descriptor(Gradient, "version", new _GradientField<string>());
  * AE stores stop values as float32 and prints them at up to 8
  * significant digits (e.g. `0.83` becomes `0.82999998`).
  */
-function _format_float(value: number): string {
+export function _format_float(value: number): string {
   return format(to_f4(value), ".8g");
 }
 
 /** XML lines for one `Alpha Stops` / `Color Stops` prop.pair. */
-function _stops_lines(kind: string, stops: number[][]): string[] {
+export function _stops_lines(kind: string, stops: number[][]): string[] {
   const lines: string[] = [
     "<prop.pair>",
     `<key>${kind} Stops</key>`,

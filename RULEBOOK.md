@@ -27,9 +27,12 @@ translating** and use them; do not reimplement anything they provide. Never edit
   `import py_aep` (tests) → `import * as py_aep from "../../src/py_aep/index.ts";`.
 - Import names exactly as Python does. Assume every imported name exists in the target TS module
   under the identical name (other agents translate those files in parallel to the same rules).
-- Deferred imports inside functions (cycle breakers) → normal top-level imports. ESM tolerates
-  cycles as long as nothing is *used at module-evaluation time*. One exception: a class that
-  `extends` an imported class is used at evaluation time. Python's end-of-module
+- Deferred imports inside functions (`from .x import Y` indented inside a def — Python's cycle
+  breaker) → **not** a top-level import: declare at module level
+  `const _x = deferred<typeof import("./x.ts")>(import.meta.url, "./x.ts");` (pyrt) and use
+  `_x().Y` at the original use sites; add `import type { Y } from "./x.ts";` if `Y` is also used as
+  a type. A top-level import would let a subclass module (`class M extends Base`) evaluate before
+  `Base` exists (TDZ). `if TYPE_CHECKING:` imports → `import type`. Python's end-of-module
   "import for registration side effects" lines in `binary/chunk.py` become the separate module
   `src/py_aep/binary/_register.ts`, which imports `./chunk.ts` and every `*_chunks.ts`, and any
   module whose code needs all chunk types registered (`models/project.ts`, `py_aep/index.ts`,

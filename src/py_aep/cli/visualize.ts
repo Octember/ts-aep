@@ -52,7 +52,7 @@ import type { OutputModule } from "../models/renderqueue/output_module.ts";
 import type { RenderQueueItem } from "../models/renderqueue/render_queue_item.ts";
 
 /** `TextIO` as used by the formatters: anything with `write(str)`. */
-type TextIO = { write(s: string): unknown };
+export type TextIO = { write(s: string): unknown };
 
 /** A node of the uniform tree the formatters consume (`dict[str, Any]` in Python). */
 export type Node = {
@@ -319,7 +319,7 @@ export function build_output_module_node(om: OutputModule): Node {
  * Python `str(dict)`: `{'k': v, ...}` with repr'd keys and values.
  * TODO(pyrt): pyrt `repr`/`str` do not handle a Map (Python dict) yet.
  */
-function dict_repr(d: Map<any, any>): string {
+export function dict_repr(d: Map<any, any>): string {
   return "{" + [...d].map(([k, v]) => `${repr(k)}: ${attr_repr(k, v)}`).join(", ") + "}";
 }
 
@@ -327,7 +327,7 @@ function dict_repr(d: Map<any, any>): string {
  * `repr(v)` for an attrs value. TODO(port): int/float distinction - `frame_rate`
  * is always a Python float (`24.0`), so it is spelled via float_repr.
  */
-function attr_repr(k: string, v: any): string {
+export function attr_repr(k: string, v: any): string {
   return k === "frame_rate" && typeof v === "number" ? float_repr(v) : repr(v);
 }
 
@@ -536,7 +536,7 @@ export function format_json(node: Node, output: TextIO, max_depth: number | null
 // json.dumps(obj, indent=2, default=str) parity (byte-compared CLI output):
 // Python separators with indent, ensure_ascii escaping, float spelling via
 // num_str, and default=str for anything that is not a JSON value.
-function json_str(s: string): string {
+export function json_str(s: string): string {
   let out = '"';
   for (let i = 0; i < s.length; i++) {
     const ch = s[i];
@@ -554,7 +554,7 @@ function json_str(s: string): string {
   return out + '"';
 }
 
-function json_dumps(obj: any, indent: number, level: number = 0, is_float: boolean = false): string {
+export function json_dumps(obj: any, indent: number, level: number = 0, is_float: boolean = false): string {
   const pad = (n: number): string => " ".repeat(indent * n);
   if (obj == null) return "null";
   if (obj === true) return "true";
@@ -591,14 +591,14 @@ function json_dumps(obj: any, indent: number, level: number = 0, is_float: boole
 // Main
 // =============================================================================
 
-const PROG = "aep-visualize";
+export const PROG = "aep-visualize";
 
-const USAGE = `usage: aep-visualize [-h] [--format {text,dot,mermaid,json}]
+export const USAGE = `usage: aep-visualize [-h] [--format {text,dot,mermaid,json}]
                      [--depth DEPTH] [--no-properties] [--output OUTPUT]
                      aep_file
 `;
 
-const HELP =
+export const HELP =
   USAGE +
   `
 Visualize an After Effects project structure.
@@ -623,7 +623,7 @@ Examples:
   aep-visualize project.aep --depth 2 --no-properties
 `;
 
-type Args = {
+export type Args = {
   aep_file: string;
   format: string;
   depth: number | null;
@@ -637,7 +637,7 @@ type Args = {
  * `--`). argparse's prefix matching and exact error/help layout are not
  * reproduced; the help text is hand-copied from argparse's output.
  */
-function parse_args(argv: string[]): Args {
+export function parse_args(argv: string[]): Args {
   const fail = (msg: string): never => {
     process.stderr.write(`${USAGE}${PROG}: error: ${msg}\n`);
     process.exit(2);

@@ -36,7 +36,7 @@ export function map_output_audio(
  * Regenerate from ICC files on disk with
  * `scripts/generate_color_space_mapping.py`.
  */
-const _ICC_PROFILE_MAPPING: Map<string, string> = new Map<string, string>([
+export const _ICC_PROFILE_MAPPING: Map<string, string> = new Map<string, string>([
   ["7388945281150aeb4d9daebdafdc1801", "ACES Academy Color Encoding Specification SMPTE ST 2065-1"],
   ["ae27d1e66d65c5a0a50fe0ec149a24fa", "ACEScct"],
   ["9cc3d6762423e9d771726cb97d57cf3c", "ACEScg ACES Working Space AMPAS S-2014-004"],
@@ -148,7 +148,7 @@ const _ICC_PROFILE_MAPPING: Map<string, string> = new Map<string, string>([
  * Used to write a known Adobe profile's 16-byte ID (footage `apid`, output
  * `output_profile_id`) without needing the ICC file on disk.
  */
-const _NAME_TO_ICC_PROFILE: Map<string, string> = new Map<string, string>(
+export const _NAME_TO_ICC_PROFILE: Map<string, string> = new Map<string, string>(
   Array.from(_ICC_PROFILE_MAPPING, ([uid, name]) => [name, uid] as [string, string]),
 );
 

@@ -106,7 +106,7 @@ export function* walk_chunks(
  * is provided, the decoded leaf `Chunk` objects are stored alongside the
  * raw bytes (used for float-tolerant comparison).
  */
-function _extract_chunks_recursive(
+export function _extract_chunks_recursive(
   chunks: Chunk[],
   parent_path: string,
   result: Map<string, Uint8Array>,

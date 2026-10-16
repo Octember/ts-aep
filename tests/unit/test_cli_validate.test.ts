@@ -7,15 +7,7 @@ import { spawnSync } from "node:child_process";
 
 import "../../src/py_aep/binary/_register.ts";
 // TODO(port): _get_field_names and _get_property_names are module-private in validate.ts; they need to be exported.
-import {
-  ValidationResult,
-  _get_field_names,
-  _get_property_names,
-  compare_marker,
-  compare_values,
-  get_enum_value,
-  main,
-} from "../../src/py_aep/cli/validate.ts";
+import { ValidationResult, _get_field_names, _get_property_names, compare_marker, compare_values, get_enum_value, main } from "../../src/py_aep/cli/validate.ts";
 import { BlendingMode } from "../../src/py_aep/enums/index.ts";
 import { KeyframeEase } from "../../src/py_aep/models/properties/keyframe_ease.ts";
 import { Property } from "../../src/py_aep/models/properties/property.ts";

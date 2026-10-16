@@ -9,14 +9,7 @@
 
 import { describe, expect, test } from "bun:test";
 
-import {
-  PROFILE_TYPE_ICC,
-  PROFILE_TYPE_OCIO,
-  build_icc_envelope,
-  build_ocio_colorspace_envelope,
-  build_ocio_display_envelope,
-  parse_envelope,
-} from "../../src/py_aep/color/envelope.ts";
+import { PROFILE_TYPE_ICC, PROFILE_TYPE_OCIO, build_icc_envelope, build_ocio_colorspace_envelope, build_ocio_display_envelope, parse_envelope } from "../../src/py_aep/color/envelope.ts";
 import { b, concat, py_eq, range } from "../../src/pyrt/index.ts";
 
 // Verbatim AE output.

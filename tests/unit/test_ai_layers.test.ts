@@ -12,12 +12,7 @@ import { describe, expect, test } from "bun:test";
 
 import { raises } from "../../src/pyrt/pytest.ts";
 import { encode, py_eq } from "../../src/pyrt/index.ts";
-import {
-  AiLayer,
-  UnsupportedAiLayersError,
-  read_ai_layer_ocgs,
-  read_ai_layers,
-} from "../../src/py_aep/resolvers/ai_layers.ts";
+import { AiLayer, UnsupportedAiLayersError, read_ai_layer_ocgs, read_ai_layers } from "../../src/py_aep/resolvers/ai_layers.ts";
 
 /** A minimal PDF body whose catalog carries `oc_properties`. */
 function _pdf(oc_properties: string): Uint8Array {

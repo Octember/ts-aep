@@ -6,20 +6,10 @@
 // positional argument.
 
 import { describe, expect, test } from "bun:test";
-import {
-  AlphaMode,
-  FieldSeparationType,
-} from "../../src/py_aep/index.ts";
+import { AlphaMode, FieldSeparationType } from "../../src/py_aep/index.ts";
 import "../../src/py_aep/binary/_register.ts";
 import { find_by_list_type } from "../../src/py_aep/binary/utils.ts";
-import {
-  get_comp,
-  get_first_footage,
-  get_footage,
-  get_footage_from_json_by_name,
-  load_expected,
-  parse_project,
-} from "../conftest.ts";
+import { get_comp, get_first_footage, get_footage, get_footage_from_json_by_name, load_expected, parse_project } from "../conftest.ts";
 import { Path, isclose, py_eq } from "../../src/pyrt/index.ts";
 
 // Python `Path(__file__).parent.parent.parent` is the repo root. A TS file's

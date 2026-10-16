@@ -16,16 +16,7 @@ import {
 import { make_tmp_path, raises } from "../../src/pyrt/pytest.ts";
 import { type Project, parse as parse_aep } from "../../src/py_aep/index.ts";
 import { parse_envelope } from "../../src/py_aep/color/envelope.ts";
-import {
-  BitsPerChannel,
-  ColorManagementSystem,
-  FeetFramesFilmType,
-  FootageTimecodeDisplayStartType,
-  FramesCountType,
-  GpuAccelType,
-  LutInterpolationMethod,
-  TimeDisplayType,
-} from "../../src/py_aep/enums/index.ts";
+import { BitsPerChannel, ColorManagementSystem, FeetFramesFilmType, FootageTimecodeDisplayStartType, FramesCountType, GpuAccelType, LutInterpolationMethod, TimeDisplayType } from "../../src/py_aep/enums/index.ts";
 import "../../src/py_aep/binary/_register.ts";
 
 const SAMPLES_DIR = new Path(import.meta.path).parent.parent.parent.div("samples", "models", "project");

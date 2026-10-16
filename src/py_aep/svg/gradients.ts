@@ -21,9 +21,9 @@ import { GradientPaint, GradientStop } from "./types.ts";
 // TODO(port): xml.etree.ElementTree.Element has no pyrt shim yet; typed as any.
 // Assumes `.tag`, `.attrib` (a Map), `.get(key, default?)`, `.iter()` and
 // iteration over children.
-type Element = any;
+export type Element = any;
 
-function _href(elem: Element): string | null {
+export function _href(elem: Element): string | null {
   for (const key of ["href", "{http://www.w3.org/1999/xlink}href"]) {
     const ref = elem.get(key);
     if (py_bool(ref)) {
@@ -88,7 +88,7 @@ export function collect_gradients(root: Element): Map<string, GradientDef> {
   return defs;
 }
 
-function _parse_stops(elem: Element): GradientStop[] {
+export function _parse_stops(elem: Element): GradientStop[] {
   const stops: GradientStop[] = [];
   for (const child of elem) {
     if (local_name(child.tag) !== "stop") {
@@ -113,9 +113,9 @@ function _parse_stops(elem: Element): GradientStop[] {
   return stops;
 }
 
-const _STOP_PROPS = ["stop-color", "stop-opacity"];
+export const _STOP_PROPS = ["stop-color", "stop-opacity"];
 
-function _stop_style(elem: Element): Map<string, string> {
+export function _stop_style(elem: Element): Map<string, string> {
   const out = new Map<string, string>();
   for (const [k, v] of elem.attrib) {
     if (_STOP_PROPS.includes(k)) {
@@ -133,7 +133,7 @@ function _stop_style(elem: Element): Map<string, string> {
  * fraction of `span` (1.0 under objectBoundingBox, where `50%` and `0.5`
  * are the same fraction of the bounding box).
  */
-function _coord(text: string, span: number): number {
+export function _coord(text: string, span: number): number {
   return parse_length(text, 0.0, span);
 }
 

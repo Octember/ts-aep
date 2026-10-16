@@ -27,6 +27,8 @@ export class UnicodeDecodeError extends UnicodeError {}
 export class UnicodeEncodeError extends UnicodeError {}
 /** `struct.error` */
 export class StructError extends PyException {}
+/** Python `SyntaxError` (raised by parsers such as the COS reader). */
+export class SyntaxError_ extends PyException {}
 
 /** Python's `assert cond, msg`. */
 export function py_assert(cond: unknown, message = ""): asserts cond {

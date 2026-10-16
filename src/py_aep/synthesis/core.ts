@@ -29,23 +29,8 @@ import { ShapeLayer } from "../models/layers/shape_layer.ts";
 import { TextLayer } from "../models/layers/text_layer.ts";
 import { ThreeDModelLayer } from "../models/layers/three_d_model_layer.ts";
 import { Property } from "../models/properties/property.ts";
-import {
-  PropertyGroup,
-  _apply_bounds,
-  _derive_layer_styles_enabled,
-  _reorder_and_fill,
-} from "../models/properties/property_group.ts";
-import {
-  _PARAMETRIC_MESH_TOP_LEVEL_SPECS,
-  _SKIP_FOR_CAMERA,
-  _SKIP_FOR_LIGHT,
-  _SKIP_FOR_REGULAR_AV,
-  _SKIP_FOR_SHAPE,
-  _SKIP_FOR_TEXT,
-  _TOP_LEVEL_SPECS,
-  _TRANSFORM_FIXED_DEFAULTS,
-  _TRANSFORM_SPECS,
-} from "./property.ts";
+import { PropertyGroup, _apply_bounds, _derive_layer_styles_enabled, _reorder_and_fill } from "../models/properties/property_group.ts";
+import { _PARAMETRIC_MESH_TOP_LEVEL_SPECS, _SKIP_FOR_CAMERA, _SKIP_FOR_LIGHT, _SKIP_FOR_REGULAR_AV, _SKIP_FOR_SHAPE, _SKIP_FOR_TEXT, _TOP_LEVEL_SPECS, _TRANSFORM_FIXED_DEFAULTS, _TRANSFORM_SPECS } from "./property.ts";
 import { dict_get, py_bool, range } from "../../pyrt/index.ts";
 import type { Layer } from "../models/layers/layer.ts";
 

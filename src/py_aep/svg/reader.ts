@@ -9,14 +9,7 @@
  */
 
 import { FLOAT32_MAX } from "../binary/bin_utils.ts";
-import {
-  DEFAULT_FONT_SIZE,
-  LengthContext,
-  local_name,
-  parse_length,
-  parse_number,
-  parse_ratio,
-} from "./_util.ts";
+import { DEFAULT_FONT_SIZE, LengthContext, local_name, parse_length, parse_number, parse_ratio } from "./_util.ts";
 import { parse_color } from "./colors.ts";
 import { canvas, viewport_transform } from "./document.ts";
 import { UnsupportedSVGError } from "./errors.ts";
@@ -26,15 +19,7 @@ import { type RawSubpath, cubics_to_subpath, element_subpaths } from "./shapes.t
 import { type CssRule, parse_css, resolve_properties } from "./style.ts";
 import { TextRun, outline_runs, outline_text_path } from "./text.ts";
 import { Affine, parse_transform } from "./transform.ts";
-import {
-  GradientStop,
-  SolidPaint,
-  StrokeStyle,
-  SvgDocument,
-  SvgDrawable,
-  type GradientPaint,
-  type Subpath,
-} from "./types.ts";
+import { GradientStop, SolidPaint, StrokeStyle, SvgDocument, SvgDrawable, type GradientPaint, type Subpath } from "./types.ts";
 import {
   Path,
   PyException,
@@ -60,7 +45,7 @@ import {
 // `text`, `tail`, `get(key, default)`, `iter()` (self and descendants in document order),
 // and iteration over direct children. `fromstring` must parse well-formed XML and throw
 // ParseError otherwise; it is not implemented yet.
-interface Element {
+export interface Element {
   tag: string;
   attrib: Map<string, string>;
   text: string | null;
@@ -70,17 +55,17 @@ interface Element {
   [Symbol.iterator](): Iterator<Element>;
 }
 
-class ParseError extends PyException {}
+export class ParseError extends PyException {}
 
-function fromstring(data: Uint8Array): Element {
+export function fromstring(data: Uint8Array): Element {
   // TODO(pyrt): ElementTree.fromstring shim missing (see the Element note above).
   throw new Error(`fromstring: XML parser shim missing (${data.length} bytes)`);
 }
 
-type Bbox = [number, number, number, number];
-type Paint = SolidPaint | GradientPaint | null;
+export type Bbox = [number, number, number, number];
+export type Paint = SolidPaint | GradientPaint | null;
 
-const _DRAWABLE_TAGS: ReadonlySet<string> = new Set([
+export const _DRAWABLE_TAGS: ReadonlySet<string> = new Set([
   "path",
   "rect",
   "circle",
@@ -89,10 +74,10 @@ const _DRAWABLE_TAGS: ReadonlySet<string> = new Set([
   "polyline",
   "polygon",
 ]);
-const _CONTAINER_TAGS: ReadonlySet<string> = new Set(["g", "a", "svg"]);
+export const _CONTAINER_TAGS: ReadonlySet<string> = new Set(["g", "a", "svg"]);
 // Non-rendered or definition-only elements skipped without recursing into
 // them for drawables (gradients/symbols are resolved on demand elsewhere).
-const _SKIP_TAGS: ReadonlySet<string> = new Set([
+export const _SKIP_TAGS: ReadonlySet<string> = new Set([
   "defs",
   "symbol",
   "title",
@@ -119,31 +104,31 @@ const _SKIP_TAGS: ReadonlySet<string> = new Set([
 // Unsupported as standalone elements: `<tspan>`/`<textPath>` outside a `<text>`
 // (invalid SVG); within a `<text>`, _visit_text renders both. Raster `<image>` is
 // handled in _visit (skipped with a warning - it is not yet rendered).
-const _UNSUPPORTED_TAGS: ReadonlySet<string> = new Set(["tspan", "textPath"]);
+export const _UNSUPPORTED_TAGS: ReadonlySet<string> = new Set(["tspan", "textPath"]);
 
 // Bound on container nesting (<g>/<svg>/<use>) so a pathologically deep
 // document raises a clean UnsupportedSVGError instead of a RecursionError.
 // Each level costs ~2 Python frames (walk -> _visit -> walk), so this stays
 // well under the interpreter's ~1000-frame recursion limit; no real SVG nests
 // anywhere near this deep.
-const _MAX_SVG_DEPTH = 250;
+export const _MAX_SVG_DEPTH = 250;
 
 // Maps are used (not object literals) so lookups of arbitrary attribute values
 // such as "constructor" cannot hit Object.prototype.
-const _CAP: Map<string, number> = new Map([
+export const _CAP: Map<string, number> = new Map([
   ["butt", 1],
   ["round", 2],
   ["square", 3],
 ]);
-const _JOIN: Map<string, number> = new Map([
+export const _JOIN: Map<string, number> = new Map([
   ["miter", 1],
   ["round", 2],
   ["bevel", 3],
 ]);
 // Python `re.match` anchors at the start of the string, hence the `^`.
 // `\s` is spelled out: CPython's str `\s` matches \x1c-\x1f and \x85 but not \ufeff.
-const _PY_WS = "\\t\\n\\v\\f\\r\\x1c-\\x1f \\x85\\xa0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000";
-const _URL_RE = new RegExp(`^url\\([${_PY_WS}]*#([^)${_PY_WS}]+)[${_PY_WS}]*\\)`);
+export const _PY_WS = "\\t\\n\\v\\f\\r\\x1c-\\x1f \\x85\\xa0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000";
+export const _URL_RE = new RegExp(`^url\\([${_PY_WS}]*#([^)${_PY_WS}]+)[${_PY_WS}]*\\)`);
 
 /**
  * Parse an SVG file into a flattened {@link SvgDocument}.
@@ -189,7 +174,7 @@ export function read_svg(source: string | PathLike | Uint8Array): SvgDocument {
   return new SvgDocument(width, height, drawables);
 }
 
-class _Reader {
+export class _Reader {
   _gradients: Map<string, GradientDef>;
   _css: CssRule[];
   _by_id: Map<string, Element>;
@@ -706,7 +691,7 @@ class _Reader {
   }
 }
 
-function _bbox(subpaths: Subpath[]): Bbox {
+export function _bbox(subpaths: Subpath[]): Bbox {
   const xs: number[] = [];
   const ys: number[] = [];
   for (const sp of subpaths) {
@@ -719,7 +704,7 @@ function _bbox(subpaths: Subpath[]): Bbox {
   return [min(xs), min(ys), max(xs), max(ys)];
 }
 
-const _WS_RE = new RegExp(`[${_PY_WS}]+`, "g");
+export const _WS_RE = new RegExp(`[${_PY_WS}]+`, "g");
 
 /**
  * Collapse internal whitespace runs (incl. newlines/tabs) to one space.
@@ -729,6 +714,6 @@ const _WS_RE = new RegExp(`[${_PY_WS}]+`, "g");
  * is laid out as leading glyph advances. Edge spaces are kept here and
  * trimmed once across the whole run sequence by the caller.
  */
-function _collapse_ws(text: string): string {
+export function _collapse_ws(text: string): string {
   return text.replace(_WS_RE, " ");
 }

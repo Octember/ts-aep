@@ -18,29 +18,24 @@ import { ShphChunk, TensionItem } from "../../binary/misc_chunks.ts";
 import type { FeatherPointItem, OmtnChunk } from "../../binary/misc_chunks.ts";
 import { DEFAULT_TENSION, roto_bezier_tangents } from "../../resolvers/roto_bezier.ts";
 import { ChunkField } from "../descriptors.ts";
-import {
-  validate_bool,
-  validate_f4_point,
-  validate_normalized_float,
-  validate_positive_int,
-} from "../validators.ts";
+import { validate_bool, validate_f4_point, validate_normalized_float, validate_positive_int } from "../validators.ts";
 import type { AVLayer } from "../layers/av_layer.ts";
 import type { Layer } from "../layers/layer.ts";
 import type { MaskPropertyGroup } from "./mask_property_group.ts";
 import type { Property } from "./property.ts";
 
 // TODO(pyrt): true division that raises ZeroDivisionError like CPython float `/`.
-function _truediv(a: number, b: number): number {
+export function _truediv(a: number, b: number): number {
   if (b === 0) throw new ZeroDivisionError("float division by zero");
   return a / b;
 }
 
-function _interp_transform(raw: number): number {
+export function _interp_transform(raw: number): number {
   /** Map binary interpolation (0=non-Hold, 2=Hold) to ExtendScript (0/1). */
   return raw === 2 ? 1 : 0;
 }
 
-function _interp_reverse(value: number): number {
+export function _interp_reverse(value: number): number {
   /** Map ExtendScript interpolation (0/1) back to binary (0/2). */
   return value === 1 ? 2 : 0;
 }

@@ -9,7 +9,7 @@ import { _UNDEFINED_ID, Layer, _no_source_id } from "./layer.ts";
 import { AttributeError, ValueError, descriptor, dict_get, py_cmp } from "../../../pyrt/index.ts";
 import type { CompItem } from "../items/composition.ts";
 
-function _require_environment_lights(comp: CompItem, what: string): void {
+export function _require_environment_lights(comp: CompItem, what: string): void {
   /** Environment lights and their light source arrived in AE 24.3. */
   const head = comp._project._head;
   if (py_cmp([head.ae_version_major, head.ae_version_minor], [24, 3]) < 0) {
@@ -20,7 +20,7 @@ function _require_environment_lights(comp: CompItem, what: string): void {
   }
 }
 
-function _validate_light_type(value: any, obj: LightLayer): void {
+export function _validate_light_type(value: any, obj: LightLayer): void {
   if (value === LightType.ENVIRONMENT) {
     _require_environment_lights(obj.containing_comp, "LightType.ENVIRONMENT");
   }
