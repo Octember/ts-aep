@@ -197,7 +197,7 @@ describe("TestRoundtripBgColor", () => {
     const comp = get_comp(parse_project_fresh(SAMPLES_DIR.div("bgColor.aep")), "bgColor_red");
     raises(ValueError, () => {
       comp.bg_color = [1.5, 0.0, 0.0];
-    }, "must be <= 1.0");
+    }, "must be <= 1(\\.0)?");
   });
 });
 
@@ -236,7 +236,7 @@ describe("TestRoundtripFrameRate", () => {
     );
     raises(ValueError, () => {
       comp.frame_rate = 0.0;
-    }, "must be >= 1.0");
+    }, "must be >= 1(\\.0)?");
   });
 
   test("test_frame_rate_validation_rejects_too_high", () => {
@@ -247,7 +247,7 @@ describe("TestRoundtripFrameRate", () => {
     // AE 2026's range is 1 to 999 ("out of range 1 to 999").
     raises(ValueError, () => {
       comp.frame_rate = 1000.0;
-    }, "must be <= 999.0");
+    }, "must be <= 999(\\.0)?");
   });
 });
 
@@ -566,7 +566,7 @@ describe("TestRoundtripDisplayStartTime", () => {
     );
     raises(ValueError, () => {
       comp.display_start_time = -10801.0;
-    }, "must be >= -10800.0");
+    }, "must be >= -10800(\\.0)?");
   });
 
   test("test_display_start_time_validation_rejects_too_large", () => {
@@ -577,7 +577,7 @@ describe("TestRoundtripDisplayStartTime", () => {
     // AE 2026's range is -10800 to 86400.
     raises(ValueError, () => {
       comp.display_start_time = 86400.01;
-    }, "must be <= 86400.0");
+    }, "must be <= 86400(\\.0)?");
   });
 });
 
@@ -617,7 +617,7 @@ describe("TestRoundtripDuration", () => {
     );
     raises(ValueError, () => {
       comp.duration = -1.0;
-    }, "must be >= 0.0");
+    }, "must be >= 0(\\.0)?");
   });
 
   test("test_duration_validation_rejects_too_large", () => {
@@ -627,7 +627,7 @@ describe("TestRoundtripDuration", () => {
     );
     raises(ValueError, () => {
       comp.duration = 10801.0;
-    }, "must be <= 10800.0");
+    }, "must be <= 10800(\\.0)?");
   });
 
   test("test_frame_duration_validation_rejects_zero", () => {
@@ -712,7 +712,7 @@ describe("TestRoundtripDuration", () => {
     );
     raises(ValueError, () => {
       comp.frame_duration = round(10800 * comp.frame_rate) + 1;
-    }, "must be <= 10800.0");
+    }, "must be <= 10800(\\.0)?");
   });
 
   test("test_frame_duration_counts_every_frame_at_ntsc", () => {

@@ -1,5 +1,6 @@
 /** Parser and serializer for After Effects gradient XML in GCky Utf8 chunks. */
 
+import { Element, ParseError, fromstring } from "../../pyrt/etree.ts";
 import {
   ValueError,
   dict_get,
@@ -18,137 +19,7 @@ export const logger = {
   warning: (m: string) => warn(m),
 };
 
-// TODO(pyrt): no xml.etree.ElementTree shim in pyrt. This is a local stand-in for the
-// subset this file uses: `tag`, `.text` (leading character data, null when there is
-// none), `find` / `findall` over direct children, and iteration over children.
-// `fromstring` parses well-formed XML and throws `ParseError` otherwise.
-export class ParseError extends Error {}
-
-export class Element {
-  text: string | null = null;
-  readonly children: Element[] = [];
-
-  constructor(readonly tag: string) {}
-
-  find(tag: string): Element | null {
-    for (const child of this.children) {
-      if (child.tag === tag) return child;
-    }
-    return null;
-  }
-
-  findall(tag: string): Element[] {
-    return this.children.filter((child) => child.tag === tag);
-  }
-
-  [Symbol.iterator](): Iterator<Element> {
-    return this.children[Symbol.iterator]();
-  }
-}
-
-export const XML_NAME = "[A-Za-z_][\\w.:-]*";
-export const START_TAG = new RegExp(
-  `<(${XML_NAME})((?:\\s+${XML_NAME}\\s*=\\s*(?:"[^"<]*"|'[^'<]*'))*)\\s*(/?)>`,
-  "y",
-);
-export const END_TAG = new RegExp(`</(${XML_NAME})\\s*>`, "y");
-export const ENTITY_TOKEN = /&(?!#x[0-9a-fA-F]+;|#[0-9]+;|[A-Za-z]+;)/;
-export const NAMED_ENTITIES: Record<string, string> = {
-  lt: "<",
-  gt: ">",
-  amp: "&",
-  quot: '"',
-  apos: "'",
-};
-
-/** Decode character and entity references in a text run. */
-export function decode_text(raw: string): string {
-  if (ENTITY_TOKEN.test(raw)) throw new ParseError("not well-formed (invalid token)");
-  return raw.replace(/&(#x[0-9a-fA-F]+|#[0-9]+|[A-Za-z]+);/g, (_m, ent: string) => {
-    if (ent[0] === "#") {
-      const cp = ent[1] === "x" ? parseInt(ent.slice(2), 16) : parseInt(ent.slice(1), 10);
-      return String.fromCodePoint(cp);
-    }
-    const named = NAMED_ENTITIES[ent];
-    if (named === undefined) throw new ParseError(`undefined entity &${ent};`);
-    return named;
-  });
-}
-
-// TODO(pyrt): ElementTree.fromstring shim missing (see the Element note above).
-export function fromstring(text: string): Element {
-  // expat normalizes \r\n and lone \r to \n in character data
-  text = text.replace(/\r\n?/g, "\n");
-  let pos = 0;
-  const stack: Element[] = [];
-  let root: Element | null = null;
-
-  while (pos < text.length) {
-    if (text[pos] !== "<") {
-      const next = text.indexOf("<", pos);
-      const stop = next < 0 ? text.length : next;
-      const chunk = text.slice(pos, stop);
-      pos = stop;
-      if (stack.length === 0) {
-        if (!/^[ \t\r\n]*$/.test(chunk)) throw new ParseError("junk outside document element");
-        continue;
-      }
-      // Character data before the first child is `.text`; after it, a child's tail.
-      const top = stack[stack.length - 1];
-      if (top.children.length === 0) top.text = (top.text ?? "") + decode_text(chunk);
-      else decode_text(chunk);
-    } else if (text.startsWith("<!--", pos)) {
-      const end = text.indexOf("-->", pos + 4);
-      if (end < 0) throw new ParseError("unclosed comment");
-      pos = end + 3;
-    } else if (text.startsWith("<![CDATA[", pos)) {
-      const end = text.indexOf("]]>", pos + 9);
-      if (end < 0 || stack.length === 0) throw new ParseError("unclosed CDATA section");
-      const top = stack[stack.length - 1];
-      if (top.children.length === 0) top.text = (top.text ?? "") + text.slice(pos + 9, end);
-      pos = end + 3;
-    } else if (text.startsWith("<?", pos)) {
-      const end = text.indexOf("?>", pos + 2);
-      if (end < 0) throw new ParseError("unclosed processing instruction");
-      pos = end + 2;
-    } else if (text.startsWith("<!DOCTYPE", pos)) {
-      let end = pos + 2;
-      let in_subset = false;
-      while (end < text.length && !(text[end] === ">" && !in_subset)) {
-        if (text[end] === "[") in_subset = true;
-        else if (text[end] === "]") in_subset = false;
-        end++;
-      }
-      if (end >= text.length) throw new ParseError("unclosed DOCTYPE");
-      pos = end + 1;
-    } else if (text.startsWith("</", pos)) {
-      END_TAG.lastIndex = pos;
-      const m = END_TAG.exec(text);
-      const top = stack.pop();
-      if (m === null || top === undefined || top.tag !== m[1]) {
-        throw new ParseError("mismatched tag");
-      }
-      pos = END_TAG.lastIndex;
-    } else {
-      START_TAG.lastIndex = pos;
-      const m = START_TAG.exec(text);
-      if (m === null) throw new ParseError("syntax error");
-      const el = new Element(m[1]);
-      if (stack.length === 0) {
-        if (root !== null) throw new ParseError("junk after document element");
-        root = el;
-      } else {
-        stack[stack.length - 1].children.push(el);
-      }
-      if (m[3] !== "/") stack.push(el);
-      pos = START_TAG.lastIndex;
-    }
-  }
-
-  if (stack.length > 0) throw new ParseError("no element found");
-  if (root === null) throw new ParseError("no element found");
-  return root;
-}
+export { Element, ParseError, fromstring };
 
 /**
  * Parse AE gradient XML into a `Gradient` instance.

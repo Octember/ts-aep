@@ -167,7 +167,7 @@ export function _line_ink(
     }
     const [font, is_cff, glyph_bounds] = _font_outlines(style.font);
     const ink_scale = scale * (is_cff ? _CFF_INK_SCALE : 1.0);
-    for (const [info, pos] of zip(buf.glyph_infos, buf.glyph_positions)) {
+    for (const [info, pos] of zip<[any[], any[]]>(buf.glyph_infos, buf.glyph_positions)) {
       // fontkit addresses glyphs by id, which HarfBuzz reports as the codepoint.
       const name = info.codepoint;
       if (!glyph_bounds.has(name)) {

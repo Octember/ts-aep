@@ -15,6 +15,7 @@ import { read_svg } from "../../src/py_aep/svg/index.ts";
 import { parse_path } from "../../src/py_aep/svg/path_data.ts";
 import { TextRun, _glyphs, outline_runs, outline_text_path } from "../../src/py_aep/svg/text.ts";
 import { IDENTITY } from "../../src/py_aep/svg/transform.ts";
+import { FontBuilder, TTGlyphPen } from "../_fontbuilder.ts";
 import * as fonts_mod from "../../src/py_aep/svg/fonts.ts";
 
 // TODO(pyrt): `monkeypatch.setattr` - ESM module bindings are read-only, so
@@ -24,13 +25,39 @@ const monkeypatch_setattr = (_obj: unknown, _name: string, _value: unknown): voi
   throw new NotImplementedError("monkeypatch.setattr");
 };
 
-// TODO(port): fontTools FontBuilder / TTGlyphPen have no fontkit equivalent; the
-// font must be serialized by hand. Intended content: 1000 upm TrueType with
-// .notdef, space, A, B; cmap {0x20: space, 0x41: A, 0x42: B}; A and B are the
-// contour box (100,0)-(500,700) with advance 600 (lsb 100); space/.notdef empty;
-// hhea ascent 800 / descent -200; family "PyAepTest", style "Regular".
-function _build_test_font(_path: Path): void {
-  throw new NotImplementedError("fontTools FontBuilder");
+function _build_test_font(path: Path): void {
+  const box = (x0: number, y0: number, x1: number, y1: number) => {
+    const pen = new TTGlyphPen();
+    pen.moveTo([x0, y0]);
+    pen.lineTo([x1, y0]);
+    pen.lineTo([x1, y1]);
+    pen.lineTo([x0, y1]);
+    pen.closePath();
+    return pen.glyph();
+  };
+
+  const empty = new TTGlyphPen().glyph();
+  const fb = new FontBuilder(1000, { isTTF: true });
+  fb.setupGlyphOrder([".notdef", "space", "A", "B"]);
+  fb.setupCharacterMap({ 0x20: "space", 0x41: "A", 0x42: "B" });
+  // 'A' and 'B' are identical 400x700 boxes; advance 600 units.
+  fb.setupGlyf({
+    ".notdef": empty,
+    space: empty,
+    A: box(100, 0, 500, 700),
+    B: box(100, 0, 500, 700),
+  });
+  fb.setupHorizontalMetrics({
+    ".notdef": [600, 0],
+    space: [600, 0],
+    A: [600, 100],
+    B: [600, 100],
+  });
+  fb.setupHorizontalHeader({ ascent: 800, descent: -200 });
+  fb.setupNameTable({ familyName: "PyAepTest", styleName: "Regular" });
+  fb.setupOS2();
+  fb.setupPost();
+  fb.save(String(path));
 }
 
 // Python: @pytest.fixture(scope="module") test_font(tmp_path_factory).

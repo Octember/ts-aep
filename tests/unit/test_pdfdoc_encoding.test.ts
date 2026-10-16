@@ -7,7 +7,7 @@
 
 import { expect, test } from "bun:test";
 
-import { BytesIO, b, concat } from "../../src/pyrt/index.ts";
+import { BytesIO, b, concat, py_eq } from "../../src/pyrt/index.ts";
 import { CosParser, decode_pdf_text_string } from "../../src/py_aep/cos/index.ts";
 
 const _REPLACEMENT = String.fromCodePoint(0xfffd);
@@ -73,6 +73,6 @@ test.each([
     sees it, so only a literal exercises the case that matters.
     */
     const token = new CosParser(new BytesIO(concat(literal, b(")")))).lex_string();
-    expect(decode_pdf_text_string(token.value)).toBe(expected);
+    expect(py_eq(decode_pdf_text_string(token.value), expected)).toBe(true);
   },
 );

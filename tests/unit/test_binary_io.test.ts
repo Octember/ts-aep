@@ -752,7 +752,7 @@ describe("TestTdsbChunk", () => {
     const buf = new BytesIO(raw);
     const chunk = TdsbChunk.read(buf, 4, { chunk_type: "tdsb" });
     expect(chunk instanceof TdsbChunk).toBe(true);
-    expect(chunk.roto_bezier).toBe(0);
+    expect(py_eq(chunk.roto_bezier, 0)).toBe(true);
     expect(chunk.ratio_unlinked).toBe(false);
     // Separation is lock-byte bit 3; enable-byte bit 1 is the Timeline
     // hidden flag (AE sets it on an UNSEPARATED position that does not
@@ -783,7 +783,7 @@ describe("TestTdsbChunk", () => {
     const buf = new BytesIO(raw);
     const chunk = TdsbChunk.read(buf, 6, { chunk_type: "tdsb" });
     expect(chunk instanceof TdsbChunk).toBe(true);
-    expect(chunk.roto_bezier).toBe(1);
+    expect(py_eq(chunk.roto_bezier, 1)).toBe(true);
     expect(chunk.enabled).toBe(true);
     expect(py_eq(chunk._trailing, b("\xaa\xbb"))).toBe(true);
     const out = new BytesIO();
@@ -852,7 +852,7 @@ describe("TestTdb4Chunk", () => {
     expect(chunk.integer).toBe(true);
     expect(chunk.color).toBe(true);
     expect(chunk.vector).toBe(false);
-    expect(chunk.animated).toBe(1);
+    expect(py_eq(chunk.animated, 1)).toBe(true);
     expect(chunk.expression_disabled).toBe(true);
 
     const out = new BytesIO();
@@ -1351,7 +1351,7 @@ describe("TestRoptChunk", () => {
     const chunk2 = RoptChunk.read(buf, buf.getbuffer().length, { chunk_type: "Ropt" });
     expect(chunk2 instanceof OpenExrRoptChunk).toBe(true);
     expect(chunk2.compression).toBe(3);
-    expect(chunk2.thirty_two_bit_float).toBe(1);
+    expect(py_eq(chunk2.thirty_two_bit_float, 1)).toBe(true);
     expect(chunk2.dwa_compression_level).toBe(45.0);
   });
 
@@ -1367,7 +1367,7 @@ describe("TestRoptChunk", () => {
     const chunk2 = RoptChunk.read(buf, buf.getbuffer().length, { chunk_type: "Ropt" });
     expect(chunk2 instanceof TargaRoptChunk).toBe(true);
     expect(chunk2.bits_per_pixel).toBe(32);
-    expect(chunk2.rle_compression).toBe(1);
+    expect(py_eq(chunk2.rle_compression, 1)).toBe(true);
   });
 
   test("test_png_roundtrip", () => {
@@ -1496,7 +1496,7 @@ describe("TestPardChunk", () => {
     const chunk = PardChunk.read(buf, data.length, { chunk_type: "pard" });
     expect(chunk instanceof BooleanPardChunk).toBe(true);
     expect(chunk.last_value).toBe(1);
-    expect(chunk.default).toBe(1);
+    expect(chunk.default_).toBe(1);
 
     const out = new BytesIO();
     chunk.write(out);
@@ -1514,7 +1514,7 @@ describe("TestPardChunk", () => {
     expect(chunk instanceof EnumPardChunk).toBe(true);
     expect(chunk.last_value).toBe(2);
     expect(chunk.nb_options).toBe(5);
-    expect(chunk.default).toBe(4);
+    expect(chunk.default_).toBe(4);
 
     const out = new BytesIO();
     chunk.write(out);
@@ -1538,7 +1538,7 @@ describe("TestPardChunk", () => {
     const data = _build_pard(7, body);
     const chunk = PardChunk.read(new BytesIO(data), data.length, { chunk_type: "pard" });
     expect(chunk instanceof EnumPardChunk).toBe(true);
-    expect(py_eq([chunk.last_value, chunk.nb_options, chunk.default], [1, 3, 3])).toBe(true);
+    expect(py_eq([chunk.last_value, chunk.nb_options, chunk.default_], [1, 3, 3])).toBe(true);
     expect(py_eq(chunk.tobytes(), data)).toBe(true);
   });
 
@@ -1579,7 +1579,7 @@ describe("TestPardChunk", () => {
     expect(chunk instanceof TwoDPardChunk).toBe(true);
     expect(chunk.last_value_x_raw).toBe(0x4000);
     expect(chunk.last_value_y_raw).toBe(0x6666);
-    expect(py_eq(chunk.default, [25.0, 40.0])).toBe(true);
+    expect(py_eq(chunk.default_, [25.0, 40.0])).toBe(true);
 
     const out = new BytesIO();
     chunk.write(out);
@@ -1598,7 +1598,7 @@ describe("TestPardChunk", () => {
     expect(chunk.last_value_x_raw).toBe(0.5);
     expect(chunk.last_value_y_raw).toBe(0.5);
     expect(chunk.last_value_z_raw).toBe(0.0);
-    expect(py_eq(chunk.default, [50.0, 50.0, 0.0])).toBe(true);
+    expect(py_eq(chunk.default_, [50.0, 50.0, 0.0])).toBe(true);
 
     const out = new BytesIO();
     chunk.write(out);

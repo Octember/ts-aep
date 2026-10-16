@@ -447,7 +447,7 @@ export class AVLayer extends Layer {
    */
   get source(): AVItem | null {
     // An unset `_source` is Python's AttributeError: resolve it on first read.
-    if (this._source !== undefined) {
+    if (hasattr(this, "_source") && this._source !== undefined) {
       return this._source;
     }
     if (this._source_id === 0) {

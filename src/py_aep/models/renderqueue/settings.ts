@@ -108,13 +108,16 @@ export class SettingsView {
     }
     const [attr_name, enum_class] = spec;
     if (enum_class != null) value = _coerce_enum(enum_class, value);
-    // TODO(port): a plain JS getter-only accessor throws a native TypeError in
-    // strict mode, which Python would have raised as AttributeError. Only
-    // descriptor setters (which throw AttributeError) convert here.
     try {
       (this._owner as any)[attr_name] = value;
     } catch (e) {
-      if (!(e instanceof AttributeError)) throw e;
+      // A getter-only JS accessor throws a native TypeError in strict mode;
+      // Python's property without a setter raises AttributeError.
+      const native_readonly =
+        e instanceof Error &&
+        e.constructor === TypeError &&
+        /readonly property|only a getter|read-only/i.test(e.message);
+      if (!(e instanceof AttributeError) && !native_readonly) throw e;
       throw new AttributeError(`Setting ${repr(key)} is read-only.`);
     }
   }

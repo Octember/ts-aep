@@ -75,8 +75,6 @@ export function psd_layer_box(
   if (merge && box[2] > box[0] && box[3] > box[1]) {
     // Merged styles are rasterized into the footage, whose content box
     // grows to hold them, from the masked content.
-    // TODO(port): PsdLayer (psd_layers.ts) has no `_replace(kw)` method yet; NamedTuple
-    // `_replace(bounds=...)` needs it on the PsdLayer class (only the private `_Record` has one).
     box = merged_styles_bounds(layer._replace({ bounds: box }), global_angle);
   }
   return box;

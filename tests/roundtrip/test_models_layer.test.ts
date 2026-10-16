@@ -1682,8 +1682,8 @@ describe("TestDuplicateComplexValueLayers", () => {
     const comp = get_comp(app.project, "shape_closed_oval");
     const original = comp.layers[0];
     const dup = original.duplicate();
-    const orig_shape = original.masks[0].property("ADBE Mask Shape").value;
-    const dup_shape = dup.masks[0].property("ADBE Mask Shape").value;
+    const orig_shape = original.masks.__getitem__(0).property("ADBE Mask Shape").value;
+    const dup_shape = dup.masks.__getitem__(0).property("ADBE Mask Shape").value;
     expect(py_eq(dup_shape.vertices, orig_shape.vertices)).toBe(true);
   });
 

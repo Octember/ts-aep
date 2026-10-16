@@ -17,3 +17,4 @@ export { Path, fspath, type PathLike } from "./pathlib.ts";
 export { descriptor, get_descriptor, descriptors_of, py_object, object_setattr, object_getattr, type Descriptor } from "./dunder.ts";
 export * from "./pytest.ts";
 export { deferred } from "./deferred.ts";
+export * as etree from "./etree.ts";

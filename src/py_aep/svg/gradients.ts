@@ -18,10 +18,8 @@ import { _split_declarations } from "./style.ts";
 import { Affine, parse_transform } from "./transform.ts";
 import { GradientPaint, GradientStop } from "./types.ts";
 
-// TODO(port): xml.etree.ElementTree.Element has no pyrt shim yet; typed as any.
-// Assumes `.tag`, `.attrib` (a Map), `.get(key, default?)`, `.iter()` and
-// iteration over children.
-export type Element = any;
+import type { Element } from "../../pyrt/etree.ts";
+export type { Element };
 
 export function _href(elem: Element): string | null {
   for (const key of ["href", "{http://www.w3.org/1999/xlink}href"]) {

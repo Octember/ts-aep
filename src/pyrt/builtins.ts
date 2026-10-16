@@ -357,9 +357,13 @@ export function deepcopy<T>(x: T, memo = new Map<any, any>()): T {
     return out as any;
   }
   if (typeof (x as any).__deepcopy__ === "function") return (x as any).__deepcopy__(memo);
-  const out = Object.create(Object.getPrototypeOf(x));
+  const out =
+    x instanceof String
+      ? Reflect.construct(String, [x.valueOf()], (x as any).constructor)
+      : Object.create(Object.getPrototypeOf(x));
   memo.set(x, out);
   for (const k of Reflect.ownKeys(x as object)) {
+    if (x instanceof String && (k === "length" || (typeof k === "string" && /^\d+$/.test(k)))) continue;
     const d = Object.getOwnPropertyDescriptor(x, k)!;
     if ("value" in d) d.value = deepcopy(d.value, memo);
     Object.defineProperty(out, k, d);
@@ -374,6 +378,12 @@ export function copy<T>(x: T): T {
   if (x instanceof Uint8Array) return x.slice() as any;
   if (x instanceof Map) return new Map(x) as any;
   if (x instanceof Set) return new Set(x) as any;
+  if (x instanceof String) {
+    const out = Reflect.construct(String, [x.valueOf()], (x as any).constructor);
+    for (const k of Object.keys(x)) if (!/^\d+$/.test(k)) out[k] = (x as any)[k];
+    return out;
+  }
+  if (x instanceof String) return Object.assign(Object.setPrototypeOf(new String(x.valueOf()), Object.getPrototypeOf(x)), x);
   return Object.assign(Object.create(Object.getPrototypeOf(x)), x);
 }
 

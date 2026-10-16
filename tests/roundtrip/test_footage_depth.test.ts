@@ -120,7 +120,7 @@ test.each(_COMP_FILES)("test_layered_comp_import_caches_after_effects_depth[%#]"
     expect(py_eq(_depth_bytes(source), _depth_bytes(getitem(ae, index)))).toBe(true);
     // The layer's content box at its own channel count (colour channels,
     // plus one when it has transparency - not for a Background layer).
-    expect(source._sspc.data_size).toBe(getitem(ae, index)._sspc.data_size);
+    expect(py_eq(source._sspc.data_size, getitem(ae, index)._sspc.data_size)).toBe(true);
   }
 });
 
@@ -133,7 +133,7 @@ test("test_chosen_background_layer_is_opaque", () => {
   const item = project.import_file(options) as FootageItem;
   const source = item.main_source;
   expect(py_eq(_depth_bytes(source), _depth_bytes(getitem(ae, source._sspc.layer_index)))).toBe(true);
-  expect(source._sspc.data_size).toBe(getitem(ae, source._sspc.layer_index)._sspc.data_size);
+  expect(py_eq(source._sspc.data_size, getitem(ae, source._sspc.layer_index)._sspc.data_size)).toBe(true);
   expect(source.has_alpha).toBe(false);
 });
 
@@ -194,7 +194,7 @@ test.each(sorted(_ae_sources().keys()))("test_import_caches_after_effects_data_s
   // counting alpha only when the image has it: 2 for gray + alpha).
   const project = _windows_project();
   const item = project.import_file(new ImportOptions(_asset(name))) as FootageItem;
-  expect(item.main_source._sspc.data_size).toBe(getitem(_ae_sources(), name)._sspc.data_size);
+  expect(py_eq(item.main_source._sspc.data_size, getitem(_ae_sources(), name)._sspc.data_size)).toBe(true);
 });
 
 test("test_data_size_above_32_bits_round_trips", () => {
@@ -205,7 +205,7 @@ test("test_data_size_above_32_bits_round_trips", () => {
   const out = tmp_path.div("big.aep");
   project.save(out);
   const reread = getitem(parse_aep(out).project.items, item.id) as FootageItem;
-  expect(reread.main_source._sspc.data_size).toBe(lshift(5, 30));
+  expect(py_eq(reread.main_source._sspc.data_size, lshift(5, 30))).toBe(true);
 });
 
 test("test_hq_field_separation_keeps_the_container_media_bit", () => {
@@ -347,7 +347,7 @@ test.each(sorted(_mode_sources().keys()))("test_color_mode_import_matches_after_
   const ae = getitem(_mode_sources(), name);
   expect(py_eq(ours._opti.tobytes(), ae._opti.tobytes())).toBe(true);
   expect(py_eq(_depth_bytes(ours), _depth_bytes(ae))).toBe(true);
-  expect(ours._sspc.data_size).toBe(ae._sspc.data_size);
+  expect(py_eq(ours._sspc.data_size, ae._sspc.data_size)).toBe(true);
 });
 
 test("test_audio_and_data_files_have_no_depth", () => {

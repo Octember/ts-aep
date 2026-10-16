@@ -40,27 +40,7 @@ import {
   type PathLike,
 } from "../../pyrt/index.ts";
 
-// TODO(pyrt): no xml.etree.ElementTree shim in pyrt. This is a local stand-in for the
-// Element surface this file uses: `tag` ("{uri}local" for namespaced tags), `attrib`,
-// `text`, `tail`, `get(key, default)`, `iter()` (self and descendants in document order),
-// and iteration over direct children. `fromstring` must parse well-formed XML and throw
-// ParseError otherwise; it is not implemented yet.
-export interface Element {
-  tag: string;
-  attrib: Map<string, string>;
-  text: string | null;
-  tail: string | null;
-  get(key: string, dflt?: string | null): string | null;
-  iter(): Iterable<Element>;
-  [Symbol.iterator](): Iterator<Element>;
-}
-
-export class ParseError extends PyException {}
-
-export function fromstring(data: Uint8Array): Element {
-  // TODO(pyrt): ElementTree.fromstring shim missing (see the Element note above).
-  throw new Error(`fromstring: XML parser shim missing (${data.length} bytes)`);
-}
+import { Element, ParseError, fromstring } from "../../pyrt/etree.ts";
 
 export type Bbox = [number, number, number, number];
 export type Paint = SolidPaint | GradientPaint | null;

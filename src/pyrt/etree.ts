@@ -1,0 +1,1103 @@
+// xml.etree.ElementTree: the subset py_aep uses, with CPython 3.12 / expat semantics.
+//
+// Element (tag, attrib, text, tail, children), SubElement, fromstring/XML, tostring,
+// register_namespace, ParseError, and the ElementPath subset (find / findall / findtext /
+// iterfind: child, `*`, `.`, `..`, `//`, `[@a]`, `[@a='v']`, `[@a!='v']`, `[tag]`,
+// `[tag='v']`, `[.='v']`, `[n]`, `[last()]`, `[last()-n]`, `{ns}tag`, `{*}tag`, `{ns}*`).
+//
+// TODO(port): internal DTD entities whose replacement text contains markup are rejected
+// (ParseError); external entities / parameter entities are ignored.
+
+import { decode } from "./codecs.ts";
+import { IndexError, KeyError, SyntaxError_, ValueError } from "./errors.ts";
+
+export class ParseError extends SyntaxError_ {
+  code = 0;
+  position: [number, number] = [1, 0];
+}
+
+type AttribInit = Map<string, string> | Record<string, string> | null | undefined;
+
+function to_attrib_map(attrib: AttribInit, extra?: Record<string, string>): Map<string, string> {
+  const m = new Map<string, string>();
+  if (attrib instanceof Map) for (const [k, v] of attrib) m.set(k, v);
+  else if (attrib != null) for (const [k, v] of Object.entries(attrib)) m.set(k, v);
+  if (extra) for (const [k, v] of Object.entries(extra)) m.set(k, v);
+  return m;
+}
+
+export class Element {
+  tag: string;
+  attrib: Map<string, string>;
+  text: string | null = null;
+  tail: string | null = null;
+  _children: Element[] = [];
+
+  constructor(tag: string, attrib: AttribInit = null, extra?: Record<string, string>) {
+    this.tag = tag;
+    this.attrib = to_attrib_map(attrib, extra);
+  }
+
+  /** Direct children (the live list). */
+  get children(): Element[] {
+    return this._children;
+  }
+
+  __len__(): number {
+    return this._children.length;
+  }
+
+  __getitem__(i: number): Element {
+    const n = this._children.length;
+    const j = i < 0 ? i + n : i;
+    if (j < 0 || j >= n) throw new IndexError("child index out of range");
+    return this._children[j];
+  }
+
+  [Symbol.iterator](): Iterator<Element> {
+    return this._children[Symbol.iterator]();
+  }
+
+  append(subelement: Element): void {
+    this._children.push(subelement);
+  }
+
+  extend(elements: Iterable<Element>): void {
+    for (const e of elements) this._children.push(e);
+  }
+
+  insert(index: number, subelement: Element): void {
+    this._children.splice(index, 0, subelement);
+  }
+
+  remove(subelement: Element): void {
+    const i = this._children.indexOf(subelement);
+    if (i < 0) throw new ValueError("list.remove(x): x not in list");
+    this._children.splice(i, 1);
+  }
+
+  clear(): void {
+    this.attrib.clear();
+    this._children = [];
+    this.text = this.tail = null;
+  }
+
+  get(key: string, default_: string | null = null): string | null {
+    const v = this.attrib.get(key);
+    return v === undefined ? default_ : v;
+  }
+
+  set(key: string, value: string): void {
+    this.attrib.set(key, value);
+  }
+
+  keys(): string[] {
+    return [...this.attrib.keys()];
+  }
+
+  items(): [string, string][] {
+    return [...this.attrib.entries()];
+  }
+
+  *iter(tag: string | null = null): Generator<Element> {
+    if (tag === "*") tag = null;
+    if (tag === null || this.tag === tag) yield this;
+    for (const e of this._children) yield* e.iter(tag);
+  }
+
+  *itertext(): Generator<string> {
+    if (typeof this.tag !== "string") return;
+    const t = this.text;
+    if (t) yield t;
+    for (const e of this._children) {
+      yield* e.itertext();
+      const tl = e.tail;
+      if (tl) yield tl;
+    }
+  }
+
+  find(path: string, namespaces: NsMap = null): Element | null {
+    const r = iterfind(this, path, namespaces).next();
+    return r.done ? null : r.value;
+  }
+
+  findall(path: string, namespaces: NsMap = null): Element[] {
+    return [...iterfind(this, path, namespaces)];
+  }
+
+  findtext(path: string, default_: string | null = null, namespaces: NsMap = null): string | null {
+    const r = iterfind(this, path, namespaces).next();
+    if (r.done) return default_;
+    return r.value.text || "";
+  }
+
+  iterfind(path: string, namespaces: NsMap = null): Generator<Element> {
+    return iterfind(this, path, namespaces);
+  }
+}
+
+export function SubElement(
+  parent: Element,
+  tag: string,
+  attrib: AttribInit = null,
+  extra?: Record<string, string>,
+): Element {
+  const e = new Element(tag, attrib, extra);
+  parent.append(e);
+  return e;
+}
+
+export function iselement(element: unknown): element is Element {
+  return element instanceof Element;
+}
+
+// ---------------------------------------------------------------------------
+// ElementPath
+// ---------------------------------------------------------------------------
+
+export type NsMap = Map<string | null, string> | Record<string, string> | null | undefined;
+
+function ns_get(ns: NsMap, key: string | null): string | undefined {
+  if (!ns) return undefined;
+  if (ns instanceof Map) return ns.get(key);
+  return key === null ? undefined : ns[key];
+}
+
+type Token = [string, string];
+type Select = (context: SelectorContext, result: Iterable<Element>) => Iterable<Element>;
+
+class SelectorContext {
+  parent_map: Map<Element, Element> | null = null;
+  root: Element;
+  constructor(root: Element) {
+    this.root = root;
+  }
+}
+
+function get_parent_map(context: SelectorContext): Map<Element, Element> {
+  if (context.parent_map === null) {
+    const pm = new Map<Element, Element>();
+    for (const p of context.root.iter()) for (const c of p) pm.set(c, p);
+    context.parent_map = pm;
+  }
+  return context.parent_map;
+}
+
+const xpath_tokenizer_re =
+  /('[^']*'|"[^"]*"|::|\/\/?|\.\.|\(\)|!=|[/.*:[\]()@=])|((?:\{[^}]+\})?[^/[\]()@!=\s]+)|\s+/g;
+
+function xpath_tokenizer(pattern: string, namespaces: NsMap): Token[] {
+  const out: Token[] = [];
+  const default_namespace = ns_get(namespaces, null);
+  let parsing_attribute = false;
+  for (const m of pattern.matchAll(xpath_tokenizer_re)) {
+    const ttype = m[1] ?? "";
+    const tag = m[2] ?? "";
+    if (tag && tag[0] !== "{") {
+      if (tag.includes(":")) {
+        const i = tag.indexOf(":");
+        const prefix = tag.slice(0, i);
+        const uri = tag.slice(i + 1);
+        const ns = namespaces ? ns_get(namespaces, prefix) : undefined;
+        if (ns === undefined) throw new SyntaxError_(`prefix '${prefix}' not found in prefix map`);
+        out.push([ttype, `{${ns}}${uri}`]);
+      } else if (default_namespace && !parsing_attribute) {
+        out.push([ttype, `{${default_namespace}}${tag}`]);
+      } else {
+        out.push([ttype, tag]);
+      }
+      parsing_attribute = false;
+    } else {
+      out.push([ttype, tag]);
+      parsing_attribute = ttype === "@";
+    }
+  }
+  return out;
+}
+
+class TokenStream {
+  i = 0;
+  constructor(readonly tokens: Token[]) {}
+  next(): Token {
+    if (this.i >= this.tokens.length) throw new StopIter();
+    return this.tokens[this.i++];
+  }
+}
+class StopIter extends Error {}
+
+function _prepare_tag(tag: string): (t: string) => boolean {
+  if (tag === "{*}*") return () => true;
+  if (tag === "{}*") return (t) => !t.startsWith("{");
+  if (tag.startsWith("{*}")) {
+    const suffix = tag.slice(2);
+    return (t) => t.endsWith(suffix);
+  }
+  if (tag.endsWith("}*")) {
+    const ns = tag.slice(0, -1);
+    return (t) => t.startsWith(ns);
+  }
+  if (tag.startsWith("{}")) {
+    const plain = tag.slice(2);
+    return (t) => t === plain;
+  }
+  return (t) => t === tag;
+}
+
+function prepare_child(_next: () => Token, token: Token): Select {
+  const match = _prepare_tag(token[1]);
+  return function* (_c, result) {
+    for (const elem of result) for (const e of elem) if (match(e.tag)) yield e;
+  };
+}
+
+function prepare_star(): Select {
+  return function* (_c, result) {
+    for (const elem of result) yield* elem;
+  };
+}
+
+function prepare_self(): Select {
+  return function* (_c, result) {
+    yield* result;
+  };
+}
+
+function prepare_descendant(next: () => Token): Select {
+  let token: Token;
+  try {
+    token = next();
+  } catch (e) {
+    if (e instanceof StopIter) throw e;
+    throw e;
+  }
+  let tag: string;
+  if (token[0] === "*") tag = "*";
+  else if (!token[0]) tag = token[1];
+  else throw new SyntaxError_("invalid descendant");
+  if (tag === "*" || tag === "{*}*") {
+    return function* (_c, result) {
+      for (const elem of result) for (const e of elem.iter()) if (e !== elem) yield e;
+    };
+  }
+  const match = _prepare_tag(tag);
+  return function* (_c, result) {
+    for (const elem of result) for (const e of elem.iter()) if (e !== elem && match(e.tag)) yield e;
+  };
+}
+
+function prepare_parent(): Select {
+  return function* (context, result) {
+    const parent_map = get_parent_map(context);
+    const seen = new Set<Element>();
+    for (const elem of result) {
+      const parent = parent_map.get(elem);
+      if (parent !== undefined && !seen.has(parent)) {
+        seen.add(parent);
+        yield parent;
+      }
+    }
+  };
+}
+
+const INT_RE = /^-?\d+$/;
+
+function prepare_predicate(next: () => Token): Select {
+  const signature_parts: string[] = [];
+  const predicate: string[] = [];
+  for (;;) {
+    let token = next();
+    if (token[0] === "]") break;
+    if (token[0] === "" && token[1] === "") continue;
+    if (token[0] && "'\"".includes(token[0][0])) token = ["'", token[0].slice(1, -1)];
+    signature_parts.push(token[0] || "-");
+    predicate.push(token[1]);
+  }
+  const signature = signature_parts.join("");
+  if (signature === "@-") {
+    const key = predicate[1];
+    return function* (_c, result) {
+      for (const elem of result) if (elem.get(key) !== null) yield elem;
+    };
+  }
+  if (signature === "@-='") {
+    const key = predicate[1];
+    const value = predicate[predicate.length - 1];
+    return function* (_c, result) {
+      for (const elem of result) if (elem.get(key) === value) yield elem;
+    };
+  }
+  if (signature === "@-!='") {
+    const key = predicate[1];
+    const value = predicate[predicate.length - 1];
+    return function* (_c, result) {
+      for (const elem of result) if (elem.get(key) !== value) yield elem;
+    };
+  }
+  if (signature === "-" && !INT_RE.test(predicate[0])) {
+    const tag = predicate[0];
+    return function* (_c, result) {
+      for (const elem of result) if (elem.find(tag) !== null) yield elem;
+    };
+  }
+  if (
+    signature === ".='" ||
+    signature === ".!='" ||
+    ((signature === "-='" || signature === "-!='") && !INT_RE.test(predicate[0]))
+  ) {
+    const tag = predicate[0];
+    const value = predicate[predicate.length - 1];
+    const negate = signature.includes("!");
+    if (tag !== "." && tag !== "") {
+      return function* (_c, result) {
+        for (const elem of result) {
+          let hit = false;
+          for (const e of elem.findall(tag)) {
+            if (([...e.itertext()].join("") === value) !== negate) {
+              hit = true;
+              break;
+            }
+          }
+          if (hit) yield elem;
+        }
+      };
+    }
+    return function* (_c, result) {
+      for (const elem of result) if (([...elem.itertext()].join("") === value) !== negate) yield elem;
+    };
+  }
+  if (signature === "-" || signature === "-()" || signature === "-()-") {
+    let index: number;
+    if (signature === "-") {
+      index = parseInt(predicate[0], 10) - 1;
+      if (index < 0) throw new SyntaxError_("XPath position >= 1 expected");
+    } else {
+      if (predicate[0] !== "last") throw new SyntaxError_("unsupported function");
+      if (signature === "-()-") {
+        if (!INT_RE.test(predicate[2])) throw new SyntaxError_("unsupported expression");
+        index = parseInt(predicate[2], 10) - 1;
+        if (index > -2) throw new SyntaxError_("XPath offset from last() must be negative");
+      } else {
+        index = -1;
+      }
+    }
+    return function* (context, result) {
+      const parent_map = get_parent_map(context);
+      for (const elem of result) {
+        const parent = parent_map.get(elem);
+        if (parent === undefined) continue;
+        const elems = [...iterfind(parent, elem.tag, null)];
+        const j = index < 0 ? elems.length + index : index;
+        if (j >= 0 && j < elems.length && elems[j] === elem) yield elem;
+      }
+    };
+  }
+  throw new SyntaxError_("invalid predicate");
+}
+
+const ops: Record<string, (next: () => Token, token: Token) => Select> = {
+  "": prepare_child,
+  "*": prepare_star,
+  ".": prepare_self,
+  "..": prepare_parent,
+  "//": prepare_descendant,
+  "[": prepare_predicate,
+};
+
+const _cache = new Map<string, Select[]>();
+
+export function* iterfind(elem: Element, path: string, namespaces: NsMap = null): Generator<Element> {
+  if (path.slice(-1) === "/") path = path + "*";
+  const ns_key =
+    namespaces instanceof Map
+      ? JSON.stringify([...namespaces.entries()])
+      : namespaces
+        ? JSON.stringify(Object.entries(namespaces))
+        : "";
+  const cache_key = path + "\u0000" + ns_key;
+  let selector = _cache.get(cache_key);
+  if (selector === undefined) {
+    if (path.slice(0, 1) === "/") throw new SyntaxError_("cannot use absolute path on element");
+    const stream = new TokenStream(xpath_tokenizer(path, namespaces));
+    const next = () => stream.next();
+    let token: Token;
+    try {
+      token = next();
+    } catch (e) {
+      if (e instanceof StopIter) return;
+      throw e;
+    }
+    selector = [];
+    for (;;) {
+      const op = ops[token[0]];
+      if (op === undefined) throw new KeyError(token[0]);
+      try {
+        selector.push(op(next, token));
+      } catch (e) {
+        if (e instanceof StopIter) throw new SyntaxError_("invalid path");
+        throw e;
+      }
+      try {
+        token = next();
+        if (token[0] === "/") token = next();
+      } catch (e) {
+        if (e instanceof StopIter) break;
+        throw e;
+      }
+    }
+    if (_cache.size > 100) _cache.clear();
+    _cache.set(cache_key, selector);
+  }
+  let result: Iterable<Element> = [elem];
+  const context = new SelectorContext(elem);
+  for (const select of selector) result = select(context, result);
+  yield* result;
+}
+
+// ---------------------------------------------------------------------------
+// Serialization
+// ---------------------------------------------------------------------------
+
+const _namespace_map = new Map<string, string>([
+  ["http://www.w3.org/XML/1998/namespace", "xml"],
+  ["http://www.w3.org/1999/xhtml", "html"],
+  ["http://www.w3.org/1999/02/22-rdf-syntax-ns#", "rdf"],
+  ["http://schemas.xmlsoap.org/wsdl/", "wsdl"],
+  ["http://www.w3.org/2001/XMLSchema", "xs"],
+  ["http://www.w3.org/2001/XMLSchema-instance", "xsi"],
+  ["http://purl.org/dc/elements/1.1/", "dc"],
+]);
+
+export function register_namespace(prefix: string, uri: string): void {
+  if (/^ns\d+$/.test(prefix)) throw new ValueError("Prefix format reserved for internal use");
+  for (const [k, v] of [..._namespace_map]) {
+    if (k === uri || v === prefix) _namespace_map.delete(k);
+  }
+  _namespace_map.set(uri, prefix);
+}
+
+function _escape_cdata(text: string): string {
+  return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+function _escape_attrib(text: string): string {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/\r/g, "&#13;")
+    .replace(/\n/g, "&#10;")
+    .replace(/\t/g, "&#09;");
+}
+
+function _namespaces(elem: Element, default_namespace: string | null): [Map<string, string | null>, Map<string, string>] {
+  const qnames = new Map<string, string | null>();
+  const namespaces = new Map<string, string>();
+  if (default_namespace) namespaces.set(default_namespace, "");
+  const add_qname = (qname: string): void => {
+    if (qname[0] === "{") {
+      const close = qname.lastIndexOf("}");
+      const uri = qname.slice(1, close);
+      const tag = qname.slice(close + 1);
+      let prefix = namespaces.get(uri);
+      if (prefix === undefined) {
+        prefix = _namespace_map.get(uri);
+        if (prefix === undefined) prefix = `ns${namespaces.size}`;
+        if (prefix !== "xml") namespaces.set(uri, prefix);
+      }
+      qnames.set(qname, prefix ? `${prefix}:${tag}` : tag);
+    } else {
+      if (default_namespace) {
+        throw new ValueError("cannot use non-qualified names with default_namespace option");
+      }
+      qnames.set(qname, qname);
+    }
+  };
+  for (const e of elem.iter()) {
+    if (typeof e.tag !== "string") throw new TypeError(`cannot serialize ${String(e.tag)} (type ${typeof e.tag})`);
+    if (!qnames.has(e.tag)) add_qname(e.tag);
+    for (const key of e.attrib.keys()) if (!qnames.has(key)) add_qname(key);
+  }
+  return [qnames, namespaces];
+}
+
+function _serialize_xml(
+  write: (s: string) => void,
+  elem: Element,
+  qnames: Map<string, string | null>,
+  namespaces: Map<string, string> | null,
+  short_empty_elements: boolean,
+): void {
+  const tag = qnames.get(elem.tag) ?? null;
+  const text = elem.text;
+  if (tag === null) {
+    if (text) write(_escape_cdata(text));
+    for (const e of elem) _serialize_xml(write, e, qnames, null, short_empty_elements);
+  } else {
+    write("<" + tag);
+    const items = elem.items();
+    if (items.length || (namespaces && namespaces.size)) {
+      if (namespaces) {
+        const sorted = [...namespaces.entries()].sort((a, b) => (a[1] < b[1] ? -1 : a[1] > b[1] ? 1 : 0));
+        for (const [v, k0] of sorted) {
+          const k = k0 ? ":" + k0 : "";
+          write(` xmlns${k}="${_escape_attrib(v)}"`);
+        }
+      }
+      for (const [k, v] of items) write(` ${qnames.get(k)}="${_escape_attrib(v)}"`);
+    }
+    if (text || elem.__len__() || !short_empty_elements) {
+      write(">");
+      if (text) write(_escape_cdata(text));
+      for (const e of elem) _serialize_xml(write, e, qnames, null, short_empty_elements);
+      write("</" + tag + ">");
+    } else {
+      write(" />");
+    }
+  }
+  if (elem.tail) write(_escape_cdata(elem.tail));
+}
+
+function _serialize_text(write: (s: string) => void, elem: Element): void {
+  if (elem.text) write(elem.text);
+  for (const e of elem) _serialize_text(write, e);
+  if (elem.tail) write(elem.tail);
+}
+
+export interface ToStringOptions {
+  xml_declaration?: boolean | null;
+  default_namespace?: string | null;
+  method?: "xml" | "text" | null;
+  short_empty_elements?: boolean;
+}
+
+function _tostring_unicode(element: Element, opts: ToStringOptions): string {
+  const method = opts.method ?? "xml";
+  const out: string[] = [];
+  const write = (s: string): void => {
+    out.push(s);
+  };
+  if (method === "text") {
+    _serialize_text(write, element);
+  } else if (method === "xml") {
+    const [qnames, namespaces] = _namespaces(element, opts.default_namespace ?? null);
+    _serialize_xml(write, element, qnames, namespaces, opts.short_empty_elements ?? true);
+  } else {
+    throw new ValueError(`unknown serialization method '${method}'`);
+  }
+  return out.join("");
+}
+
+export function tostring(element: Element, encoding: "unicode", opts?: ToStringOptions): string;
+export function tostring(element: Element, encoding?: string | null, opts?: ToStringOptions): Uint8Array;
+export function tostring(
+  element: Element,
+  encoding: string | null = null,
+  opts: ToStringOptions = {},
+): string | Uint8Array {
+  const enc = encoding ?? "us-ascii";
+  const body = _tostring_unicode(element, opts);
+  if (enc === "unicode") {
+    const decl = opts.xml_declaration === true ? "<?xml version='1.0'?>\n" : "";
+    return decl + body;
+  }
+  const lower = enc.toLowerCase();
+  const declare =
+    opts.xml_declaration === true ||
+    (opts.xml_declaration == null && !["utf-8", "us-ascii", "unicode"].includes(lower));
+  const decl = declare ? `<?xml version='1.0' encoding='${enc}'?>\n` : "";
+  const text = decl + body;
+  if (lower === "us-ascii" || lower === "ascii") {
+    let s = "";
+    for (const ch of text) {
+      const cp = ch.codePointAt(0)!;
+      s += cp < 128 ? ch : `&#${cp};`;
+    }
+    return new Uint8Array(Buffer.from(s, "latin1"));
+  }
+  if (lower === "utf-8" || lower === "utf8") return new Uint8Array(Buffer.from(text, "utf8"));
+  throw new ValueError(`unsupported tostring encoding ${enc}`);
+}
+
+// ---------------------------------------------------------------------------
+// Parser (expat-compatible subset)
+// ---------------------------------------------------------------------------
+
+const NAME_START =
+  ":A-Z_a-z\\u00C0-\\u00D6\\u00D8-\\u00F6\\u00F8-\\u02FF\\u0370-\\u037D\\u037F-\\u1FFF\\u200C-\\u200D\\u2070-\\u218F\\u2C00-\\u2FEF\\u3001-\\uD7FF\\uF900-\\uFDCF\\uFDF0-\\uFFFD\\u{10000}-\\u{EFFFF}";
+const NAME_CHAR = NAME_START + "\\-.0-9\\u00B7\\u0300-\\u036F\\u203F-\\u2040";
+const NAME_RE = new RegExp(`[${NAME_START}][${NAME_CHAR}]*`, "uy");
+const BAD_CHAR_RE = /[^\t\n\r -퟿-�\u{10000}-\u{10FFFF}]/u;
+const PREDEFINED: Record<string, string> = { lt: "<", gt: ">", amp: "&", quot: '"', apos: "'" };
+const XML_NS = "http://www.w3.org/XML/1998/namespace";
+const EXPANSION_LIMIT = 10_000_000;
+
+function is_ws(c: string): boolean {
+  return c === " " || c === "\t" || c === "\n" || c === "\r";
+}
+
+class _Parser {
+  readonly s: string;
+  pos = 0;
+  entities = new Map<string, string>();
+  expanded = 0;
+
+  constructor(s: string) {
+    this.s = s;
+  }
+
+  err(msg: string, at: number = this.pos): never {
+    const upto = this.s.slice(0, at);
+    const line = (upto.match(/\n/g)?.length ?? 0) + 1;
+    const column = at - (upto.lastIndexOf("\n") + 1);
+    const e = new ParseError(`${msg}: line ${line}, column ${column}`);
+    e.position = [line, column];
+    throw e;
+  }
+
+  skip_ws(): boolean {
+    const start = this.pos;
+    while (this.pos < this.s.length && is_ws(this.s[this.pos])) this.pos++;
+    return this.pos > start;
+  }
+
+  read_name(): string {
+    NAME_RE.lastIndex = this.pos;
+    const m = NAME_RE.exec(this.s);
+    if (m === null) {
+      if (this.pos >= this.s.length) this.err("unclosed token");
+      this.err("not well-formed (invalid token)");
+    }
+    this.pos = NAME_RE.lastIndex;
+    return m[0];
+  }
+
+  check_chars(text: string, at: number): void {
+    const m = BAD_CHAR_RE.exec(text);
+    if (m !== null) this.err("not well-formed (invalid token)", at + m.index);
+  }
+
+  /** Expand one reference starting at s[pos] === "&"; returns replacement text. */
+  reference(depth: number): string {
+    const s = this.s;
+    const start = this.pos;
+    const semi = s.indexOf(";", start);
+    const bad = semi < 0 ? -1 : s.slice(start + 1, semi).search(/[&<\s]/);
+    if (semi < 0 || bad >= 0) {
+      this.err(semi < 0 && s.slice(start + 1).search(/[<\s]/) < 0 ? "unclosed token" : "not well-formed (invalid token)", start);
+    }
+    const body = s.slice(start + 1, semi);
+    this.pos = semi + 1;
+    if (body[0] === "#") {
+      const hex = body[1] === "x";
+      const digits = hex ? body.slice(2) : body.slice(1);
+      if (!(hex ? /^[0-9a-fA-F]+$/ : /^[0-9]+$/).test(digits)) this.err("not well-formed (invalid token)", start);
+      const cp = parseInt(digits, hex ? 16 : 10);
+      if (!(cp === 9 || cp === 10 || cp === 13 || (cp >= 0x20 && cp <= 0xd7ff) || (cp >= 0xe000 && cp <= 0xfffd) || (cp >= 0x10000 && cp <= 0x10ffff))) {
+        this.err("reference to invalid character number", start);
+      }
+      return String.fromCodePoint(cp);
+    }
+    NAME_RE.lastIndex = 0;
+    const nm = NAME_RE.exec(body);
+    if (nm === null || nm[0].length !== body.length) this.err("not well-formed (invalid token)", start + 1);
+    if (Object.hasOwn(PREDEFINED, body)) return PREDEFINED[body];
+    const val = this.entities.get(body);
+    if (val === undefined) this.err("undefined entity", start);
+    if (depth > 40) this.err("recursive entity reference", start);
+    const out = this.expand_entity_value(val, depth + 1, start);
+    this.expanded += out.length;
+    if (this.expanded > EXPANSION_LIMIT) {
+      this.err("limit on input amplification factor (from DTD and entities) breached", start);
+    }
+    return out;
+  }
+
+  expand_entity_value(val: string, depth: number, at: number): string {
+    if (val.includes("<")) this.err("not well-formed (invalid token)", at);
+    if (!val.includes("&")) return val;
+    const sub = new _Parser(val);
+    sub.entities = this.entities;
+    sub.expanded = this.expanded;
+    let out = "";
+    while (sub.pos < val.length) {
+      const amp = val.indexOf("&", sub.pos);
+      if (amp < 0) {
+        out += val.slice(sub.pos);
+        break;
+      }
+      out += val.slice(sub.pos, amp);
+      sub.pos = amp;
+      out += sub.reference(depth);
+    }
+    this.expanded = sub.expanded;
+    return out;
+  }
+
+  parse_doctype(): void {
+    const s = this.s;
+    this.pos += "<!DOCTYPE".length;
+    this.skip_ws();
+    this.read_name();
+    // external id and internal subset
+    for (;;) {
+      if (this.pos >= s.length) this.err("unclosed token");
+      const c = s[this.pos];
+      if (c === ">") {
+        this.pos++;
+        return;
+      }
+      if (c === '"' || c === "'") {
+        const e = s.indexOf(c, this.pos + 1);
+        if (e < 0) this.err("unclosed token");
+        this.pos = e + 1;
+      } else if (c === "[") {
+        this.pos++;
+        this.parse_internal_subset();
+      } else {
+        this.pos++;
+      }
+    }
+  }
+
+  parse_internal_subset(): void {
+    const s = this.s;
+    const entity_re = new RegExp(`<!ENTITY\\s+(%\\s+)?([${NAME_START}][${NAME_CHAR}]*)\\s+(?:"([^"]*)"|'([^']*)')\\s*>`, "uy");
+    for (;;) {
+      this.skip_ws();
+      if (this.pos >= s.length) this.err("unclosed token");
+      if (s[this.pos] === "]") {
+        this.pos++;
+        return;
+      }
+      if (s.startsWith("<!--", this.pos)) {
+        const e = s.indexOf("-->", this.pos + 4);
+        if (e < 0) this.err("unclosed token");
+        this.pos = e + 3;
+      } else if (s.startsWith("<?", this.pos)) {
+        const e = s.indexOf("?>", this.pos + 2);
+        if (e < 0) this.err("unclosed token");
+        this.pos = e + 2;
+      } else if (s.startsWith("<!ENTITY", this.pos)) {
+        entity_re.lastIndex = this.pos;
+        const m = entity_re.exec(s);
+        if (m !== null) {
+          if (!m[1] && !this.entities.has(m[2])) this.entities.set(m[2], m[3] ?? m[4]);
+          this.pos = entity_re.lastIndex;
+        } else {
+          this.skip_decl();
+        }
+      } else if (s.startsWith("<!", this.pos)) {
+        this.skip_decl();
+      } else if (s[this.pos] === "%") {
+        const e = s.indexOf(";", this.pos);
+        if (e < 0) this.err("unclosed token");
+        this.pos = e + 1;
+      } else {
+        this.err("syntax error");
+      }
+    }
+  }
+
+  skip_decl(): void {
+    const s = this.s;
+    for (;;) {
+      if (this.pos >= s.length) this.err("unclosed token");
+      const c = s[this.pos];
+      if (c === '"' || c === "'") {
+        const e = s.indexOf(c, this.pos + 1);
+        if (e < 0) this.err("unclosed token");
+        this.pos = e + 1;
+      } else if (c === ">") {
+        this.pos++;
+        return;
+      } else {
+        this.pos++;
+      }
+    }
+  }
+
+  skip_misc_token(): boolean {
+    const s = this.s;
+    if (s.startsWith("<!--", this.pos)) {
+      const e = s.indexOf("-->", this.pos + 4);
+      if (e < 0) this.err("unclosed token");
+      if (s.slice(this.pos + 4, e).includes("--")) this.err("not well-formed (invalid token)");
+      this.check_chars(s.slice(this.pos, e), this.pos);
+      this.pos = e + 3;
+      return true;
+    }
+    if (s.startsWith("<?", this.pos)) {
+      this.skip_pi();
+      return true;
+    }
+    return false;
+  }
+
+  skip_pi(): void {
+    const s = this.s;
+    const start = this.pos;
+    this.pos += 2;
+    const target = this.read_name();
+    if (target.toLowerCase() === "xml") {
+      this.err("XML or text declaration not at start of entity", start);
+    }
+    const e = s.indexOf("?>", this.pos);
+    if (e < 0) this.err("unclosed token");
+    if (this.pos < e && !is_ws(s[this.pos])) this.err("processing instruction not well-formed", this.pos);
+    this.check_chars(s.slice(this.pos, e), this.pos);
+    this.pos = e + 2;
+  }
+
+  parse_attr_value(quote: string): string {
+    const s = this.s;
+    this.pos++;
+    let out = "";
+    for (;;) {
+      if (this.pos >= s.length) this.err("unclosed token");
+      const c = s[this.pos];
+      if (c === quote) {
+        this.pos++;
+        return out;
+      }
+      if (c === "<") this.err("not well-formed (invalid token)");
+      if (c === "&") {
+        out += this.reference(0);
+        continue;
+      }
+      const start = this.pos;
+      while (this.pos < s.length && s[this.pos] !== quote && s[this.pos] !== "<" && s[this.pos] !== "&") this.pos++;
+      const chunk = s.slice(start, this.pos);
+      this.check_chars(chunk, start);
+      out += chunk.replace(/[\t\n]/g, " ");
+    }
+  }
+
+  parse(): Element {
+    const s = this.s;
+    let root: Element | null = null;
+    // XML declaration
+    if (/^<\?xml[ \t\r\n]/.test(s)) {
+      const e = s.indexOf("?>");
+      if (e < 0) this.err("unclosed token");
+      this.pos = e + 2;
+    }
+    // prolog
+    for (;;) {
+      this.skip_ws();
+      if (this.pos >= s.length) this.err("no element found");
+      if (s[this.pos] !== "<") this.err("syntax error");
+      if (this.skip_misc_token()) continue;
+      if (s.startsWith("<!DOCTYPE", this.pos)) {
+        this.parse_doctype();
+        continue;
+      }
+      break;
+    }
+
+    type Frame = { el: Element; raw: string; scope: Map<string, string> };
+    const stack: Frame[] = [];
+    let scope = new Map<string, string>([["xml", XML_NS]]);
+    let pending: string[] = [];
+    const flush = (): void => {
+      if (pending.length === 0) return;
+      const text = pending.join("");
+      pending = [];
+      if (!text) return;
+      const top = stack[stack.length - 1].el;
+      if (top._children.length === 0) top.text = text;
+      else top._children[top._children.length - 1].tail = text;
+    };
+
+    const resolve = (raw: string, is_attr: boolean, sc: Map<string, string>, at: number): string => {
+      const i = raw.indexOf(":");
+      if (i < 0) {
+        if (!is_attr) {
+          const d = sc.get("");
+          if (d) return `{${d}}${raw}`;
+        }
+        return raw;
+      }
+      const prefix = raw.slice(0, i);
+      const local = raw.slice(i + 1);
+      if (!local || local.includes(":") || !prefix) this.err("not well-formed (invalid token)", at);
+      const uri = sc.get(prefix);
+      if (uri === undefined) this.err("unbound prefix", at);
+      return `{${uri}}${local}`;
+    };
+
+    const start_tag = (): void => {
+      const tag_at = this.pos;
+      this.pos++;
+      const raw = this.read_name();
+      const raw_attrs: [string, string][] = [];
+      const seen = new Set<string>();
+      let self_close = false;
+      for (;;) {
+        const had_ws = this.skip_ws();
+        if (this.pos >= s.length) this.err("unclosed token");
+        const c = s[this.pos];
+        if (c === ">") {
+          this.pos++;
+          break;
+        }
+        if (c === "/") {
+          if (this.pos + 1 >= s.length) this.err("unclosed token");
+          if (s[this.pos + 1] !== ">") this.err("not well-formed (invalid token)");
+          this.pos += 2;
+          self_close = true;
+          break;
+        }
+        if (!had_ws) this.err("not well-formed (invalid token)");
+        const at = this.pos;
+        const name = this.read_name();
+        this.skip_ws();
+        if (this.pos >= s.length) this.err("unclosed token");
+        if (s[this.pos] !== "=") this.err("not well-formed (invalid token)");
+        this.pos++;
+        this.skip_ws();
+        if (this.pos >= s.length) this.err("unclosed token");
+        const q = s[this.pos];
+        if (q !== '"' && q !== "'") this.err("not well-formed (invalid token)");
+        const value = this.parse_attr_value(q);
+        if (seen.has(name)) this.err("duplicate attribute", at);
+        seen.add(name);
+        raw_attrs.push([name, value]);
+      }
+      let sc = stack.length ? stack[stack.length - 1].scope : scope;
+      const decls = raw_attrs.filter(([n]) => n === "xmlns" || n.startsWith("xmlns:"));
+      if (decls.length) {
+        sc = new Map(sc);
+        for (const [n, v] of decls) sc.set(n === "xmlns" ? "" : n.slice(6), v);
+      }
+      const tag = resolve(raw, false, sc, tag_at + 1);
+      const el = new Element(tag);
+      for (const [n, v] of raw_attrs) {
+        if (n === "xmlns" || n.startsWith("xmlns:")) continue;
+        const k = resolve(n, true, sc, tag_at);
+        if (el.attrib.has(k)) this.err("duplicate attribute", tag_at);
+        el.attrib.set(k, v);
+      }
+      if (stack.length) {
+        flush();
+        stack[stack.length - 1].el._children.push(el);
+      } else {
+        root = el;
+      }
+      if (self_close) {
+        if (!stack.length) return;
+        // an empty element: nothing pending belongs to it
+      } else {
+        stack.push({ el, raw, scope: sc });
+      }
+    };
+
+    start_tag();
+    if (stack.length === 0) return this.epilog(root!);
+
+    while (stack.length) {
+      if (this.pos >= s.length) this.err("no element found");
+      const c = s[this.pos];
+      if (c === "<") {
+        if (s.startsWith("</", this.pos)) {
+          this.pos += 2;
+          const name = this.read_name();
+          const at = this.pos;
+          this.skip_ws();
+          if (this.pos >= s.length) this.err("unclosed token");
+          if (s[this.pos] !== ">") this.err("not well-formed (invalid token)");
+          if (name !== stack[stack.length - 1].raw) this.err("mismatched tag", at);
+          this.pos++;
+          flush();
+          stack.pop();
+        } else if (s.startsWith("<![CDATA[", this.pos)) {
+          const e = s.indexOf("]]>", this.pos + 9);
+          if (e < 0) this.err("unclosed CDATA section");
+          const data = s.slice(this.pos + 9, e);
+          this.check_chars(data, this.pos + 9);
+          pending.push(data);
+          this.pos = e + 3;
+        } else if (s.startsWith("<!--", this.pos) || s.startsWith("<?", this.pos)) {
+          this.skip_misc_token();
+        } else if (s.startsWith("<!", this.pos)) {
+          this.err("not well-formed (invalid token)");
+        } else {
+          start_tag();
+        }
+      } else if (c === "&") {
+        pending.push(this.reference(0));
+      } else {
+        const start = this.pos;
+        while (this.pos < s.length && s[this.pos] !== "<" && s[this.pos] !== "&") this.pos++;
+        const chunk = s.slice(start, this.pos);
+        this.check_chars(chunk, start);
+        const cd = chunk.indexOf("]]>");
+        if (cd >= 0) this.err("not well-formed (invalid token)", start + cd + 2);
+        pending.push(chunk);
+      }
+    }
+    return this.epilog(root!);
+  }
+
+  epilog(root: Element): Element {
+    const s = this.s;
+    for (;;) {
+      this.skip_ws();
+      if (this.pos >= s.length) return root;
+      if (s[this.pos] === "<" && this.skip_misc_token()) continue;
+      this.err("junk after document element");
+    }
+  }
+}
+
+function decode_xml_bytes(data: Uint8Array): string {
+  let enc = "utf-8";
+  let start = 0;
+  if (data.length >= 3 && data[0] === 0xef && data[1] === 0xbb && data[2] === 0xbf) {
+    start = 3;
+  } else if (data.length >= 2 && data[0] === 0xff && data[1] === 0xfe) {
+    enc = "utf-16-le";
+    start = 2;
+  } else if (data.length >= 2 && data[0] === 0xfe && data[1] === 0xff) {
+    enc = "utf-16-be";
+    start = 2;
+  } else {
+    const head = Buffer.from(data.subarray(0, 200)).toString("latin1");
+    const m = /^<\?xml[^>]*?encoding\s*=\s*["']([A-Za-z][A-Za-z0-9._-]*)["']/.exec(head);
+    if (m !== null) enc = m[1];
+  }
+  const lower = enc.toLowerCase().replace(/_/g, "-");
+  const known: Record<string, string> = {
+    "utf-8": "utf-8",
+    utf8: "utf-8",
+    "us-ascii": "ascii",
+    ascii: "ascii",
+    "iso-8859-1": "latin-1",
+    latin1: "latin-1",
+    "latin-1": "latin-1",
+    "utf-16": "utf-16-le",
+    "utf-16le": "utf-16-le",
+    "utf-16-le": "utf-16-le",
+    "utf-16be": "utf-16-be",
+    "utf-16-be": "utf-16-be",
+    "windows-1252": "cp1252",
+    cp1252: "cp1252",
+  };
+  const py_enc = known[lower];
+  if (py_enc === undefined) throw new ParseError("unknown encoding: line 1, column 0");
+  try {
+    return decode(data.subarray(start), py_enc, "strict");
+  } catch (e) {
+    if (e instanceof ParseError) throw e;
+    throw new ParseError("not well-formed (invalid token): line 1, column 0");
+  }
+}
+
+export function fromstring(text: string | Uint8Array): Element {
+  let s = typeof text === "string" ? text : decode_xml_bytes(text);
+  if (s.charCodeAt(0) === 0xfeff) s = s.slice(1);
+  s = s.replace(/\r\n?/g, "\n");
+  return new _Parser(s).parse();
+}
+
+export const XML = fromstring;

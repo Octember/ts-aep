@@ -23,14 +23,14 @@ import {
   py_or,
   repr,
   str,
+  SyntaxError_,
   TypeError_,
   UnicodeDecodeError,
   ValueError,
 } from "../../pyrt/index.ts";
 import type { EnumValue, IO } from "../../pyrt/index.ts";
 
-// TODO(pyrt): Python's SyntaxError is not in pyrt/errors.ts yet; local shim until it lands.
-export class SyntaxError_ extends PyException {}
+export { SyntaxError_ };
 
 // io.SEEK_CUR
 export const SEEK_CUR = 1 as const;

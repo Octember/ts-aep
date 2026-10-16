@@ -1,4 +1,5 @@
 import "../../src/py_aep/binary/_register.ts";
+import { realpathSync } from "node:fs";
 import { afterEach, describe, expect, test } from "bun:test";
 import {
   AssertionError_,
@@ -733,7 +734,8 @@ describe("TestRelativePaths", () => {
   afterEach(() => process.chdir(_cwd_original));
   const monkeypatch_chdir = (dir: Path): void => process.chdir(dir.path);
 
-  const _absolute = (path: Path): string => String(new Path(path).resolve());
+  // `samples/` is a symlink in this checkout and getcwd() reports the real path after chdir.
+  const _absolute = (path: Path): string => realpathSync(String(path));
 
   test("test_import_file_stores_absolute_path", () => {
     const tmp_path = make_tmp_path();
@@ -1072,7 +1074,7 @@ describe("TestImportGapFormats", () => {
       const project = parse_aep(BASE).project;
       const item = project.import_file(new ImportOptions(ASSETS.div(filename)));
       expect(item.main_source instanceof FileSource).toBe(true);
-      expect(item.main_source._sspc.source_format_type).toBe(source_format);
+      expect(py_eq(item.main_source._sspc.source_format_type, source_format)).toBe(true);
       expect(py_eq([item.width, item.height], [width, height])).toBe(true);
     },
   );

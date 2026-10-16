@@ -564,14 +564,14 @@ export function _pard_extractor(
 // directly after each definition, which keeps the registration order.
 export function _extract_angle(body: any, result: Map<string, any>): void {
   result.set("last_value", body.last_value);
-  if (body.default != null) result.set("default", _intify(body.default));
+  if (body.default_ != null) result.set("default", _intify(body.default_));
   result.set("property_value_type", PropertyValueType.OneD);
 }
 _pard_extractor(PropertyControlType.ANGLE)(_extract_angle);
 
 export function _extract_boolean(body: any, result: Map<string, any>): void {
   result.set("last_value", body.last_value);
-  result.set("default_value", body.default);
+  result.set("default_value", body.default_);
   result.set("min_value", 0);
   result.set("max_value", 1);
 }
@@ -597,7 +597,7 @@ _pard_extractor(PropertyControlType.COLOR)(_extract_color);
 export function _extract_enum(body: any, result: Map<string, any>): void {
   result.set("last_value", body.last_value);
   result.set("nb_options", body.nb_options);
-  result.set("default_value", body.default);
+  result.set("default_value", body.default_);
   result.set("min_value", 1);
   result.set("max_value", body.nb_options);
 }
@@ -611,7 +611,7 @@ export function _intify(value: number): number {
 }
 
 export function _extract_integer(body: any, result: Map<string, any>): void {
-  if (body.default != null) result.set("default", body.default);
+  if (body.default_ != null) result.set("default", body.default_);
   result.set("min_value", body.valid_min);
   result.set("max_value", body.valid_max);
 }
@@ -619,7 +619,7 @@ _pard_extractor(PropertyControlType.INTEGER)(_extract_integer);
 
 export function _extract_scalar(body: any, result: Map<string, any>): void {
   result.set("last_value", body.last_value);
-  if (body.default != null) result.set("default", _intify(body.default));
+  if (body.default_ != null) result.set("default", _intify(body.default_));
   result.set("min_value", _intify(body.valid_min));
   result.set("max_value", _intify(body.valid_max));
   result.set("slider_min", body.slider_min);
@@ -629,8 +629,8 @@ _pard_extractor(PropertyControlType.SCALAR)(_extract_scalar);
 
 export function _extract_slider(body: any, result: Map<string, any>): void {
   result.set("last_value", body.last_value);
-  if (body.default != null && Number.isFinite(body.default)) {
-    result.set("default", _intify(body.default));
+  if (body.default_ != null && Number.isFinite(body.default_)) {
+    result.set("default", _intify(body.default_));
   }
   // Non-finite bounds mean the side is unbounded.
   if (Number.isFinite(body.valid_min)) result.set("min_value", _intify(body.valid_min));
@@ -646,14 +646,14 @@ _pard_extractor(PropertyControlType.SLIDER)(_extract_slider);
 export function _extract_three_d(body: any, result: Map<string, any>): void {
   result.set("last_value", [body.last_value_x, body.last_value_y, body.last_value_z]);
   // Percent of the layer size; `_point_default_pixels` converts it.
-  result.set("default_value", body.default);
+  result.set("default_value", body.default_);
   result.set("property_value_type", PropertyValueType.ThreeD_SPATIAL);
 }
 _pard_extractor(PropertyControlType.THREE_D)(_extract_three_d);
 
 export function _extract_two_d(body: any, result: Map<string, any>): void {
   result.set("last_value", [body.last_value_x, body.last_value_y]);
-  result.set("default_value", body.default);
+  result.set("default_value", body.default_);
   result.set("property_value_type", PropertyValueType.TwoD_SPATIAL);
 }
 _pard_extractor(PropertyControlType.TWO_D)(_extract_two_d);

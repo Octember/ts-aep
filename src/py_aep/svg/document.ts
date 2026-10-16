@@ -4,8 +4,8 @@ import { dict_get, float, min, max, py_bool, py_eq, py_or, split } from "../../p
 import { NUMBER_RE, parse_length } from "./_util.ts";
 import { Affine } from "./transform.ts";
 
-// TODO(port): xml.etree.ElementTree.Element has no pyrt shim yet; typed as any.
-export type Element = any;
+import type { Element } from "../../pyrt/etree.ts";
+export type { Element };
 
 // Python `NUMBER_RE.findall(value)`: the unanchored, global form of the (`^`-anchored) `NUMBER_RE` in _util.ts.
 // TODO(port): CPython's `\d` also matches non-ASCII decimal digits; this uses ASCII `\d`.

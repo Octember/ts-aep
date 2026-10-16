@@ -353,7 +353,7 @@ export class FootageSource {
    * placeholder's or sequence's assumed rate nor a movie's conform carries
    * over (AE 2026).
    */
-  static _rate_from_media: boolean = false;
+  _rate_from_media: boolean = false;
 
   /**
    * Whether the native-rate slot holds a rate the user chose rather
@@ -398,7 +398,7 @@ export class FootageSource {
     let rate = this.conform_frame_rate;
     if (new_._is_sequence) {
       rate = rate || this._sspc.native_frame_rate;
-      if (rate && !(new_.constructor as typeof FootageSource)._rate_from_media) {
+      if (rate && !new_._rate_from_media) {
         // A sequence's stored duration is its frame count over its
         // rate, so it has to move with the rate; a movie keeps the
         // duration it measured and gets the conform factor applied.

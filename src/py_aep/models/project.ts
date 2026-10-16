@@ -4,6 +4,7 @@ import * as fs from "node:fs";
 import * as nodepath from "node:path";
 import { randomUUID } from "node:crypto";
 
+import { fromstring, tostring } from "../../pyrt/etree.ts";
 import { ae_writes, requires_version } from "../ae_version.ts";
 import { to_f4, truncate_utf8 } from "../binary/bin_utils.ts";
 import { write_aep } from "../binary/chunk.ts";
@@ -151,14 +152,12 @@ export function json_dumps(value: any): string {
   return "{" + entries.map(([k, v]) => `${json_str(k)}: ${json_dumps(v)}`).join(", ") + "}";
 }
 
-// TODO(port): xml.etree.ElementTree has no pyrt shim. The XMP packet is parsed
-// and serialized by these two stubs, which fail loudly until an XML library is picked.
-export function ET_fromstring(_text: string): any {
-  throw new NotImplementedError("xml.etree.ElementTree.fromstring is not ported");
+export function ET_fromstring(text: string): any {
+  return fromstring(text);
 }
 
-export function ET_tostring(_el: any): string {
-  throw new NotImplementedError("xml.etree.ElementTree.tostring is not ported");
+export function ET_tostring(el: any): string {
+  return tostring(el, "unicode");
 }
 
 /** Python `type(x).__name__` for an error message. */

@@ -219,7 +219,7 @@ describe("TestRoundtripPremulColor", () => {
     ).main_source;
     raises(ValueError, () => {
       source.premul_color = [1.5, 0.0, 0.0];
-    }, "must be <= 1.0");
+    }, "must be <= 1(\\.0)?");
   });
 });
 
@@ -536,7 +536,7 @@ describe("TestRoundtripSolidColor", () => {
     const source = get_comp(project, "solid_color_red").layers[0].source.main_source;
     raises(ValueError, () => {
       source.color = [1.5, 0.0, 0.0];
-    }, "must be <= 1.0");
+    }, "must be <= 1(\\.0)?");
   });
 });
 

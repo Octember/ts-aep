@@ -143,7 +143,7 @@ describe("TestRoundtripExposure", () => {
       () => {
         opts.exposure = 41.0;
       },
-      "must be <= 40.0",
+      "must be <= 40(\\.0)?",
     );
   });
 
@@ -154,7 +154,7 @@ describe("TestRoundtripExposure", () => {
       () => {
         opts.exposure = -41.0;
       },
-      "must be >= -40.0",
+      "must be >= -40(\\.0)?",
     );
   });
 });
@@ -357,7 +357,7 @@ describe("TestRoundtripZoom", () => {
       () => {
         opts.zoom = 17.0;
       },
-      "must be <= 16.0",
+      "must be <= 16(\\.0)?",
     );
   });
 

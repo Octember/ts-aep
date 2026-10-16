@@ -95,6 +95,18 @@ export class PsdStyleBlocks {
     yield this.channel_restrictions;
   }
 
+  static readonly _fields = ["effects", "fill_opacity", "blend_interior", "channel_restrictions"];
+
+  /** `t._replace(field=...)`: a copy with the given fields replaced. */
+  _replace(kw: Partial<PsdStyleBlocks>): PsdStyleBlocks {
+    const args = PsdStyleBlocks._fields.map((f) => (f in kw ? (kw as any)[f] : (this as any)[f]));
+    return new (PsdStyleBlocks as any)(...args);
+  }
+
+  _asdict(): Record<string, any> {
+    return Object.fromEntries(PsdStyleBlocks._fields.map((f) => [f, (this as any)[f]]));
+  }
+
   /** NamedTuple equality: tuple-wise comparison of the fields. */
   __eq__(other: any): boolean {
     if (other == null || typeof other[Symbol.iterator] !== "function") return false;
@@ -220,6 +232,18 @@ export class PsdLayer {
     yield this.visible;
   }
 
+  static readonly _fields = ["name", "layer_id", "bounds", "record_index", "is_adjustment", "style_blocks", "vector_mask", "clipped", "is_fill", "mask_box", "has_transparency", "visible"];
+
+  /** `t._replace(field=...)`: a copy with the given fields replaced. */
+  _replace(kw: Partial<PsdLayer>): PsdLayer {
+    const args = PsdLayer._fields.map((f) => (f in kw ? (kw as any)[f] : (this as any)[f]));
+    return new (PsdLayer as any)(...args);
+  }
+
+  _asdict(): Record<string, any> {
+    return Object.fromEntries(PsdLayer._fields.map((f) => [f, (this as any)[f]]));
+  }
+
   /** NamedTuple equality: tuple-wise comparison of the fields. */
   __eq__(other: any): boolean {
     if (other == null || typeof other[Symbol.iterator] !== "function") return false;
@@ -272,6 +296,18 @@ export class PsdGroup {
     yield this.children;
     yield this.style_blocks;
     yield this.visible;
+  }
+
+  static readonly _fields = ["name", "layer_id", "children", "style_blocks", "visible"];
+
+  /** `t._replace(field=...)`: a copy with the given fields replaced. */
+  _replace(kw: Partial<PsdGroup>): PsdGroup {
+    const args = PsdGroup._fields.map((f) => (f in kw ? (kw as any)[f] : (this as any)[f]));
+    return new (PsdGroup as any)(...args);
+  }
+
+  _asdict(): Record<string, any> {
+    return Object.fromEntries(PsdGroup._fields.map((f) => [f, (this as any)[f]]));
   }
 
   /** NamedTuple equality: tuple-wise comparison of the fields. */

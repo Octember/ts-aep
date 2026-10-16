@@ -179,7 +179,7 @@ describe("TestCompItemResolution", () => {
       parse_project(SAMPLES_DIR.div("resolutionFactor.aep")),
       "resolutionFactor_half",
     );
-    expect(comp.resolution_factor).toBe(comp_json["resolutionFactor"]);
+    expect(py_eq(comp.resolution_factor, comp_json["resolutionFactor"])).toBe(true);
   });
 
   test("test_resolutionFactor_quarter", () => {
@@ -189,7 +189,7 @@ describe("TestCompItemResolution", () => {
       parse_project(SAMPLES_DIR.div("resolutionFactor.aep")),
       "resolutionFactor_quarter",
     );
-    expect(comp.resolution_factor).toBe(comp_json["resolutionFactor"]);
+    expect(py_eq(comp.resolution_factor, comp_json["resolutionFactor"])).toBe(true);
   });
 });
 

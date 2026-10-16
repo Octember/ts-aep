@@ -33,6 +33,7 @@
  * Python 3.7 (no wheels), where the resolver reports unsupported.
  */
 
+import { readFileSync } from "node:fs";
 import * as fontkit from "fontkit";
 import type { Path } from "../../pyrt/index.ts";
 import {
@@ -63,13 +64,74 @@ import { BoxAutoFitPolicy, BoxFirstBaselineAlignment, BoxVerticalAlignment } fro
 import { resolve_postscript } from "../svg/fonts.ts";
 import type { TextDocument } from "../models/text/text_document.ts";
 
-// TODO(port): uharfbuzz -> harfbuzzjs. harfbuzzjs is WASM that initializes
-// asynchronously and exposes a different Blob/Face/Font/Buffer API; the
-// uharfbuzz-shaped calls below (`hb.Blob.from_file_path`, `buf.add_str`,
-// `hb.shape`, `glyph_infos`, ...) need a binding assigned to `hb` before any
-// composition runs. While it is null every composition is refused, the same
-// as Python without uharfbuzz (`hb is None`).
-export let hb: any = null;
+// uharfbuzz -> harfbuzzjs. The wasm module initializes asynchronously, so it is
+// awaited once at module load and wrapped in a uharfbuzz-shaped binding
+// (`hb.Blob.from_file_path`, `hb.Face`, `hb.Font`, `hb.Buffer`, `hb.shape`).
+// TODO(port): harfbuzzjs indexes clusters in UTF-16 units; uharfbuzz in code
+// points. Composition refuses astral text first (`_check_envelope`), so the
+// two agree on every text that is shaped.
+const _hbjs: any = await (await import("harfbuzzjs")).default;
+
+class _HbBlob {
+  declare data: Uint8Array;
+  constructor(data: Uint8Array) {
+    this.data = data;
+  }
+  static from_file_path(path: string): _HbBlob {
+    return new _HbBlob(new Uint8Array(readFileSync(path)));
+  }
+}
+
+class _HbFace {
+  declare _face: any;
+  declare upem: number;
+  constructor(blob: _HbBlob, index: number = 0) {
+    const b = _hbjs.createBlob(blob.data);
+    this._face = _hbjs.createFace(b, index);
+    this.upem = this._face.upem;
+  }
+}
+
+class _HbFont {
+  declare _font: any;
+  constructor(face: _HbFace) {
+    this._font = _hbjs.createFont(face._face);
+  }
+}
+
+class _HbBuffer {
+  declare _buf: any;
+  constructor() {
+    this._buf = _hbjs.createBuffer();
+  }
+  add_str(text: string): void {
+    this._buf.addText(text);
+  }
+  guess_segment_properties(): void {
+    this._buf.guessSegmentProperties();
+  }
+  get glyph_infos(): { codepoint: number; cluster: number }[] {
+    return this._buf.json().map((g: any) => ({ codepoint: g.g, cluster: g.cl }));
+  }
+  get glyph_positions(): { x_advance: number; y_advance: number; x_offset: number; y_offset: number }[] {
+    return this._buf
+      .json()
+      .map((g: any) => ({ x_advance: g.ax, y_advance: g.ay, x_offset: g.dx, y_offset: g.dy }));
+  }
+}
+
+export let hb: any = {
+  Blob: _HbBlob,
+  Face: _HbFace,
+  Font: _HbFont,
+  Buffer: _HbBuffer,
+  shape(font: _HbFont, buf: _HbBuffer, features: Record<string, boolean>): void {
+    const spec = Object.entries(features)
+      .map(([tag, on]) => `${on ? "" : "-"}${tag}`)
+      .join(",");
+    _hbjs.shape(font._font, buf._buf, spec);
+  },
+};
 
 export const _AUTO_LEADING_FACTOR = 1.2;
 export const _FAUX_BOLD_ADVANCE = 0.027;
@@ -379,7 +441,7 @@ export function _glyph_advances(text: string, style: _CharStyle, buf: any, scale
   // Text here is BMP-only (`_check_envelope` refuses astral characters
   // first), so UTF-16 indexing matches Python's code-point indexing.
   const per_cluster: number[] = new Array<number>(len(text)).fill(0.0);
-  for (const [info, pos] of zip(buf.glyph_infos, buf.glyph_positions)) {
+  for (const [info, pos] of zip<[any[], any[]]>(buf.glyph_infos, buf.glyph_positions)) {
     per_cluster[info.cluster] += pos.x_advance * scale;
   }
   const advances: number[] = [];

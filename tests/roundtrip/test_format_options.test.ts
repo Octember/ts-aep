@@ -808,10 +808,10 @@ describe("TestRoundtripXmlFormatOptions", () => {
   test("test_settings_view_format_code_read_only", () => {
     const [, opts] = _parse_fresh(FORMAT_DIR.div("h.264", "base.aep"));
     expect(opts instanceof XmlFormatOptions).toBe(true);
-    // TODO(port): `opts.settings["Format Code"] = ...` translated as __setitem__ (rulebook gap:
-    // no rule for item assignment; mirrors the __getitem__ rule in §6).
+    // `XmlFormatOptions` has no `settings` attribute, so the Python attribute load raises
+    // AttributeError before the item assignment; TS property loads yield undefined, so use getattr.
     raises(AttributeError, () => {
-      opts.settings.__setitem__("Format Code", "MooV");
+      getattr(opts, "settings").__setitem__("Format Code", "MooV");
     });
   });
 });

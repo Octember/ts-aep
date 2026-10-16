@@ -12,6 +12,7 @@ import {
   int,
   py_assert,
   py_bool,
+  py_eq,
   py_or,
   rstrip,
   setdefault,
@@ -843,8 +844,8 @@ export class TextDocument {
     const engine_info = cos_get(this._cos_data, "1", "4");
     if (engine_info instanceof Map) {
       const engine_name = engine_info.get("3");
-      if (engine_name === "DVA") return ComposerEngine.LATIN_CJK_ENGINE;
-      if (engine_name === "Universal") return ComposerEngine.UNIVERSAL_TYPE_ENGINE;
+      if (py_eq(engine_name, "DVA")) return ComposerEngine.LATIN_CJK_ENGINE;
+      if (py_eq(engine_name, "Universal")) return ComposerEngine.UNIVERSAL_TYPE_ENGINE;
     }
     return null;
   }

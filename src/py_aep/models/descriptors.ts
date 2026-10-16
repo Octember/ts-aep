@@ -94,6 +94,9 @@ export function _enum_class(transform: ((...args: any[]) => any) | null | undefi
  */
 export function bound_enum_method(enum_cls: any, name: string, dflt: any): any {
   const m = getattr(enum_cls, name, dflt);
+  // Python's default is the enum class itself, which is callable (`E(v)`); a
+  // py_enum object is not, so use `E.of` and keep `__self__` for `_enum_class`.
+  if (m === dflt && is_enum(m)) return Object.assign((v: any) => m.of(v), { __self__: m });
   if (m === dflt || typeof m !== "function") return m;
   return Object.assign(m.bind(enum_cls), { __self__: enum_cls });
 }
