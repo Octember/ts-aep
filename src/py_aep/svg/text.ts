@@ -11,7 +11,7 @@
  * bidirectional text, and complex-script shaping are out of scope.
  */
 
-// TODO(port): fontTools TTFont → fontkit 2.0.4 (already a dependency). Parity risk: fontkit addresses glyphs by id, not name.
+// TODO(port): fontTools TTFont → fontkit 2.0.4: fontkit exposes glyphs by numeric id, not glyph name, so the glyph set is keyed by id (same 1:1 mapping); fonts whose glyph metrics/outlines fontkit parses differently from fontTools (e.g. malformed hmtx/glyf tables) may give different advances or outlines.
 import * as fontkit from "fontkit";
 import { type CubicSeg, RawSubpath } from "./path_data.ts";
 import { cubics_to_subpath } from "./shapes.ts";
@@ -200,7 +200,7 @@ export function _glyphs(font: any, text: string): [(number | null)[], number[], 
   // Windows symbol faces Wingdings/Webdings/Symbol/Marlett, and similar). Treat
   // it as empty so every char maps to no glyph and the run is dropped, matching
   // the "unresolved font is skipped" behaviour rather than crashing read_svg.
-  // TODO(port): fontkit has no getBestCmap(); its internal cmap processor may pick a different subtable than fontTools for fonts with several Unicode cmaps.
+  // TODO(port): fontkit has no getBestCmap(); its internal cmap processor may pick a different subtable than fontTools' priority order for fonts carrying several Unicode cmaps (e.g. both format 4 and format 12, or differing platform 0/3 subtables), changing which code points map to glyphs.
   // Its lookup returns 0 for unmapped code points, which is reported as null here.
   let cmap: any = null;
   try {
@@ -365,7 +365,7 @@ export function _point_at(
   const [x1, y1] = pts[i];
   const span = cum[i] - cum[i - 1];
   const f = span > 1e-9 ? (dist - cum[i - 1]) / span : 0.0;
-  // TODO(port): Math.atan2 vs libm (CPython) may differ in the last ulp.
+  // NOTE(port): platform libm — CPython's own math.* results vary by platform libm; V8 (fdlibm) may differ in the last ulp.
   return [x0 + (x1 - x0) * f, y0 + (y1 - y0) * f, Math.atan2(y1 - y0, x1 - x0)];
 }
 
@@ -415,7 +415,7 @@ export function outline_text_path(
     const mid = dist + advance_user / 2.0;
     if (gname != null && _in_glyph_set(glyph_set, gname) && 0.0 <= mid && mid <= total) {
       const [px, py, angle] = _point_at(pts, cum, mid);
-      // TODO(port): Math.cos / Math.sin vs libm (CPython) may differ in the last ulp.
+      // NOTE(port): platform libm — CPython's own math.* results vary by platform libm; V8 (fdlibm) may differ in the last ulp.
       const cos = Math.cos(angle);
       const sin = Math.sin(angle);
       // place at path point, rotate to tangent, scale+y-flip, then shift

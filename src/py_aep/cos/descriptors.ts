@@ -52,7 +52,7 @@ export function _extract(
     try {
       return transform(raw);
     } catch (e) {
-      // TODO(port): a native JS TypeError (e.g. property access on null) raised by a transform is treated as Python TypeError and yields default; CPython would raise AttributeError and propagate.
+      // TODO(port): JS cannot distinguish a native TypeError from property access on null/undefined (Python AttributeError, which would propagate) from a Python-style TypeError, so a transform dereferencing null yields default here instead of raising; only affects transforms fed unexpected None/non-container COS values.
       if (
         !(
           e instanceof TypeError_ ||

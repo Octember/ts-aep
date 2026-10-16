@@ -240,8 +240,7 @@ export function build_property_node(prop: Property): Node {
     if (Array.isArray(prop.value)) {
       if (len(prop.value) <= 4) attrs.set("value", prop.value);
     } else if (typeof prop.value === "number") {
-      // TODO(port): int/float distinction - rounding is equivalent (round(int, 2) is the identity),
-      // but an integral Python float (100.0) is a plain JS number here and displays as `100`.
+      // NOTE(port): int/float — integral values are plain numbers by design (RULEBOOK §4); an integral Python float (100.0) displays as `100` here instead of `100.0`.
       attrs.set("value", round(prop.value, 2));
     } else {
       attrs.set("value", prop.value);
@@ -562,7 +561,7 @@ export type Args = {
 };
 
 /**
- * TODO(port): argparse shim missing (prefix-abbreviated options like `--for` are not accepted). Minimal local parser for exactly the
+ * TODO(port): no argparse shim: abbreviated long options (`--for` for `--format`) are rejected and error/usage text is hand-copied, so only unusual argv (abbreviations, ambiguous-prefix errors) differs. Minimal local parser for exactly the
  * options this CLI declares (long and short forms, `--opt=value`, `-fVALUE`,
  * `--`). argparse's prefix matching and exact error/help layout are not
  * reproduced; the help text is hand-copied from argparse's output.

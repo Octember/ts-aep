@@ -69,6 +69,8 @@ export class ParametricMeshLayer extends AVLayer {
     this._update_options();
   }
 
+  // Python `# type: ignore[override]`: keyword shape differs from AVLayer._new's; overloads keep the base static side assignable.
+  static _new(match_name: string, auto_name: string, property_depth: number, kw?: any): PropertyGroup;
   static _new(kw: {
     name: string;
     layer_id: number;
@@ -76,7 +78,9 @@ export class ParametricMeshLayer extends AVLayer {
     containing_comp: CompItem;
     mesh_type: ParametricMeshType;
     effect_param_defs?: Map<string, any> | null;
-  }): ParametricMeshLayer {
+  }): ParametricMeshLayer;
+  static _new(kw: any): ParametricMeshLayer;
+  static _new(kw: any): any {
     const { name, layer_id, duration, containing_comp, mesh_type, effect_param_defs = null } = kw;
     const layer = super._new({
       name,
@@ -242,8 +246,7 @@ export class ParametricMeshOptions {
     for (const [name] of descriptors_of(this.constructor)) {
       result.set(name, getattr(this, name));
     }
-    // TODO(port): int/float distinction. f"{value}" prints float 1.0 as "1.0";
-    // str() of an integer-valued number prints "1".
+    // NOTE(port): int/float — integral values are plain numbers by design (RULEBOOK §4); a float-valued option of 1.0 prints as "1" here where Python prints "1.0" (repr string only, never saved).
     const formatted = [...result].map(([key, value]) => `${key}=${str(value)}`).join(", ");
     return `<${Object.getPrototypeOf(this.constructor).name}(${formatted})>`;
   }

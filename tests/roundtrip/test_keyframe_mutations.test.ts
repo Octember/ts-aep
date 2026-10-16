@@ -1011,26 +1011,26 @@ describe("TestParallelValueAliasing", () => {
       ["a", "1"],
       ["b", "2"],
     ]);
-    expect(py_eq(k0.value.params, new Map())).toBe(true);
-    expect(k0.value._nmhd.num_params).toBe(0);
+    expect(py_eq((k0.value as any).params, new Map())).toBe(true);
+    expect((k0.value as any)._nmhd.num_params).toBe(0);
     expect(k1.value._nmhd.num_params).toBe(2);
 
     const app2 = _roundtrip(app, tmp_path);
     const comp2 = get_comp(app2.project, "layer_multiple_markers");
     const mp2 = comp2.layers[0].__getitem__("ADBE Marker");
     const by_comment = new Map(mp2.keyframes.map((k) => [(k.value as MarkerValue).comment, k.value as MarkerValue] as const));
-    expect(py_eq(getitem(by_comment, "first_only").params, new Map())).toBe(true);
-    expect(getitem(by_comment, "first_only")._nmhd.num_params).toBe(0);
+    expect(py_eq((getitem(by_comment, "first_only") as any).params, new Map())).toBe(true);
+    expect((getitem(by_comment, "first_only") as any)._nmhd.num_params).toBe(0);
     expect(
       py_eq(
-        getitem(by_comment, "shared").params,
+        (getitem(by_comment, "shared") as any).params,
         new Map([
           ["a", "1"],
           ["b", "2"],
         ]),
       ),
     ).toBe(true);
-    expect(getitem(by_comment, "shared")._nmhd.num_params).toBe(2);
+    expect((getitem(by_comment, "shared") as any)._nmhd.num_params).toBe(2);
   });
 
   test("test_gradient_set_value_at_time_not_aliased", () => {
@@ -1536,8 +1536,8 @@ describe("TestRoundtripAutoBezierWrites", () => {
     keyframe.temporal_auto_bezier = true;
 
     expect(keyframe.temporal_continuous).toBe(true);
-    expect(keyframe.in_interpolation_type).toBe(KeyframeInterpolationType.BEZIER);
-    expect(keyframe.out_interpolation_type).toBe(KeyframeInterpolationType.BEZIER);
+    expect(keyframe.in_interpolation_type as KeyframeInterpolationType).toBe(KeyframeInterpolationType.BEZIER);
+    expect(keyframe.out_interpolation_type as KeyframeInterpolationType).toBe(KeyframeInterpolationType.BEZIER);
   });
 
   /**
@@ -1578,7 +1578,7 @@ describe("TestRoundtripAutoBezierWrites", () => {
 
     keyframe.temporal_continuous = true;
 
-    expect(keyframe.in_interpolation_type).toBe(KeyframeInterpolationType.BEZIER);
+    expect(keyframe.in_interpolation_type as KeyframeInterpolationType).toBe(KeyframeInterpolationType.BEZIER);
     expect(keyframe.out_interpolation_type).toBe(KeyframeInterpolationType.BEZIER);
     expect(approx(keyframe.in_temporal_ease[0].speed, 10.0)).toBe(true);
     expect(approx(keyframe.in_temporal_ease[0].influence, 75.0)).toBe(true);

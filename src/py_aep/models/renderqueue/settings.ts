@@ -344,9 +344,7 @@ export function _to_string_value(
   if (key === "Resolution") return dict_get(_RESOLUTION_STRINGS, tkey(...value), "Custom");
   if (key === "Resize to") return dict_get(resize_map, tkey(...value), "Custom");
   if (typeof value === "boolean") return str(value).toLowerCase();
-  // TODO(port): int/float distinction. A float getter value such as 30.0 (Time Span Duration,
-  // Use comp's frame rate, ...) is a plain JS number and renders "30"; Python's str gives "30.0".
-  // Needs the producing properties to return PyFloat (str(PyFloat) is already faithful).
+  // NOTE(port): int/float — integral values are plain numbers by design (RULEBOOK §4); a float getter value such as 30.0 (Time Span Duration, Use comp's frame rate) renders "30" here where Python gives "30.0" (returned string only, never saved).
   return str(value);
 }
 

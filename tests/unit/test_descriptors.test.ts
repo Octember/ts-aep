@@ -18,6 +18,7 @@ import {
   instance_dict,
 } from "../../src/pyrt/index.ts";
 import type { EnumValue } from "../../src/pyrt/index.ts";
+import { pyfloat } from "../../src/pyrt/num.ts";
 import { raises } from "../../src/pyrt/pytest.ts";
 import { CosField } from "../../src/py_aep/cos/descriptors.ts";
 import { ChunkField, _materialization_allowed, _suppress_materialization } from "../../src/py_aep/models/descriptors.ts";
@@ -515,9 +516,7 @@ describe("TestChunkFieldEnumAllowOutOfEnumValues", () => {
 describe("TestChunkFieldBool", () => {
   /** `ChunkField.bool` bakes in `validate_bool`. */
 
-  // TODO(port): int/float distinction (kept: JS numbers have no float type) - Python's `1.0` is a float and must be
-  // rejected as a non-bool; JS `1.0 === 1`, so this row duplicates the int row.
-  test.each([["no"], [2], [1], [0], [null], [[]], [1.0]])("test_rejects_non_bool[%#]", (bad) => {
+  test.each([["no"], [2], [1], [0], [null], [[]], [pyfloat(1)]])("test_rejects_non_bool[%#]", (bad) => {
     const body = new _FakeBody({ flag: false });
     new _FakeParent(body);
     const model = new _BoolModel(body);

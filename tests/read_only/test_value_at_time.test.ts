@@ -183,8 +183,8 @@ describe("TestValueAtTimeAPI", () => {
       if (typeof expected === "number") {
         expect(Math.abs(float(result) - float(expected)) < 0.001).toBe(true);
       } else if (Array.isArray(expected)) {
-        for (const [g, e] of zip(result, expected)) {
-          expect(Math.abs(g - e) < 0.001).toBe(true);
+        for (const [g, e] of zip(result as any, expected as any)) {
+          expect(Math.abs((g as number) - (e as number)) < 0.001).toBe(true);
         }
       }
     }

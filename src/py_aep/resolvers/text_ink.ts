@@ -100,9 +100,11 @@ export function _font_outlines(ps_name: string): [any, boolean, _GlyphBounds] {
 
 /** fontTools `BoundsPen` for one glyph: `null` when it draws nothing. */
 export function _pen_bounds(font: any, gid: number): [number, number, number, number] | null {
-  // TODO(port): fontTools BoundsPen is exact (curve extrema). fontkit's path
-  // bbox is also computed from the outline; parity is unverified on every
-  // CFF and TrueType outline.
+  // TODO(port): fontkit vs fontTools outline decoding. fontkit's Path.bbox is
+  // exact (curve extrema) like BoundsPen, but fontkit builds the path itself
+  // (TrueType implied on-curve points, CFF/CFF2 charstring interpretation), so
+  // a glyph whose outline fontkit decodes differently from fontTools gets
+  // different bounds; not checkable without a second decoder.
   const glyph = font.getGlyph(gid);
   if (glyph.path.commands.length === 0) return null;
   const b = glyph.path.bbox;

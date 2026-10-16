@@ -603,7 +603,7 @@ export class Preferences {
     }
     if (!is_override) return decode_pref_string(value);
     if (typeof value === "boolean") return str(int(value));
-    // TODO(port): Python str(float) keeps a trailing ".0" for float overrides; JS cannot tell 30.0 from 30.
+    // NOTE(port): int/float — integral values are plain numbers by design (RULEBOOK §4); a float override such as 30.0 returns "30" where Python returns "30.0".
     if (typeof value === "number") return str(value);
     return value as string;
   }

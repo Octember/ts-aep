@@ -22,6 +22,7 @@ import {
   dict_get,
   encode,
   field,
+  fields,
   floordiv,
   getattr,
   hasattr,
@@ -262,8 +263,11 @@ export class Chunk extends AttrsBase {
     return attrs_eq(this, other, py_eq);
   }
 
-  // TODO(port): attrs-generated `__repr__` (field list, repr=False skipped) is not reproduced; pyrt has no attrs repr shim, so repr(chunk)/f"{chunk!r}" differs.
-
+  __repr__(): string {
+    // attrs-generated `__repr__`: repr=True fields in declaration order.
+    const parts = fields(this.constructor).filter((f) => f.repr).map((f) => `${f.name}=${repr((this as any)[f.name])}`);
+    return `${this.constructor.name}(${parts.join(", ")})`;
+  }
 }
 
 define(Chunk, {

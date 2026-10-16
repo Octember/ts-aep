@@ -121,7 +121,7 @@ export function parse_hex_value(value: string): Uint8Array {
 export function parse_number_text(text: string): number {
   const stripped = strip(text);
   try {
-    // TODO(port): int/float distinction - both branches return a JS number, so 30.0 and 30 are indistinguishable.
+    // NOTE(port): int/float — integral values are plain numbers by design (RULEBOOK §4); "30.0" and "30" both yield 30 (read-only getter, never written to a file).
     return int(stripped) + 0; // + 0 normalizes pyrt's -0 for "-0"
   } catch (e) {
     if (!(e instanceof ValueError)) throw e;
@@ -147,7 +147,7 @@ export function decode_pref_string(raw: string): string {
 export function decode_pref_number(raw: string): number {
   if (raw.includes('"')) return parse_number_text(decode_pref_string(raw));
   const data = parse_hex_value(raw);
-  // TODO(port): int/float distinction. pyrt int_from_bytes returns a JS number, so values past 2^53 (more than 6 bytes) lose precision.
+  // TODO(port): pyrt int_from_bytes returns a JS number, so unquoted hex values wider than 2^53 (more than 6 significant bytes) lose precision; Python's int is arbitrary-precision.
   return bytes_.int_from_bytes(data, "big");
 }
 

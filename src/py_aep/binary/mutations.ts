@@ -311,7 +311,7 @@ export function build_kf_data(item_type: LdatItemType, num_value: number): any {
   if (item_type === LdatItemType.color) {
     return new KfColor();
   }
-  if ([LdatItemType.two_d_spatial, LdatItemType.three_d_spatial].includes(item_type)) {
+  if (([LdatItemType.two_d_spatial, LdatItemType.three_d_spatial] as number[]).includes(item_type)) {
     return new KfPosition({
       value: zeros_list(num_value),
       in_spatial_tangents: zeros_list(num_value),
@@ -370,7 +370,7 @@ export function build_parallel_ldat_item(
   let kf_data: any;
   let interp: number;
   let flags: number;
-  if ([LdatItemType.orientation, LdatItemType.no_value].includes(item_type)) {
+  if (([LdatItemType.orientation, LdatItemType.no_value] as number[]).includes(item_type)) {
     kf_data = new KfNoValue();
     interp = 1;
     flags = 1;

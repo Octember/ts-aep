@@ -241,11 +241,12 @@ export function _dump_chunk(path: Path, chunk_path: string): number {
 
 // ── CLI ─────────────────────────────────────────────────────────────────────
 
-// TODO(port): argparse is not in pyrt; this is the subset main() declares (a
-// positional, store_true flags, typed value options, error exit status 2).
-// Gaps: -h/--help and usage text layout/wrapping differ from argparse, and
-// value-conversion errors say "invalid value" instead of "invalid int value".
-// Affects only help/usage/error stderr text, not parsed values.
+// TODO(port): argparse has no pyrt shim; this hand-written subset covers only what main()
+// declares (one positional, store_true flags, typed value options, exit status 2 on error).
+// Gaps: -h/--help and usage text layout/line wrapping/column alignment differ from argparse's
+// HelpFormatter, "invalid <type> value" errors say plain "invalid value", and abbreviated long
+// options (--ver for --verbose) and combined short flags are not accepted. Parsed values and exit
+// codes are identical; only help/usage/error text on stdout/stderr differs.
 export const NEGATIVE_NUMBER = /^-\d+$|^-\d*\.\d+$/;
 
 export type ArgSpec = {

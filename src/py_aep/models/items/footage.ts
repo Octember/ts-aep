@@ -247,7 +247,7 @@ export class FootageItem extends AVItem {
     } else if (this._main_source instanceof PlaceholderSource) {
       return "placeholder";
     } else {
-      // TODO(port): Python prints `type(...)` as `<class '...'>`; the JS constructor name differs.
+      // TODO(port): Python formats `type(src)` as `<class 'py_aep.<module>.<Name>'>`; JS has no module path, so only the bare class name is printed. Affects only this unreachable-in-practice error message.
       throw new TypeError_(
         `Unexpected source type for ${this.name}: ${(this._main_source as any)?.constructor?.name}`,
       );

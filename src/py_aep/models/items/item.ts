@@ -46,6 +46,10 @@ export function list_remove<T>(xs: T[], x: T): void {
  *
  * See: https://ae-scripting.docsforadobe.dev/item/item/
  */
+// Annotation-only `name` (interface merge so FootageItem may override it with an accessor).
+export interface Item {
+  name: string;
+}
 export class Item {
   /**
    * The label color. Colors are represented by their number (0 for None,
@@ -61,7 +65,6 @@ export class Item {
    * The name of the item, as shown in the Project panel.
    * Read / Write.
    */
-  declare name: string;
 
   declare _idta: IdtaChunk | null;
   declare _name_utf8: Utf8Chunk | null;
@@ -176,7 +179,7 @@ export class Item {
     // A folder cannot become its own descendant. Walking up from the
     // target also covers value is self and value under the root.
     for (let ancestor: FolderItem | null = value; ancestor != null; ancestor = ancestor._parent_folder) {
-      if (ancestor === this) throw new ValueError("a folder cannot be moved inside itself");
+      if ((ancestor as unknown) === this) throw new ValueError("a folder cannot be moved inside itself");
     }
 
     const block = this._remove_from_parent_chunks();

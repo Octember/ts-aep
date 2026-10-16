@@ -122,7 +122,7 @@ export function parse_transform(value: string): Affine {
  * One transform function, its name and argument count already checked
  * by `parse_transform`.
  */
-// TODO(port): V8 Math.sin/cos/tan (fdlibm) may differ from CPython libm in the last ulp for some rotate/skewX/skewY angles; no pyrt shim yet.
+// NOTE(port): platform libm — CPython's own math.* results vary by platform libm; V8 (fdlibm) may differ in the last ulp.
 export function _single_transform(name: string, n: number[]): Affine {
   if (name === "matrix") {
     return new Affine(n[0], n[1], n[2], n[3], n[4], n[5]);

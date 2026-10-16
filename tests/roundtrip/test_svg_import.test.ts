@@ -16,11 +16,11 @@ const SAMPLES = new Path(import.meta.path).parent.parent.parent.div("samples");
 const BASE = SAMPLES.div("models", "folder", "folder.aep");
 const ASSETS = SAMPLES.div("assets");
 
-function _import(name: string): [any, CompItem] {
+function _import(name: string): [any, any] {
   const app = parse(BASE);
   const opts = new ImportOptions(ASSETS.div(`${name}.svg`));
   opts.import_as = ImportAsType.COMP_CROPPED_LAYERS;
-  const comp = app.project.import_file(opts);
+  const comp: any = app.project.import_file(opts);
   expect(comp instanceof CompItem).toBe(true);
   return [app, comp];
 }
@@ -148,7 +148,7 @@ describe("TestSvgImportGradients", () => {
     const app = new_();
     const opts = new ImportOptions(ASSETS.div("butterfly.svg"));
     opts.import_as = ImportAsType.COMP_CROPPED_LAYERS;
-    const comp = app.project.import_file(opts);
+    const comp: any = app.project.import_file(opts);
     expect(comp instanceof CompItem).toBe(true);
     const contents = comp.layers[0].property("ADBE Root Vectors Group");
     expect(contents instanceof PropertyGroup).toBe(true);
@@ -177,7 +177,7 @@ function _import_text(tmp_path: Path, body: string): PropertyGroup[] {
   svg.write_text(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">${body}</svg>`);
   const opts = new ImportOptions(svg);
   opts.import_as = ImportAsType.COMP_CROPPED_LAYERS;
-  const comp = new_().project.import_file(opts);
+  const comp: any = new_().project.import_file(opts);
   expect(comp instanceof CompItem).toBe(true);
   const contents = comp.layers[0].property("ADBE Root Vectors Group");
   expect(contents instanceof PropertyGroup).toBe(true);
@@ -194,7 +194,7 @@ describe("TestSvgImportAeConventions", () => {
     // AE centres a group on the box of its vertices AND tangent handles
     // (all 21 butterfly.svg groups), not on the vertices alone: this
     // bulge's handles at y=10 pull the centre up to (50, 30).
-    const group = unpack_one(
+    const group: any = unpack_one(
       _import_text(tmp_path, '<path d="M10,50 C10,10 90,10 90,50 Z" fill="#f00"/>'),
     );
     const pos = group.__getitem__("ADBE Vector Transform Group").__getitem__("ADBE Vector Position").value;
@@ -210,7 +210,7 @@ describe("TestSvgImportAeConventions", () => {
     const tmp_path = make_tmp_path();
     // A line has no interior, so the default black fill paints nothing;
     // AE adds only the Stroke.
-    const group = unpack_one(
+    const group: any = unpack_one(
       _import_text(tmp_path, '<line x1="20" y1="30" x2="150" y2="170" stroke="#000"/>'),
     );
     const kinds = group.__getitem__("ADBE Vectors Group").properties.map((c: any) => c.match_name);
@@ -222,7 +222,7 @@ describe("TestSvgImportAeConventions", () => {
     // AE writes one alpha stop where consecutive stops share both offset
     // and opacity (two colour stops at offset 0 -> one alpha stop), while
     // every colour stop stays.
-    const group = unpack_one(
+    const group: any = unpack_one(
       _import_text(
         tmp_path,
         '<linearGradient id="L" x1="20" y1="20" x2="180" y2="20"' +
@@ -252,7 +252,7 @@ describe("TestSvgImportAeConventions", () => {
     // AE 2026 ignores fill-opacity / stroke-opacity (100 % both); py_aep
     // applies each to its own paint, 8-bit quantized like `opacity`, and
     // combined with an element `opacity`.
-    const group = unpack_one(
+    const group: any = unpack_one(
       _import_text(
         tmp_path,
         '<rect x="20" y="20" width="100" height="60" fill="#f00" ' +
@@ -272,7 +272,7 @@ describe("TestSvgImportAeConventions", () => {
     // py honours stop-opacity (AE 2026 drops it and renders the gradient
     // opaque), so two stops at one offset with different opacities stay
     // apart: merging them would erase the hard alpha edge.
-    const group = unpack_one(
+    const group: any = unpack_one(
       _import_text(
         tmp_path,
         '<linearGradient id="L" x1="20" y1="20" x2="180" y2="20"' +
@@ -326,7 +326,7 @@ describe("TestSvgImportByteFidelity", () => {
     const app = new_();
     const opts = new ImportOptions(svg);
     opts.import_as = ImportAsType.COMP_CROPPED_LAYERS;
-    const comp = app.project.import_file(opts);
+    const comp: any = app.project.import_file(opts);
     expect(comp instanceof CompItem).toBe(true);
     const contents = comp.layers[0].property("ADBE Root Vectors Group");
     expect(contents instanceof PropertyGroup).toBe(true);
@@ -375,7 +375,7 @@ describe("TestSvgImportByteFidelity", () => {
     const app = parse(BASE);
     const comp = app.project.root_folder.add_comp("T", 100, 100, 1.0, 1.0, 30.0);
     const layer = comp.add_shape();
-    const contents = layer.__getitem__("ADBE Root Vectors Group");
+    const contents: any = layer.__getitem__("ADBE Root Vectors Group");
     const group = contents.add_property("ADBE Vector Group");
     const materials = group.__getitem__("ADBE Vector Materials Group");
     const tdsb: any = materials._tdgp.chunks.find((c: any) => getattr(c, "chunk_type", null) === "tdsb");
@@ -450,7 +450,7 @@ describe("TestSvgImportByteFidelity", () => {
     const app = parse(BASE);
     const comp = app.project.root_folder.add_comp("T", 100, 100, 1.0, 1.0, 30.0);
     const layer = comp.add_shape();
-    const contents = layer.__getitem__("ADBE Root Vectors Group");
+    const contents: any = layer.__getitem__("ADBE Root Vectors Group");
     const stroke = contents.add_property("ADBE Vector Graphic - Stroke");
     const cap = stroke.__getitem__("ADBE Vector Stroke Line Cap");
     cap.value = 2.0; // round - non-default, forces materialization

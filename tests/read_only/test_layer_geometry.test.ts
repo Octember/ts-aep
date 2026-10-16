@@ -54,9 +54,9 @@ const CAMERA_POINTS = [[0.0, 0.0], [100.0, 50.0], [200.0, 100.0]];
  * Returns true when the test must be skipped; callers `return` on true.
  */
 function _skip_unless_fonts_match(layer: any): boolean {
-  // TODO(port): uharfbuzz → harfbuzzjs (package.json pins 0.4.7). This check
-  // only proves the package resolves; its shaping is not proven identical to
-  // uharfbuzz, which the fixture was measured with.
+  // TODO(port): harfbuzzjs (0.4.7) vs uharfbuzz shaping cannot be closed here. This
+  // check only proves the package resolves; text-layer sourceRectAtTime cases
+  // (TEXT_INK fixture) may differ from uharfbuzz-measured advances.
   if (!importorskip("harfbuzzjs")) return true;
   const document = layer.text.__getitem__("ADBE Text Document").value;
   for (const font of document._fonts) {
@@ -373,7 +373,7 @@ describe("TestShapeSourceRect", () => {
   }
 
   const SHAPE_NAMES = sorted(Object.keys(_SHAPE_TRUTH).filter((n) => !_UNMODELED_SHAPES.has(n)));
-  const SHAPE_CASES = SHAPE_NAMES.flatMap((name) => [false, true].map((extents) => [name, extents]));
+  const SHAPE_CASES = SHAPE_NAMES.flatMap((name) => [false, true].map((extents): [string, boolean] => [name, extents]));
 
   test.each(SHAPE_CASES)("test_matches_ae[%#]", (name, extents) => {
     const comp = comp_fixture();
@@ -452,7 +452,7 @@ describe("TestTextSourceRect", () => {
     return _comp;
   }
 
-  const TEXT_CASES = sorted(Object.keys(_TEXT_TRUTH)).flatMap((name) => [false, true].map((extents) => [name, extents]));
+  const TEXT_CASES = sorted(Object.keys(_TEXT_TRUTH)).flatMap((name) => [false, true].map((extents): [string, boolean] => [name, extents]));
 
   test.each(TEXT_CASES)("test_matches_ae[%#]", (name, extents) => {
     const layer = _layer(comp_fixture(), name);

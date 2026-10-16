@@ -20,7 +20,7 @@ import { parse_project_fresh } from "../helpers.ts";
 const SAMPLES_DIR = new Path(import.meta.path).parent.parent.parent.div("samples", "models", "property");
 
 function _position(comp: CompItem): Property {
-  return comp.layers[0].transform.__getitem__("ADBE Position");
+  return comp.layers[0].transform.__getitem__("ADBE Position") as Property;
 }
 
 function _state(comp: CompItem): Map<string, any> {

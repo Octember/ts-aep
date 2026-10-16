@@ -44,9 +44,9 @@ describe("TestAddVariableFontAxis", () => {
     const out = tmp_path.div("axis.aep");
     app.project.save(out);
     const app2 = parse_aep(String(out));
-    const props2: any = get_comp(app2.project, "vf")
+    const props2: any = (get_comp(app2.project, "vf")
       .layers[0]
-      .__getitem__("ADBE Text Properties")
+      .__getitem__("ADBE Text Properties") as any)
       .__getitem__("ADBE Text Animators")
       .properties[0]
       .__getitem__("ADBE Text Animator Properties");
@@ -69,9 +69,9 @@ describe("TestAddVariableFontAxis", () => {
     const out = tmp_path.div("axis_anim.aep");
     app.project.save(out);
     const app2 = parse_aep(String(out));
-    const props2: any = get_comp(app2.project, "vf")
+    const props2: any = (get_comp(app2.project, "vf")
       .layers[0]
-      .__getitem__("ADBE Text Properties")
+      .__getitem__("ADBE Text Properties") as any)
       .__getitem__("ADBE Text Animators")
       .properties[0]
       .__getitem__("ADBE Text Animator Properties");
@@ -96,9 +96,9 @@ describe("TestAddVariableFontAxis", () => {
     const out = tmp_path.div("deanimated.aep");
     app.project.save(out);
     const app2 = parse_aep(String(out));
-    const props2: any = get_comp(app2.project, "vf")
+    const props2: any = (get_comp(app2.project, "vf")
       .layers[0]
-      .__getitem__("ADBE Text Properties")
+      .__getitem__("ADBE Text Properties") as any)
       .__getitem__("ADBE Text Animators")
       .properties[0]
       .__getitem__("ADBE Text Animator Properties");
@@ -145,9 +145,9 @@ describe("TestAddVariableFontAxis", () => {
     const out = tmp_path.div("tag_kept.aep");
     app.project.save(out);
     const app2 = parse_aep(String(out));
-    const props2: any = get_comp(app2.project, "vf")
+    const props2: any = (get_comp(app2.project, "vf")
       .layers[0]
-      .__getitem__("ADBE Text Properties")
+      .__getitem__("ADBE Text Properties") as any)
       .__getitem__("ADBE Text Animators")
       .properties[0]
       .__getitem__("ADBE Text Animator Properties");

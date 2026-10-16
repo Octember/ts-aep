@@ -28,7 +28,7 @@ export const _LAYER_CLASSES: Map<number, typeof Layer> = new Map<number, typeof 
   [LayerType.SHAPE, ShapeLayer],
   [LayerType.THREE_D_MODEL, ThreeDModelLayer],
   [LayerType.PARAMETRIC_MESH, ParametricMeshLayer],
-]);
+] as Array<[number, any]>);
 
 /**
  * Extract Essential Properties override UUIDs from LIST:OvG2 chunks.

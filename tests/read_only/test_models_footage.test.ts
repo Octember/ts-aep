@@ -525,9 +525,9 @@ describe("TestImageSequenceSource", () => {
       "mainSource"
     ];
     // Exact string match against AE's fsName, separators included.
-    expect(footage.main_source.file).toBe(exp_source["filePath"]);
+    expect((footage.main_source as any).file).toBe(exp_source["filePath"]);
     // This sample is Windows-authored: no stray forward slash on any host.
-    expect(footage.main_source.file.includes("/")).toBe(false);
+    expect((footage.main_source as any).file.includes("/")).toBe(false);
   });
 });
 
@@ -547,20 +547,20 @@ describe("TestAlphabeticalSequence", () => {
     expect(footage_json["name"]).toBe("assets");
     expect(footage.duration).toBe(footage_json["duration"]);
     expect(footage.frame_rate).toBe(footage_json["frameRate"]);
-    expect(footage.main_source.file).toBe(footage_json["mainSource"]["filePath"]);
+    expect((footage.main_source as any).file).toBe(footage_json["mainSource"]["filePath"]);
   });
 
   test("test_lists_its_files", () => {
     const source = get_footage(parse_project(SAMPLE), "assets").main_source;
     expect(
-      py_eq(source.file_names, [
+      py_eq((source as any).file_names, [
         "new_exr.0002.exr",
         "new_exr.0003.exr",
         "old_exr.00004.exr",
       ]),
     ).toBe(true);
     // The StVc list's little-endian file count.
-    const stvc = find_by_list_type(source._pin.chunks, "StVc");
-    expect(stvc.chunks[0].value).toBe(3);
+    const stvc = find_by_list_type((source as any)._pin.chunks, "StVc");
+    expect((stvc.chunks[0] as any).value).toBe(3);
   });
 });

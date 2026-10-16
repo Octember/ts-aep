@@ -85,7 +85,7 @@ describe("TestParseLayerStyles", () => {
     const leaf = getitem(_leaves(SINGLE), "Layer 1");
     const styles = parse_layer_styles(leaf, read_global_light(SINGLE));
     expect(styles != null).toBe(true);
-    const gradient = getitem(styles.values, "outerGlow/gradient");
+    const gradient = getitem(styles.values, "outerGlow/gradient") as Gradient;
     expect(gradient instanceof Gradient).toBe(true);
     expect(len(gradient.color_stops)).toBe(5);
     expect(len(gradient.alpha_stops)).toBe(2);

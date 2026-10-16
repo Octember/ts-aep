@@ -579,12 +579,9 @@ export class Keyframe {
 
     const as_vector = (keyframe: Keyframe): number[] | null => {
       const value = keyframe.value;
-      if (typeof value === "number") return [float(value)];
-      if (
-        Array.isArray(value) &&
-        value.every((component) => typeof component === "number")
-      ) {
-        // TODO(port): Python `isinstance(x, (int, float))` also admits bool; JS booleans are not numbers here.
+      const is_num = (x: unknown): boolean => typeof x === "number" || typeof x === "boolean";
+      if (is_num(value)) return [float(value as number)];
+      if (Array.isArray(value) && value.every(is_num)) {
         return value.map((component) => float(component));
       }
       return null;
@@ -618,10 +615,10 @@ export class Keyframe {
     if (this._property != null) {
       this._property._reject_curves_write();
     }
-    // TODO(port): int/float distinction - Python `isinstance(value, int)` also admits bool.
     if (
       !(
         typeof value === "number" ||
+        typeof value === "boolean" ||
         Array.isArray(value) ||
         value instanceof Gradient ||
         value instanceof MarkerValue ||

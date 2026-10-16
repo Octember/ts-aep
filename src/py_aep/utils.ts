@@ -13,9 +13,11 @@ import { warn } from "../pyrt/index.ts";
 export function deprecated(message: string) {
   return function decorator<R>(func: (...args: any[]) => R): (...args: any[]) => R {
     function wrapper(this: any, ...args: any[]): R {
-      // TODO(port): warnings.warn category DeprecationWarning and stacklevel=2 are dropped; pyrt
-      // warn() takes only the message (needs a category/stacklevel-aware shim).
-      // TODO(port): __qualname__ has no JS equivalent; func.name is used, so methods warn as "m" not "Cls.m".
+      // TODO(port): pyrt warn(message) records only the message string, so the DeprecationWarning
+      // category and stacklevel=2 (caller attribution) are not represented; affects only warning-filter
+      // and location semantics, not the message text.
+      // TODO(port): JS functions have no __qualname__; func.name is used, so a decorated method warns as
+      // "m is deprecated..." where Python says "Cls.m is deprecated...". No call sites exist in src yet.
       warn(`${func.name} is deprecated. ${message}`);
       return func.apply(this, args);
     }

@@ -132,9 +132,9 @@ export function _get_field_names(obj: any): readonly string[] | null {
   if (attrs_has(cls)) {
     for (const f of fields(cls)) names.add(f.name);
   }
-  // TODO(port): Python also collects `__annotations__` from the full MRO here.
-  // TS has no runtime annotations, so annotated-only plain-class fields that are
-  // neither attrs fields nor descriptors are not enumerated.
+  // TODO(port): Python also collects `__annotations__` from the full MRO here. TS erases
+  // type annotations at runtime, so a field that is only annotated (neither an attrs field
+  // nor a chunk_attr/dict_attr descriptor) on a plain class is not enumerated.
   // Collect annotations and chunk-backed descriptors from the full MRO.
   // This covers plain-class models and also dataclass subclasses that
   // add chunk descriptors in non-dataclass bases (e.g. Layer extends
@@ -1820,8 +1820,9 @@ export const _CATEGORY_CHOICES: readonly string[] = [
 export const _USAGE =
   "usage: validate.py [-h] [-v] [-c {project,composition,layers,properties,markers,folders,footage,keyframes,textdocument,renderqueue,viewer}] [--coverage] aep_file json_file";
 
-// TODO(port): argparse's help layout is approximated, and argparse's unique option
-// prefixes (`--verb`) and combined short flags (`-vc layers`) are not accepted.
+// TODO(port): no argparse in TS. _HELP is a hand-written copy of argparse's help layout
+// (differs from argparse only if the terminal COLUMNS wraps it), and combined short flags
+// (`-vc layers`) are rejected as unrecognized; long-option prefixes (`--verb`) are handled.
 export const _HELP = `${_USAGE}
 
 Validate parsed AEP values against expected JSON from ExtendScript export.

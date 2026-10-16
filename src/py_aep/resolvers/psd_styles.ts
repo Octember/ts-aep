@@ -325,7 +325,7 @@ export const _STROKE_POSITION = new Map<string, number>([
 ]);
 
 /** Python `repr()` of a parsed descriptor value (dicts print as `{'k': v}`). */
-// TODO(port): dicts/lists handled here, but pyrt repr() prints float 5.0 as "5" (JS number has no int/float split); only error-message text for whole-valued doubles in unsupported-style errors differs
+// NOTE(port): int/float — integral values are plain numbers by design (RULEBOOK §4); a whole-valued double prints as "5" not "5.0" in unsupported-style error messages.
 export function _repr(value: any): string {
   if (value instanceof Map) {
     return `{${[...value].map(([k, v]) => `${repr(k)}: ${_repr(v)}`).join(", ")}}`;

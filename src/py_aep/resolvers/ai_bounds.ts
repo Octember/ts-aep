@@ -387,10 +387,14 @@ export class _Document {
         );
       }
       try {
-        // TODO(port): zlib.decompress -> inflateSync; the error text differs from CPython's zlib.error message.
         body = new Uint8Array(inflateSync(body));
       } catch (exc) {
-        throw Object.assign(this._reject(`corrupt content stream (${exc})`), { cause: exc });
+        const z = exc as { errno?: number; message?: string };
+        const text =
+          z.errno === -5
+            ? "Error -5 while decompressing data: incomplete or truncated stream"
+            : `Error ${z.errno ?? -3} while decompressing data: ${z.message}`;
+        throw Object.assign(this._reject(`corrupt content stream (${text})`), { cause: exc });
       }
     }
     return body;

@@ -2207,7 +2207,6 @@ describe("TestSyntheticFlag", () => {
   });
 
   test("test_synthetic_not_in_repr", () => {
-    // TODO(port): chunk.ts does not reproduce the attrs-generated __repr__, so this is vacuous until it does.
     const c = new Chunk({ chunk_type: "test", synthetic: true });
     expect(repr(c).includes("synthetic")).toBe(false);
   });

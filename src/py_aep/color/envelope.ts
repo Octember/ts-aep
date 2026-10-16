@@ -190,13 +190,57 @@ export class ColorProfile {
 export function parse_envelope(envelope_json: string): ColorProfile {
   const outer: Map<string, any> = json_loads(envelope_json);
   const base: Map<string, any> = getitem(outer, "baseColorProfile");
-  // TODO(port): b64decode(validate=False) drops non-alphabet characters and
-  // raises on bad padding; Buffer.from(..., "base64") is lenient about padding.
   return new ColorProfile(
     getitem(base, "colorProfileName"),
     getitem(outer, "baseProfileType"),
-    new Uint8Array(Buffer.from(getitem(base, "colorProfileData"), "base64")),
+    b64decode(getitem(base, "colorProfileData")),
   );
+}
+
+const B64_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+
+/** `base64.b64decode(s)` (validate=False): skips non-alphabet characters, raises on bad padding. */
+function b64decode(s: string): Uint8Array {
+  if (/[^\x00-\x7f]/.test(s)) {
+    throw new Error("string argument should contain only ASCII characters");
+  }
+  const out: number[] = [];
+  let quad_pos = 0;
+  let leftchar = 0;
+  let pads = 0;
+  for (const ch of s) {
+    if (ch === "=") {
+      pads += 1;
+      if (quad_pos >= 2 && quad_pos + pads >= 4) {
+        return Uint8Array.from(out);
+      }
+      continue;
+    }
+    const val = B64_ALPHABET.indexOf(ch);
+    if (val === -1) continue;
+    pads = 0;
+    quad_pos += 1;
+    if (quad_pos === 1) {
+      leftchar = val;
+    } else if (quad_pos === 2) {
+      out.push((leftchar << 2) | (val >> 4));
+      leftchar = val & 0x0f;
+    } else if (quad_pos === 3) {
+      out.push((leftchar << 4) | (val >> 2));
+      leftchar = val & 0x03;
+    } else {
+      out.push((leftchar << 6) | val);
+      quad_pos = 0;
+    }
+  }
+  if (quad_pos !== 0) {
+    throw new Error(
+      quad_pos === 1
+        ? "Invalid base64-encoded string: number of data characters cannot be 1 more than a multiple of 4"
+        : "Incorrect padding",
+    );
+  }
+  return Uint8Array.from(out);
 }
 
 /**

@@ -8,6 +8,7 @@ import { label_index } from "../preferences.ts";
 import { AVLayer } from "./av_layer.ts";
 import type { CompItem } from "../items/composition.ts";
 import type { Layer } from "./layer.ts";
+import type { PropertyGroup } from "../properties/property_group.ts";
 
 /**
  * The `TextLayer` object represents a text layer within a composition.
@@ -32,6 +33,12 @@ export class TextLayer extends AVLayer {
   static _auto_name: string = "Text";
 
   // NOTE(port): Python has the same `# type: ignore[override]`; the keyword shape differs from AVLayer._new's in both.
+  static _new(
+    match_name: string,
+    auto_name: string,
+    property_depth: number,
+    kw?: any,
+  ): PropertyGroup;
   static _new(kw: {
     name: string;
     layer_id: number;
@@ -41,7 +48,9 @@ export class TextLayer extends AVLayer {
     btgu: ListChunk;
     tdmn: TdmnChunk;
     effect_param_defs?: Map<string, Map<string, Map<string, any>>> | null;
-  }): TextLayer {
+  }): TextLayer;
+  static _new(kw: any): AVLayer;
+  static _new(kw: any): any {
     const {
       name,
       layer_id,

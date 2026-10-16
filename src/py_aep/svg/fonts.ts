@@ -132,8 +132,11 @@ export const NAME_KEYS = new Map<number, string>([
 
 /**
  * First non-empty name among the given name IDs, or `null`.
- * TODO(port): fontTools `getDebugName` falls back across name records and
- * languages; fontkit `getName(key)` reads the English record only.
+ * TODO(port): fontTools `getDebugName` falls back across platform/language
+ * name records (Windows-English, then Mac, then any); fontkit `getName(key)`
+ * reads the English record only. Affects fonts whose requested ID exists only
+ * under a non-English or non-primary platform record: Python finds it, TS
+ * returns null.
  */
 export function _name(font: any, ...ids: number[]): string | null {
   // `table = font.get("name"); if table is None: return None`
@@ -250,8 +253,9 @@ export function _index_postscript(
  */
 export function* _walk_font_files(): Generator<Path> {
   for (const directory of _font_dirs()) {
-    // TODO(port): pyrt rglob sorts entries by name; CPython's rglob follows
-    // filesystem (scandir) order. The order decides which duplicate font wins.
+    // TODO(port): pyrt rglob yields entries sorted by name; CPython's rglob
+    // follows filesystem (scandir) order, which is not reproducible here. Only
+    // affects which file wins when two font files share the same index key.
     for (const path of directory.rglob("*")) {
       if (_FONT_SUFFIXES.includes(path.suffix.toLowerCase())) {
         yield path;

@@ -92,7 +92,7 @@ describe("TestCompareLayer", () => {
       load_expected(SAMPLES_DIR.div("models", "layer"), "enabled_false"),
     );
     // Find matching comp and layers
-    for (const item of getitem(expected, "items")) {
+    for (const item of getitem(expected, "items") as any[]) {
       if (contains(item, "layers") && len(getitem(item, "layers")) > 0) {
         const exp_layer = getitem(item, "layers")[0];
         // Get parsed comp layers
@@ -139,7 +139,7 @@ describe("TestComparePropertyMediaReplacement", () => {
 
   test("test_matching_object_sources_no_diff", () => {
     const expected = new Map<string, any>([
-      ["alternateSource", new Map([["id", 30], ["name", "wrapper"]])],
+      ["alternateSource", new Map<string, any>([["id", 30], ["name", "wrapper"]])],
       [
         "essentialPropertySource",
         new Map<string, any>([
@@ -151,7 +151,7 @@ describe("TestComparePropertyMediaReplacement", () => {
     ]);
     // Parsed index is 0-based; the AVItem/AVLayer serialize id/name/index.
     const parsed = new Map<string, any>([
-      ["alternate_source", new Map([["id", 30], ["name", "wrapper"]])],
+      ["alternate_source", new Map<string, any>([["id", 30], ["name", "wrapper"]])],
       ["essential_property_source", new Map<string, any>([["name", "src_layer"], ["index", 0]])],
     ]);
     const result = new ValidationResult();
@@ -161,7 +161,7 @@ describe("TestComparePropertyMediaReplacement", () => {
 
   test("test_id_and_index_mismatches_flagged", () => {
     const expected = new Map<string, any>([
-      ["alternateSource", new Map([["id", 30], ["name", "wrapper"]])],
+      ["alternateSource", new Map<string, any>([["id", 30], ["name", "wrapper"]])],
       [
         "essentialPropertySource",
         new Map<string, any>([
@@ -173,7 +173,7 @@ describe("TestComparePropertyMediaReplacement", () => {
     ]);
     const parsed = new Map<string, any>([
       // id mismatch
-      ["alternate_source", new Map([["id", 99], ["name", "wrapper"]])],
+      ["alternate_source", new Map<string, any>([["id", 99], ["name", "wrapper"]])],
       // 5+1 != 1
       ["essential_property_source", new Map<string, any>([["name", "src_layer"], ["index", 5]])],
     ]);

@@ -131,7 +131,7 @@ export class Mat4 {
     for (let r = 0; r < 3; r++) {
       for (let c = 0; c < 3; c++) abs_vals.push(Math.abs(s[r * 4 + c]));
     }
-    // TODO(port): `scale ** 3` uses V8 pow; CPython uses libm pow. Measured ~23% of random doubles differ in the last ulp; only matters when |det| sits within an ulp of the singular threshold.
+    // NOTE(port): platform libm — CPython's own math.* results vary by platform libm; V8 (fdlibm) may differ in the last ulp.
     const scale = max(abs_vals);
     if (det === 0.0 || Math.abs(det) <= _EPSILON * 1e-2 * scale ** 3) {
       throw new ValueError("Singular matrix, cannot invert.");
@@ -195,7 +195,7 @@ export function _scale(sx: number, sy: number, sz: number): Mat4 {
 
 export function _rotate_x(deg: number): Mat4 {
   const r = deg * _DEG2RAD;
-  // TODO(port): V8 Math.cos/Math.sin may differ from CPython's libm in the last ulp.
+  // NOTE(port): platform libm — CPython's own math.* results vary by platform libm; V8 (fdlibm) may differ in the last ulp.
   const c = Math.cos(r);
   const s = Math.sin(r);
   const m = Mat4.identity();
@@ -824,7 +824,7 @@ export function _euler_xyz(
 ): [number, number, number] {
   // Clamp to [-1, 1] for asin safety.
   const sin_beta = max([-1.0, min([1.0, r02])]);
-  // TODO(port): V8 Math.asin/Math.atan2 may differ from CPython's libm in the last ulp.
+  // NOTE(port): platform libm — CPython's own math.* results vary by platform libm; V8 (fdlibm) may differ in the last ulp.
   const beta = Math.asin(sin_beta);
   // cos(beta) straight off the matrix. Going through `cos(asin(r02))`
   // loses most of its digits as r02 approaches 1, which matters because

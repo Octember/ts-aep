@@ -138,7 +138,7 @@ test("test_reader_outlines_text", () => {
   const d = doc.drawables[0];
   expect(d.subpaths.length).toBe(2);
   expect(d.fill != null).toBe(true);
-  expect(py_eq(Array.from(d.fill.color.slice(0, 3)), [1.0, 0.0, 0.0])).toBe(true);
+  expect(py_eq(Array.from((d.fill as any).color.slice(0, 3)), [1.0, 0.0, 0.0])).toBe(true);
 });
 
 test("test_reader_tspan_per_run_fill", () => {
@@ -151,8 +151,8 @@ test("test_reader_tspan_per_run_fill", () => {
     '<tspan fill="#ff0000">B</tspan></text></svg>';
   const doc = read_svg(svg);
   expect(doc.drawables.length).toBe(2);
-  expect(py_eq(Array.from(doc.drawables[0].fill.color.slice(0, 3)), [0.0, 0.0, 0.0])).toBe(true);
-  expect(py_eq(Array.from(doc.drawables[1].fill.color.slice(0, 3)), [1.0, 0.0, 0.0])).toBe(true);
+  expect(py_eq(Array.from((doc.drawables[0].fill as any).color.slice(0, 3)), [0.0, 0.0, 0.0])).toBe(true);
+  expect(py_eq(Array.from((doc.drawables[1].fill as any).color.slice(0, 3)), [1.0, 0.0, 0.0])).toBe(true);
 });
 
 test("test_reader_tspan_inherits_font_size", () => {
@@ -203,7 +203,7 @@ test("test_reader_text_stroke", () => {
   const d = doc.drawables[0];
   expect(d.fill == null).toBe(true);
   expect(d.stroke != null).toBe(true);
-  expect(py_eq(Array.from(d.stroke.paint.color.slice(0, 3)), [0.0, 1.0, 0.0])).toBe(true);
+  expect(py_eq(Array.from((d.stroke.paint as any).color.slice(0, 3)), [0.0, 1.0, 0.0])).toBe(true);
   expect(d.stroke.width).toBe(4.0);
 });
 
@@ -241,7 +241,7 @@ test("test_reader_textpath", () => {
   expect(doc.drawables.length).toBe(1);
   const d = doc.drawables[0];
   expect(d.subpaths.length).toBe(2);
-  expect(py_eq(Array.from(d.fill.color.slice(0, 3)), [1.0, 0.0, 0.0])).toBe(true);
+  expect(py_eq(Array.from((d.fill as any).color.slice(0, 3)), [1.0, 0.0, 0.0])).toBe(true);
 });
 
 test("test_reader_textpath_applies_path_transform", () => {

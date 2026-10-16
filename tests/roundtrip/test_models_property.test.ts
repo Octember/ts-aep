@@ -55,7 +55,7 @@ const parse_project_fresh = (...args: Parameters<typeof parse_project_fresh_>): 
 /** Find a property in the layer's transform by match_name. */
 function _find_property(layer: Layer, match_name: string): Property | null {
   for (const prop of layer.transform) {
-    if (prop.match_name === match_name) return prop;
+    if (prop.match_name === match_name) return prop as Property;
   }
   return null;
 }
@@ -921,7 +921,7 @@ describe("TestKeyedEffectPointArcMetric", () => {
   ]);
 
   /** Static method `_effects` in the Python class. */
-  function _effects(project: Project): PropertyGroup {
+  function _effects(project: Project): any {
     const comp = project.compositions.find((c) => c.name === "MASK_LAYER_SPACE");
     const layer = comp.layers.find((lyr) => lyr.name === "solid_3000x200");
     return layer.__getitem__("ADBE Effect Parade");
@@ -2084,7 +2084,7 @@ describe("TestAddEffect", () => {
         bytes_.fromhex(skeleton["part"]),
         { tdsn_name: "-_0_/-", time_base: 24576, layer_id: 1 },
       );
-      const pgui = sspc.chunks.find((c) => c.chunk_type === "pgui");
+      const pgui: any = sspc.chunks.find((c) => c.chunk_type === "pgui");
       guids.push(pgui.guid);
     }
     expect(py_eq(guids[0], b("\x00".repeat(16)))).toBe(true);
@@ -2105,7 +2105,7 @@ describe("TestBakedBuiltinEffects", () => {
     expect(py_eq(app.project._effect_param_defs, new Map())).toBe(true);
     const comp = app.project.root_folder.add_comp("c", 1920, 1080, 1.0, 10.0, 24.0);
     const layer = comp.add_null();
-    const parade = layer.__getitem__("ADBE Effect Parade");
+    const parade: any = layer.__getitem__("ADBE Effect Parade");
 
     expect(parade.can_add_property("ADBE Geometry2")).toBe(true);
     expect(parade.can_add_property("Transform")).toBe(true); // display name
@@ -2569,7 +2569,7 @@ describe("TestAddTextSelector", () => {
   const AEP = SAMPLES_DIR.div("text_animator.aep");
 
   /** Method `_selectors` in the Python class. */
-  function _selectors(app: any): PropertyGroup {
+  function _selectors(app: any): any {
     const comp = app.project.compositions[0];
     const layer = comp.layers.find((lyr) => lyr.name === "Animate Me");
     const animator = layer
@@ -2724,7 +2724,7 @@ describe("TestAddTextAnimator", () => {
      * pool, matching AE; it is not yet modified.
      */
     const anims = _animators(parse_aep(AEP));
-    const a1 = anims.add_property("ADBE Text Animator");
+    const a1: any = anims.add_property("ADBE Text Animator");
     expect(a1 instanceof PropertyGroup).toBe(true);
     expect(a1.name).toBe("Animator 1");
     expect(a1.can_set_enabled).toBe(true);
@@ -2742,7 +2742,7 @@ describe("TestAddTextAnimator", () => {
 
   test("test_animator_numbering", () => {
     const anims = _animators(parse_aep(AEP));
-    const a1 = anims.add_property("ADBE Text Animator");
+    const a1: any = anims.add_property("ADBE Text Animator");
     const a2 = anims.add_property("ADBE Text Animator");
     expect(a1.name).toBe("Animator 1");
     expect(a2.name).toBe("Animator 2");
@@ -2750,7 +2750,7 @@ describe("TestAddTextAnimator", () => {
 
   test("test_animator_modified_after_adding_selector", () => {
     const anims = _animators(parse_aep(AEP));
-    const a1 = anims.add_property("ADBE Text Animator");
+    const a1: any = anims.add_property("ADBE Text Animator");
     expect(a1.is_modified).toBe(false);
     a1.__getitem__("ADBE Text Selectors").add_property("ADBE Text Selector");
     expect(a1.is_modified).toBe(true);
@@ -2760,13 +2760,13 @@ describe("TestAddTextAnimator", () => {
     const tmp_path = make_tmp_path();
     const app = parse_aep(AEP);
     const anims = _animators(app);
-    const a1 = anims.add_property("ADBE Text Animator");
+    const a1: any = anims.add_property("ADBE Text Animator");
     a1.__getitem__("ADBE Text Selectors").add_property("ADBE Text Wiggly Selector");
     anims.add_property("ADBE Text Animator");
     const out = tmp_path.div("out.aep");
     app.project.save(out);
     const anims2 = _animators(parse_aep(out));
-    const summary = anims2.properties.map((a) => [
+    const summary = anims2.properties.map((a: any) => [
       a.name,
       a.__getitem__("ADBE Text Selectors").properties.length,
       a.__getitem__("ADBE Text Animator Properties").properties.length,
@@ -2900,7 +2900,7 @@ describe("TestAddShapeElement", () => {
   ]);
 
   /** Method `_new_contents` in the Python class. */
-  function _new_contents(): [any, PropertyGroup] {
+  function _new_contents(): [any, any] {
     const app = parse_aep(BASE_AEP);
     const layer = app.project.compositions[0].add_shape();
     const contents = layer.__getitem__("ADBE Root Vectors Group");
@@ -3130,7 +3130,7 @@ describe("TestAddShapeElement", () => {
     app.project.save(out);
     const reparsed = parse_aep(out).project;
     const rifx = reparsed._rifx;
-    const shph = find_by_type(recursive_find(rifx.chunks, null, "shap")[0].chunks, "shph");
+    const shph: any = find_by_type((recursive_find(rifx.chunks, null, "shap")[0] as any).chunks, "shph");
     expect(shph.normalized).toBe(true);
     expect(shph.open).toBe(false);
 
@@ -3222,7 +3222,7 @@ describe("TestRoundtripProxyBody", () => {
 
   /** Find a synthesized effect property by match name. */
   function _find_synthesized_effect_prop(layer: Layer, effect_index: number, match_name: string): Property {
-    const effect = layer.effects.properties[effect_index];
+    const effect: any = layer.effects.properties[effect_index];
     expect(effect instanceof PropertyGroup).toBe(true);
     for (const prop of effect.properties) {
       if (prop instanceof Property && prop.match_name === match_name) {
@@ -4179,7 +4179,7 @@ describe("TestKeyPathlessMask", () => {
   );
 
   /** Static method `_mask_path` in the Python class. */
-  function _mask_path(project: any): Property {
+  function _mask_path(project: any): any {
     const comp = get_comp(project, "Comp 1");
     const layer = comp.layers.find((layer) => layer.name === "Gray Solid 1");
     return layer.masks.properties[0].property("ADBE Mask Shape");
@@ -4299,7 +4299,7 @@ describe("TestRotoBezierWrites", () => {
   const AEP = SAMPLES_DIR.div("mask_rotobezier_tensions.aep");
 
   /** Static method `_keyed` in the Python class. */
-  function _keyed(project: any): Property {
+  function _keyed(project: any): any {
     const comp = get_comp(project, "ROTO");
     return comp.layers
       .flatMap((layer) => layer.masks.properties.map((m) => [layer, m] as const))

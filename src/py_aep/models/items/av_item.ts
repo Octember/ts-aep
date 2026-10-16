@@ -194,6 +194,9 @@ export interface AVItem {
   duration: number;
   frame_duration: number;
   frame_rate: number;
+  height: number;
+  pixel_aspect: number;
+  width: number;
 }
 export class AVItem extends Item {
   // Python: annotation-only attributes, with `"""…"""` attribute docstrings.
@@ -207,14 +210,8 @@ export class AVItem extends Item {
   /** The frame rate of the item in frames-per-second. Read-only for a `FootageItem`, otherwise Read / Write. */
 
   /** The height of the item in pixels. Read / Write. */
-  declare height: number;
-
   /** The pixel aspect ratio of the item (1.0 is square). Read / Write. */
-  declare pixel_aspect: number;
-
   /** The width of the item in pixels. Read / Write. */
-  declare width: number;
-
   declare _pin_chunks: ListChunk[];
   declare _proxy_source: FileSource | SolidSource | PlaceholderSource | null;
   declare _used_in: _IdHashSet<CompItem>;

@@ -254,7 +254,7 @@ export class TextDocument {
     if (this._char_style == null) return AutoKernType.NO_AUTO_KERN;
     const raw = this._char_style.get("11");
     if (raw == null) return AutoKernType.NO_AUTO_KERN;
-    return AutoKernType.from_binary(raw as any);
+    return AutoKernType.from_binary(raw as any) as AutoKernType;
   }
 
   set auto_kern_type(value: AutoKernType) {
@@ -416,13 +416,13 @@ export class TextDocument {
     const btdk = new ListChunk({ list_type: "btdk", data: serialize(cos) });
     const doc: Dict = at(getitem(getitem(cos, "1"), "1"), 0);
     const doc_0: any = getitem(doc, "0");
-    const doc_0_6_0: any = getitem(getitem(doc_0, "6"), "0");
+    const doc_0_6_0: any = getitem(getitem(doc_0, "6") as any, "0");
     const run_0: any = at(doc_0_6_0, 0);
-    const char_style: Dict = getitem(getitem(getitem(run_0, "0"), "0"), "6");
-    const doc_0_5_0: any = getitem(getitem(doc_0, "5"), "0");
+    const char_style: Dict = getitem(getitem(getitem(run_0, "0") as any, "0") as any, "6");
+    const doc_0_5_0: any = getitem(getitem(doc_0, "5") as any, "0");
     const para_run_0: any = at(doc_0_5_0, 0);
-    const para_style: Dict = getitem(getitem(getitem(para_run_0, "0"), "0"), "5");
-    const fonts = (getitem(getitem(getitem(cos, "0"), "1"), "0") as any[]).map(
+    const para_style: Dict = getitem(getitem(getitem(para_run_0, "0") as any, "0") as any, "5");
+    const fonts = (getitem(getitem(getitem(cos, "0") as any, "1") as any, "0") as any[]).map(
       (entry: Dict) =>
         new FontObject({
           _font_data: getitem(getitem(entry, "0"), "0"),
@@ -868,7 +868,7 @@ export class TextDocument {
   /** The Text layer's line orientation. Read / Write. */
   get line_orientation(): LineOrientation {
     const val = cos_get(this._cos_data, "0", "8", "0", 0, "0", "2", "1");
-    if (typeof val === "number" && Number.isInteger(val)) return LineOrientation.from_binary(val as any);
+    if (typeof val === "number" && Number.isInteger(val)) return LineOrientation.from_binary(val as any) as LineOrientation;
     return LineOrientation.HORIZONTAL;
   }
 
@@ -1002,7 +1002,7 @@ export class TextDocument {
   /** The box's vertical text alignment. Read / Write. */
   get box_vertical_alignment(): BoxVerticalAlignment {
     const raw = cos_get(this._box_frame(), "2", "13");
-    if (typeof raw === "number" && Number.isInteger(raw)) return BoxVerticalAlignment.from_binary(raw as any);
+    if (typeof raw === "number" && Number.isInteger(raw)) return BoxVerticalAlignment.from_binary(raw as any) as BoxVerticalAlignment;
     return BoxVerticalAlignment.TOP;
   }
 
@@ -1013,7 +1013,7 @@ export class TextDocument {
   /** The box's auto-fit policy. Read / Write. */
   get box_auto_fit_policy(): BoxAutoFitPolicy {
     const raw = cos_get(this._box_frame(), "2", "14");
-    if (typeof raw === "number" && Number.isInteger(raw)) return BoxAutoFitPolicy.from_binary(raw as any);
+    if (typeof raw === "number" && Number.isInteger(raw)) return BoxAutoFitPolicy.from_binary(raw as any) as BoxAutoFitPolicy;
     return BoxAutoFitPolicy.NONE;
   }
 
@@ -1025,7 +1025,7 @@ export class TextDocument {
   get box_first_baseline_alignment(): BoxFirstBaselineAlignment {
     const sub = cos_get(this._box_frame(), "2", "10");
     if (sub instanceof Map && typeof sub.get("0") === "number" && Number.isInteger(sub.get("0"))) {
-      return BoxFirstBaselineAlignment.from_binary(sub.get("0") as any);
+      return BoxFirstBaselineAlignment.from_binary(sub.get("0") as any) as BoxFirstBaselineAlignment;
     }
     return BoxFirstBaselineAlignment.ASCENT;
   }

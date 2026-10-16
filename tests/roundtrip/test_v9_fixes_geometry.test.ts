@@ -81,18 +81,16 @@ function _close(a: any, b: any, tol: number): boolean {
   return zip(a as number[], b as number[]).every(([x, y]) => Math.abs(x - y) <= tol);
 }
 
-function _rect(layer: any, time: number): number[] {
+/** Rect, or null after reporting a skip (callers `return` to abort the test body like pytest.skip). */
+function _rect(layer: any, time: number): number[] | null {
   try {
     const r = layer.source_rect_at_time(time, false);
     // source_rect_at_time returns a fixed-key record (plain object), not a Map.
     return [r.left, r.top, r.width, r.height];
   } catch (exc) {
     if (!(exc instanceof NotImplementedError)) throw exc;
-    // TODO(port): pytest.skip() raises and aborts the calling test; the shim
-    // only logs, so NaN rects make the caller's assertion fail instead of
-    // skipping. Use a real skip once the shim can abort a test body.
     skip(`text ink unavailable here: ${exc.message}`);
-    return [NaN, NaN, NaN, NaN];
+    return null;
   }
 }
 
@@ -624,7 +622,9 @@ describe("TestSourceRect", () => {
     const [_, layer] = _layer(project, "PA_TIME", layer_name);
     const truth = GEOMETRY_TRUTH[`PA_TIME/${layer_name}`];
     for (const [index, time] of TIMES.entries()) {
-      expect(_close(_rect(layer, time), truth[`t${index}`].rect, 1e-3)).toBe(true);
+      const rect = _rect(layer, time);
+      if (rect === null) return;
+      expect(_close(rect, truth[`t${index}`].rect, 1e-3)).toBe(true);
     }
   });
 
@@ -633,13 +633,17 @@ describe("TestSourceRect", () => {
     const [_, layer] = _layer(project, "PF_TEXT", name);
     // 0.006 px: AE's first box baseline sits that much lower than the
     // composer's for Arial (unmodelled residual).
-    expect(_close(_rect(layer, 0.0), TEXT_TRUTH.text[name].rect, 1e-2)).toBe(true);
+    const rect = _rect(layer, 0.0);
+    if (rect === null) return;
+    expect(_close(rect, TEXT_TRUTH.text[name].rect, 1e-2)).toBe(true);
   });
 
   test.each(sorted(Object.keys(MORE_TRUTH.text)))("test_point_text_indents[%#]", (name: string) => {
     const project = parse_project_fresh(MORE);
     const [_, layer] = _layer(project, "PH_TEXT", name);
-    expect(_close(_rect(layer, 0.0), MORE_TRUTH.text[name].rect, 1e-2)).toBe(true);
+    const rect = _rect(layer, 0.0);
+    if (rect === null) return;
+    expect(_close(rect, MORE_TRUTH.text[name].rect, 1e-2)).toBe(true);
   });
 
   test("test_three_d_model_layer", () => {

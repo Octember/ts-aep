@@ -612,7 +612,7 @@ describe("TestOutputModuleSettings", () => {
     const project = parse_project(SAMPLES_DIR.div("output_to_comp_folder_and_name.aep"));
     const info = project.render_queue.items[0].output_modules[0].settings.__getitem__("Output File Info");
 
-    expect(getitem(info, "Base Path").includes("[compName]")).toBe(true);
+    expect((getitem(info, "Base Path") as string).includes("[compName]")).toBe(true);
     expect(getitem(info, "File Template")).toBe("[compName].[fileExtension]");
     expect(getitem(info, "File Name")).toBe("[compName].[fileExtension]");
     expect(getitem(info, "Subfolder Path")).toBe("");
@@ -623,7 +623,7 @@ describe("TestOutputModuleSettings", () => {
     const project = parse_project(SAMPLES_DIR.div("output_to_custom_all_fields.aep"));
     const info = project.render_queue.items[0].output_modules[0].settings.__getitem__("Output File Info");
 
-    const template = getitem(info, "File Template");
+    const template = getitem(info, "File Template") as string;
     expect(template.includes("[projectFolder]")).toBe(true);
     expect(template.includes("[projectName]")).toBe(true);
     expect(template.includes("[compName]")).toBe(true);
@@ -631,7 +631,7 @@ describe("TestOutputModuleSettings", () => {
     expect(template.includes("[height]")).toBe(true);
     expect(template.includes("[fileExtension]")).toBe(true);
     expect(getitem(info, "Base Path")).not.toBe("");
-    expect(getitem(info, "Full Flat Path").endsWith(".[fileExtension]")).toBe(true);
+    expect((getitem(info, "Full Flat Path") as string).endsWith(".[fileExtension]")).toBe(true);
   });
 
   test("test_output_file_info_project_and_comp", () => {

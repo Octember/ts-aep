@@ -48,24 +48,28 @@ export class FontDesignAxis {
 export function read_design_axes(font_file: _PathLike, font_number: number = 0): FontDesignAxis[] {
   // NOTE(port): fontTools lazy=True defers table reads; fontkit reads eagerly. Results are identical, only I/O cost differs.
   const opened: any = fontkit.openSync(str(font_file));
-  // TODO(port): fontTools raises on an out-of-range fontNumber; here an
-  // out-of-range index yields undefined and fails later on property access.
   const font: any = opened.fonts != null ? opened.fonts[font_number] : opened;
+  if (font == null) {
+    throw new Error(
+      `specify a font number between 0 and ${opened.fonts.length - 1} (inclusive)`,
+    );
+  }
   try {
     if (!("fvar" in font.directory.tables)) {
       throw new ValueError(`${str(font_file)} is not a variable font (it has no fvar table).`);
     }
     const name_table = "name" in font.directory.tables ? font.name : null;
     const axes: FontDesignAxis[] = [];
-    // TODO(port): fontkit's variationAxes is an object keyed by tag, so axis
-    // order follows JS key order (integer-like tags would reorder). fvar tags are
-    // 4-character registered names, so this does not occur in practice.
+    // TODO(port): fontkit exposes variationAxes as an object keyed by tag, so
+    // order follows JS key order; only a font whose fvar tag is an integer-like
+    // string (e.g. "1234") would be reordered vs fvar table order.
     for (const [axis_tag, info] of Object.entries<any>(font.variationAxes)) {
       let axis_name: string | null = null;
       if (name_table != null) {
         // TODO(port): fontTools getDebugName(axis.axisNameID) falls back across
         // name records and languages; fontkit's variationAxes name reads the
-        // English record only.
+        // English record only. Differs for fonts lacking an English name record
+        // for the axis (Python picks another language, fontkit gives no name).
         axis_name = info.name;
       }
       axes.push(

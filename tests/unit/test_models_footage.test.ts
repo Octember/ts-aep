@@ -193,7 +193,7 @@ describe("TestAlphaModeWrites", () => {
     const item = project.import_file(
       new ImportOptions(SAMPLES.parent.div("assets", "image_with_alpha.png")),
     );
-    return (item as FootageItem).main_source;
+    return (item as FootageItem).main_source as FileSource;
   }
 
   test.each([
@@ -308,7 +308,7 @@ describe("TestMediaColorProfileRecord", () => {
   function _import(name: string): FileSource {
     const project = parse_aep(SAMPLES.div("project", "emptier.aep")).project;
     const item = project.import_file(new ImportOptions(SAMPLES.parent.div("assets", name)));
-    return (item as FootageItem).main_source;
+    return (item as FootageItem).main_source as FileSource;
   }
 
   test.each([

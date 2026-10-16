@@ -102,7 +102,7 @@ function _get_mask_shape(layer: any): Property {
   const mask = layer.masks.properties[0] as MaskPropertyGroup;
   for (const prop of mask.properties) {
     if (prop.match_name === "ADBE Mask Shape") {
-      return prop;
+      return prop as Property;
     }
   }
   throw new AssertionError_("ADBE Mask Shape not found");
@@ -1434,7 +1434,7 @@ describe("TestUnitsText", () => {
       const comp_opts = effect.property("ADBE Effect Built In Params");
       py_assert(comp_opts != null, `Effect ${repr(effect.name)} missing Compositing Options`);
       expect(comp_opts.name).toBe("Compositing Options");
-      const child_mns = comp_opts.properties.map((c) => c.match_name);
+      const child_mns = (comp_opts as PropertyGroup).properties.map((c) => c.match_name);
       expect(child_mns.includes("ADBE Effect Mask Parade")).toBe(true);
       expect(child_mns.includes("ADBE Effect Mask Opacity")).toBe(true);
       expect(child_mns.includes("ADBE Force CPU GPU")).toBe(true);
@@ -1449,7 +1449,7 @@ describe("TestUnitsText", () => {
     let blurriness: Property | null = null;
     for (const child of effect.properties) {
       if (child.match_name === "ADBE Gaussian Blur 2-0001") {
-        blurriness = child;
+        blurriness = child as Property;
         break;
       }
     }
@@ -2170,9 +2170,9 @@ describe("TestCanSetExpression", () => {
   /** AE shows a stroke's Miter Limit only while it joins by miter. */
   test("test_stroke_miter_limit_needs_a_miter_join", () => {
     const layer = parse_project(SAMPLES_DIR.div("gradient.aep")).compositions[0].layers[0];
-    const stroke = layer
-      .property("ADBE Root Vectors Group")
-      .property("ADBE Vector Graphic - G-Stroke");
+    const stroke = (layer
+      .property("ADBE Root Vectors Group") as PropertyGroup)
+      .property("ADBE Vector Graphic - G-Stroke") as PropertyGroup;
     expect(stroke.property("ADBE Vector Stroke Line Join").value).toBe(2); // round
     const miter = stroke.property("ADBE Vector Stroke Miter Limit");
     expect(miter.can_set_expression).toBe(false);
@@ -2272,11 +2272,11 @@ describe("TestCanAddProperty", () => {
     if (contents == null) {
       return skip("No Root Vectors Group found");
     }
-    expect(contents.can_add_property("ADBE Vector Shape - Rect")).toBe(true);
-    expect(contents.can_add_property("ADBE Vector Shape - Ellipse")).toBe(true);
-    expect(contents.can_add_property("ADBE Vector Graphic - Fill")).toBe(true);
-    expect(contents.can_add_property("ADBE Vector Group")).toBe(true);
-    expect(contents.can_add_property("ADBE Vector Filter - Trim")).toBe(true);
+    expect((contents as any).can_add_property("ADBE Vector Shape - Rect")).toBe(true);
+    expect((contents as any).can_add_property("ADBE Vector Shape - Ellipse")).toBe(true);
+    expect((contents as any).can_add_property("ADBE Vector Graphic - Fill")).toBe(true);
+    expect((contents as any).can_add_property("ADBE Vector Group")).toBe(true);
+    expect((contents as any).can_add_property("ADBE Vector Filter - Trim")).toBe(true);
   });
 
   test("test_shape_group_rejects_invalid_names", () => {
@@ -2293,8 +2293,8 @@ describe("TestCanAddProperty", () => {
     if (contents == null) {
       return skip("No Root Vectors Group found");
     }
-    expect(contents.can_add_property("ADBE Position")).toBe(false);
-    expect(contents.can_add_property("ADBE Mask Atom")).toBe(false);
+    expect((contents as any).can_add_property("ADBE Position")).toBe(false);
+    expect((contents as any).can_add_property("ADBE Mask Atom")).toBe(false);
   });
 });
 
@@ -2315,7 +2315,7 @@ class TestEffectPointSpeed {
     const comp = get_comp(project, "EffectPoint");
     const prop = (comp.layers[0].effects.__getitem__(0) as PropertyGroup).property(TestEffectPointSpeed.MATCH_NAME);
     expect(prop instanceof Property).toBe(true);
-    return prop;
+    return prop as Property;
   }
 
   static _expected_keyframes(): any[] {

@@ -1301,7 +1301,7 @@ export function* _atoms(data: Uint8Array, start: number, end: number): Generator
   }
 }
 
-// TODO(port): 8-byte fields come back as `number`; values above 2^53 lose precision (none occur in media headers).
+// TODO(port): n == 8 fields return a JS `number` (no bigint), so values above 2^53 lose precision where Python's int is exact; affects only 64-bit header fields >= 2^53 (e.g. corrupt/huge MP4 sizes).
 export function _u(data: Uint8Array, off: number, n: number): number {
   return bytes_.int_from_bytes(bytes_.slice(data, off, off + n), "big");
 }
@@ -1776,9 +1776,10 @@ export function _naive_datetime_us(y: number, mo: number, d: number, h: number, 
  * `None` if the value cannot be parsed. Here a naive datetime is returned as
  * its microseconds since the epoch, which keeps differences exact.
  *
- * TODO(port): the `datetime.fromisoformat` fallback accepts only the common
- * ISO-8601 shapes (date, optional `T`/space time to the second, optional
- * 3- or 6-digit fraction); CPython 3.12 accepts a few more.
+ * TODO(port): the `datetime.fromisoformat` fallback accepts only YYYY-MM-DD with an optional
+ * `T`/space HH[:MM[:SS[.f{1,6}]]]; CPython 3.12 also accepts basic format (YYYYMMDD,
+ * HHMMSS), ISO week dates (YYYY-Www-D) and 3/6-digit-only fractions with comma separators,
+ * so such mgjson sample times yield None here but a value in Python.
  */
 export function _parse_mgjson_time(t: string): number | null {
   if (typeof t !== "string") throw new AttributeError(`'${type_name(t)}' object has no attribute 'strip'`);
@@ -2074,7 +2075,7 @@ export function _probe_aac(fp: IO): MediaInfo {
 // SWF - file header (AE rasterizes the movie to video)
 // ---------------------------------------------------------------------------
 
-// TODO(port): lzma.decompress(format=FORMAT_ALONE) has no node:zlib equivalent and pyrt has no LZMA decoder.
+// TODO(port): no LZMA decoder (node:zlib has none, pyrt has none); ZWS-compressed SWF files raise NotImplementedError here where Python's lzma.decompress(format=FORMAT_ALONE) returns the header.
 export function _lzma_alone_decompress(data: Uint8Array): Uint8Array {
   throw new NotImplementedError(`LZMA (FORMAT_ALONE) decoding is not ported yet (${data.length} bytes)`);
 }

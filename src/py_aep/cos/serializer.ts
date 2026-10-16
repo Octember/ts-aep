@@ -7,7 +7,7 @@
  * bytes suitable for writing back into a btdk chunk's `binary_data`.
  */
 
-import { BytesIO, b, bytes_, concat, encode, format, getattr, PyFloat, TypeError_, unbox } from "../../pyrt/index.ts";
+import { BytesIO, b, bytes_, concat, encode, format, getattr, PyFloat, TypeError_, type_name, unbox } from "../../pyrt/index.ts";
 import { CosName, IndirectObject, IndirectReference, Stream } from "./cos.ts";
 
 /**
@@ -87,9 +87,7 @@ export function _write_value(buf: BytesIO, value: any, kw: { top_level?: boolean
     _space(buf);
     _write_stream(buf, value);
   } else {
-    // TODO(port): type(value).__name__ — JS constructor names do not match Python type names
-    // (e.g. "float", "tuple", "set"), so the message text differs for unsupported values.
-    throw new TypeError_(`Cannot serialize COS value of type ${value?.constructor?.name ?? typeof value}`);
+    throw new TypeError_(`Cannot serialize COS value of type ${type_name(value)}`);
   }
 }
 

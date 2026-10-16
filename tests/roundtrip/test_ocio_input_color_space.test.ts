@@ -89,7 +89,7 @@ test.each(IMPORT_ROWS)("test_import_records_the_ocio_input_space[%#]", (tag, nam
   const project = new_().project;
   project.color_management_system = ColorManagementSystem.OCIO;
   project.ocio_configuration_file = config;
-  const ours = project.import_file(new ImportOptions(getitem(FILES, name)));
+  const ours = project.import_file(new ImportOptions(getitem(FILES, name))) as any;
   expect(py_eq(_clrs(ours.main_source), _clrs(ae.main_source))).toBe(true);
 });
 
@@ -115,7 +115,7 @@ test.each([
     const project = new_().project;
     project.color_management_system = ColorManagementSystem.OCIO;
     project.ocio_configuration_file = str(SERGB);
-    const ours = project.import_file(new ImportOptions(first));
+    const ours = project.import_file(new ImportOptions(first)) as any;
     if (assigned != null) {
       ours.main_source.media_color_space = assigned;
     }

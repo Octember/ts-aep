@@ -764,12 +764,10 @@ export class PropertyGroup extends PropertyBase {
     // Position untouched and makes `transform.position` the list). Layers
     // opt out (`Layer.__setattr__`) to keep their own public instance
     // attributes.
-    // TODO(port): `hasattr(type(self), name)` is approximated by the
-    // class prototype chain, which covers methods and accessors but not
-    // class-level statics.
     if (
       !name.startsWith("_") &&
       !(name in this.constructor.prototype) &&
+      !hasClassStatic(this.constructor, name) &&
       !Object.prototype.hasOwnProperty.call(this, name) &&
       !instance_dict(this).has(name)
     ) {
@@ -1397,3 +1395,12 @@ export class PropertyGroup extends PropertyBase {
 PropertyGroup.prototype.add_variable_font_axis = requires_version(26)(
   PropertyGroup.prototype.add_variable_font_axis,
 ) as any;
+
+/** Class-level attributes (TS statics) of `ctor` and its bases, excluding Function built-ins. */
+function hasClassStatic(ctor: any, name: string): boolean {
+  if (name === "name" || name === "length" || name === "prototype") return false;
+  for (let c = ctor; c && c !== Function.prototype; c = Object.getPrototypeOf(c)) {
+    if (Object.prototype.hasOwnProperty.call(c, name)) return true;
+  }
+  return false;
+}

@@ -426,7 +426,7 @@ export class XmlFormatOptions extends FormatOptionsBase {
   /** Set an Adobe parameter from an enum or int value. */
   _set_enum_param(key: string, value: any, enum_cls: any = null): void {
     if (value == null) return;
-    // TODO(port): JS cannot tell 2.0 from 2; an integral float is accepted where Python raises TypeError.
+    // NOTE(port): int/float — integral values are plain numbers by design (RULEBOOK §4); an integral float such as 2.0 is accepted where Python raises TypeError.
     if (!((typeof value === "number" && Number.isInteger(value)) || typeof value === "boolean")) {
       throw new TypeError_(`expected an int or IntEnum for ${repr(key)}, got ${type_name(value)}`);
     }

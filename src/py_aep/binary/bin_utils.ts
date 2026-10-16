@@ -123,12 +123,12 @@ export function read_fmt(fmt: string, fp: IO, endian = ">"): any[] {
  *
  * Returns bytes written.
  */
-// TODO(port): Python signature is `write_fmt(fp, fmt, *args, endian=">")`; a
-// TS rest parameter cannot be followed by a trailing options object, so the
-// keyword-only `endian` is fixed to big-endian here. No caller in py_aep
-// passes `endian` to write_fmt (only read_fmt and the field descriptors do).
+// Python's keyword-only `endian` follows `*args`; in TS it is a trailing plain
+// `{ endian }` options object (struct values are never plain objects).
 export function write_fmt(fp: IO, fmt: string, ...args: any[]): number {
-  const data = _get_struct(">" + fmt).pack(...args);
+  const last = args[args.length - 1];
+  const opts = last !== null && typeof last === "object" && Object.getPrototypeOf(last) === Object.prototype ? args.pop() : {};
+  const data = _get_struct((opts.endian ?? ">") + fmt).pack(...args);
   fp.write(data);
   return data.length;
 }

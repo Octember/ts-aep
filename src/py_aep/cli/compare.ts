@@ -853,9 +853,11 @@ export function _report_suppressed(suppressed: number, exact: boolean): void {
   }
 }
 
-// TODO(pyrt): argparse. The helpers below cover only this CLI's option set,
-// including argparse's prefix matching, `--opt=value`, `--`, the exit-2 error
-// path and "unrecognized arguments". The help layout is hand-written, not generated.
+// TODO(port): argparse has no TS equivalent. parse_args below hand-implements only this CLI's
+// option set (prefix matching, `--opt=value`, `--`, exit-2 errors, "unrecognized arguments");
+// HELP/USAGE are hand-written literals, so help wrapping differs from argparse only if the
+// option set or terminal width (COLUMNS) changes, and argparse edge cases (e.g. `-c4` short
+// clustering, `type=int` error text for odd inputs) outside those paths are not generated.
 export const PROG = "aep-compare";
 export const OPTIONS = ["--help", "--json", "--filter", "--context", "--exact"];
 

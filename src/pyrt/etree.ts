@@ -5,9 +5,13 @@
 // iterfind: child, `*`, `.`, `..`, `//`, `[@a]`, `[@a='v']`, `[@a!='v']`, `[tag]`,
 // `[tag='v']`, `[.='v']`, `[n]`, `[last()]`, `[last()-n]`, `{ns}tag`, `{*}tag`, `{ns}*`).
 //
-// TODO(port): internal DTD entities whose replacement text contains markup (`<` in the literal,
-// e.g. <!ENTITY e "<a/>">) raise ParseError here; expat parses the replacement as content.
-// External and parameter entities are ignored. Only affects DOCTYPE-bearing input.
+// TODO(port): internal general entities whose literal replacement text contains markup (`<`,
+// e.g. <!ENTITY e "<a/>"> then `&e;` in element content) raise ParseError("not well-formed")
+// in _Parser.expand_entity_value; expat re-parses the replacement as content and yields the
+// nested elements. Fixing it needs a re-entrant content parser over the replacement text
+// (reference() currently returns a flat string). Only affects input with an internal DTD
+// subset declaring such an entity; entities with plain text or nested `&x;` refs are exact.
+// External and parameter entities are ignored (expat without a resolver also skips them).
 
 import { decode } from "./codecs.ts";
 import { IndexError, KeyError, SyntaxError_, ValueError } from "./errors.ts";

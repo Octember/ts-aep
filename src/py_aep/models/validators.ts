@@ -43,9 +43,7 @@ export type NumBound = number | ((instance: any) => number | null) | null;
  *     exclusive_min: When `True`, the value must be strictly greater than
  *         `min` (e.g. a positive-but-non-zero size).
  */
-// TODO(port): int/float distinction - Python renders float bounds/values with a
-// trailing ".0" in messages (`must be >= 0.0, got -1`); JS prints whole numbers
-// without it because the two cannot be told apart.
+// NOTE(port): int/float — integral values are plain numbers by design (RULEBOOK §4); error messages print whole-number bounds without Python's trailing ".0".
 export function _validate_number(
   kw: { min?: NumBound; max?: NumBound; integer?: boolean; exclusive_min?: boolean } = {},
 ): Validator {
@@ -63,7 +61,7 @@ export function _validate_number(
       // place in this codebase that had to hand-roll the same guard.
       // Not `type(value) is not int`: that would also reject IntEnum
       // members and numpy integers.
-      // TODO(port): int/float distinction - Python rejects a float such as 2.0 here; JS cannot tell it from 2.
+      // NOTE(port): int/float — integral values are plain numbers by design (RULEBOOK §4); a float such as 2.0 is accepted here where Python rejects it.
       throw new TypeError_(`expected ${type_label}, got ${type_name(value)}`);
     }
     if (typeof value === "number" && !Number.isFinite(value)) {

@@ -136,7 +136,7 @@ describe("TestPrefsFileParsing", () => {
 describe("TestValueDecoding", () => {
   test("test_number_forms", () => {
     expect(decode_pref_number('"999"')).toBe(999);
-    // TODO(port): int/float distinction - a float 999.0 also passes Number.isInteger.
+    // NOTE(port): int/float — integral values are plain numbers by design (RULEBOOK §4); this isinstance(int) check cannot distinguish 999 from 999.0.
     expect(typeof decode_pref_number('"999"') === "number" && Number.isInteger(decode_pref_number('"999"'))).toBe(true);
     expect(approx(decode_pref_number('"30.000000"'), 30.0)).toBe(true);
     expect(decode_pref_number("01")).toBe(1);

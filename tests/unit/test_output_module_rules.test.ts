@@ -9,7 +9,7 @@
 
 import { expect, test } from "bun:test";
 import { _CONDITIONAL_RULES, _FORMAT_RULES, _KIND_RULES, allowed_values } from "../../src/py_aep/data/output_module_rules.ts";
-import { AudioChannels, AudioCodec, FormatKind, OutputAudio, OutputChannels, OutputColorMode, OutputFormat } from "../../src/py_aep/enums/index.ts";
+import { AudioChannels, AudioCodec, FormatKind, OutputAudio, OutputChannels, OutputColorDepth, OutputColorMode, OutputFormat } from "../../src/py_aep/enums/index.ts";
 import { _DEPTH_MINUS, _DEPTH_PLUS, OM_SETTINGS } from "../../src/py_aep/models/renderqueue/output_module.ts";
 import {
   dict_get,
@@ -99,12 +99,13 @@ test("test_no_empty_allowed_sets", () => {
 
 /** Check the channels<->depth pairing closure for one rule branch. */
 function _depth_closure_ok(channels: ReadonlySet<any>, depths: ReadonlySet<any>): [boolean, string] {
-  // TODO(port): failure-message text prints pyrt repr of depth numbers; Python prints the OutputColorDepth IntEnum repr.
+  const depth_repr = (ds: Iterable<any>) =>
+    `[${[...sorted(ds)].map((d: any) => `<OutputColorDepth.${OutputColorDepth.name_of(d)}: ${d}>`).join(", ")}]`;
   if (channels.has(OutputChannels.RGBA)) {
     for (const depth of depths) {
       const base = int(depth);
       if (_DEPTH_PLUS.has(base) && !depths.has(getitem(_DEPTH_PLUS, base))) {
-        return [false, `${base} has no +alpha pair in ${repr(sorted(depths))}`];
+        return [false, `${base} has no +alpha pair in ${depth_repr(depths)}`];
       }
     }
   }
@@ -112,7 +113,7 @@ function _depth_closure_ok(channels: ReadonlySet<any>, depths: ReadonlySet<any>)
     for (const depth of depths) {
       const plus = int(depth);
       if (_DEPTH_MINUS.has(plus) && !depths.has(getitem(_DEPTH_MINUS, plus))) {
-        return [false, `${plus} has no base pair in ${repr(sorted(depths))}`];
+        return [false, `${plus} has no base pair in ${depth_repr(depths)}`];
       }
     }
   }
@@ -130,10 +131,10 @@ test.each(OutputFormat.members().map((fmt) => [OutputFormat.name_of(fmt), fmt] a
      * depth reachable through the RGBA pairing maps (`_DEPTH_PLUS/_MINUS`)
      * from an allowed depth under allowed channels must itself be allowed.
      */
-    const fmt_rules = dict_get(_FORMAT_RULES, fmt, new Map());
+    const fmt_rules: Map<string, any> = dict_get(_FORMAT_RULES, fmt, new Map<string, any>()) as any;
     const branches: [Map<string, any>, Map<string, any> | null][] = [[fmt_rules, null]];
     for (const [conditions, constraints] of dict_get(_CONDITIONAL_RULES, fmt, [])) {
-      const merged = new Map([...fmt_rules, ...constraints]);
+      const merged = new Map<string, any>([...fmt_rules, ...(constraints as Map<string, any>)]);
       branches.push([merged, conditions]);
     }
     for (const [branch, conditions] of branches) {
@@ -150,7 +151,7 @@ test.each(OutputFormat.members().map((fmt) => [OutputFormat.name_of(fmt), fmt] a
         channels = new Set([...channels].filter((c) => new Set(cond_channels).has(c)));
       }
       const [ok, why] = _depth_closure_ok(channels, depths);
-      py_assert(ok, `${OutputFormat.name_of(fmt)}: ${why}`);
+      py_assert(ok, `${OutputFormat.name_of(fmt as any)}: ${why}`);
     }
   },
 );

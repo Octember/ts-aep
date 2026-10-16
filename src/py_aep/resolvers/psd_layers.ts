@@ -1040,7 +1040,7 @@ export function join_all(parts: Uint8Array[]): Uint8Array {
  * at most `max_length` bytes. Z_SYNC_FLUSH keeps a truncated stream from
  * throwing, as Python's partial decompress does.
  */
-// TODO(port): Python's decompressobj stops inflating at max_length; node:zlib inflateSync has no partial-output cap (maxOutputLength throws instead), so a stream that expands far beyond max_length is fully inflated before being truncated. Output bytes are identical; only memory/time on hostile streams differs (the pre-check at line ~749 bounds only the declared rectangle, not the stream).
+// TODO(port): Python's decompressobj stops inflating at max_length; node:zlib inflateSync has no partial-output cap (maxOutputLength throws instead), so a stream that expands far beyond max_length is fully inflated before being truncated. Output bytes are identical; only memory/time on hostile streams differs (the caller bounds only the declared rectangle, not the stream).
 export function inflate_bounded(body: Uint8Array, max_length: number): Uint8Array {
   const inflated = zlib.inflateSync(body, { finishFlush: zlib.constants.Z_SYNC_FLUSH });
   return bytes_.slice(inflated, 0, max_length);

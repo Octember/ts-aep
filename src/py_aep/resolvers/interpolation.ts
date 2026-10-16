@@ -78,7 +78,7 @@ export function _calc_bezier(t: number, a1: number, a2: number): number {
  * Returns `None` when no root lands in [0, 1]. AE's result is undefined
  * there; that is a bug, not behaviour to copy.
  */
-// TODO(port): Math.pow / Math.cos / Math.acos may differ from CPython's libm in the last bit; byte-exact parity of the cubic roots is unverified.
+// NOTE(port): platform libm — CPython's own math.* results vary by platform libm; V8 (fdlibm) may differ in the last ulp.
 export function _solve_cubic(a: number, b: number, c: number, d: number): number | null {
   let root: number;
   if (Math.abs(a) >= _EPS) {
@@ -1548,7 +1548,7 @@ export function slerp_orientation(start: number[], end: number[], progress: numb
     const blend = q0.map((a, i) => a + (q1[i] - a) * progress) as [number, number, number, number];
     return quaternion_to_euler(blend);
   }
-  // TODO(port): Math.acos / Math.sin may differ from CPython's libm in the last bit.
+  // NOTE(port): platform libm — CPython's own math.* results vary by platform libm; V8 (fdlibm) may differ in the last ulp.
   const theta = Math.acos(dot);
   const sin_theta = Math.sin(theta);
   const s0 = Math.sin((1.0 - progress) * theta) / sin_theta;
@@ -1962,7 +1962,7 @@ export function interpolate_keyframes(
   // side facing an EASED in side still gets that ease (measured on AE
   // 2026: Opacity 0->100 over 2 s with a LINEAR out and a 90 % influence in
   // side reaches 87.5 at t=1, where a lerp gives 50).
-  if ([KeyframeInterpolationType.BEZIER, KeyframeInterpolationType.LINEAR].includes(out_type)) {
+  if ((out_type === KeyframeInterpolationType.BEZIER || out_type === KeyframeInterpolationType.LINEAR)) {
     // Non-spatial: per-dimension 1D bezier
     if (is_color && Array.isArray(v0) && Array.isArray(v1)) {
       return _interpolate_color(kf_left, kf_right, time, t0, t1, v0, v1);

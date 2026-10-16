@@ -682,7 +682,7 @@ export class FileSource extends FootageSource {
     const config = resolve_ocio_config(project.ocio_configuration_file);
     const envelope = config == null ? null : ocio_input_envelope(config, this._file);
     if (envelope == null) {
-      // TODO(port): Python passes stacklevel=3; pyrt warn has no stack frames.
+      // TODO(port): Python passes stacklevel=3 so the warning is attributed to the caller of the public API (warning filename/lineno); pyrt warn(message) has no stacklevel and JS has no Python frames, so only that attribution differs, not the message text.
       warn(
         `OCIO configuration ${repr(project.ocio_configuration_file)} not found ` +
           `or without a default color space: ${new Path(this._file).name} keeps ` +

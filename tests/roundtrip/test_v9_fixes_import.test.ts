@@ -583,7 +583,7 @@ test("test_dpx_and_cineon_carry_no_profile", () => {
 });
 
 // skipif(not _ICC_AVAILABLE): the parametrized table runs only when the Adobe ICC profiles are installed
-const icc_test: typeof test = _ICC_AVAILABLE ? test : test.skip;
+const icc_test = (_ICC_AVAILABLE ? test : test.skip) as typeof test;
 
 icc_test.each([
   // Bitmap: sRGB assigned, not taken as carried.

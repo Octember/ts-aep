@@ -86,11 +86,11 @@ test.each(["ae2018", "ae2022", "ae2023", "ae2026"])(
         }
         if (py_bool(json_key.temporalAutoBezier ?? null)) {
           compared += 1;
-          for (const [ease, json_ease] of zip(keyframe.in_temporal_ease, json_key.inTemporalEase)) {
+          for (const [ease, json_ease] of zip(keyframe.in_temporal_ease, json_key.inTemporalEase) as [any, any][]) {
             expect(approx(ease.speed, json_ease.speed, { abs: 0.001 })).toBe(true);
             expect(approx(ease.influence, json_ease.influence, { abs: 0.001 })).toBe(true);
           }
-          for (const [ease, json_ease] of zip(keyframe.out_temporal_ease, json_key.outTemporalEase)) {
+          for (const [ease, json_ease] of zip(keyframe.out_temporal_ease, json_key.outTemporalEase) as [any, any][]) {
             expect(approx(ease.speed, json_ease.speed, { abs: 0.001 })).toBe(true);
             expect(approx(ease.influence, json_ease.influence, { abs: 0.001 })).toBe(true);
           }

@@ -71,7 +71,7 @@ export function latin1(data: Uint8Array): string {
   return Buffer.from(data).toString("latin1");
 }
 
-// TODO(port): RecursionError maps to a JS stack-overflow RangeError; the nesting depth at which it triggers differs (CPython limit 1000 vs V8 stack size), so objects nested between the two limits parse in one runtime and not the other. Proposed pyrt shim: RecursionError.
+// TODO(port): Python's RecursionError (CPython limit 1000 frames) maps to V8's stack-overflow RangeError, which fires at an engine/stack-size dependent depth; PDF objects nested between the two limits parse in one runtime and are reported malformed (or not) in the other. No pyrt RecursionError exists and V8 gives no fixed depth to emulate.
 export function is_malformed(exc: unknown): boolean {
   return (
     exc instanceof SyntaxError_ ||

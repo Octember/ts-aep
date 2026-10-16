@@ -76,7 +76,7 @@ describe("TestTextDocumentParsing", () => {
     const [_project, doc] = _get_text_document(SAMPLES_DIR.div("type.aep"), "type_text");
     expect(doc.fill_color != null).toBe(true);
     expect(len(doc.fill_color)).toBe(3);
-    // TODO(port): int/float distinction — `isinstance(c, float)` is `typeof === "number"`; an int-valued float is indistinguishable here.
+    // NOTE(port): int/float — integral values are plain numbers by design (RULEBOOK §4); this check cannot distinguish an int-valued float from an int.
     expect(doc.fill_color.every((c: any) => typeof c === "number")).toBe(true);
   });
 

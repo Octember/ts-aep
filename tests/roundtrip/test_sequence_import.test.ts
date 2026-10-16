@@ -285,7 +285,7 @@ describe("TestCachedDataSize", () => {
 
   test("test_file", () => {
     const project = parse_aep(BASE).project;
-    const item = project.import_file(new ImportOptions(ASSETS.div("image_with_alpha.png")));
+    const item = project.import_file(new ImportOptions(ASSETS.div("image_with_alpha.png"))) as Seq;
     // Node's fs.Stats exposes the byte count as `size` (Python `st_size`).
     const size = ASSETS.div("image_with_alpha.png").stat().size;
     expect(item.main_source._sspc.data_size).toBe(size);
@@ -325,7 +325,7 @@ describe("TestPlatform", () => {
     const project = parse_aep(BASE, { platform }).project;
     const opts = new ImportOptions(ASSETS.div("sequence_001.gif"));
     opts.sequence = true;
-    const item = project.import_file(opts);
+    const item = project.import_file(opts) as Seq;
     expect(item.main_source._sspc.source_format_type).toBe(code);
     // Every path that builds a sequence follows the project's platform.
     item.replace_with_sequence(ASSETS.div("sequence_001.gif"));
@@ -341,7 +341,7 @@ describe("TestPlatform", () => {
     // Stills take the platform's importer code too, and Windows AE
     // stores HEIC without alpha (windows_stills.aep), on every path.
     const project = parse_aep(BASE, { platform }).project;
-    const item = project.import_file(new ImportOptions(ASSETS.div("bmp.bmp")));
+    const item = project.import_file(new ImportOptions(ASSETS.div("bmp.bmp"))) as Seq;
     expect(item.main_source._sspc.source_format_type).toBe(code);
     item.set_proxy(ASSETS.div("gif.gif"));
     expect(item.proxy_source._sspc.source_format_type).toBe(code);
@@ -355,6 +355,6 @@ describe("TestPlatform", () => {
     const project = py_aep.new(undefined, { platform: "macos" }).project;
     const opts = new ImportOptions(ASSETS.div("sequence_001.gif"));
     opts.sequence = true;
-    expect(project.import_file(opts).main_source._sspc.source_format_type).toBe("IMIO");
+    expect((project.import_file(opts) as Seq).main_source._sspc.source_format_type).toBe("IMIO");
   });
 });

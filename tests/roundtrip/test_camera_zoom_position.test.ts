@@ -17,6 +17,7 @@ import { parse as parse_aep } from "../../src/py_aep/index.ts";
 import { CameraLayer } from "../../src/py_aep/models/layers/index.ts";
 import type { Project } from "../../src/py_aep/models/project.ts";
 import { Property } from "../../src/py_aep/models/properties/property.ts";
+import type { PropertyGroup } from "../../src/py_aep/models/properties/property_group.ts";
 import { get_comp, parse_project_fresh } from "../helpers.ts";
 import { Path } from "../../src/pyrt/index.ts";
 import { approx, make_tmp_path } from "../../src/pyrt/pytest.ts";
@@ -37,7 +38,7 @@ function _position(camera: CameraLayer): Property {
 }
 
 function _zoom(camera: CameraLayer): Property {
-  const prop = camera.__getitem__("ADBE Camera Options Group").__getitem__("ADBE Camera Zoom");
+  const prop = (camera.__getitem__("ADBE Camera Options Group") as PropertyGroup).__getitem__("ADBE Camera Zoom");
   expect(prop instanceof Property).toBe(true);
   return prop as Property;
 }
@@ -65,7 +66,7 @@ describe("TestZoomChange", () => {
   });
 
   test("test_default_is_float_after_int_zoom", () => {
-    // TODO(port): int/float distinction - `typeof v === "number"` cannot tell an int-valued float from an int.
+    // NOTE(port): int/float — integral values are plain numbers by design (RULEBOOK §4); isinstance(v, float) reduces to a number check, so an int result would not be caught.
     const camera = _camera(parse_project_fresh(SAMPLE));
     _zoom(camera).value = 3000;
 

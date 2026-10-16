@@ -69,7 +69,7 @@ describe("TestFixedStringTail", () => {
   test("test_sspc_source_code_after_nul_round_trips", () => {
     const data = new Uint8Array(new SspcChunk().tobytes());
     data.set(b("\x00vsc"), 0x16);
-    const chunk = SspcChunk.frombytes(new Uint8Array(data));
+    const chunk = SspcChunk.frombytes(new Uint8Array(data)) as SspcChunk;
     expect(String(chunk.source_format_type)).toBe("");
     expect(py_eq(chunk.tobytes(), new Uint8Array(data))).toBe(true);
   });
@@ -83,7 +83,7 @@ describe("TestFixedStringTail", () => {
   test("test_assigned_plain_string_drops_the_old_tail", () => {
     const data = new Uint8Array(new SspcChunk().tobytes());
     data.set(b("\x00vsc"), 0x16);
-    const chunk = SspcChunk.frombytes(new Uint8Array(data));
+    const chunk = SspcChunk.frombytes(new Uint8Array(data)) as SspcChunk;
     chunk.source_format_type = "png!";
     expect(py_eq(bytes_.slice(chunk.tobytes(), 0x16, 0x1A), b("png!"))).toBe(true);
   });
@@ -94,7 +94,7 @@ describe("TestFixedStringTail", () => {
     // AE keeps the end of a longer previous name after the terminator.
     const stale = b("Black Solid 3\x00 1\x00id 1");
     data.set(stale, name_at);
-    const chunk = OptiChunk.frombytes(new Uint8Array(data));
+    const chunk = OptiChunk.frombytes(new Uint8Array(data)) as SoliOptiChunk;
     expect(chunk instanceof SoliOptiChunk).toBe(true);
     expect(String(chunk.solid_name)).toBe("Black Solid 3");
     expect(py_eq(chunk.tobytes(), new Uint8Array(data))).toBe(true);
@@ -122,7 +122,7 @@ describe("TestTdb4KeyFlagsByte", () => {
   test("test_byte_0x4f_kept_whole", () => {
     const data = new Uint8Array(new Tdb4Chunk().tobytes());
     data[0x4F] = 0x07;
-    const chunk = Tdb4Chunk.frombytes(new Uint8Array(data));
+    const chunk = Tdb4Chunk.frombytes(new Uint8Array(data)) as Tdb4Chunk;
     expect(chunk._spatial_marker).toBe(0x07);
     expect(chunk._spatial_marker).toBeTruthy(); // still reads as a spatial stream
     expect(py_eq(chunk.tobytes(), new Uint8Array(data))).toBe(true);

@@ -93,7 +93,7 @@ describe("TestRoundtripRenderer", () => {
     const tmp_path = make_tmp_path();
     const project = parse_aep(SAMPLES_DIR.div("renderer_options_classic_3d.aep")).project;
     const comp = project.compositions.at(0)!;
-    expect(comp.renderer_options.shadow_map_resolution === ShadowMapResolution.RES_750).toBe(true);
+    expect((comp.renderer_options as any).shadow_map_resolution === ShadowMapResolution.RES_750).toBe(true);
 
     comp.renderer = "ADBE Calder";
     const out = tmp_path.div("switched_renderer.aep");
@@ -104,7 +104,7 @@ describe("TestRoundtripRenderer", () => {
     const opts = comp2.renderer_options;
     expect(opts instanceof AdvancedRendererOptions).toBe(true);
     // Advanced 3D defaults, not Classic leftovers read as Quality.
-    expect(opts.quality).toBe(8);
+    expect((opts as AdvancedRendererOptions).quality).toBe(8);
   });
 
   test("test_renderer_reassign_same_value_keeps_options", () => {
@@ -113,7 +113,7 @@ describe("TestRoundtripRenderer", () => {
 
     comp.renderer = "ADBE Advanced 3d"; // already Classic 3D
 
-    expect(comp.renderer_options.shadow_map_resolution === ShadowMapResolution.RES_750).toBe(true);
+    expect((comp.renderer_options as any).shadow_map_resolution === ShadowMapResolution.RES_750).toBe(true);
   });
 });
 
@@ -159,7 +159,7 @@ describe("TestCompItemLazyLayerParsing", () => {
     // Trigger lazy linking via used_in - source IDs are extracted
     // on-demand from DeferredListChunk raw bytes.
     const footage_items = [...project.items.values()].filter((it) => hasattr(it, "_used_in"));
-    const linked = footage_items.filter((it) => contains(it.used_in, comp));
+    const linked = footage_items.filter((it) => contains((it as any).used_in, comp));
     expect(py_bool(linked)).toBe(true);
     expect(comp._layers_loaded).toBe(false);
   });
@@ -1191,7 +1191,7 @@ describe("TestValidateGuidePosition", () => {
     );
     // type: ignore[assignment] in Python; the TS setter receives the string as-is.
     raises(TypeError_, () => {
-      comp.guides[0].position = "nope";
+      (comp.guides[0] as any).position = "nope";
     });
   });
 });
@@ -1574,7 +1574,7 @@ describe("TestRoundtripFrameRateRetiming", () => {
   function _layer_marker(comp: CompItem): Property {
     for (const layer of comp.layers) {
       for (const child of layer) {
-        if (getattr(child, "match_name", "") === "ADBE Marker") return child;
+        if (getattr(child, "match_name", "") === "ADBE Marker") return child as Property;
       }
     }
     // Python next(...) with no default raises StopIteration here.

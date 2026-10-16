@@ -239,7 +239,7 @@ describe("TestValueSpaces", () => {
     const prop = _find(TestValueSpaces._probe_layer("probe_solid"), "ADBE Mask Shape");
     const first = prop.keyframes[0].value;
     expect(first instanceof Shape).toBe(true);
-    for (const [got, expected] of zip(first.vertices, [[20, 20], [120, 20], [120, 80], [20, 80]])) {
+    for (const [got, expected] of zip((first as any).vertices, [[20, 20], [120, 20], [120, 80], [20, 80]])) {
       expect(Math.abs(got[0] - expected[0]) < 1e-4).toBe(true);
       expect(Math.abs(got[1] - expected[1]) < 1e-4).toBe(true);
     }
@@ -250,8 +250,8 @@ describe("TestValueSpaces", () => {
     // against the 200x100 layer.
     const prop = _find(TestValueSpaces._probe_layer("probe_puppet"), "ADBE FreePin3 PosPin Position");
     expect(prop.units_text).toBe("pixels");
-    for (const [got, expected] of zip(prop.keyframes[0].value, [50.0, 25.0])) {
-      expect(Math.abs(got - expected) < 1e-6).toBe(true);
+    for (const [got, expected] of zip(prop.keyframes[0].value as any, [50.0, 25.0])) {
+      expect(Math.abs((got as any) - (expected as any)) < 1e-6).toBe(true);
     }
   });
 

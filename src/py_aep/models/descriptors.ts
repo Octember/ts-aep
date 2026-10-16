@@ -138,7 +138,7 @@ export function enum_or_raw(convert: (value: any) => any): (value: any) => any {
  */
 export function _validate_enum_member(enum_cls: any, value: any, public_name: string): void {
   if (enum_cls.has(value)) return;
-  // TODO(port): int/float distinction - Python `isinstance(1.0, int)` is False, here an integer-valued number passes as int.
+  // NOTE(port): int/float — integral values are plain numbers by design (RULEBOOK §4); an integer-valued float such as 2.0 takes the int branch and gets the "Invalid value" message instead of "is not a valid".
   // A Python bool is an int that hashes like 0/1, so it is checked as its int value.
   if (typeof value === "boolean" || (typeof value === "number" && Number.isInteger(value))) {
     const key = typeof value === "boolean" ? Number(value) : value;
