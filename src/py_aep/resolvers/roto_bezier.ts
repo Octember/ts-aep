@@ -29,6 +29,54 @@ import { mod, zip } from "../../pyrt/index.ts";
 
 export const DEFAULT_TENSION = 1.0 / 3.0;
 
+function _decompose(v: number): [bigint, number] {
+  const buf = new DataView(new ArrayBuffer(8));
+  buf.setFloat64(0, Math.abs(v));
+  const bits = buf.getBigUint64(0);
+  const exp = Number((bits >> 52n) & 0x7ffn);
+  const frac = bits & ((1n << 52n) - 1n);
+  return exp === 0 ? [frac, -1074] : [frac | (1n << 52n), exp - 1075];
+}
+
+function _isqrt(n: bigint): bigint {
+  if (n < 2n) return n;
+  let x = 1n << BigInt((n.toString(2).length + 1) >> 1);
+  for (;;) {
+    const y = (x + n / x) >> 1n;
+    if (y >= x) return x;
+    x = y;
+  }
+}
+
+// TODO(pyrt): math.hypot for two args. CPython's vector_norm is accurate to
+// well under 1 ulp and in practice correctly rounded; V8's Math.hypot is not.
+// This computes the correctly rounded sqrt(x*x + y*y) exactly with BigInt.
+function hypot(x: number, y: number): number {
+  if (!Number.isFinite(x) || !Number.isFinite(y)) {
+    return Math.hypot(x, y);
+  }
+  if (x === 0 && y === 0) return 0.0;
+  const [ma, ea] = _decompose(x);
+  const [mb, eb] = _decompose(y);
+  const e = Math.min(ea, eb);
+  const a = ma << BigInt(ea - e);
+  const b = mb << BigInt(eb - e);
+  const s = a * a + b * b;
+  const k = Math.max(0, 60 - (s.toString(2).length >> 1));
+  const shifted = s << BigInt(2 * k);
+  const r = _isqrt(shifted);
+  let sticky = r * r === shifted ? 0n : 1n;
+  // Reduce to 62 significant bits, folding the dropped bits into sticky.
+  const drop = Math.max(0, r.toString(2).length - 62);
+  const kept = r >> BigInt(drop);
+  if (kept << BigInt(drop) !== r) sticky = 1n;
+  // The appended sticky bit makes the final rounding exact.
+  const scaled = Number((kept << 1n) | sticky);
+  const exp = e - k - 1 + drop;
+  const half = Math.trunc(exp / 2);
+  return scaled * 2 ** half * 2 ** (exp - half);
+}
+
 /**
  * `(in_tangents, out_tangents)` of a RotoBezier path.
  *
@@ -60,18 +108,14 @@ export function roto_bezier_tangents(
     const [vx, vy] = points[i];
     const [px, py] = points.at(i - 1)!;
     const [nx, ny] = points[mod(i + 1, count)];
-    // TODO(port): CPython 3.12 math.hypot uses a different accumulation than
-    // V8 Math.hypot; the last bit may differ.
-    const chord = Math.hypot(nx - px, ny - py);
+    const chord = hypot(nx - px, ny - py);
     if (chord < 1e-12) {
       continue;
     }
     const ux = (nx - px) / chord;
     const uy = (ny - py) / chord;
-    // TODO(port): same math.hypot parity risk as above.
-    const before = Math.hypot(vx - px, vy - py) * ks[i];
-    // TODO(port): same math.hypot parity risk as above.
-    const after = Math.hypot(nx - vx, ny - vy) * ks[i];
+    const before = hypot(vx - px, vy - py) * ks[i];
+    const after = hypot(nx - vx, ny - vy) * ks[i];
     ins[i] = [-ux * before, -uy * before];
     outs[i] = [ux * after, uy * after];
   }

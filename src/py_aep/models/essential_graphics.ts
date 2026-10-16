@@ -30,6 +30,25 @@ export class SourcePropertyRef {
     this.prop_index = prop_index;
   }
 
+  /** NamedTuple `_replace(**kw)`: a copy with the given fields changed. */
+  _replace(kw: { match_name?: string; prop_index?: number | null } = {}): SourcePropertyRef {
+    return new SourcePropertyRef(
+      "match_name" in kw ? (kw.match_name as string) : this.match_name,
+      "prop_index" in kw ? (kw.prop_index as number | null) : this.prop_index,
+    );
+  }
+
+  /** NamedTuple equality: elementwise over the fields (also against a plain tuple). */
+  __eq__(other: any): boolean {
+    if (other == null || typeof other === "string" || typeof other[Symbol.iterator] !== "function") return false;
+    const o = [...other];
+    return o.length === 2 && o[0] === this.match_name && o[1] === this.prop_index;
+  }
+
+  __len__(): number {
+    return 2;
+  }
+
   *[Symbol.iterator]() {
     yield this.match_name;
     yield this.prop_index;

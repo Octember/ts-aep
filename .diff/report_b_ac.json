@@ -1,54 +1,7 @@
 {
- "per_sample": {
-  "samples__models__essential_graphics__checkbox_controller.aep": 3,
-  "samples__models__essential_graphics__color_controller.aep": 3,
-  "samples__models__essential_graphics__controller_renamed.aep": 3,
-  "samples__models__essential_graphics__custom_template_name.aep": 3,
-  "samples__models__essential_graphics__dropdown_controller.aep": 3,
-  "samples__models__essential_graphics__fill_color_added.aep": 3,
-  "samples__models__essential_graphics__group_controller.aep": 6,
-  "samples__models__essential_graphics__indexed_group_controllers.aep": 32,
-  "samples__models__essential_graphics__media_replacement.aep": 2
- },
+ "per_sample": {},
  "samples": 12,
- "identical": 3,
- "differing": 9,
- "top": [
-  {
-   "attr": "app.project.active_item.compositions[].av_layers[].essential_property_controllers[].source_property_path[]",
-   "samples": 6,
-   "sample": "samples__models__essential_graphics__checkbox_controller.aep",
-   "path": "app.project.active_item.compositions[0].av_layers[0].essential_property_controllers[0].source_property_path[0]",
-   "py": {
-    "$list": 2
-   },
-   "ts": {
-    "$obj": "SourcePropertyRef"
-   }
-  },
-  {
-   "attr": "app.project.active_item.av_layers[].essential_property_controllers[].source_property_path[]",
-   "samples": 2,
-   "sample": "samples__models__essential_graphics__group_controller.aep",
-   "path": "app.project.active_item.av_layers[0].essential_property_controllers[1].source_property_path[0]",
-   "py": {
-    "$list": 2
-   },
-   "ts": {
-    "$obj": "SourcePropertyRef"
-   }
-  },
-  {
-   "attr": "app.project.active_item.compositions[].motion_graphics_controllers[].source_property_path[]",
-   "samples": 1,
-   "sample": "samples__models__essential_graphics__indexed_group_controllers.aep",
-   "path": "app.project.active_item.compositions[0].motion_graphics_controllers[0].source_property_path[0]",
-   "py": {
-    "$list": 2
-   },
-   "ts": {
-    "$obj": "SourcePropertyRef"
-   }
-  }
- ]
+ "identical": 12,
+ "differing": 0,
+ "top": []
 }

@@ -32,6 +32,128 @@ const _file = deferred<typeof import("../sources/file.ts")>(import.meta.url, "..
 const _placeholder = deferred<typeof import("../sources/placeholder.ts")>(import.meta.url, "../sources/placeholder.ts");
 const _solid = deferred<typeof import("../sources/solid.ts")>(import.meta.url, "../sources/solid.ts");
 
+// TODO(pyrt): CPython `set` iteration order. `Item.__hash__` is `hash(self.id)`, so
+// `set[CompItem]` iterates in open-addressing table order (deterministic, not insertion
+// order). This emulates the 3.12 table (linear probes 9, perturb 5, resize at fill*5 >= mask*3)
+// for the add / discard / iterate surface that `AVItem._used_in` uses.
+export class _IdHashSet<T extends { id: number }> {
+  private _keys: (T | null)[] = new Array(8).fill(null);
+  private _hashes: number[] = new Array(8).fill(0); // -1 = dummy
+  private _mask = 7;
+  private _fill = 0;
+  private _used = 0;
+
+  get size(): number {
+    return this._used;
+  }
+
+  private _lookup(item: T): number {
+    const hash = item.id;
+    let i = hash & this._mask;
+    let perturb = hash;
+    for (;;) {
+      const probes = i + 9 <= this._mask ? 9 : 0;
+      for (let k = 0; k <= probes; k++) {
+        const j = i + k;
+        const key = this._keys[j];
+        if (key == null && this._hashes[j] === 0) return -1;
+        if (key != null && this._hashes[j] === hash && key.id === item.id) return j;
+      }
+      perturb >>>= 5;
+      i = (i * 5 + 1 + perturb) & this._mask;
+    }
+  }
+
+  has(item: T): boolean {
+    return this._lookup(item) >= 0;
+  }
+
+  __contains__(item: T): boolean {
+    return this.has(item);
+  }
+
+  __len__(): number {
+    return this._used;
+  }
+
+  add(item: T): this {
+    if (this._lookup(item) >= 0) return this;
+    const hash = item.id;
+    let i = hash & this._mask;
+    let perturb = hash;
+    let freeslot = -1;
+    for (;;) {
+      const probes = i + 9 <= this._mask ? 9 : 0;
+      for (let k = 0; k <= probes; k++) {
+        const j = i + k;
+        if (this._keys[j] == null && this._hashes[j] === -1) freeslot = j;
+        if (this._keys[j] == null && this._hashes[j] === 0) {
+          if (freeslot >= 0) {
+            this._keys[freeslot] = item;
+            this._hashes[freeslot] = hash;
+            this._used++;
+            return this;
+          }
+          this._keys[j] = item;
+          this._hashes[j] = hash;
+          this._fill++;
+          this._used++;
+          if (this._fill * 5 >= this._mask * 3) {
+            this._resize(this._used > 50000 ? this._used * 2 : this._used * 4);
+          }
+          return this;
+        }
+      }
+      perturb >>>= 5;
+      i = (i * 5 + 1 + perturb) & this._mask;
+    }
+  }
+
+  delete(item: T): boolean {
+    const j = this._lookup(item);
+    if (j < 0) return false;
+    this._keys[j] = null;
+    this._hashes[j] = -1;
+    this._used--;
+    return true;
+  }
+
+  private _resize(minused: number): void {
+    let newsize = 8;
+    while (newsize <= minused) newsize <<= 1;
+    const oldKeys = this._keys;
+    const oldHashes = this._hashes;
+    this._keys = new Array(newsize).fill(null);
+    this._hashes = new Array(newsize).fill(0);
+    this._mask = newsize - 1;
+    this._fill = this._used;
+    for (let n = 0; n < oldKeys.length; n++) {
+      const key = oldKeys[n];
+      if (key == null) continue;
+      const hash = oldHashes[n]!;
+      let i = hash & this._mask;
+      let perturb = hash;
+      placed: for (;;) {
+        const probes = i + 9 <= this._mask ? 9 : 0;
+        for (let k = 0; k <= probes; k++) {
+          const j = i + k;
+          if (this._keys[j] == null) {
+            this._keys[j] = key;
+            this._hashes[j] = hash;
+            break placed;
+          }
+        }
+        perturb >>>= 5;
+        i = (i * 5 + 1 + perturb) & this._mask;
+      }
+    }
+  }
+
+  *[Symbol.iterator](): IterableIterator<T> {
+    for (const key of this._keys) if (key != null) yield key;
+  }
+}
+
 export function _validate_use_proxy(value: boolean, obj: AVItem): void {
   validate_bool(value);
   if (obj.proxy_source == null && value) {
@@ -92,7 +214,7 @@ export class AVItem extends Item {
 
   declare _pin_chunks: ListChunk[];
   declare _proxy_source: FileSource | SolidSource | PlaceholderSource | null;
-  declare _used_in: Set<CompItem>;
+  declare _used_in: _IdHashSet<CompItem>;
   declare _viewer: Viewer | null;
 
   /**
@@ -130,7 +252,7 @@ export class AVItem extends Item {
     if (kw.proxy_source != null) {
       kw.proxy_source._project = kw.project;
     }
-    this._used_in = new Set<CompItem>();
+    this._used_in = new _IdHashSet<CompItem>();
     this._viewer = null;
   }
 

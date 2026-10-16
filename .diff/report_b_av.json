@@ -1,70 +1,7 @@
 {
- "per_sample": {
-  "samples__models__layer__audioEnabled.aep": 6
- },
+ "per_sample": {},
  "samples": 12,
- "identical": 11,
- "differing": 1,
- "top": [
-  {
-   "attr": "app.project.active_item.compositions[].av_layers[].source.used_in[]",
-   "samples": 1,
-   "sample": "samples__models__layer__audioEnabled.aep",
-   "path": "app.project.active_item.compositions[0].av_layers[0].source.used_in[0]",
-   "py": {
-    "$obj": "CompItem"
-   },
-   "ts": {
-    "$ref": "app.project.active_item.compositions[0]"
-   }
-  },
-  {
-   "attr": "app.project.active_item.compositions[]",
-   "samples": 1,
-   "sample": "samples__models__layer__audioEnabled.aep",
-   "path": "app.project.active_item.compositions[1]",
-   "py": {
-    "$ref": "app.project.active_item.compositions[0].av_layers[0].source.used_in[0]"
-   },
-   "ts": {
-    "$ref": "app.project.active_item.compositions[0].av_layers[0].source.used_in[1]"
-   }
-  },
-  {
-   "attr": "app.project.active_item.items[]",
-   "samples": 1,
-   "sample": "samples__models__layer__audioEnabled.aep",
-   "path": "app.project.active_item.items[1]",
-   "py": {
-    "$ref": "app.project.active_item.compositions[0].av_layers[0].source.used_in[0]"
-   },
-   "ts": {
-    "$ref": "app.project.active_item.compositions[0].av_layers[0].source.used_in[1]"
-   }
-  },
-  {
-   "attr": "app.project.compositions[]",
-   "samples": 1,
-   "sample": "samples__models__layer__audioEnabled.aep",
-   "path": "app.project.compositions[1]",
-   "py": {
-    "$ref": "app.project.active_item.compositions[0].av_layers[0].source.used_in[0]"
-   },
-   "ts": {
-    "$ref": "app.project.active_item.compositions[0].av_layers[0].source.used_in[1]"
-   }
-  },
-  {
-   "attr": "app.project.items[]",
-   "samples": 1,
-   "sample": "samples__models__layer__audioEnabled.aep",
-   "path": "app.project.items{1}",
-   "py": {
-    "$ref": "app.project.active_item.compositions[0].av_layers[0].source.used_in[0]"
-   },
-   "ts": {
-    "$ref": "app.project.active_item.compositions[0].av_layers[0].source.used_in[1]"
-   }
-  }
- ]
+ "identical": 12,
+ "differing": 0,
+ "top": []
 }

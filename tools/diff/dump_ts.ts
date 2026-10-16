@@ -65,6 +65,10 @@ class Dumper {
     if (typeof value === "string" || value instanceof String) return this.emit(path, String(value));
     if (typeof value === "number" || typeof value === "bigint") return this.emit(path, num(value));
     if (value instanceof Uint8Array) return this.emit(path, { $bytes: Buffer.from(value).toString("hex") });
+    if (value instanceof Date) {
+      // Twin of a naive Python datetime: UTC fields, isoformat(timespec="microseconds").
+      return this.emit(path, { $datetime: value.toISOString().slice(0, -1) + "000" });
+    }
     if (value instanceof Path) return this.emit(path, { $path: String(value) });
     if (Array.isArray(value)) {
       this.emit(path, { $list: value.length });

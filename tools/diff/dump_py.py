@@ -7,6 +7,7 @@ canonicalize values the same way, so the two outputs diff line by line.
 usage: uv run --project .upstream python tools/diff/dump_py.py OUT_DIR SAMPLE...
 """
 
+import datetime
 import enum
 import inspect
 import json
@@ -78,6 +79,9 @@ class Dumper:
             self.emit(path, num(value))
         elif isinstance(value, (bytes, bytearray)):
             self.emit(path, {"$bytes": bytes(value).hex()})
+        elif isinstance(value, datetime.datetime):
+            # Naive datetime: the wall-clock fields, read as UTC (matches the Date twin).
+            self.emit(path, {"$datetime": value.isoformat(timespec="microseconds")})
         elif isinstance(value, pathlib.PurePath):
             self.emit(path, {"$path": str(value)})
         elif isinstance(value, (list, tuple)):

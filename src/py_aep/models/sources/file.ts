@@ -70,7 +70,7 @@ export function _pure_parts(
     const unc = /^[\\/]{2}(?![\\/])[^\\/]+[\\/]+[^\\/]+/.exec(text);
     if (unc != null) {
       // \\server\share is the drive of a UNC path.
-      drive = unc[0].replace(/[\\/]+/g, "\\");
+      drive = "\\\\" + unc[0].slice(2).replace(/[\\/]+/g, "\\");
       rest = text.slice(unc[0].length);
     } else {
       drive = /^[A-Za-z]:/.exec(text)?.[0] ?? "";

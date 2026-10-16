@@ -1,27 +1,7 @@
 {
- "per_sample": {
-  "samples__models__property__mask_rotobezier_shapes.aep": 12,
-  "samples__models__property__mask_rotobezier_tensions.aep": 34
- },
+ "per_sample": {},
  "samples": 12,
- "identical": 10,
- "differing": 2,
- "top": [
-  {
-   "attr": "app.project.active_item.compositions[].av_layers[].source.parent_folder.footages[].used_in[].av_layers[].masks.properties[].properties[].value.in_tangents[][]",
-   "samples": 2,
-   "sample": "samples__models__property__mask_rotobezier_shapes.aep",
-   "path": "app.project.active_item.compositions[0].av_layers[0].source.parent_folder.footages[1].used_in[0].av_layers[2].masks.properties[14].properties[0].value.in_tangents[1][0]",
-   "py": -202.53167992900612,
-   "ts": -202.53167992900606
-  },
-  {
-   "attr": "app.project.active_item.compositions[].av_layers[].source.parent_folder.footages[].used_in[].av_layers[].masks.properties[].properties[].value.out_tangents[][]",
-   "samples": 2,
-   "sample": "samples__models__property__mask_rotobezier_shapes.aep",
-   "path": "app.project.active_item.compositions[0].av_layers[0].source.parent_folder.footages[1].used_in[0].av_layers[2].masks.properties[14].properties[0].value.out_tangents[0][0]",
-   "py": 224.67588071106888,
-   "ts": 224.67588071106886
-  }
- ]
+ "identical": 12,
+ "differing": 0,
+ "top": []
 }
