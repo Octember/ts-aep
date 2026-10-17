@@ -54,7 +54,7 @@ import {
 
 // NOTE(port): Python's `isinstance(x, bool) or isinstance(x, int)` accepts bools as ints.
 // `is_int` keeps that so raw bool fields still count as ints in the checks below.
-export function is_int(v: unknown): boolean {
+export function is_int(v: unknown): v is number | boolean {
   return (typeof v === "number" && Number.isInteger(v)) || typeof v === "boolean";
 }
 
@@ -82,7 +82,7 @@ export const _KEY_ENUM = new Map<string, KeyEnum>([
   ["Audio Bit Depth", AudioBitDepth],
 ]);
 
-export function _is_enum_member(key: string, value: unknown): boolean {
+export function _is_enum_member(key: string, value: unknown): value is RuleValue {
   return getitem(_KEY_ENUM, key).has(value);
 }
 
@@ -637,8 +637,8 @@ export class OutputModule {
    * its key absent, so the rules that condition on it simply do not
    * apply (permissive degradation).
    */
-  _rules_context(): Map<string, any> {
-    const context = new Map<string, any>();
+  _rules_context(): Map<string, RuleValue> {
+    const context = new Map<string, RuleValue>();
     for (const key of ["Channels", "Audio Channels", "Audio Sample Rate"]) {
       let value: unknown;
       try {

@@ -6,7 +6,7 @@
  */
 
 import { OutputChannels, OutputColorDepth, TimeSpanSource } from "../enums/index.ts";
-import { IndexError, PyException, floordiv, format, getitem, int, mod, num_str, py_or, round } from "../../pyrt/index.ts";
+import { IndexError, PyException, floordiv, format, int, mod, num_str, py_or, round } from "../../pyrt/index.ts";
 import type { CompItem } from "../models/items/composition.ts";
 import type { SettingsView } from "../models/renderqueue/settings.ts";
 

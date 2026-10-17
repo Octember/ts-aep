@@ -625,7 +625,7 @@ export const CLAMP_DEPENDENTS: Map<string, readonly string[]> = new Map<string, 
  * An array condition value means "in"; a context key that is absent
  * never matches (permissive degradation).
  */
-export function _conditions_match(conditions: Map<string, RuleValue | RuleValue[]>, context: Map<string, unknown>): boolean {
+export function _conditions_match(conditions: Map<string, RuleValue | RuleValue[]>, context: ReadonlyMap<string, RuleValue>): boolean {
   for (const [key, expected] of conditions) {
     const actual = context.get(key) ?? null;
     if (actual == null) return false;
@@ -666,12 +666,12 @@ export function constrained_keys(fmt: OutputFormat): ReadonlySet<string> {
 export function allowed_values(
   fmt: OutputFormat,
   key: string,
-  context: Map<string, unknown> | null = null,
+  context: ReadonlyMap<string, RuleValue> | null = null,
 ): ReadonlySet<unknown> | null {
   const rules = new Map<string, ReadonlySet<RuleValue>>();
   for (const [k, v] of getitem(_KIND_RULES, OutputFormat.kind(fmt))) rules.set(k, v);
   for (const [k, v] of (_FORMAT_RULES.get(fmt) ?? new Map<string, ReadonlySet<RuleValue>>())) rules.set(k, v);
-  if (context == null) context = new Map<string, unknown>();
+  if (context == null) context = new Map<string, RuleValue>();
   for (const [conditions, constraints] of (_CONDITIONAL_RULES.get(fmt) ?? [] as Rule[])) {
     if (_conditions_match(conditions, context)) {
       for (const [k, v] of constraints) rules.set(k, v);
