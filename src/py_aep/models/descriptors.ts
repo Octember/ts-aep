@@ -17,6 +17,7 @@ import {
   py_bool,
   repr,
   instance_dict,
+  type_name,
 } from "../../pyrt/index.ts";
 import type { EnumHelpers, EnumValue } from "../../pyrt/enum.ts";
 import type { FieldValue } from "../binary/fmt_field.ts";
@@ -369,7 +370,10 @@ export class ChunkField<
     }
     if (py_bool(getattr(body, "synthetic", false))) {
       const owner: ChunkOwner = obj;
-      getattr(owner, "_ensure_materialized").call(owner);
+      if (owner._ensure_materialized == null) {
+        throw new AttributeError(`'${type_name(owner)}' object has no attribute '_ensure_materialized'`);
+      }
+      owner._ensure_materialized();
       body = getattr(obj, this.chunk_attr);
     }
     if (this.reverse != null) body[this.field] = this.reverse(value);
