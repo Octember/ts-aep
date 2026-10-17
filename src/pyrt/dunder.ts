@@ -89,13 +89,21 @@ export function descriptors_of(cls: Function): Map<string, Descriptor> {
 
 const TARGET: unique symbol = Symbol("target");
 
+function _has_getattr(x: object): x is { __getattr__(name: string): unknown } {
+  return "__getattr__" in x && typeof x.__getattr__ === "function";
+}
+
+function _has_setattr(x: object): x is { __setattr__(name: string, value: unknown): void } {
+  return "__setattr__" in x && typeof x.__setattr__ === "function";
+}
+
 /**
  * Wrap a freshly constructed instance so `__getattr__` runs for missing
  * attributes and `__setattr__` for every assignment, as in Python.
  */
 export function py_object<T extends object>(self: T): T {
-  const has_getattr = typeof (self as { __getattr__?: unknown }).__getattr__ === "function";
-  const has_setattr = typeof (self as { __setattr__?: unknown }).__setattr__ === "function";
+  const has_getattr = _has_getattr(self);
+  const has_setattr = _has_setattr(self);
   if (!has_getattr && !has_setattr) return self;
   const proxy = new Proxy(self, {
     get(target, key, receiver) {
@@ -105,13 +113,13 @@ export function py_object<T extends object>(self: T): T {
       // Python looks special methods (`__bool__`, `__eq__`, `__len__`, ...) up on the type,
       // never through `__getattr__`; pyrt probes them as property reads, so a miss is undefined.
       if (key.length > 4 && key.startsWith("__") && key.endsWith("__")) return undefined;
-      return (receiver as { __getattr__(name: string): unknown }).__getattr__(key);
+      if (_has_getattr(receiver)) return receiver.__getattr__(key);
     },
     set(target, key, value, receiver) {
       if (typeof key === "symbol" || !has_setattr || in_setattr.has(target)) {
         return Reflect.set(target, key, value, receiver);
       }
-      (receiver as { __setattr__(name: string, value: unknown): void }).__setattr__(key, value);
+      if (_has_setattr(receiver)) receiver.__setattr__(key, value);
       return true;
     },
   });

@@ -7,7 +7,8 @@
 // input yields (a truncated stream is not an error) and stops at max_length.
 // Error texts follow CPython's ("Error -3 while decompressing data: ...").
 
-import { Inflate, gunzipSync, type FlateError } from "fflate";
+import { Inflate, gunzipSync } from "fflate";
+import { error_code } from "./errors.ts";
 
 /** fflate's private `Inflate.s` decoder state (untyped in its typings). */
 type InflateState = { f: number; l: number; p: number };
@@ -36,13 +37,15 @@ const _FFLATE_MESSAGES: Record<number, string> = {
 };
 
 function _rethrow(e: unknown): never {
-  const code = (e as FlateError | null | undefined)?.code;
+  const code = error_code(e);
   if (code === 0) _fail(Z_BUF_ERROR, "incomplete or truncated stream");
   if (typeof code === "number" && code in _FFLATE_MESSAGES) _fail(Z_DATA_ERROR, _FFLATE_MESSAGES[code]);
   throw e;
 }
 
 /** zlib's header checks (wbits=15); returns the header length (always 2). */
+function _check_header(data: Uint8Array, truncated_is_error: true): number;
+function _check_header(data: Uint8Array, truncated_is_error: false): number | null;
 function _check_header(data: Uint8Array, truncated_is_error: boolean): number | null {
   if (data.length < 2) {
     if (truncated_is_error) _fail(Z_BUF_ERROR, "incomplete or truncated stream");
@@ -131,7 +134,7 @@ function _inflate(body: Uint8Array, limit: number, step: number): _Inflated {
 
 /** `zlib.decompress(data)` (wbits=15). */
 export function decompress(data: Uint8Array): Uint8Array {
-  const start = _check_header(data, true)!;
+  const start = _check_header(data, true);
   const r = _inflate(data.subarray(start), -1, Math.max(data.length, 1));
   if (r.rest == null || r.rest.length < 4) _fail(Z_BUF_ERROR, "incomplete or truncated stream");
   const t = r.rest;
