@@ -91,13 +91,13 @@ export function _parent_world(parent: Layer | null, time: number, child_is_3d: b
 }
 
 /** `list.index(x)` with `==` (identity for layers) and CPython's ValueError. */
-export function _list_index(xs: unknown[], x: unknown): number {
+export function _list_index<T>(xs: T[], x: T): number {
   for (let i = 0; i < xs.length; i++) if (xs[i] === x) return i;
   throw new ValueError(`${repr(x)} is not in list`);
 }
 
 /** `list.remove(x)` with CPython's ValueError. */
-export function _list_remove(xs: unknown[], x: unknown): void {
+export function _list_remove<T>(xs: T[], x: T): void {
   for (let i = 0; i < xs.length; i++) {
     if (xs[i] === x) {
       xs.splice(i, 1);

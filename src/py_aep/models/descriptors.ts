@@ -149,7 +149,7 @@ export function _validate_enum_member(enum_cls: any, value: unknown, public_name
     if (!enum_cls.has(key)) {
       const members = enum_cls
         .members()
-        .map((m: unknown) => `${enum_cls.name_of(m)} (${m})`)
+        .map((m: number) => `${enum_cls.name_of(m)} (${m})`)
         .join(", ");
       throw new ValueError(
         `Invalid value ${repr(value)} for ${repr(public_name)}. ` +

@@ -1371,7 +1371,7 @@ export class Property<V extends PropertyValue = any> extends PropertyBase {
    * Applied in order: percent scaling, color conversion, effect point
    * denormalization.
    */
-  _resolve_value(raw: unknown): any {
+  _resolve_value(raw: number[] | number | null): any {
     if (raw == null) return null;
     // 0. Variable-font axis: the binary stores [value, tag4cc] but
     //    ExtendScript exposes only the scalar axis value.
@@ -1414,7 +1414,7 @@ export class Property<V extends PropertyValue = any> extends PropertyBase {
    * Applied in reverse order: effect point normalization, color
    * conversion, then percent scaling.
    */
-  _unresolve_value(value: unknown): any {
+  _unresolve_value(value: _ValueType | boolean): any {
     if (value == null) return null;
     if (!(typeof value === "number" || typeof value === "boolean" || Array.isArray(value))) return value;
     if (Array.isArray(value) && value?.length > 0 && !(typeof value[0] === "number" || typeof value[0] === "boolean")) return value;
@@ -1655,7 +1655,7 @@ export class Property<V extends PropertyValue = any> extends PropertyBase {
     const separated = this._separated_value();
     if (separated != null) return separated;
     if (this._arbs != null && !this.keyframes?.length) return this._static_curves();
-    if (this._value != null) return this._wire_text_version(this._value);
+    if (this._value != null) return this._wire_text_version(this._value as _ValueType);
     if (this.keyframes?.length > 0) return this._stored_value_at(0);
     if (this._cdat != null) return this._resolve_value(this._read_cdat_raw());
     if (this.match_name === "ADBE Mask Shape") {
@@ -1692,7 +1692,7 @@ export class Property<V extends PropertyValue = any> extends PropertyBase {
    * untouched Z follower synthetic on a 2D layer (as AE does) and
    * avoids materializing it for nothing.
    */
-  _set_separated_value(value: unknown, followers: Property<number>[]): void {
+  _set_separated_value(value: _ValueType, followers: Property<number>[]): void {
     _validate_value(this, value);
     if (!Array.isArray(value)) {
       throw new ValueError(
@@ -1719,7 +1719,7 @@ export class Property<V extends PropertyValue = any> extends PropertyBase {
    * leader on its default" writes in `_separate_static` /
    * `_separate_animated`, which target the dead leader on purpose.
    */
-  _set_own_value(value: unknown): void {
+  _set_own_value(value: _ValueType): void {
     // Re-assigning the identical complex value object (TextDocument,
     // Shape, MarkerValue, Gradient) is a no-op: those types write through
     // to the backing chunks via their own descriptors. Plain numeric/list
@@ -1792,7 +1792,7 @@ export class Property<V extends PropertyValue = any> extends PropertyBase {
    * already hold it. `_write_cdat` keeps the numeric path
    * byte-faithful (a no-op write-back of the values just read).
    */
-  _cache_value(value: unknown): void {
+  _cache_value(value: _ValueType): void {
     this._write_cdat(value);
     this._value = value;
   }
@@ -1855,7 +1855,7 @@ export class Property<V extends PropertyValue = any> extends PropertyBase {
    * version-gated attributes can resolve the AE major version. No-op for
    * other value types or when the containing comp is unknown.
    */
-  _wire_text_version(value: unknown): unknown {
+  _wire_text_version(value: _ValueType): unknown {
     if (value instanceof TextDocument && this._composition != null) {
       value._head = this._composition._project._head;
     }
@@ -3675,7 +3675,7 @@ export class Property<V extends PropertyValue = any> extends PropertyBase {
    * Revert an emptied animated property to a static `value`, after
    * removing `last_key`.
    */
-  _deanimate(value: unknown, last_key: LdatItem): void {
+  _deanimate(value: _ValueType, last_key: LdatItem): void {
     const inner = this._keyframe_inner();
     const chunks = this._tdbs.chunks;
     this._static_tdb4(last_key);

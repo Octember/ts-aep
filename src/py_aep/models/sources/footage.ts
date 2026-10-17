@@ -52,7 +52,7 @@ export const _CLRS_RECORDS_SINCE: ReadonlyArray<readonly [string, readonly [numb
  * writing a mode over it would claim an alpha channel the media does not
  * have. AE greys the whole alpha section out for such footage.
  */
-export function _validate_has_alpha(value: unknown, instance: { has_alpha?: boolean } | null = null): void {
+export function _validate_has_alpha(value: AlphaMode, instance: { has_alpha?: boolean } | null = null): void {
   if (instance != null && !instance.has_alpha) {
     throw new ValueError(
       "cannot set alpha_mode: the footage has no alpha channel " +

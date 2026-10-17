@@ -10,9 +10,9 @@
 // hub src/py_aep/_modules.ts (tools/gen_deferred_modules.ts) statically imports
 // every target and registers it here; py_aep/index.ts imports the hub last.
 
-const _modules = new Map<string, unknown>();
+const _modules = new Map<string, object>();
 
-export function register(key: string, mod: unknown): void {
+export function register(key: string, mod: object): void {
   _modules.set(key, mod);
 }
 

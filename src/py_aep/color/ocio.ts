@@ -17,7 +17,7 @@
 
 import * as host from "../../pyrt/host.ts";
 import { parse, YAMLError, isMap, isSeq, isScalar } from "yaml";
-import type { Document, DocumentOptions, ParseOptions, SchemaOptions, ToJSOptions } from "yaml";
+import type { Document, Node, DocumentOptions, ParseOptions, SchemaOptions, ToJSOptions } from "yaml";
 import {
   Path,
   lru_cache,
@@ -74,7 +74,7 @@ export type OcioNode = Map<string, any>;
  * (warning silenced by `logLevel: "error"`), which yields the same untagged
  * values as this constructor. `loader` is the yaml `Document`.
  */
-export function _ignore_tag(loader: Document, suffix: string, node: unknown): unknown {
+export function _ignore_tag(loader: Document, suffix: string, node: Node): unknown {
   if (isMap(node) || isSeq(node) || isScalar(node)) {
     return node.toJS(loader, { mapAsMap: true } as ToJSOptions);
   }
