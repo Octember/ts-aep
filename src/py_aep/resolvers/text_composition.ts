@@ -40,7 +40,6 @@ import {
   at,
   KeyError,
   float,
-  int,
   islower,
   max,
   OSError,

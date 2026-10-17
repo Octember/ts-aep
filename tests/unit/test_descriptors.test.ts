@@ -586,7 +586,7 @@ class _CosModel {
     this._propagate_called = true;
   }
 }
-descriptor(_CosModel, "font_size", new CosField<number>("_style", "1", { transform: float, reverse: float }));
+descriptor(_CosModel, "font_size", new CosField<number>("_style", "1", { transform: float as any, reverse: float, accepts: (v: unknown): v is number => typeof v === "number", default: null as any }));
 
 describe("TestCosFieldScalarReverse", () => {
   test("test_scalar_reverse_writes_to_dict", () => {

@@ -73,6 +73,6 @@ test.each([
     sees it, so only a literal exercises the case that matters.
     */
     const token = new CosParser(new BytesIO(concat(literal, b(")")))).lex_string();
-    expect(py_eq(decode_pdf_text_string(token.value), expected)).toBe(true);
+    expect(py_eq(decode_pdf_text_string(token.value as any), expected)).toBe(true);
   },
 );

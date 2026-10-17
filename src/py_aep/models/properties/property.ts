@@ -35,7 +35,7 @@ import { PropertyBase } from "./property_base.ts";
 import { Shape } from "./shape.ts";
 import type { PropertyGroup } from "./property_group.ts";
 import { type MaskPropertyGroup } from "./mask_property_group.ts";
-import { deferred, deepcopy, dict_get, getitem, isclose, py_bool, py_eq, sorted, warn, int, round, floordiv, TypeError_, ValueError, KeyError, IndexError, AttributeError, NotImplementedError, py_assert, repr, hasattr, getattr, min, max, range, zip, len, float, lshift, rshift, and, or, b, descriptor, list_mul, type_name, type ClassAttributes } from "../../../pyrt/index.ts";
+import { deferred, deepcopy, dict_get, getitem, isclose, py_bool, py_eq, sorted, warn, int, round, floordiv, TypeError_, ValueError, KeyError, IndexError, AttributeError, NotImplementedError, py_assert, repr, hasattr, getattr, min, max, range, zip, float, lshift, rshift, and, or, b, descriptor, list_mul, type_name, type ClassAttributes } from "../../../pyrt/index.ts";
 
 const _property_group = deferred<typeof import("./property_group.ts")>("py_aep/models/properties/property_group");
 import { AVItem } from "../items/av_item.ts";

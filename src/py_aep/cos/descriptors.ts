@@ -218,7 +218,7 @@ export type CosFieldExtras<D extends InstanceValue, O> = Partial<Pick<CosFieldOp
 
 /** Options of a boolean flag field: `transform=bool`, `reverse=bool`. */
 export function bool_field<D extends boolean | null, O>(kw: CosFieldExtras<D, O>): CosFieldOptions<boolean | D, O> {
-  return { transform: py_bool, reverse: py_bool, accepts: (v): v is boolean | D => typeof v === "boolean" || v === kw.default, ...kw };
+  return { transform: py_bool, reverse: py_bool, accepts: (v): v is boolean | D => (v === null ? kw.default === null : typeof v === "boolean"), ...kw };
 }
 
 /**
@@ -233,7 +233,7 @@ export function float_field<D extends number | null, O>(kw: CosFieldExtras<D, O>
   return {
     transform: cos_float,
     reverse: (x: number) => pyfloat(float(x)),
-    accepts: (v): v is number | D => typeof v === "number" || v === kw.default,
+    accepts: (v): v is number | D => (v === null ? kw.default === null : typeof v === "number"),
     ...kw,
   };
 }
@@ -249,7 +249,7 @@ export function int_field<D extends number | null, O>(kw: CosFieldExtras<D, O>):
   return {
     transform: cos_int,
     reverse: (x: number) => round(x),
-    accepts: (v): v is number | D => typeof v === "number" || v === kw.default,
+    accepts: (v): v is number | D => (v === null ? kw.default === null : typeof v === "number"),
     ...kw,
   };
 }
@@ -263,7 +263,7 @@ export function enum_field<V extends number, D extends V | null, O>(E: CosEnum<V
   return {
     transform: (x: CosNode) => enum_from_cos(E, x),
     reverse: (v: V) => E.to_binary(v),
-    accepts: (v): v is V | D => E.has(v) || v === kw.default,
+    accepts: (v): v is V | D => (v === null ? kw.default === null : E.has(v)),
     ...kw,
   };
 }

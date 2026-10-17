@@ -26,7 +26,7 @@ import { get_cos_template, cos_get, serialize } from "../../cos/index.ts";
 import type { CosDict, CosNode } from "../../cos/cos.ts";
 import { enum_from_cos, type InstanceValue } from "../../cos/descriptors.ts";
 import { cos_append, cos_at, cos_dict, cos_float, cos_get_or, cos_item, cos_iter, cos_num, cos_pop, cos_setdefault, cos_setitem, cos_unbox, is, py_int, py_number, type CosUnboxed } from "../../cos/kinds.ts";
-import { char_style, first_baseline, doc_text, frame_meta, read } from "../../cos/schema.ts";
+import { char_style, first_baseline, read } from "../../cos/schema.ts";
 import { AutoKernType, BaselineDirection, BoxAutoFitPolicy, BoxFirstBaselineAlignment, BoxVerticalAlignment, ComposerEngine, DigitSet, FontBaselineOption, FontCapsOption, LeadingType, LineJoinType, LineOrientation, ParagraphDirection, ParagraphJustification } from "../../enums/index.ts";
 import { calibrate as calibrate_composition } from "../../resolvers/text_composition.ts";
 import { requires_version } from "../../ae_version.ts";

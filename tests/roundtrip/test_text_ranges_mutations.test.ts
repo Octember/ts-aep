@@ -46,8 +46,8 @@ function _require_composer(doc: any): string | null {
   // NOTE(port): importorskip("uharfbuzz") never skips here: text_composition.ts loads harfbuzzjs unconditionally at module load.
   const fonts = doc._fonts.map((font: any) => font.post_script_name);
   const used = new Set<string>();
-  for (const run of py_or(cos_get(doc._doc, "0", "6", "0"), [])) {
-    const style = py_or(cos_get(run, "0", "0", "6"), new Map());
+  for (const run of py_or(cos_get(doc._doc, "0", "6", "0"), []) as any[]) {
+    const style: any = py_or(cos_get(run, "0", "0", "6"), new Map());
     const index = dict_get(style, "0");
     if (typeof index === "number" && Number.isInteger(index) && 0 <= index && index < fonts.length) {
       used.add(fonts[index]);

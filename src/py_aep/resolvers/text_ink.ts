@@ -36,8 +36,6 @@ import * as host from "../../pyrt/host.ts";
 import {
   NotImplementedError,
   at,
-  float,
-  int,
   max,
   py_bool,
   py_or,

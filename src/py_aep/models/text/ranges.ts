@@ -49,9 +49,9 @@ import {
 } from "../../../pyrt/index.ts";
 import { CosField, CosName, cos_get, run_spans } from "../../cos/index.ts";
 import type { CosDict, CosNode } from "../../cos/cos.ts";
-import { _extract, bool_field, enum_field, float_field, int_field, enum_from_cos, type CosEnum, type CosFieldExtras, type CosFieldOptions, type InstanceValue } from "../../cos/descriptors.ts";
-import { cos_dict, cos_float, cos_get_or, cos_in, cos_insert, cos_int, cos_item, cos_iter, cos_num, cos_pop, cos_setdefault, cos_setitem, is, py_add, py_int, py_num, py_number, py_sub, type PyNum } from "../../cos/kinds.ts";
-import { char_style, kern_payload, doc_text, font_ref, read, run } from "../../cos/schema.ts";
+import { _extract, bool_field, enum_field, float_field, int_field, enum_from_cos, type CosEnum, type CosFieldExtras, type InstanceValue } from "../../cos/descriptors.ts";
+import { cos_dict, cos_float, cos_get_or, cos_in, cos_insert, cos_int, cos_iter, cos_num, cos_pop, cos_setdefault, cos_setitem, is, py_add, py_int, py_num, py_number, py_sub, type PyNum } from "../../cos/kinds.ts";
+import { cache_line, char_style, font_ref, read } from "../../cos/schema.ts";
 import { AutoKernType, BaselineDirection, DigitSet, FontBaselineOption, FontCapsOption, LeadingType, LineJoinType, ParagraphDirection, ParagraphJustification } from "../../enums/index.ts";
 import type { ComposerEngine } from "../../enums/index.ts";
 import { CompositionUnsupported, compose_lines } from "../../resolvers/text_composition.ts";
@@ -62,9 +62,6 @@ import type { TextDocument } from "./text_document.ts";
 
 // NOTE(port): thin alias of pyrt py_bool (Python truthiness), exported under the builtin name.
 export const bool = (x: CosNode): boolean => py_bool(x);
-
-/** A per-character manual-kern value: the stored `isinstance(.., int)` value, `null` where none is stored. */
-type KernValue = number | boolean | null;
 
 // AE's exact error strings (AE 26.3, English locale); py_aep raises these
 // from ValueError so behavior parity does not depend on hosting AE.
@@ -195,8 +192,8 @@ export function _line_data_from_nodes(nodes: CosDict[]): [[number, number][], (n
       }
     }
     lengths.push(total);
-    const baseline = node.get("10") ?? null;
-    baselines.push(is(py_number, baseline) ? float(baseline) : null);
+    const baseline = read(cache_line, node, "10");
+    baselines.push(baseline != null ? float(baseline) : null);
   }
   if (!lengths.length) return null;
   const spans: [number, number][] = [];
@@ -217,8 +214,8 @@ export function _line_data_from_nodes(nodes: CosDict[]): [[number, number][], (n
 export function _line_origin(node: CosDict): [number, number] {
   const origin = cos_get(node, "0", "0");
   if (Array.isArray(origin) && origin.length >= 2) return [cos_float(origin[0]), cos_float(origin[1])];
-  const baseline = node.get("10") ?? null;
-  const y = is(py_number, baseline) ? float(baseline) : 0.0;
+  const baseline = read(cache_line, node, "10");
+  const y = baseline != null ? float(baseline) : 0.0;
   return [0.0, y];
 }
 
