@@ -6,7 +6,6 @@ import {
   PyException,
   ValueError,
   b,
-  getattr,
   json_dumps,
   json_loads,
   len,
@@ -20,6 +19,11 @@ export class ChunkNotFoundError extends PyException {
 
 /** Sentinel value indicating an undefined frame number in the binary format. */
 export const UNDEFINED_FRAME = 0xFFFFFFFF;
+
+/** `getattr(chunk, "list_type", None)`: the list type of a LIST chunk, else `null`. */
+export function list_type_of(chunk: Chunk | null | undefined): string | null {
+  return chunk instanceof ListChunk ? chunk.list_type : null;
+}
 
 /** Return first chunk matching `chunk_type`, or null if there is none. */
 export function find_by_type_or_null<K extends string>(chunks: Chunk[], chunk_type: K): ChunkOf<K> | null {
@@ -125,7 +129,7 @@ export function _find_anchor_index(chunks: Chunk[], anchor_type: string): number
   if (anchor_type.startsWith("LIST:")) {
     const lt = anchor_type.slice(5);
     for (const [i, c] of chunks.entries()) {
-      if (getattr(c, "list_type", null) === lt) return i;
+      if (c instanceof ListChunk && c.list_type === lt) return i;
     }
     throw new ChunkNotFoundError(`Missing LIST/${lt} chunk`);
   }
@@ -340,8 +344,8 @@ export function chunk_tree(chunks: Chunk[], depth = -1, indent = 0): string {
   const lines: string[] = [];
   const prefix = "  ".repeat(indent);
   for (const chunk of chunks) {
-    const lt = getattr(chunk, "list_type", null);
-    const children = getattr(chunk, "chunks", null);
+    const lt = chunk instanceof ListChunk ? chunk.list_type : null;
+    const children = chunk instanceof ListChunk ? chunk.chunks : null;
     const size = len("data" in chunk ? chunk.data : b(""));
     if (lt != null) {
       const label = `LIST:${lt}`;
@@ -427,16 +431,15 @@ export function recursive_find(
   const results: Chunk[] = [];
   for (const chunk of chunks) {
     if (list_type != null) {
-      if (getattr(chunk, "list_type", null) === list_type) results.push(chunk);
+      if (chunk instanceof ListChunk && chunk.list_type === list_type) results.push(chunk);
     } else if (chunk.chunk_type === chunk_type) {
       results.push(chunk);
     }
     if (skip_unparsed && chunk instanceof DeferredListChunk && !chunk.is_parsed) {
       continue;
     }
-    const children = getattr(chunk, "chunks", null);
-    if (children != null) {
-      for (const found of recursive_find(children, chunk_type, list_type, skip_unparsed)) {
+    if (chunk instanceof ListChunk) {
+      for (const found of recursive_find(chunk.chunks, chunk_type, list_type, skip_unparsed)) {
         results.push(found);
       }
     }

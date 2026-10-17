@@ -11,7 +11,7 @@ import { validate_bool, validate_rgb_color } from "../validators.ts";
 // NOTE(port): property_group.ts reaches this module only through `deferred(...)` (the
 // port of Python's in-method import), so `extends PropertyGroup` evaluates after it.
 import { PropertyGroup, _insert_before_group_end } from "./property_group.ts";
-import { deferred, descriptor, getattr, py_assert, zip, instance_dict } from "../../../pyrt/index.ts";
+import { deferred, descriptor, py_assert, zip, instance_dict } from "../../../pyrt/index.ts";
 import type { Utf8Chunk } from "../../binary/scalar_chunks.ts";
 import type { AVLayer } from "../layers/av_layer.ts";
 import type { Property } from "./property.ts";
@@ -305,7 +305,7 @@ export class MaskPropertyGroup extends PropertyGroup {
     const found_at = chunks.findIndex(
       (c) =>
         c.chunk_type === "tdmn" &&
-        getattr(c, "value", null) === "ADBE Mask Shape" &&
+        "value" in c && c.value === "ADBE Mask Shape" &&
         c.synthetic,
     );
     const insert_at = found_at >= 0 ? found_at : chunks.length;

@@ -131,7 +131,7 @@ export function _insert_before_group_end(tdgp: ListChunk, chunk: Chunk): void {
    */
   for (let i = tdgp.chunks.length - 1; i >= 0; i--) {
     const c = tdgp.chunks[i];
-    if (c.chunk_type === "tdmn" && getattr(c, "value", null) === "ADBE Group End") {
+    if (c.chunk_type === "tdmn" && "value" in c && c.value === "ADBE Group End") {
       tdgp.chunks.splice(i, 0, chunk);
       return;
     }
@@ -596,7 +596,7 @@ export class PropertyGroup extends PropertyBase {
     }
     // Also flip the group end marker.
     for (const c of tdgp.chunks) {
-      if (c.chunk_type === "tdmn" && getattr(c, "value", null) === "ADBE Group End") {
+      if (c.chunk_type === "tdmn" && "value" in c && c.value === "ADBE Group End") {
         c.synthetic = false;
         break;
       }

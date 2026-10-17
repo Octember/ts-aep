@@ -244,7 +244,7 @@ export class PropertyBase {
       pos = chunks.length;
       for (let i = chunks.length - 1; i >= 0; i--) {
         const c = chunks[i];
-        if (c.chunk_type === "tdmn" && py_eq(getattr(c, "value", null), "ADBE Group End")) {
+        if (c.chunk_type === "tdmn" && "value" in c && py_eq(c.value, "ADBE Group End")) {
           pos = i;
           break;
         }
