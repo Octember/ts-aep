@@ -44,7 +44,7 @@
     "access": "public"
   },
   "scripts": {
-    "typecheck": "tsc --noEmit -p .",
+    "typecheck": "tsc --noEmit -p . && tsc --noEmit -p tsconfig.src.json",
     "test": "bun test",
     "build": "bun tools/build.ts",
     "prepublishOnly": "bun tools/build.ts"

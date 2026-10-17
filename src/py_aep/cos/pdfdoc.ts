@@ -80,14 +80,15 @@ export const _OVERRIDES: Map<number, number> = new Map<number, number>([
  *
  * @param raw - The string object read from the PDF.
  */
-export function decode_pdf_text_string(raw: Uint8Array | string): string {
+export function decode_pdf_text_string(raw: Uint8Array | string | CosString): string {
   if (raw instanceof Uint8Array) {
     return _from_bytes(raw);
   }
-  if ((raw as any) instanceof CosString && (raw as any).cos_raw != null) {
-    return _from_bytes((raw as any).cos_raw);
+  if (raw instanceof CosString && raw.cos_raw != null) {
+    return _from_bytes(raw.cos_raw);
   }
-  return raw;
+  // A CosString is a String object that passes through as-is.
+  return raw as string;
 }
 
 export function _from_bytes(raw: Uint8Array): string {

@@ -120,7 +120,8 @@ export function _get_struct_be(fmt: string): struct.Struct {
  *
  * @throws {@link IOError} If fewer bytes are available than the format requires.
  */
-export function read_fmt(fmt: string, fp: IO, endian = ">"): any[] {
+export function read_fmt<F extends string>(fmt: F, fp: IO, endian?: string): struct.Unpacked<F>;
+export function read_fmt(fmt: string, fp: IO, endian = ">"): struct.Unpacked<string> {
   const s = endian === ">" ? _get_struct_be(fmt) : _get_struct(endian + fmt);
   if (fp instanceof BytesIO) {
     const values = fp.unpack(s);
@@ -140,15 +141,16 @@ export function read_fmt(fmt: string, fp: IO, endian = ">"): any[] {
  */
 // Python's keyword-only `endian` follows `*args`; in TS it is a trailing plain
 // `{ endian }` options object (struct values are never plain objects).
-export function write_fmt(fp: IO, fmt: string, ...args: any[]): number {
+export type WriteFmtOptions = { endian?: string };
+export function write_fmt(fp: IO, fmt: string, ...args: (struct.PackValue | WriteFmtOptions)[]): number {
   const last = args[args.length - 1];
-  const opts = last !== null && typeof last === "object" && Object.getPrototypeOf(last) === Object.prototype ? args.pop() : {};
+  const opts: WriteFmtOptions = last !== null && typeof last === "object" && Object.getPrototypeOf(last) === Object.prototype ? (args.pop() as WriteFmtOptions) : {};
   const endian = opts.endian ?? ">";
-  return write_values(fp, endian === ">" ? _get_struct_be(fmt) : _get_struct(endian + fmt), args);
+  return write_values(fp, endian === ">" ? _get_struct_be(fmt) : _get_struct(endian + fmt), args as struct.PackValue[]);
 }
 
 /** `write_fmt` with a resolved struct and the values as an array. */
-export function write_values(fp: IO, s: struct.Struct, values: any[]): number {
+export function write_values(fp: IO, s: struct.Struct, values: struct.PackValue[]): number {
   const sink: { write(data: Uint8Array): unknown } = fp;
   if (fp instanceof BytesIO) return fp.pack(s, values);
   const data = s.pack(...values);

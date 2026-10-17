@@ -32,4 +32,14 @@ for (const file of fs.readdirSync("dist/types", { recursive: true }) as string[]
     rewritten++;
   }
 }
+// Ambient declarations for untyped dependencies (fontkit, harfbuzzjs) ship with the types.
+fs.mkdirSync("dist/types/types", { recursive: true });
+for (const f of fs.readdirSync("src/types")) {
+  const src = fs.readFileSync(path.join("src/types", f), "utf8");
+  fs.writeFileSync(path.join("dist/types/types", f), src.replace(/(import\(\s*)(["'])(\.{1,2}\/[^"']+)\.ts\2/g, (_, pre, q, spec) => `${pre}${q}${spec}.js${q}`));
+}
+const entry = "dist/types/py_aep/index.d.ts";
+const refs = fs.readdirSync("dist/types/types").map((f) => `/// <reference path="../types/${f}" />`).join("\n");
+fs.writeFileSync(entry, `${refs}\n${fs.readFileSync(entry, "utf8")}`);
+
 console.log(`dist/index.js + dist/types (${rewritten} declaration files rewritten to .js specifiers)`);

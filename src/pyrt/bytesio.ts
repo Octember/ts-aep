@@ -3,7 +3,7 @@
 
 import { fs } from "./host.ts";
 import { FileNotFoundError, OSError } from "./errors.ts";
-import type { Struct } from "./struct.ts";
+import type { PackValue, Struct, Unpacked } from "./struct.ts";
 
 const PACK_SCRATCH = new Uint8Array(64);
 
@@ -29,7 +29,7 @@ export class BytesIO {
    * `s.unpack(fp.read(s.size))` without the intermediate copy. Returns null,
    * leaving the position alone, when fewer than `s.size` bytes remain.
    */
-  unpack(s: Struct): any[] | null {
+  unpack<F extends string>(s: Struct<F>): Unpacked<F> | null {
     if (this.pos + s.size > this.len) return null;
     const out = s.unpack_from(this.buf, this.pos);
     this.pos += s.size;
@@ -63,7 +63,7 @@ export class BytesIO {
   }
 
   /** `fp.write(s.pack(*values))` without allocating the packed bytes. */
-  pack(s: Struct, values: any[]): number {
+  pack<F extends string>(s: Struct<F>, values: PackValue[]): number {
     const end = this.pos + s.size;
     if (this.pos < this.len) {
       if (end > this.len || s.size > PACK_SCRATCH.length) return this.write(s.pack(...values));
@@ -197,9 +197,9 @@ export class FileReader {
   constructor(readonly path: string) {
     try {
       this.fd = fs.openSync(path, "r");
-    } catch (e: any) {
-      if (e?.code === "ENOENT") throw new FileNotFoundError(`[Errno 2] No such file or directory: '${path}'`);
-      if (typeof e?.code === "string") throw new OSError(`${e.message}`);
+    } catch (e: unknown) {
+      if ((e as NodeJS.ErrnoException | undefined)?.code === "ENOENT") throw new FileNotFoundError(`[Errno 2] No such file or directory: '${path}'`);
+      if (typeof (e as NodeJS.ErrnoException | undefined)?.code === "string") throw new OSError(`${(e as Error).message}`);
       throw e;
     }
     this._size = fs.fstatSync(this.fd).size;

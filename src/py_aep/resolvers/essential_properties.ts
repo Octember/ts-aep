@@ -74,8 +74,8 @@ export function _resolve_indexed_child(group: PropertyGroup, ref: SourceProperty
   if (ref.prop_index == null) return null;
   if (group.is_effect) {
     const defs = project._effect_param_defs.get(group.match_name);
-    if (defs?.size > 0) {
-      const keys = [...defs.keys()];
+    if (defs?.size! > 0) {
+      const keys = [...defs!.keys()];
       const pos = ref.prop_index - 1;
       if (0 <= pos && pos < keys.length && keys[pos] === ref.match_name) {
         try {
@@ -164,7 +164,7 @@ export function _preorder_index(root: PropertyGroup, target: Property): number |
  * override leaf or the controller cannot be resolved (e.g. it was removed).
  */
 export function resolve_essential_property_controller(prop: Property): EssentialGraphicsController | null {
-  let root: any = prop._parent_property;
+  let root: PropertyGroup | Property | null = prop._parent_property;
   while (root != null && root.match_name !== "ADBE Layer Overrides") {
     root = root._parent_property;
   }

@@ -4,7 +4,50 @@
 
 import { OverflowError, StructError } from "./errors.ts";
 
+/** What `pack` accepts: ints, floats and bools (numeric codes), bytes (`c`, `s`, `p`). */
+export type PackValue = number | bigint | boolean | Uint8Array;
+
 type Code = { ch: string; count: number; size: number };
+
+// Type of the tuple `unpack(F, ...)` yields, for a literal format F (`any[]` otherwise).
+type Digit = "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9";
+type DigitTuple = {
+  "0": []; "1": [0]; "2": [0, 0]; "3": [0, 0, 0]; "4": [0, 0, 0, 0]; "5": [0, 0, 0, 0, 0];
+  "6": [0, 0, 0, 0, 0, 0]; "7": [0, 0, 0, 0, 0, 0, 0]; "8": [0, 0, 0, 0, 0, 0, 0, 0]; "9": [0, 0, 0, 0, 0, 0, 0, 0, 0];
+};
+type Times10<T extends 0[]> = [...T, ...T, ...T, ...T, ...T, ...T, ...T, ...T, ...T, ...T];
+type CountOf<S extends string, Acc extends 0[] = []> = S extends `${infer D extends Digit}${infer R}`
+  ? CountOf<R, [...Times10<Acc>, ...DigitTuple[D]]>
+  : Acc;
+type SplitCount<S extends string, D extends string = ""> = S extends `${infer C extends Digit}${infer R}`
+  ? SplitCount<R, `${D}${C}`>
+  : [D, S];
+type CodeValue = {
+  c: Uint8Array; b: number; B: number; "?": boolean; h: number; H: number; i: number; I: number;
+  l: number; L: number; q: bigint; Q: bigint; e: number; f: number; d: number;
+};
+type Fill<T extends 0[], V> = { [K in keyof T]: V };
+type ParseCodes<S extends string> = S extends ""
+  ? []
+  : S extends ` ${infer R}`
+    ? ParseCodes<R>
+    : SplitCount<S> extends [infer D extends string, `${infer C}${infer R}`]
+      ? C extends "x"
+        ? ParseCodes<R>
+        : C extends "s" | "p"
+          ? [Uint8Array, ...ParseCodes<R>]
+          : C extends keyof CodeValue
+            ? D extends ""
+              ? [CodeValue[C], ...ParseCodes<R>]
+              : [...Fill<CountOf<D>, CodeValue[C]>, ...ParseCodes<R>]
+            : any[]
+      : any[];
+/** The values `struct.unpack(F, data)` yields: a tuple for a literal format, `any[]` otherwise. */
+export type Unpacked<F extends string> = string extends F
+  ? any[]
+  : F extends `${"<" | ">" | "!" | "=" | "@"}${infer R}`
+    ? ParseCodes<R>
+    : ParseCodes<F>;
 
 const SIZES: Record<string, number> = {
   x: 1, c: 1, b: 1, B: 1, "?": 1, h: 2, H: 2, i: 4, I: 4, l: 4, L: 4,
@@ -18,15 +61,15 @@ const INT_RANGE: Record<string, [number, number]> = {
 
 const FLOAT32_MAX = 3.4028234663852886e38;
 
-export class Struct {
-  readonly format: string;
+export class Struct<F extends string = string> {
+  readonly format: F;
   readonly size: number;
   private readonly le: boolean;
   private readonly codes: Code[];
 
-  constructor(format: string) {
+  constructor(format: F) {
     this.format = format;
-    let f = format;
+    let f: string = format;
     this.le = false;
     const first = f[0];
     if (first === "<" || first === ">" || first === "!" || first === "=" || first === "@") {
@@ -69,6 +112,7 @@ export class Struct {
   /** Compiled `pack_to` body (after the arity check); null where code generation is blocked. */
   private packer: Packer | null | undefined;
 
+  unpack(data: Uint8Array): Unpacked<F>;
   unpack(data: Uint8Array): any[] {
     if (data.length !== this.size) {
       throw new StructError(`unpack requires a buffer of ${this.size} bytes`);
@@ -76,6 +120,7 @@ export class Struct {
     return this.unpack_from(data, 0);
   }
 
+  unpack_from(data: Uint8Array, offset?: number): Unpacked<F>;
   unpack_from(data: Uint8Array, offset = 0): any[] {
     if (data.length - offset < this.size) {
       throw new StructError(`unpack_from requires a buffer of at least ${this.size + offset} bytes`);
@@ -120,7 +165,7 @@ export class Struct {
     return out;
   }
 
-  pack(...values: any[]): Uint8Array {
+  pack(...values: PackValue[]): Uint8Array {
     const out = new Uint8Array(this.size);
     this.pack_to(out, 0, values);
     return out;
@@ -131,7 +176,7 @@ export class Struct {
    * `size` bytes. Pad bytes are zeroed, so `out` need not be zero-filled; on a
    * bad value, bytes before the failing field are already written.
    */
-  pack_to(out: Uint8Array, offset: number, values: any[]): void {
+  pack_to(out: Uint8Array, offset: number, values: PackValue[]): void {
     if (values.length !== this.n_values) {
       throw new StructError(`pack expected ${this.n_values} items for packing (got ${values.length})`);
     }
@@ -374,7 +419,7 @@ function scratch(d: Uint8Array, p: number, n: number): DataView {
   return SCRATCH_DV;
 }
 
-function to_int(v: any): number {
+function to_int(v: PackValue): number {
   if (typeof v === "boolean") return v ? 1 : 0;
   if (typeof v === "bigint") return Number(v);
   if (typeof v !== "number" || !Number.isInteger(v)) {
@@ -383,12 +428,12 @@ function to_int(v: any): number {
   return v;
 }
 
-function to_bigint(v: any): bigint {
+function to_bigint(v: PackValue): bigint {
   if (typeof v === "bigint") return v;
   return BigInt(to_int(v));
 }
 
-function to_float(v: any): number {
+function to_float(v: PackValue): number {
   if (typeof v === "boolean") return v ? 1 : 0;
   if (typeof v === "bigint") return Number(v);
   if (typeof v !== "number") throw new StructError("required argument is not a float");
@@ -431,22 +476,24 @@ function get(format: string): Struct {
 }
 
 /** `struct.pack(fmt, *values)` */
-export function pack(format: string, ...values: any[]): Uint8Array {
+export function pack(format: string, ...values: PackValue[]): Uint8Array {
   return get(format).pack(...values);
 }
 
 /** `struct.unpack(fmt, data)` */
+export function unpack<F extends string>(format: F, data: Uint8Array): Unpacked<F>;
 export function unpack(format: string, data: Uint8Array): any[] {
   return get(format).unpack(data);
 }
 
 /** `struct.unpack_from(fmt, data, offset)` */
+export function unpack_from<F extends string>(format: F, data: Uint8Array, offset?: number): Unpacked<F>;
 export function unpack_from(format: string, data: Uint8Array, offset = 0): any[] {
   return get(format).unpack_from(data, offset);
 }
 
 /** `struct.pack_into(fmt, buffer, offset, *values)` (negative offsets count from the end). */
-export function pack_into(format: string, buffer: Uint8Array, offset: number, ...values: any[]): void {
+export function pack_into(format: string, buffer: Uint8Array, offset: number, ...values: PackValue[]): void {
   const s = get(format);
   if (offset < 0) {
     if (offset + s.size > 0) throw new StructError(`no space to pack ${s.size} bytes at offset ${offset}`);

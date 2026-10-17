@@ -21,6 +21,7 @@ import {
   mapping_items,
   type_name,
 } from "../../../pyrt/index.ts";
+import type { EnumHelpers } from "../../../pyrt/enum.ts";
 import type { CompPreset } from "../../parsers/comp_presets.ts";
 import type { Preferences } from "../preferences.ts";
 
@@ -35,15 +36,18 @@ export const IntEnum = {
 };
 
 // Python `member.label` property; the enum objects expose it as `E.label(member)`.
-export function enum_label(enum_class: any, member: any): string {
+/** An `int_enum` class that also defines a `label(member)` method. */
+export type LabeledEnum = EnumHelpers<number> & { label(member: number): string };
+
+export function enum_label(enum_class: LabeledEnum, member: number): string {
   return enum_class.label(member);
 }
 
 /** Type alias for a settings spec: (attribute_name, optional_enum_class). */
-export type SettingsSpec = Map<string, [string, any]>;
+export type SettingsSpec = Map<string, [string, LabeledEnum | null]>;
 
 /**
- * Dict-like view mapping ExtendScript setting keys to model attributes.
+ * Map-like view mapping ExtendScript setting keys to model attributes.
  *
  * Every read delegates to `getattr(owner, attr_name)` and every write
  * delegates to `setattr(owner, attr_name, value)`. Validation is handled by
@@ -82,7 +86,7 @@ export class SettingsView {
     const [attr_name, enum_class] = spec;
     if (enum_class != null) value = _coerce_enum(enum_class, value);
     try {
-      (this._owner as any)[attr_name] = value;
+      (this._owner as Record<string, unknown>)[attr_name] = value;
     } catch (e) {
       // A getter-only JS accessor throws a native TypeError in strict mode;
       // Python's property without a setter raises AttributeError.
@@ -136,7 +140,7 @@ export class SettingsView {
     }
   }
 
-  update(other: Map<string, any> | SettingsView | Iterable<[string, any]> = [], kwargs: Record<string, any> = {}): void {
+  update(other: Map<string, any> | SettingsView | Iterable<[string, any]> = [], kwargs: Record<string, unknown> = {}): void {
     if (other instanceof Map || other instanceof SettingsView) {
       for (const [k, v] of mapping_items(other)) this.__setitem__(k, v);
     } else {
@@ -210,7 +214,7 @@ export class SettingsView {
  *     - An int matching an enum member's value
  *     - A string matching an enum member's label
  */
-export function _coerce_enum(enum_class: any, value: any): any {
+export function _coerce_enum(enum_class: LabeledEnum, value: unknown): number {
   if (enum_class.has(value)) return value;
   if (typeof value === "boolean") {
     // bool is int: settings["Output Audio"] = True would silently
@@ -224,7 +228,7 @@ export function _coerce_enum(enum_class: any, value: any): any {
       if (!(e instanceof ValueError)) throw e;
       const members = enum_class
         .members()
-        .map((m: any) => `${enum_class.name_of(m)} (${int(m)})`)
+        .map((m) => `${enum_class.name_of(m)} (${int(m)})`)
         .join(", ");
       throw new ValueError(
         `Invalid int value ${repr(value)} for ${enum_class.__name__}. ` +
@@ -233,12 +237,12 @@ export function _coerce_enum(enum_class: any, value: any): any {
     }
   }
   if (typeof value === "string") {
-    const by_label = new Map<string, any>();
+    const by_label = new Map<string, number>();
     for (const m of enum_class.members()) by_label.set(enum_label(enum_class, m), m);
-    if (by_label.has(value)) return by_label.get(value);
+    if (by_label.has(value)) return by_label.get(value)!;
     const labels = enum_class
       .members()
-      .map((m: any) => repr(enum_label(enum_class, m)))
+      .map((m) => repr(enum_label(enum_class, m)))
       .join(", ");
     throw new ValueError(
       `Invalid string ${repr(value)} for ${enum_class.__name__}. ` +
@@ -329,7 +333,7 @@ export function _to_string_value(
   key: string,
   value: any,
   resize_map: Map<string, string> = _RESIZE_TO_STRINGS,
-  enum_class: any = null,
+  enum_class: LabeledEnum | null = null,
 ): any {
   if (value instanceof Map) {
     return new Map([...value.entries()].map(([k, v]) => [k, _to_string_value(k, v, resize_map)]));
@@ -347,9 +351,9 @@ export function _to_string_value(
  * Convert settings to NUMBER format.
  *
  * IntEnum values are unwrapped to plain integers. Other values
- * (bool, float, int, list) pass through unchanged.
+ * (bool, float, int, array) pass through unchanged.
  *
- * @param settings - The typed settings dict.
+ * @param settings - The typed settings map.
  */
 export function settings_to_number(settings: Map<string, any> | SettingsView): Map<string, any> {
   return new Map<string, any>(
@@ -362,7 +366,7 @@ export function settings_to_number(settings: Map<string, any> | SettingsView): M
  *
  * All values are converted to their ExtendScript STRING representation.
  *
- * @param settings - The typed settings dict.
+ * @param settings - The typed settings map.
  * @param resize_map - Resolution -\> label map for the "Resize to" key (from
  *   {@link build_resize_to_strings}); defaults to the factory fallback table.
  */

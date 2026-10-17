@@ -335,7 +335,7 @@ export const _LINE_ORIENTATION_BINARY_MAP: Map<number, LineOrientation> = new Ma
   [2, LineOrientation.VERTICAL_RIGHT_TO_LEFT],
 ]);
 export const _LINE_ORIENTATION_TO_BINARY: Map<LineOrientation, number> = new Map<LineOrientation, number>(
-  [..._LINE_ORIENTATION_BINARY_MAP].map(([k, v]) => [v, k] as [LineOrientation, number]),
+  [..._LINE_ORIENTATION_BINARY_MAP].map(([k, v]): [LineOrientation, number] => [v, k]),
 );
 
 /**

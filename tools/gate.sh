@@ -9,10 +9,16 @@ base() { python3 -c "import json;print(json.load(open('tools/gate_baseline.json'
 echo "== tsc"
 bun run --silent typecheck
 
+echo "== generated chunk types"
+bun tools/gen_chunk_types.ts --check
+
 echo "== tsdoc"
 tsdoc=$(bun tools/tsdoc_lint.ts)
 echo "$tsdoc"
 python3 -c "import json,sys; sys.exit(0 if json.loads(sys.argv[1])['messages']==0 else 1)" "$tsdoc"
+
+echo "== doc examples"
+bun tools/doc_examples.ts | tail -1
 
 echo "== bun test"
 bun test --timeout 60000 > .gate/test.txt 2>&1 || true

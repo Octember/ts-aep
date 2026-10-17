@@ -1,7 +1,7 @@
 /** Parser for Essential Graphics panel data (LIST:CIF3 chunks). */
 
 import { ChunkNotFoundError, filter_by_type, filter_by_list_type, find_by_type, find_by_list_type } from "../binary/utils.ts";
-import type { U4Chunk, Utf8Chunk } from "../binary/scalar_chunks.ts";
+import type { Utf8Chunk } from "../binary/scalar_chunks.ts";
 import type { Chunk, ListChunk } from "../binary/chunk.ts";
 import { _suppress_materialization } from "../models/descriptors.ts";
 import { EssentialGraphicsController, SourcePropertyRef } from "../models/essential_graphics.ts";
@@ -9,6 +9,8 @@ import { at, dict_get, getitem, int, json_loads, py_eq, sorted } from "../../pyr
 
 // AE stores 0xFFFFFFFF in a CPrp path node's `index` to mean "match by name".
 export const _BY_NAME_INDEX = 0xffffffff;
+
+type PathNode = Map<"index", number | undefined> & Map<"matchName", string>;
 
 /**
  * Parse a controller's `CPrp` path JSON into root-to-leaf refs.
@@ -18,10 +20,10 @@ export const _BY_NAME_INDEX = 0xffffffff;
  * the source property the controller exposes.
  */
 export function _parse_source_property_path(raw: string): SourcePropertyRef[] {
-  const nodes: Map<string, any> = json_loads(raw);
+  const nodes: Map<string, PathNode> = json_loads(raw);
   const path: SourcePropertyRef[] = [];
   for (const key of sorted(nodes.keys(), int)) {
-    const node: Map<string, any> = getitem(nodes, key);
+    const node = getitem(nodes, key);
     const index = node.get("index") ?? null;
     path.push(
       new SourcePropertyRef(
@@ -40,12 +42,12 @@ export function _parse_source_property_path(raw: string): SourcePropertyRef[] {
  */
 export function _parse_controller(cctl_chunk: ListChunk): EssentialGraphicsController {
   const cps2 = find_by_list_type(cctl_chunk.chunks, "CpS2");
-  const name_utf8 = at(filter_by_type(cps2.chunks, "Utf8"), 0) as Utf8Chunk;
+  const name_utf8 = at(filter_by_type(cps2.chunks, "Utf8"), 0);
 
-  const ctyp = find_by_type(cctl_chunk.chunks, "CTyp") as U4Chunk;
+  const ctyp = find_by_type(cctl_chunk.chunks, "CTyp");
 
   const uuid_chunks = filter_by_type(cctl_chunk.chunks, "Utf8");
-  const uuid = uuid_chunks?.length > 0 ? (uuid_chunks[0] as Utf8Chunk).value : "";
+  const uuid = uuid_chunks?.length > 0 ? uuid_chunks[0].value : "";
 
   // The controlled-property path is the nested LIST:CPrp's Utf8 (JSON), a
   // different CPrp from the override-side OvG2/CPrp. Absent for some
@@ -63,17 +65,17 @@ export function _parse_controller(cctl_chunk: ListChunk): EssentialGraphicsContr
   if (cprp != null) {
     const path_utf8 = filter_by_type(cprp.chunks, "Utf8");
     if (path_utf8?.length > 0) {
-      source_property_path = _parse_source_property_path((path_utf8[0] as Utf8Chunk).value);
+      source_property_path = _parse_source_property_path(path_utf8[0].value);
     }
     // CCId / CLId identify the source comp + layer that own the
     // controlled property (the layer is matched by its `layer_id`).
     const ccid = filter_by_type(cprp.chunks, "CCId");
     if (ccid?.length > 0) {
-      source_comp_id = (ccid[0] as U4Chunk).value;
+      source_comp_id = ccid[0].value;
     }
     const clid = filter_by_type(cprp.chunks, "CLId");
     if (clid?.length > 0) {
-      source_layer_id = (clid[0] as U4Chunk).value;
+      source_layer_id = clid[0].value;
     }
   }
 
@@ -101,7 +103,7 @@ export function _parse_controller(cctl_chunk: ListChunk): EssentialGraphicsContr
  *
  * @param child_chunks - The child chunks of a composition LIST:Item chunk.
  * @returns A tuple of (template_name_utf8_chunk, controllers) if an Essential Graphics container is
- *   found, otherwise `None`.
+ *   found, otherwise `null`.
  */
 export const parse_essential_graphics = _suppress_materialization().decorate(
   function parse_essential_graphics(
@@ -123,7 +125,7 @@ export const parse_essential_graphics = _suppress_materialization().decorate(
 
     // Template name from the first LIST:CpS2
     const cps2 = find_by_list_type(cif_chunks, "CpS2");
-    const template_name_utf8 = at(filter_by_type(cps2.chunks, "Utf8"), 0) as Utf8Chunk;
+    const template_name_utf8 = at(filter_by_type(cps2.chunks, "Utf8"), 0);
 
     const cctl_chunks = filter_by_list_type(cif_chunks, "CCtl");
     const controllers = cctl_chunks.map((cctl) => _parse_controller(cctl));

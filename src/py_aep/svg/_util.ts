@@ -75,7 +75,7 @@ export function clamp01(value: number): number {
  */
 export function parse_number(text: string | null, default_: number = 0.0): number {
   if (!text) return default_;
-  const m = pattern_match(NUMBER_RE, strip(text!));
+  const m = pattern_match(NUMBER_RE, strip(text));
   return m ? float(m[0]) : default_;
 }
 
@@ -92,7 +92,7 @@ export function parse_length(
   font_size: number = DEFAULT_FONT_SIZE,
 ): number {
   if (!text) return default_;
-  const m = pattern_match(_LENGTH_RE, strip(text!));
+  const m = pattern_match(_LENGTH_RE, strip(text));
   if (m == null) return default_;
   const value = float(m[1]);
   const unit = (m[2] ?? "").toLowerCase();

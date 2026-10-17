@@ -43,7 +43,7 @@ import {
   write_pad,
   write_values,
 } from "./bin_utils.ts";
-import { _decode_fields, _encode_value, _struct_info, type FmtItem } from "./fmt_field.ts";
+import { _decode_fields, _encode_value, _struct_info, type FieldValue, type FmtItem, type InitKwargs } from "./fmt_field.ts";
 import { CHUNK_TYPES, register } from "./registry.ts";
 import type { HeadChunk } from "./item_chunks.ts";
 
@@ -79,7 +79,7 @@ export class Chunk extends AttrsBase {
   declare synthetic: boolean;
   declare _trailing: Uint8Array;
 
-  static read(fp: IO, size: number, kwargs: { chunk_type?: string; [k: string]: any } = {}): Chunk {
+  static read(fp: IO, size: number, kwargs: { chunk_type?: string; [k: string]: unknown } = {}): Chunk {
     const { chunk_type = "" } = kwargs;
     const cls: any = this;
     // Get fields
@@ -106,7 +106,7 @@ export class Chunk extends AttrsBase {
       // Fast path: no string encodings, endian overrides, optional
       // fields, or items. dict(zip()) replaces the _decode_fields
       // Python loop. Coerces (e.g. bool_field) are handled inline.
-      const kw: Record<string, any> = {};
+      const kw: InitKwargs = {};
       const values = read_fmt(fmt, fp);
       const n = Math.min(init_names.length, values.length);
       for (let i = 0; i < n; i++) kw[init_names[i]] = values[i];
@@ -125,7 +125,7 @@ export class Chunk extends AttrsBase {
       return new cls(kw);
     }
 
-    let values: any[];
+    let values: FieldValue[];
     let items_start: number;
     if (mixed_endian) {
       // Per-field read: each field may have its own endian prefix
@@ -181,15 +181,15 @@ export class Chunk extends AttrsBase {
       items_start = size - remaining;
     }
 
-    const kw2: Record<string, any> = { chunk_type };
+    const kw2: InitKwargs = { chunk_type };
     Object.assign(kw2, _decode_fields(data_fields, values, encodings, coerces, init_names));
     let extra_trailing: Uint8Array | null = null;
     if (items_info != null) {
       const [items_name, item_cls, item_size] = items_info;
       const items_bytes = size - items_start;
       const count = floordiv(items_bytes, item_size);
-      const fmt_cls = item_cls as unknown as typeof FmtItem;
-      const items: any[] = [];
+      const fmt_cls = item_cls;
+      const items: FmtItem[] = [];
       for (let n = 0; n < count; n++) {
         items.push(fmt_cls.frombytes(fp.read(item_size)));
       }
@@ -245,7 +245,7 @@ export class Chunk extends AttrsBase {
         written += write_bytes(fp, struct.pack(fe + f.metadata["fmt"], value));
       }
     } else {
-      const values: any[] = [];
+      const values: FieldValue[] = [];
       for (let i = 0; i < last_idx; i++) {
         const f = data_fields[i];
         let value = getattr(this, f.name);
@@ -265,10 +265,10 @@ export class Chunk extends AttrsBase {
     return written;
   }
 
-  static frombytes(data: Uint8Array, kwargs: Record<string, any> = {}): Chunk {
+  static frombytes(data: Uint8Array, kwargs: Record<string, unknown> = {}): Chunk {
     /** Parse a chunk body from raw bytes. */
     const f = new BytesIO(data);
-    return (this as any).read(f, data.length, kwargs);
+    return this.read(f, data.length, kwargs);
   }
 
   tobytes(): Uint8Array {
@@ -278,14 +278,14 @@ export class Chunk extends AttrsBase {
     return f.getvalue();
   }
 
-  __eq__(other: any): boolean {
+  __eq__(other: unknown): boolean {
     // attrs-generated `__eq__`: eq=True fields, compared with Python equality.
     return attrs_eq(this, other, py_eq);
   }
 
   __repr__(): string {
     // attrs-generated `__repr__`: repr=True fields in declaration order.
-    const parts = fields(this.constructor).filter((f) => f.repr).map((f) => `${f.name}=${repr((this as any)[f.name])}`);
+    const parts = fields(this.constructor).filter((f) => f.repr).map((f) => `${f.name}=${repr((this as unknown as Record<string, unknown>)[f.name])}`);
     return `${this.constructor.name}(${parts.join(", ")})`;
   }
 }
@@ -318,7 +318,8 @@ export class ListChunk extends Chunk {
       chunk_type?: string;
       ctx?: ReadContext | null;
       defer_list_types?: ReadonlySet<string> | null;
-      [k: string]: any;
+      parent_result?: Chunk[] | null;
+      [k: string]: unknown;
     } = {},
   ): ListChunk {
     const { chunk_type = "LIST", defer_list_types = null } = kwargs;
@@ -331,7 +332,7 @@ export class ListChunk extends Chunk {
     }
     const parent_result = kwargs.parent_result ?? null;
     const child_ctx = new ReadContext(list_type, ctx.parent_list_type, parent_result);
-    if (defer_list_types?.size > 0 && defer_list_types!.has(list_type)) {
+    if (defer_list_types?.size! > 0 && defer_list_types!.has(list_type)) {
       const raw_body = fp.read(size - 4);
       return new DeferredListChunk({
         chunk_type,
@@ -480,7 +481,8 @@ export class ContainerChunk extends Chunk {
     kwargs: {
       chunk_type?: string;
       ctx?: ReadContext | null;
-      [k: string]: any;
+      defer_list_types?: ReadonlySet<string> | null;
+      [k: string]: unknown;
     } = {},
   ): ContainerChunk {
     const { chunk_type = "" } = kwargs;
@@ -676,15 +678,15 @@ export function _resolve_cdat_context(siblings: Chunk[], ctx: ReadContext): Reco
   return { is_le: ctx.grandparent_list_type === "otst" };
 }
 
-export function _resolve_ldat_context(siblings: Chunk[], ctx: ReadContext): Record<string, any> {
+export function _resolve_ldat_context(siblings: Chunk[], ctx: ReadContext): Record<string, unknown> {
   // Registry lookup instead of a deferred import: ldat_chunks subclasses Chunk,
   // so a top-level import would be circular.
   const Lhd3Chunk = CHUNK_TYPES.get("lhd3")!;
   if (!siblings?.length) return {};
-  const lhd3_sibling: any = siblings[0];
+  const lhd3_sibling: Chunk = siblings[0];
   if (!(lhd3_sibling instanceof Lhd3Chunk)) return {};
-  const lhd3: any = lhd3_sibling;
-  const result: Record<string, any> = {
+  const lhd3 = lhd3_sibling;
+  const result: Record<string, unknown> = {
     item_type: lhd3.item_type,
     item_size: lhd3.item_size,
     count: lhd3.count,
@@ -703,7 +705,7 @@ export function _resolve_ldat_context(siblings: Chunk[], ctx: ReadContext): Reco
   return result;
 }
 
-export function _resolve_tdum_context(siblings: Chunk[], ctx: ReadContext): Record<string, any> {
+export function _resolve_tdum_context(siblings: Chunk[], ctx: ReadContext): Record<string, unknown> {
   if (siblings.length > 2) {
     const tdb4: any = siblings[2];
     if (hasattr(tdb4, "color") && hasattr(tdb4, "integer")) {
@@ -719,13 +721,13 @@ export function _resolve_prda_context(siblings: Chunk[], ctx: ReadContext): Reco
   const PrinChunk = CHUNK_TYPES.get("prin")!;
   for (const sibling of siblings) {
     if (sibling instanceof PrinChunk) {
-      return { renderer_match_name: (sibling as any).match_name };
+      return { renderer_match_name: sibling.match_name };
     }
   }
   return {};
 }
 
-export const _CONTEXT_RESOLVERS: Map<string, (siblings: Chunk[], ctx: ReadContext) => Record<string, any>> =
+export const _CONTEXT_RESOLVERS: Map<string, (siblings: Chunk[], ctx: ReadContext) => Record<string, unknown>> =
   new Map([
     ["cdat", _resolve_cdat_context],
     ["ldat", _resolve_ldat_context],
@@ -735,7 +737,7 @@ export const _CONTEXT_RESOLVERS: Map<string, (siblings: Chunk[], ctx: ReadContex
   ]);
 
 /** Compute kwargs for parameterized chunk types. */
-export function _resolve_context(chunk_type: string, siblings: Chunk[], ctx: ReadContext): Record<string, any> {
+export function _resolve_context(chunk_type: string, siblings: Chunk[], ctx: ReadContext): Record<string, unknown> {
   const resolver = _CONTEXT_RESOLVERS.get(chunk_type);
   if (resolver == null) return {};
   return resolver(siblings, ctx);
@@ -812,7 +814,7 @@ export function read_chunks(
   let pos = end - size;
   while (pos < end) {
     const [chunk_type, len_body] = read_header(fp);
-    const cls: any = dict_get(CHUNK_TYPES, chunk_type, Chunk);
+    const cls = dict_get(CHUNK_TYPES, chunk_type, Chunk);
 
     const resolver = _CONTEXT_RESOLVERS.get(chunk_type);
     const ctx_kw = resolver ? resolver(result, ctx) : {};

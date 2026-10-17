@@ -2368,7 +2368,7 @@ describe("TestEffectPointSpeed", () => {
     expect(py_eq(prop._effect_scale, [400.0, 300.0])).toBe(true);
     expect(prop._effect_point_speed_factor).toBe(300.0);
     const middle = prop.keyframes[1];
-    expect(approx(middle._ldat_item.kf_data.in_speed, 0.4)).toBe(true);
+    expect(approx((middle._ldat_item.kf_data as import("../../src/py_aep/binary/ldat_chunks.ts").KfPosition).in_speed, 0.4)).toBe(true);
     expect(approx(middle.in_temporal_ease[0].speed, 120.0)).toBe(true);
     expect(approx(middle.out_temporal_ease[0].speed, 260.0)).toBe(true);
   });

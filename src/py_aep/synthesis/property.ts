@@ -25,7 +25,7 @@ export class PropSpec {
     readonly integer: boolean = false,
     readonly min_value: number | null = null,
     readonly max_value: number | null = null,
-    readonly default_value: any = _USE_VALUE,
+    readonly default_value: unknown = _USE_VALUE,
     readonly can_vary_over_time: boolean | null = null,
     readonly has_time_base: boolean = false,
     readonly min_major: number | null = null,
@@ -75,7 +75,7 @@ export class PropSpec {
 
   /** NamedTuple `_replace(**kw)`: a copy with the given fields changed. */
   _replace(kw: Partial<PropSpec> = {}): PropSpec {
-    const f: any = { ...this, ...kw };
+    const f = { ...this, ...kw };
     return new PropSpec(
       f.match_name,
       f.auto_name,
@@ -104,12 +104,12 @@ export class PropSpec {
   }
 
   /** NamedTuple equality: elementwise over the fields (also against a plain tuple). */
-  __eq__(other: any): boolean {
+  __eq__(other: Iterable<unknown> | null | undefined): boolean {
     if (other == null || typeof other[Symbol.iterator] !== "function" || typeof other === "string") return false;
     return py_eq([...this], [...other]);
   }
 
-  *[Symbol.iterator](): Generator<any> {
+  *[Symbol.iterator](): Generator<unknown> {
     yield* [
       this.match_name,
       this.auto_name,
@@ -156,12 +156,12 @@ export class GroupSpec {
   ) {}
 
   /** NamedTuple equality: elementwise over the fields (also against a plain tuple). */
-  __eq__(other: any): boolean {
+  __eq__(other: Iterable<unknown> | null | undefined): boolean {
     if (other == null || typeof other[Symbol.iterator] !== "function" || typeof other === "string") return false;
     return py_eq([...this], [...other]);
   }
 
-  *[Symbol.iterator](): Generator<any> {
+  *[Symbol.iterator](): Generator<unknown> {
     yield* [this.match_name, this.auto_name, this.min_major, this.enable_flags];
   }
 }

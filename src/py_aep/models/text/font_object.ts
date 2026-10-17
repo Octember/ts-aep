@@ -1,19 +1,20 @@
 /** Font object model for After Effects text layers. */
 
 import { TypeError_, descriptor, is_real, split, str, instance_dict } from "../../../pyrt/index.ts";
+import type { CosDict } from "../../cos/cos.ts";
 import { CosField } from "../../cos/descriptors.ts";
 
 /** Decode the COS design vector (16.16 fixed-point ints) to floats. */
 export function _design_vector_from_cos(raw: number[]): number[] {
-  if (raw == null || typeof (raw as any)[Symbol.iterator] !== "function") {
+  if (raw == null || typeof raw[Symbol.iterator] !== "function") {
     throw new TypeError_("object is not iterable");
   }
-  return Array.from(raw, (v: any) => {
+  return Array.from(raw, (v: number) => {
     // Python `str / float` raises TypeError (JS would yield NaN)
     if (!is_real(v) && typeof v !== "boolean") {
       throw new TypeError_("unsupported operand type(s) for /");
     }
-    return (v as any) / 65536.0;
+    return v / 65536.0;
   });
 }
 
@@ -24,13 +25,13 @@ export function _design_vector_from_cos(raw: number[]): number[] {
  * the font technology used, helping disambiguate when multiple fonts
  * sharing the same PostScript name are installed on the system.
  *
- * ```python
- * from py_aep import parse
+ * ```ts
+ * import { parse } from "@bevyl-ai/ts-aep";
  *
- * app = parse("project.aep")
- * comp = app.project.compositions[0]
- * font = comp.text_layers[0].text.source_text.value.font_object
- * print(font.post_script_name)
+ * const app = parse("project.aep");
+ * const comp = app.project.compositions[0];
+ * const font = comp.text_layers[0].text.source_text.value.font_object;
+ * console.log(font.post_script_name);
  * ```
  *
  * **Note:** 
@@ -48,7 +49,7 @@ export class FontObject {
 
   /**
    * For variable fonts, an ordered array with a length matching the
-   * number of design axes defined by the font. `None` for non-variable
+   * number of design axes defined by the font. `null` for non-variable
    * fonts. Read-only.
    *
    * Stored in the file as 16.16 fixed-point integers; exposed as floats
@@ -56,17 +57,17 @@ export class FontObject {
    */
   declare design_vector: number[] | null;
 
-  declare _font_data: Map<string, any>;
-  declare _font_entry: Map<string, any> | null;
+  declare _font_data: CosDict;
+  declare _font_entry: CosDict | null;
 
-  /** Returns `True` if the font is a variable font. Read-only. */
+  /** Returns `true` if the font is a variable font. Read-only. */
   get has_design_axes(): boolean {
     return this.design_vector != null;
   }
 
   /**
    * The family prefix of the variable font. For example, the family
-   * of the PostScript name `SFPro-Bold` is `SFPro`. `None` for
+   * of the PostScript name `SFPro-Bold` is `SFPro`. `null` for
    * non-variable fonts. Read-only.
    */
   get family_prefix(): string | null {
@@ -75,8 +76,8 @@ export class FontObject {
   }
 
   constructor(kw: {
-    _font_data: Map<string, any>;
-    _font_entry?: Map<string, any> | null;
+    _font_data: CosDict;
+    _font_entry?: CosDict | null;
     post_script_name?: string | null;
     version?: string | null;
   }) {

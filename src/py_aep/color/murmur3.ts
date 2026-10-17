@@ -40,7 +40,7 @@ export function _fmix64(k: bigint): bigint {
  * Return the 16-byte MurmurHash3 x64 128-bit digest of `data`.
  *
  * `seed` initializes both 64-bit accumulators (After Effects uses
- * {@link py_aep.color.murmur3.GUID_SEED | GUID_SEED}). The output is `h1` then `h2`,
+ * {@link GUID_SEED | GUID_SEED}). The output is `h1` then `h2`,
  * each little-endian - the byte order After Effects stores in a `Guid`.
  */
 export function murmurhash3_x64_128(data: Uint8Array, seed: number | bigint = 0): Uint8Array {
@@ -131,7 +131,7 @@ export function murmurhash3_x64_128(data: Uint8Array, seed: number | bigint = 0)
 
 /**
  * Return the 16-byte After Effects `Guid` for `data` (MurmurHash3 x64 128
- * with After Effects' {@link py_aep.color.murmur3.GUID_SEED | GUID_SEED}).
+ * with After Effects' {@link GUID_SEED | GUID_SEED}).
  */
 export function ae_guid(data: Uint8Array): Uint8Array {
   return murmurhash3_x64_128(data, GUID_SEED);

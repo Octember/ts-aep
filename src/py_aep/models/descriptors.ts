@@ -18,8 +18,12 @@ import {
   repr,
   instance_dict,
 } from "../../pyrt/index.ts";
+import type { EnumHelpers, EnumValue } from "../../pyrt/enum.ts";
 import { get_ae_version_major } from "../ae_version.ts";
 import { validate_bool, validate_enum } from "./validators.ts";
+
+/** Callable applied to a chunk value on read (`transform`) or write (`reverse`). */
+export type ChunkTransform = (...args: any[]) => any;
 
 export const _SENTINEL: unique symbol = Symbol("_SENTINEL");
 
@@ -55,8 +59,8 @@ export function _run_suppressed<R>(body: () => R): R {
  * `@_suppress_materialization()` becomes `.decorate(fn)`.
  */
 export function _suppress_materialization() {
-  function decorate<F extends (...args: any[]) => any>(fn: F): F {
-    return function (this: unknown, ...args: any[]) {
+  function decorate<F extends (...args: never[]) => unknown>(fn: F): F {
+    return function (this: unknown, ...args: Parameters<F>) {
       return _run_suppressed(() => fn.apply(this, args));
     } as unknown as F;
   }
@@ -79,7 +83,7 @@ export function is_enum(x: any): boolean {
  * Detects a `from_binary` classmethod (via `__self__`) or a direct
  * enum class reference.
  */
-export function _enum_class(transform: ((...args: any[]) => any) | null | undefined): any {
+export function _enum_class(transform: ChunkTransform | null | undefined): any {
   if (transform == null) return null;
   let enum_cls = getattr(transform, "__self__", null);
   if (enum_cls == null && is_enum(transform)) enum_cls = transform;
@@ -96,7 +100,7 @@ export function bound_enum_method(enum_cls: any, name: string, dflt: any): any {
   const m = getattr(enum_cls, name, dflt);
   // Python's default is the enum class itself, which is callable (`E(v)`); a
   // py_enum object is not, so use `E.of` and keep `__self__` for `_enum_class`.
-  if (m === dflt && is_enum(m)) return Object.assign((v: any) => m.of(v), { __self__: m });
+  if (m === dflt && is_enum(m)) return Object.assign((v: unknown) => m.of(v), { __self__: m });
   if (m === dflt || typeof m !== "function") return m;
   return Object.assign(m.bind(enum_cls), { __self__: enum_cls });
 }
@@ -136,7 +140,7 @@ export function enum_or_raw(convert: (value: any) => any): (value: any) => any {
  * Raw ints must appear in the enum's value map; any other type must
  * already be an instance of the enum.
  */
-export function _validate_enum_member(enum_cls: any, value: any, public_name: string): void {
+export function _validate_enum_member(enum_cls: any, value: unknown, public_name: string): void {
   if (enum_cls.has(value)) return;
   // NOTE(port): int/float — integral values are plain numbers by design (RULEBOOK §4); an integer-valued float such as 2.0 takes the int branch and gets the "Invalid value" message instead of "is not a valid".
   // A Python bool is an int that hashes like 0/1, so it is checked as its int value.
@@ -145,7 +149,7 @@ export function _validate_enum_member(enum_cls: any, value: any, public_name: st
     if (!enum_cls.has(key)) {
       const members = enum_cls
         .members()
-        .map((m: any) => `${enum_cls.name_of(m)} (${m})`)
+        .map((m: unknown) => `${enum_cls.name_of(m)} (${m})`)
         .join(", ");
       throw new ValueError(
         `Invalid value ${repr(value)} for ${repr(public_name)}. ` +
@@ -166,11 +170,11 @@ export function _validate_enum_member(enum_cls: any, value: any, public_name: st
  * @param transform - Optional callable applied when *getting* (binary -\> user-facing value).
  * @param reverse - 1-arg callable applied when *setting* (user-facing -\> binary value). Returns a
  *   scalar written to `field`.
- * @param read_only - When `True`, the field cannot be set. Defaults to `False`.
+ * @param read_only - When `true`, the field cannot be set. Defaults to `false`.
  * @param validate - Optional callable called with the user-facing value before any reverse
  *   transform. Must raise `ValueError` or `TypeError` if the value is invalid.
- * @param default - Optional default value returned when the chunk body is `None`. If not given,
- *   accessing the field when the body is `None` raises `AttributeError`.
+ * @param default - Optional default value returned when the chunk body is `null`. If not given,
+ *   accessing the field when the body is `null` raises `AttributeError`.
  * @param pre_set - Optional method name on the model instance, invoked after validation and before
  *   the value is written.
  * @param post_set - Optional method name on the model instance, or a callable receiving the model
@@ -179,11 +183,11 @@ export function _validate_enum_member(enum_cls: any, value: any, public_name: st
 export class ChunkField<T> {
   declare chunk_attr: string;
   declare field: string;
-  declare transform: ((...args: any[]) => any) | null;
-  declare reverse: ((...args: any[]) => any) | null;
+  declare transform: ChunkTransform | null;
+  declare reverse: ChunkTransform | null;
   declare read_only: boolean;
-  declare validate: ((value: any, obj: any) => void) | null;
-  declare default: any;
+  declare validate: ((value: T, obj: any) => void) | null;
+  declare default: T | typeof _SENTINEL;
   declare pre_set: string | null;
   declare post_set: ((obj: any) => void) | string | null;
   declare min_version: number | null;
@@ -194,11 +198,11 @@ export class ChunkField<T> {
     chunk_attr: string,
     field: string,
     kw: {
-      transform?: ((...args: any[]) => any) | null;
-      reverse?: ((...args: any[]) => any) | null;
+      transform?: ((value: any) => T) | null;
+      reverse?: ((value: NoInfer<T>) => unknown) | null;
       read_only?: boolean;
-      validate?: ((value: any, obj: any) => void) | null;
-      default?: any;
+      validate?: ((value: NoInfer<T>, obj: any) => void) | null;
+      default?: NoInfer<T>;
       pre_set?: string | null;
       post_set?: ((obj: any) => void) | string | null;
       min_version?: number | null;
@@ -242,7 +246,7 @@ export class ChunkField<T> {
     if (overrides.has(this.public_name)) return overrides.get(this.public_name) as T;
     const body = getattr(obj, this.chunk_attr);
     if (body == null) {
-      if (this.default !== _SENTINEL) return this.default as T;
+      if (this.default !== _SENTINEL) return this.default;
       throw new AttributeError(`chunk body ${repr(this.chunk_attr)} is None`);
     }
     const value = getattr(body, this.field);
@@ -323,7 +327,7 @@ export class ChunkField<T> {
   static bool(chunk_attr: string, field: string, kwargs: Record<string, any> = {}): ChunkField<boolean> {
     kwargs = { ...kwargs };
     if (!("validate" in kwargs)) kwargs.validate = validate_bool;
-    return new this(chunk_attr, field, kwargs) as ChunkField<boolean>;
+    return new this(chunk_attr, field, kwargs);
   }
 
   /**
@@ -336,19 +340,33 @@ export class ChunkField<T> {
    * `int` is used.
    *
    * @param kw - Keyword arguments:
-   * - `allow_out_of_enum_values`: When `True`, a stored value outside the enum reads back raw
+   * - `allow_out_of_enum_values`: When `true`, a stored value outside the enum reads back raw
    *     instead of raising - real `.aep` files hold them (an unlabelled output depth, a format id
    *     from a third-party output plugin) and the binary is trusted. Wrapping the transform hides
    *     the enum class from `_enum_class`, so write-side membership strictness is restored via
    *     `validate=validate_enum(enum_cls)` unless the caller passes its own `validate` (which must
    *     then check membership itself).
+   *   The field then reads as `EnumValue<E> | Raw`, `Raw` being the rest of the
+   *   declared field type (`declare depth: OutputColorDepth | number`).
    */
-  static enum<T = any>(
+  static enum<E extends EnumHelpers<unknown>, Raw = never>(
+    enum_cls: E,
+    chunk_attr: string,
+    field: string,
+    kw: { allow_out_of_enum_values: true; [key: string]: any },
+  ): ChunkField<EnumValue<E> | Raw>;
+  static enum<E extends EnumHelpers<unknown>>(
+    enum_cls: E,
+    chunk_attr: string,
+    field: string,
+    kw?: { allow_out_of_enum_values?: false; [key: string]: any },
+  ): ChunkField<EnumValue<E>>;
+  static enum(
     enum_cls: any,
     chunk_attr: string,
     field: string,
     kw: { allow_out_of_enum_values?: boolean; [key: string]: any } = {},
-  ): ChunkField<T> {
+  ): ChunkField<unknown> {
     const { allow_out_of_enum_values = false, ...kwargs } = kw;
     if (!("transform" in kwargs)) kwargs.transform = bound_enum_method(enum_cls, "from_binary", enum_cls);
     if (!("reverse" in kwargs)) kwargs.reverse = bound_enum_method(enum_cls, "to_binary", int);
@@ -358,6 +376,6 @@ export class ChunkField<T> {
         if (!("validate" in kwargs)) kwargs.validate = validate_enum(enum_cls);
       }
     }
-    return new this(chunk_attr, field, kwargs) as ChunkField<T>;
+    return new this(chunk_attr, field, kwargs);
   }
 }

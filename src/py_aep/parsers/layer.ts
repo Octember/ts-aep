@@ -1,8 +1,6 @@
 import { getitem, KeyError, warn } from "../../pyrt/index.ts";
 import type { Chunk, ListChunk } from "../binary/chunk.ts";
 import type { CmtaChunk } from "../binary/item_chunks.ts";
-import type { LdtaChunk } from "../binary/layer_chunks.ts";
-import type { Utf8Chunk } from "../binary/scalar_chunks.ts";
 import { ChunkNotFoundError, filter_by_list_type, filter_by_type, find_by_list_type, find_by_type } from "../binary/utils.ts";
 import { LayerType } from "../enums/index.ts";
 import { _suppress_materialization } from "../models/descriptors.ts";
@@ -14,6 +12,7 @@ import { ShapeLayer } from "../models/layers/shape_layer.ts";
 import { TextLayer } from "../models/layers/text_layer.ts";
 import { ThreeDModelLayer } from "../models/layers/three_d_model_layer.ts";
 import { synthesize_layer_properties } from "../synthesis/core.ts";
+import type { ParamDef } from "./effect.ts";
 import { parse_properties } from "./property.ts";
 import { get_match_name_runs } from "./utils.ts";
 import type { CompItem } from "../models/items/composition.ts";
@@ -28,7 +27,7 @@ export const _LAYER_CLASSES: Map<number, typeof Layer> = new Map<number, typeof 
   [LayerType.SHAPE, ShapeLayer],
   [LayerType.THREE_D_MODEL, ThreeDModelLayer],
   [LayerType.PARAMETRIC_MESH, ParametricMeshLayer],
-] as Array<[number, any]>);
+]);
 
 /**
  * Extract Essential Properties override UUIDs from LIST:OvG2 chunks.
@@ -45,7 +44,7 @@ export function _parse_ovg2_uuids(tdgp_chunks: Chunk[]): string[] {
     for (const cprp of filter_by_list_type(ovg2_list.chunks, "CPrp")) {
       const utf8_chunks = filter_by_type(cprp.chunks, "Utf8");
       if (utf8_chunks?.length > 0) {
-        uuids.push((utf8_chunks[0] as Utf8Chunk).value);
+        uuids.push(utf8_chunks[0].value);
       }
     }
   }
@@ -68,20 +67,20 @@ export function _parse_ovg2_uuids(tdgp_chunks: Chunk[]): string[] {
 export const parse_layer = _suppress_materialization().decorate(function parse_layer(
   layer_chunk: ListChunk,
   composition: CompItem,
-  effect_param_defs: Map<string, Map<string, Map<string, any>>>,
+  effect_param_defs: Map<string, Map<string, ParamDef>>,
 ): Layer {
   const child_chunks = layer_chunk.chunks;
 
   let cmta: CmtaChunk | null;
   try {
-    cmta = find_by_type(child_chunks, "cmta") as CmtaChunk;
+    cmta = find_by_type(child_chunks, "cmta");
   } catch (e) {
     if (!(e instanceof ChunkNotFoundError)) throw e;
     cmta = null;
   }
 
-  const ldta = find_by_type(child_chunks, "ldta") as LdtaChunk;
-  const name_utf8 = find_by_type(child_chunks, "Utf8") as Utf8Chunk;
+  const ldta = find_by_type(child_chunks, "ldta");
+  const name_utf8 = find_by_type(child_chunks, "Utf8");
 
   const layer_type = ldta.layer_type;
 

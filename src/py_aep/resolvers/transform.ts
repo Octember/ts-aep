@@ -335,7 +335,7 @@ export function build_local_matrix(
  * (measured on AE 2026).
  *
  * @param layer - The layer whose world matrix to build.
- * @param time - Composition time in seconds to evaluate animated transform properties at; `None`
+ * @param time - Composition time in seconds to evaluate animated transform properties at; `null`
  *   uses each property's static `value`.
  * @param flatten_2d - Drop the out-of-plane terms (see `_layer_local_matrix`).
  * @param kw - Keyword arguments:
@@ -395,9 +395,9 @@ export function build_world_matrix(
 
 /** Pixel aspect of a layer's own pixels: its source's, else square. */
 export function layer_source_aspect(layer: Layer): number {
-  const source = hasattr(layer, "source") ? (layer as any).source : null;
-  const aspect = hasattr(source, "pixel_aspect") ? source.pixel_aspect : null;
-  return py_bool(aspect) ? float(aspect) : 1.0;
+  const source = hasattr(layer, "source") ? (layer as AVLayer).source : null;
+  const aspect = hasattr(source, "pixel_aspect") ? source!.pixel_aspect : null;
+  return py_bool(aspect) ? float(aspect!) : 1.0;
 }
 
 /**
@@ -424,7 +424,7 @@ export function square_pixels(matrix: Mat4, comp_aspect: number, space_aspect: n
 }
 
 /**
- * Evaluate `group[match_name]`: static `value` when `time` is `None`,
+ * Evaluate `group[match_name]`: static `value` when `time` is `null`,
  * else `value_at_time(time)`.
  */
 export function _prop_value(group: PropertyGroup, match_name: string, time: number | null): any {
@@ -568,7 +568,7 @@ export function _auto_rotation(layer: Layer, time: number, position: number[]): 
   const mode = layer.auto_orient;
   const three_d = !!layer._ldta.three_d_layer;
   if (mode === AutoOrientType.ALONG_PATH) {
-    const prop = layer.transform.__getitem__("ADBE Position") as Property;
+    const prop = layer.transform.__getitem__("ADBE Position");
     if (prop.dimensions_separated) {
       throw new NotImplementedError(
         `layer ${repr(layer.name)} auto-orients along a path with separated ` +
@@ -875,7 +875,7 @@ export function _vec3_normalize(v: number[]): number[] {
  * @param bottom_left - `[x, y, z]` position of the source's bottom-left.
  * @param width - Layer source width in pixels.
  * @param height - Layer source height in pixels.
- * @returns A dict with `anchor_point`, `position`, `x_rotation`, `y_rotation`, `z_rotation` and
+ * @returns An object with `anchor_point`, `position`, `x_rotation`, `y_rotation`, `z_rotation` and
  *   `scale` keys, matching the transform property values AE's `calculateTransformFromPoints()`
  *   returns.
  * @throws {@link ValueError} If the points are coincident or collinear.
@@ -886,7 +886,7 @@ export function transform_from_points(
   bottom_left: number[],
   width: number,
   height: number,
-): Record<string, any> {
+): Record<string, number | number[]> {
   const x_axis = [0, 1, 2].map((i) => top_right[i] - top_left[i]);
   const y_axis = [0, 1, 2].map((i) => bottom_left[i] - top_left[i]);
   const x_len = _vec3_norm(x_axis);
@@ -1046,7 +1046,7 @@ export function camera_ray(
   const world = build_world_matrix(camera, time, undefined, { as_parent: true });
   const position = world.transform_point([0.0, 0.0, 0.0]);
 
-  const camera_options = camera.__getitem__("ADBE Camera Options Group") as PropertyGroup;
+  const camera_options = camera.__getitem__("ADBE Camera Options Group");
   const zoom = _prop_value(camera_options, "ADBE Camera Zoom", time);
 
   // The image plane is in square pixels; the rig matrix narrows the ray

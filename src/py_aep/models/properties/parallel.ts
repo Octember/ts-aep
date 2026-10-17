@@ -7,7 +7,7 @@
  * `om-s`/`omks`, `GCst`/`GCky`, `btds`/btdk COS). The kinds differ in a
  * small set of facts and conversions; each {@link ParallelKind} subclass
  * centralizes one kind so the generic keyframe mutation algorithms in
- * {@link py_aep.models.properties.property.Property | Property} are written once.
+ * {@link Property | Property} are written once.
  *
  * All binary forms were reverse-engineered from AE 2026 static-vs-keyed
  * output pairs (`aep-compare` ground-truth workflow).
@@ -88,7 +88,7 @@ export class ParallelKind {
    * Most kinds cannot be interpolated: hold the nearest existing
    * keyframe's value, or the static value.
    */
-  held_value(prop: Property, time: number): any {
+  held_value(prop: Property, time: number): unknown {
     if (!prop.keyframes?.length) {
       return prop._value;
     }
@@ -96,12 +96,12 @@ export class ParallelKind {
   }
 
   /** Normalize a user-supplied value to the kind's value object. */
-  coerce(value: any): any {
+  coerce(value: unknown): unknown {
     return value;
   }
 
   /** Build the parallel-container value chunk holding `value`. */
-  build_value_chunk(prop: Property, value: any): Chunk {
+  build_value_chunk(prop: Property, value: unknown): Chunk {
     throw new NotImplementedError();
   }
 
@@ -112,23 +112,23 @@ export class ParallelKind {
    * a newly added keyframe can be edited in place (the source model
    * passed to `build_value_chunk` is backed by a different chunk).
    */
-  wrap_value_chunk(prop: Property, value_chunk: Chunk): any {
+  wrap_value_chunk(prop: Property, value_chunk: Chunk): unknown {
     return null;
   }
 
   /** Attach kind-specific back-references after a value is set. */
-  bind_keyframe(value: any, kf: Keyframe): void {}
+  bind_keyframe(value: unknown, kf: Keyframe): void {}
 
   /** Build the keyframe header ldat item for `value`. */
-  build_header_item(value: any): LdatItem {
+  build_header_item(value: unknown): LdatItem {
     return build_parallel_ldat_item(this.header_item_type);
   }
 
   /** Refresh value data mirrored into an existing header item. */
-  update_header_item(item: LdatItem, value: any): void {}
+  update_header_item(item: LdatItem, value: unknown): void {}
 
   /** The cdat AE writes when the property reverts to static. */
-  static_cdat(removed_value: any): CdatChunk {
+  static_cdat(removed_value: unknown): CdatChunk {
     return new CdatChunk({ pad: _EMPTY_CDAT_PAD });
   }
 
@@ -144,30 +144,30 @@ export class _OrientationKind extends ParallelKind {
   can_materialize_wrapper = true;
   linear_ease_speed = 1.0;
 
-  held_value(prop: Property, time: number): any {
+  held_value(prop: Property, time: number): unknown {
     // Orientation values interpolate numerically.
     return prop.value_at_time(time);
   }
 
-  build_value_chunk(prop: Property, value: any): Chunk {
+  build_value_chunk(prop: Property, value: unknown): Chunk {
     const vals = Array.isArray(value) ? value.map((v) => float(v)) : [0.0, 0.0, 0.0];
     return new OtdaChunk({ values: vals });
   }
 
-  build_header_item(value: any): LdatItem {
+  build_header_item(value: unknown): LdatItem {
     return build_parallel_ldat_item(
       this.header_item_type,
       Array.isArray(value) ? value.map((v) => float(v)) : null,
     );
   }
 
-  update_header_item(item: LdatItem, value: any): void {
+  update_header_item(item: LdatItem, value: unknown): void {
     if (Array.isArray(value)) {
       set_orientation_item_values(item, value.map((v) => float(v)));
     }
   }
 
-  static_cdat(removed_value: any): CdatChunk {
+  static_cdat(removed_value: unknown): CdatChunk {
     // Inside an otst the cdat doubles are little-endian and hold the
     // actual angles.
     if (Array.isArray(removed_value)) {
@@ -206,18 +206,18 @@ export class _MarkerKind extends ParallelKind {
   keeps_value_on_revert = false;
   can_materialize_wrapper = true;
 
-  held_value(prop: Property, time: number): any {
+  held_value(prop: Property, time: number): unknown {
     return new MarkerValue();
   }
 
-  coerce(value: any): any {
+  coerce(value: unknown): unknown {
     if (typeof value === "string") {
       return new MarkerValue(value);
     }
     return value;
   }
 
-  build_value_chunk(prop: Property, value: any): Chunk {
+  build_value_chunk(prop: Property, value: unknown): Chunk {
     if (!(value instanceof MarkerValue)) {
       throw new TypeError_("marker value must be a MarkerValue or str comment");
     }
@@ -239,11 +239,11 @@ export class _MarkerKind extends ParallelKind {
     return new ListChunk({ list_type: "Nmrd", chunks: source.map((c) => clone_chunk_tree(c)) });
   }
 
-  wrap_value_chunk(prop: Property, value_chunk: Chunk): any {
-    return _marker().parse_marker(value_chunk as ListChunk);
+  wrap_value_chunk(prop: Property, value_chunk: ListChunk): unknown {
+    return _marker().parse_marker(value_chunk);
   }
 
-  bind_keyframe(value: any, kf: Keyframe): void {
+  bind_keyframe(value: unknown, kf: Keyframe): void {
     if (value instanceof MarkerValue) {
       value._keyframe = kf;
     }
@@ -278,23 +278,23 @@ export class _ShapeKind extends ParallelKind {
    * 0.7 s on a 0 -\> 2 s LINEAR segment, [[7, 3.5], [117.5, 0],
    * [107, 114]]).
    */
-  held_value(prop: Property, time: number): any {
+  held_value(prop: Property, time: number): unknown {
     if (!prop.keyframes?.length) {
       return prop._value;
     }
     return prop.value_at_time(time);
   }
 
-  build_value_chunk(prop: Property, value: any): Chunk {
+  build_value_chunk(prop: Property, value: unknown): Chunk {
     if (!(value instanceof Shape)) {
       throw new TypeError_("shape value must be a Shape");
     }
     return prop._build_shap_chunk(value);
   }
 
-  wrap_value_chunk(prop: Property, value_chunk: Chunk): any {
+  wrap_value_chunk(prop: Property, value_chunk: ListChunk): unknown {
     return _specialized_properties()._parse_shape_shap(
-      value_chunk as ListChunk,
+      value_chunk,
       prop._containing_layer,
       prop.match_name === "ADBE Mask Shape" ? prop : null,
     );
@@ -308,7 +308,7 @@ export class _GradientKind extends ParallelKind {
   header_item_type = LdatItemType.no_value;
   can_materialize_wrapper = true;
 
-  build_value_chunk(prop: Property, value: any): Chunk {
+  build_value_chunk(prop: Property, value: unknown): Chunk {
     if (value == null) {
       // A never-edited gradient has no parsed Gradient model;
       // AE's default gradient seeds the first keyframe.
@@ -321,8 +321,8 @@ export class _GradientKind extends ParallelKind {
     return new Utf8Chunk({ value: value._utf8.value });
   }
 
-  wrap_value_chunk(prop: Property, value_chunk: Chunk): any {
-    return parse_gradient_xml(value_chunk as Utf8Chunk);
+  wrap_value_chunk(prop: Property, value_chunk: Utf8Chunk): unknown {
+    return parse_gradient_xml(value_chunk);
   }
 
   on_wrap(prop: Property): void {

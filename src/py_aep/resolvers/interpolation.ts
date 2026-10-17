@@ -74,7 +74,7 @@ export function _calc_bezier(t: number, a1: number, a2: number): number {
  * sit on either end - are AE's, and only tell the two apart on a
  * non-monotonic curve.
  *
- * Returns `None` when no root lands in [0, 1]. AE's result is undefined
+ * Returns `null` when no root lands in [0, 1]. AE's result is undefined
  * there; that is a bug, not behaviour to copy.
  */
 // NOTE(port): platform libm — CPython's own math.* results vary by platform libm; V8 (fdlibm) may differ in the last ulp.
@@ -1018,7 +1018,7 @@ export function auto_temporal_speeds(values: number[][], times: number[], index:
 /**
  * Ease curve mapping a time fraction to a progress fraction, for eases
  * whose speed is dimensionless (1 = the chord slope, see
- * `_single_progress`). `None` means "no explicit ease", i.e. constant
+ * `_single_progress`). `null` means "no explicit ease", i.e. constant
  * progress.
  */
 export function _progress_easing(
@@ -1146,7 +1146,7 @@ export function roving_keyframe_times(keyframes: Keyframe[], metric: ArcMetric):
 
 /**
  * The time unit at which a roving run has travelled `travelled`, read
- * off the run's ease `curve` (`None` when both anchors are LINEAR).
+ * off the run's ease `curve` (`null` when both anchors are LINEAR).
  */
 export function _roving_units(
   curve: _Point2[] | null,
@@ -1183,7 +1183,7 @@ export function _spatial_tangents(keyframes: Keyframe[], first: number, last: nu
       continue;
     }
     const zero = new Array<number>((kf._stored_value as number[]).length).fill(0.0);
-    result.set(i, [kf.out_spatial_tangent?.length > 0 ? kf.out_spatial_tangent : zero, kf.in_spatial_tangent?.length > 0 ? kf.in_spatial_tangent : zero]);
+    result.set(i, [kf.out_spatial_tangent!?.length > 0 ? kf.out_spatial_tangent! : zero, kf.in_spatial_tangent!?.length > 0 ? kf.in_spatial_tangent! : zero]);
   }
   return result;
 }
@@ -1360,7 +1360,7 @@ export function spatial_location(time: number, keyframes: Keyframe[], left: numb
  * What auto-orientation along a path follows. At a keyframe it is the
  * outgoing segment's start, before the first key the first segment's
  * start and past the last the last segment's end (measured on AE 2026).
- * `None` without a path to follow, and inside a held segment: AE 2026
+ * `null` without a path to follow, and inside a held segment: AE 2026
  * turns a layer whose current segment starts on a HOLD key not at all,
  * while past the last key it still follows the last segment.
  */
@@ -1702,7 +1702,7 @@ export function _resample_path(
  * different vertex counts the shorter path is resampled up to the
  * longer one first, the way AE does it.
  *
- * `None` means "no blend is defined" - either path is empty, or the
+ * `null` means "no blend is defined" - either path is empty, or the
  * shorter one has no segment to subdivide - and the caller holds the
  * left keyframe's value instead.
  */
@@ -1840,18 +1840,18 @@ export function _interpolate_color(
  * @param time - Time in the owning LAYER's seconds, not composition seconds. AE evaluates the
  *   temporal bezier in layer time - its ease speeds are per layer second, and a negatively
  *   stretched layer's keyframes only ascend on this axis.
- *   {@link py_aep.Property.value_at_time | Property.value_at_time} converts before calling.
+ *   {@link Property.value_at_time | Property.value_at_time} converts before calling.
  * @param keyframes - Keyframes in stored (layer time ascending) order.
  * @param is_spatial - Whether the property is spatial.
  * @param inert_dimensions - Indices the layer ignores, held at the left keyframe's value instead of
  *   interpolated - the Z of a 2-D layer's Scale, which AE never moves.
  * @param value_kind - `SHAPE_KIND` or `ORIENTATION_KIND` for the two kinds AE blends as one eased
- *   quantity rather than per component; `None` for an ordinary numeric property.
+ *   quantity rather than per component; `null` for an ordinary numeric property.
  * @param metric - How the property's motion path is measured, from its `tdb4`; only a spatial
  *   property reads it.
  * @param is_color - Whether the value is a colour, which AE blends along one eased progress (see
  *   `_interpolate_color`).
- * @returns Interpolated value, or `None` if no keyframes.
+ * @returns Interpolated value, or `null` if no keyframes.
  */
 export function interpolate_keyframes(
   time: number,
@@ -1868,12 +1868,12 @@ export function interpolate_keyframes(
 
   // Before first keyframe or single keyframe
   if (n === 1 || time <= keyframes[0]._layer_time) {
-    return keyframes[0]._stored_value as any;
+    return keyframes[0]._stored_value as number[] | number | Shape | null;
   }
 
   // After last keyframe
   if (time >= keyframes[keyframes.length - 1]._layer_time) {
-    return keyframes[keyframes.length - 1]._stored_value as any;
+    return keyframes[keyframes.length - 1]._stored_value as number[] | number | Shape | null;
   }
 
   // Find the segment
@@ -1893,8 +1893,8 @@ export function interpolate_keyframes(
   const t1 = kf_right._layer_time;
 
   // At exactly a keyframe time
-  if (Math.abs(time - t0) < 1e-12) return kf_left._stored_value as any;
-  if (Math.abs(time - t1) < 1e-12) return kf_right._stored_value as any;
+  if (Math.abs(time - t0) < 1e-12) return kf_left._stored_value as number[] | number | Shape | null;
+  if (Math.abs(time - t1) < 1e-12) return kf_right._stored_value as number[] | number | Shape | null;
 
   const v0 = kf_left._stored_value as any;
   const v1 = kf_right._stored_value as any;

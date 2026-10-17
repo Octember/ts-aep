@@ -212,7 +212,7 @@ export function remap_layer_ref_tdpi(chunk: Chunk, id_map: Map<number, number>):
  */
 export function rewrite_time_base(chunk: Chunk, time_base: number): void {
   for (const found of recursive_find([chunk], "tdb4")) {
-    const tdb4 = found as Tdb4Chunk;
+    const tdb4 = found;
     if (tdb4._time_base) {
       tdb4._time_base = time_base;
     }
@@ -243,6 +243,7 @@ export function strip_synthetic(chunk: Chunk): void {
  * Synthetic chunks are excluded during serialization, so the clone
  * contains only real (non-synthetic) chunks.
  */
+export function clone_chunk_tree<T extends Chunk>(chunk: T): T extends ListChunk ? ListChunk : T;
 export function clone_chunk_tree(chunk: Chunk): Chunk {
   const buf = new BytesIO();
   const size = write_chunk(buf, chunk);
@@ -303,7 +304,7 @@ export function build_rq_settings_list(
  * Speed / influence are seeded to zero (LINEAR defaults). The caller
  * sets the actual value afterwards (e.g. via `Keyframe.value`).
  */
-export function build_kf_data(item_type: LdatItemType, num_value: number): any {
+export function build_kf_data(item_type: LdatItemType, num_value: number): KfColor | KfPosition | KfNoValue | KfMultiDimensional {
   if (item_type === LdatItemType.color) {
     return new KfColor();
   }
@@ -328,7 +329,7 @@ export function build_kf_data(item_type: LdatItemType, num_value: number): any {
 }
 
 /** Wrap a keyframe-data payload in an `LdatItem` with LINEAR defaults. */
-export function build_ldat_item(kf_data: any, kw: { spatial: boolean }): LdatItem {
+export function build_ldat_item(kf_data: KfColor | KfPosition | KfNoValue | KfMultiDimensional | Uint8Array, kw: { spatial: boolean }): LdatItem {
   const { spatial } = kw;
   return new LdatItem({
     time_units: 0,
@@ -363,7 +364,7 @@ export function build_parallel_ldat_item(
   // Orientation shares the valueless 48-byte ease prefix with shape and
   // gradient keys; only the trailing padding (which holds a copy of the
   // angles) differs.
-  let kf_data: any;
+  let kf_data: KfNoValue | Uint8Array;
   let interp: number;
   let flags: number;
   if (([LdatItemType.orientation, LdatItemType.no_value] as number[]).includes(item_type)) {
@@ -402,7 +403,7 @@ export function build_parallel_ldat_item(
  * `bbox` is `(top_left_x, top_left_y, bottom_right_x, bottom_right_y)`;
  * `points` are the normalized bezier control points (3 per vertex);
  * `tensions` the per-vertex RotoBezier tensions (empty `omtn` when
- * `None`); `feather_points` are copied, so the source keeps its own.
+ * `null`); `feather_points` are copied, so the source keeps its own.
  */
 export function build_shap(
   bbox: [number, number, number, number],
@@ -433,12 +434,12 @@ export function build_shap(
   });
   const inner = new ListChunk({ list_type: "list", chunks: [lhd3, ldat] });
   const omtn = new OmtnChunk({
-    tensions: (tensions?.length > 0 ? tensions : []).map((t) => new TensionItem({ value: t })),
+    tensions: (tensions?.length! > 0 ? tensions! : []).map((t) => new TensionItem({ value: t })),
   });
   const chunks: Chunk[] = [shph, inner, omtn];
-  if (feather_points?.length > 0) {
+  if (feather_points?.length! > 0) {
     // NOTE(port): FeatherPointItem has plain int/float fields and no converters, so a shallow copy equals attrs.evolve(fp).
-    chunks.push(new Fth5Chunk({ points: feather_points.map((fp) => copy(fp)) }));
+    chunks.push(new Fth5Chunk({ points: feather_points!.map((fp) => copy(fp)) }));
   }
   return new ListChunk({ list_type: "shap", chunks: chunks });
 }
@@ -789,7 +790,7 @@ export function build_pin_list(
     chunks: [
       sspc,
       new Utf8Chunk({ value: layer_name }),
-      ...(path_chunks?.length > 0 ? path_chunks : []),
+      ...(path_chunks?.length! > 0 ? path_chunks! : []),
       opti,
       PguiChunk.new_(),
       clrs,

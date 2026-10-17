@@ -86,12 +86,12 @@ export class EssentialGraphicsController {
   declare source_property_path: SourcePropertyRef[];
   /**
    * The item id of the source composition that owns the controlled
-   * property (the `CCId` chunk), or `None` when not stored. Read-only.
+   * property (the `CCId` chunk), or `null` when not stored. Read-only.
    */
   declare source_comp_id: number | null;
   /**
    * The `layer_id` of the source layer that owns the controlled
-   * property (the `CLId` chunk), or `None` when not stored. Read-only.
+   * property (the `CLId` chunk), or `null` when not stored. Read-only.
    */
   declare source_layer_id: number | null;
 
@@ -124,12 +124,12 @@ export class EssentialGraphicsController {
     this.source_comp_id = source_comp_id;
     /**
      * The item id of the source composition that owns the controlled
-     * property (the `CCId` chunk), or `None` when not stored. Read-only.
+     * property (the `CCId` chunk), or `null` when not stored. Read-only.
      */
     this.source_layer_id = source_layer_id;
     /**
      * The `layer_id` of the source layer that owns the controlled
-     * property (the `CLId` chunk), or `None` when not stored. Read-only.
+     * property (the `CLId` chunk), or `null` when not stored. Read-only.
      */
   }
 

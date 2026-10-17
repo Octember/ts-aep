@@ -2,7 +2,7 @@
  * Text range models mirroring the AE 24.3+ ExtendScript range API.
  *
  * `CharacterRange`, `ParagraphRange` and `ComposedLineRange` are computed,
- * read-only views over a {@link py_aep.models.text.TextDocument | TextDocument}'s
+ * read-only views over a {@link TextDocument | TextDocument}'s
  * parsed COS data. They are created via the `TextDocument` factory methods
  * (`character_range`, `paragraph_range`, `composed_line_range`), never
  * constructed directly - matching ExtendScript, where `new CharacterRange()`
@@ -66,7 +66,7 @@ import type { TextDocument } from "./text_document.ts";
 // NOTE(port): thin alias of pyrt py_bool (Python truthiness), exported under the builtin name.
 export const bool = (x: unknown): boolean => py_bool(x);
 
-/** A COS dict (`dict[str, Any]`): a `Map` so numeric-looking keys keep their order. */
+/** A COS dict (string keys to any value): a `Map` so numeric-looking keys keep their order. */
 export type Dict = Map<string, any>;
 
 // AE's exact error strings (AE 26.3, English locale); py_aep raises these
@@ -106,7 +106,7 @@ export function u16_slice(s: string, start: number, end: number): string {
 
 /** The stored text, including the terminator `\r`. */
 export function _raw_text(doc: TextDocument): string {
-  const val = cos_get((doc as any)._doc, "0", "0");
+  const val = cos_get(doc._doc, "0", "0");
   return val != null ? str(val) : "";
 }
 
@@ -126,17 +126,17 @@ export function _visible_length(doc: TextDocument): number {
 
 /** Character style-run spans. */
 export function _char_run_spans(doc: TextDocument): [number, number, Dict][] {
-  return run_spans((doc as any)._doc, "6", "6");
+  return run_spans(doc._doc, "6", "6");
 }
 
 /** Paragraph style-run spans (one run per paragraph). */
 export function _para_run_spans(doc: TextDocument): [number, number, Dict][] {
-  return run_spans((doc as any)._doc, "5", "5");
+  return run_spans(doc._doc, "5", "5");
 }
 
 /** Manual-kerning run spans; payload key `"0"` holds the value. */
 export function _kern_run_spans(doc: TextDocument): [number, number, Dict][] {
-  return run_spans((doc as any)._doc, "8", null);
+  return run_spans(doc._doc, "8", null);
 }
 
 /**
@@ -147,11 +147,11 @@ export function _kern_run_spans(doc: TextDocument): [number, number, Dict][] {
  * document has no cache.
  */
 export function _cached_line_nodes(doc: TextDocument): Dict[] {
-  const entries = cos_get((doc as any)._doc, "1", "2");
+  const entries = cos_get(doc._doc, "1", "2");
   if (!Array.isArray(entries)) return [];
   const lines: Dict[] = [];
 
-  const collect = (node: any): void => {
+  const collect = (node: unknown): void => {
     if (!(node instanceof Map)) return;
     if (str(node.get("99") ?? null) === "L") {
       lines.push(node);
@@ -302,7 +302,7 @@ export function _composed_line_spans(doc: TextDocument): [number, number][] | nu
 }
 
 /** Extract `[R, G, B]` from a COS SimplePaint structure. */
-export function _parse_color(paint: any): number[] | null {
+export function _parse_color(paint: unknown): number[] | null {
   const argb = cos_get(paint, "0", "1");
   if (Array.isArray(argb) && argb.length >= 4) {
     return [float(argb[1]), float(argb[2]), float(argb[3])];
@@ -367,8 +367,8 @@ export function _register_font_at(
   kw: { used_record?: boolean } = {},
 ): number {
   const { used_record = true } = kw;
-  const cos: Dict = (doc as any)._cos_data;
-  const font_array: any[] = setdefault(setdefault(setdefault(cos, "0", new Map()), "1", new Map()), "0", []);
+  const cos: Dict = doc._cos_data;
+  const font_array: unknown[] = setdefault(setdefault(setdefault(cos, "0", new Map()), "1", new Map()), "0", []);
   const entry = _build_font_entry(post_script_name);
   const version = font_version_string(post_script_name);
   if (version != null) (getitem(getitem(entry, "0"), "0") as Dict).set("5", version);
@@ -381,7 +381,7 @@ export function _register_font_at(
     }
   };
 
-  for (const entry_doc of py_or(dict_get(dict_get(cos, "1", new Map()), "1", []), []) as any[]) {
+  for (const entry_doc of py_or(dict_get(dict_get(cos, "1", new Map()), "1", []), []) as Dict[]) {
     const runs = cos_get(entry_doc, "0", "6", "0");
     if (!Array.isArray(runs)) continue;
     for (const run of runs) {
@@ -490,7 +490,7 @@ export function _repoint_used_font_record(
   to_name: string,
 ): void {
   const version = font_version_string(to_name);
-  const sessions = cos_get((doc as any)._cos_data, "1", "5");
+  const sessions = cos_get(doc._cos_data, "1", "5");
   if (!Array.isArray(sessions)) return;
   for (const session of sessions) {
     const records = session instanceof Map ? session.get("4") ?? null : null;
@@ -539,11 +539,11 @@ export function _mark_layout_dirty(doc: TextDocument): void {
  * structural op must end here.
  */
 export function _refresh_style_aliases(doc: TextDocument): void {
-  const cos_doc: Dict = (doc as any)._doc;
+  const cos_doc: Dict = doc._doc;
   const char = cos_get(cos_doc, "0", "6", "0", 0, "0", "0", "6");
-  if (char instanceof Map) (doc as any)._char_style = char;
+  if (char instanceof Map) doc._char_style = char;
   const para = cos_get(cos_doc, "0", "5", "0", 0, "0", "0", "5");
-  if (para instanceof Map) (doc as any)._para_style = para;
+  if (para instanceof Map) doc._para_style = para;
 }
 
 /**
@@ -636,13 +636,13 @@ export function _merge_adjacent_runs(runs: Dict[]): void {
  * at the visible length extends through the raw terminator
  * (`W_MERGE_SAME`); `value=None` clears the key.
  */
-export function _apply_char_key(doc: TextDocument, start: number, end: number, key: string, value: any): void {
+export function _apply_char_key(doc: TextDocument, start: number, end: number, key: string, value: unknown): void {
   const raw = _raw_text(doc);
   [start, end] = _snap_to_pairs(raw, start, end);
   if (start === end) return;
   if (!_NON_LAYOUT_CHAR_KEYS.has(key)) _mark_layout_dirty(doc);
   if (end === _visible_length(doc)) end = u16_len(raw);
-  const runs = cos_get((doc as any)._doc, "0", "6", "0");
+  const runs = cos_get(doc._doc, "0", "6", "0");
   if (!Array.isArray(runs) || !runs.length) return;
   _split_run_array(runs, new Set([start, end]));
   let pos = 0;
@@ -662,9 +662,9 @@ export function _apply_char_key(doc: TextDocument, start: number, end: number, k
 }
 
 /** Per-character manual-kern values decoded from the kern runs. */
-export function _kern_values(doc: TextDocument): any[] {
+export function _kern_values(doc: TextDocument): unknown[] {
   const total = u16_len(_raw_text(doc));
-  const values: any[] = new Array(total).fill(null);
+  const values: unknown[] = new Array(total).fill(null);
   for (const [start, end, payload] of _kern_run_spans(doc)) {
     const value = payload.get("0") ?? null;
     if (value != null) {
@@ -683,8 +683,8 @@ export function _kern_values(doc: TextDocument): any[] {
  * dict is kept in place when it exists so `doc["0"]`'s key order is
  * preserved; a fresh key is appended, like AE's creation order.
  */
-export function _rebuild_kern_runs(doc: TextDocument, values: any[]): void {
-  const inner: Dict = setdefault((doc as any)._doc, "0", new Map());
+export function _rebuild_kern_runs(doc: TextDocument, values: unknown[]): void {
+  const inner: Dict = setdefault(doc._doc, "0", new Map());
   const has_value = values.some((v) => v != null);
   if (!has_value) {
     // AE drops the array entirely once no manual values remain
@@ -733,7 +733,7 @@ export function _splice_text(
   end: number,
   new_text: string,
   insert_runs: Dict[] | null = null,
-  insert_kern: any[] | null = null,
+  insert_kern: unknown[] | null = null,
 ): void {
   const raw = _raw_text(doc);
   const total = u16_len(raw);
@@ -744,7 +744,7 @@ export function _splice_text(
   const new_raw = u16_slice(raw, 0, start) + new_text + u16_slice(raw, end, total);
   let parts = split(new_raw, "\r");
   if (parts[parts.length - 1] === "") parts = parts.slice(0, -1);
-  const inner: Dict = setdefault((doc as any)._doc, "0", new Map());
+  const inner: Dict = setdefault(doc._doc, "0", new Map());
 
   const runs = cos_get(inner, "6", "0");
   if (Array.isArray(runs) && runs.length) {
@@ -755,12 +755,12 @@ export function _splice_text(
       for (const run of runs) {
         const run_end = pos + (dict_get(run, "1", 0) as number);
         if (pos <= start && start < run_end) {
-          donor = deepcopy(run);
+          donor = deepcopy<Dict>(run);
           break;
         }
         pos = run_end;
       }
-      if (donor == null) donor = deepcopy(runs[runs.length - 1]);
+      if (donor == null) donor = deepcopy<Dict>(runs[runs.length - 1]);
       donor.set("1", insert_len);
       insert_entries = insert_len ? [donor] : [];
     } else {
@@ -844,10 +844,10 @@ export function _splice_text(
  * range (paragraph runs are structural: never split, never merged -
  * `W_PARA_PARTIAL` styles the whole containing paragraph).
  */
-export function _apply_para_key(doc: TextDocument, start: number, end: number, key: string, value: any): void {
+export function _apply_para_key(doc: TextDocument, start: number, end: number, key: string, value: unknown): void {
   if (start === end) return;
   _mark_layout_dirty(doc);
-  const runs = cos_get((doc as any)._doc, "0", "5", "0");
+  const runs = cos_get(doc._doc, "0", "5", "0");
   if (!Array.isArray(runs)) return;
   let pos = 0;
   for (const run of runs) {
@@ -867,16 +867,26 @@ export function _apply_para_key(doc: TextDocument, start: number, end: number, k
 // RangeField descriptor
 // ---------------------------------------------------------------------------
 
+/** Constructor options of {@link RangeField | RangeField}. */
+export interface RangeFieldOptions {
+  transform?: ((raw: any) => any) | null;
+  default?: any;
+  gate?: string | null;
+  reverse?: ((value: any) => any) | null;
+  validate?: ((value: any, instance?: any) => void) | null;
+  read_only?: boolean;
+}
+
 /**
  * Read-only descriptor resolving one COS style key over a range.
  *
  * Evaluates the key across every style run overlapping the owning
  * {@link CharacterRange} with AE's mixed-value semantics: a uniform value
- * is returned, disagreement reads as `None` (ExtendScript
+ * is returned, disagreement reads as `null` (ExtendScript
  * `undefined`). `gate` names a boolean style key that must be truthy
  * for a run to participate at all (AE gates `strokeColor` on
  * `applyStroke` and `fillColor` on `applyFill`); when no overlapping
- * run passes the gate the field reads `None`.
+ * run passes the gate the field reads `null`.
  *
  * Writable fields split the style runs at the range boundaries, write
  * the key into the covered runs and re-merge adjacent identical runs,
@@ -909,14 +919,7 @@ export class RangeField {
   constructor(
     kind: string,
     key: string,
-    kw: {
-      transform?: ((raw: any) => any) | null;
-      default?: any;
-      gate?: string | null;
-      reverse?: ((value: any) => any) | null;
-      validate?: ((value: any, instance?: any) => void) | null;
-      read_only?: boolean;
-    } = {},
+    kw: RangeFieldOptions = {},
   ) {
     const {
       transform = null,
@@ -958,13 +961,13 @@ export class RangeField {
   }
 
   /** Create a RangeField for boolean style flags. */
-  static bool(kind: string, key: string, kwargs: Record<string, any> = {}): RangeField {
+  static bool(kind: string, key: string, kwargs: RangeFieldOptions = {}): RangeField {
     return new this(kind, key, { transform: bool, reverse: bool, ...kwargs });
   }
 
   /** Create a RangeField that coerces to float. */
-  static float(kind: string, key: string, kwargs: Record<string, any> = {}): RangeField {
-    const kw: Record<string, any> = { ...kwargs };
+  static float(kind: string, key: string, kwargs: RangeFieldOptions = {}): RangeField {
+    const kw: RangeFieldOptions = { ...kwargs };
     // The stored value is a Python float, so box it to keep `1.0` from serializing as `1`.
     if (!("reverse" in kw)) kw.reverse = (x: any) => pyfloat(float(x));
     return new this(kind, key, { transform: float, ...kw });
@@ -978,15 +981,15 @@ export class RangeField {
    * misread at 16.16 scale (stored `50.0` read back as `3276800`,
    * probed AE 2026).
    */
-  static int(kind: string, key: string, kwargs: Record<string, any> = {}): RangeField {
-    const kw: Record<string, any> = { ...kwargs };
+  static int(kind: string, key: string, kwargs: RangeFieldOptions = {}): RangeField {
+    const kw: RangeFieldOptions = { ...kwargs };
     if (!("reverse" in kw)) kw.reverse = round;
     return new this(kind, key, { transform: int, ...kw });
   }
 
   /** Create a RangeField for IntEnum-backed style keys. */
-  static enum(enum_cls: any, kind: string, key: string, kwargs: Record<string, any> = {}): RangeField {
-    const kw: Record<string, any> = { ...kwargs };
+  static enum(enum_cls: any, kind: string, key: string, kwargs: RangeFieldOptions = {}): RangeField {
+    const kw: RangeFieldOptions = { ...kwargs };
     if (!("transform" in kw)) {
       const from_binary = getattr(enum_cls, "from_binary", null);
       kw.transform =
@@ -1007,7 +1010,7 @@ export class RangeField {
 }
 
 /**
- * A {@link py_aep.cos.CosField | CosField} whose writes style the whole
+ * A {@link CosField | CosField} whose writes style the whole
  * document.
  *
  * AE document-level setters apply to every character or paragraph and
@@ -1048,7 +1051,7 @@ export class DocumentWideCosField extends CosField<any> {
    *
    * Mirrors `RangeField.enum`; the base `CosField.enum` does not
    * validate, so a stray int would serialize a value that reads back
-   * as `None`/undefined. Reads stay tolerant via `from_binary`.
+   * as `null`/undefined. Reads stay tolerant via `from_binary`.
    */
   static enum(enum_cls: any, dict_attr: string, key: string, kwargs: Record<string, any> = {}): any {
     const kw: Record<string, any> = { ...kwargs };
@@ -1097,7 +1100,7 @@ export class _TextRange {
     return this._bounds()[1];
   }
 
-  /** `True` while the range lies within the document bounds. Read-only. */
+  /** `true` while the range lies within the document bounds. Read-only. */
   get is_range_valid(): boolean {
     try {
       this._bounds();
@@ -1150,7 +1153,7 @@ export class _IndexRange extends _TextRange {
  *
  * Created via `TextDocument.character_range(character_start, signed_character_end)`. Most `TextDocument` styling attributes are
  * readable on the range; when the range spans style runs with
- * differing values the attribute reads `None` (ExtendScript
+ * differing values the attribute reads `null` (ExtendScript
  * `undefined`). Bounds re-resolve on every access, so a range created
  * valid raises `ValueError` once the document shrinks beneath it.
  *
@@ -1244,8 +1247,8 @@ export class CharacterRange extends _TextRange {
   /**
    * Resolve one style key over the overlapping runs.
    *
-   * Uniform value -\> that value; disagreement -\> `None`; every run
-   * gated out -\> `None`.
+   * Uniform value -\> that value; disagreement -\> `null`; every run
+   * gated out -\> `null`.
    */
   _resolve_mixed(
     kind: string,
@@ -1325,7 +1328,7 @@ export class CharacterRange extends _TextRange {
 
     const entries: Dict[] = [];
     let pos = 0;
-    for (const run of py_or(cos_get((src_doc as any)._doc, "0", "6", "0"), [])) {
+    for (const run of py_or(cos_get(src_doc._doc, "0", "6", "0"), [])) {
       const run_end = pos + (dict_get(run, "1", 0) as number);
       const overlap_start = Math.max(pos, src_start);
       const overlap_end = Math.min(run_end, src_end);
@@ -1371,7 +1374,7 @@ export class CharacterRange extends _TextRange {
     const kern_slice = _kern_values(src_doc).slice(src_start, src_end);
     let src_edge: number | null = null;
     if (src_start === 0) {
-      const edge = cos_get((src_doc as any)._doc, "0", "7");
+      const edge = cos_get(src_doc._doc, "0", "7");
       if (typeof edge === "number" && Number.isInteger(edge)) src_edge = edge;
     }
     const raw = _raw_text(doc);
@@ -1384,7 +1387,7 @@ export class CharacterRange extends _TextRange {
       // 0, otherwise it becomes the pair value between the preceding
       // character and the pasted text (probed Y_PASTE_EDGE0/_MID).
       if (start === 0) {
-        setdefault((doc as any)._doc, "0", new Map()).set("7", src_edge);
+        setdefault(doc._doc, "0", new Map()).set("7", src_edge);
       } else {
         const values = _kern_values(doc);
         if (start - 1 < values.length) {
@@ -1399,7 +1402,7 @@ export class CharacterRange extends _TextRange {
   // -- Paragraph / leading style accessors ---------------------------------
 
   /**
-   * The range's auto-leading option; `None` when mixed. Read / Write.
+   * The range's auto-leading option; `null` when mixed. Read / Write.
    *
    * Enabling auto-leading also resets the explicit leading key to
    * AE's sentinel (probed `X_AL_SET`).
@@ -1419,7 +1422,7 @@ export class CharacterRange extends _TextRange {
   }
 
   /**
-   * The range's auto kern type option; `None` when mixed. Read / Write.
+   * The range's auto kern type option; `null` when mixed. Read / Write.
    *
    * Setting a non-manual kern type clears the manual kerning values
    * over the range; AE drops the kern-run array entirely when no
@@ -1445,7 +1448,7 @@ export class CharacterRange extends _TextRange {
       for (let i = start; i < Math.min(end, values.length); i++) values[i] = null;
       _rebuild_kern_runs(doc, values);
       if (start === 0) {
-        const holder = dict_get((doc as any)._doc, "0") as Dict | null;
+        const holder = dict_get(doc._doc, "0") as Dict | null;
         if (holder != null) holder.delete("7");
       }
     }
@@ -1455,7 +1458,7 @@ export class CharacterRange extends _TextRange {
   // -- Font ------------------------------------------------------------------
 
   /**
-   * The range's font PostScript name; `None` when mixed. Read / Write.
+   * The range's font PostScript name; `null` when mixed. Read / Write.
    *
    * Setting a font absent from the document's font array prepends
    * it and reindexes existing references, matching AE.
@@ -1486,7 +1489,7 @@ export class CharacterRange extends _TextRange {
     this._propagate();
   }
 
-  /** The range's {@link FontObject}; `None` when mixed. Read-only. */
+  /** The range's {@link FontObject}; `null` when mixed. Read-only. */
   get font_object(): FontObject | null {
     const idx = this._resolve_mixed("char", "0", null, null, null);
     const fonts = this._doc_ref._fonts;
@@ -1503,7 +1506,7 @@ export class CharacterRange extends _TextRange {
    * anywhere in the range; the explicit value only surfaces when
    * auto-leading is uniformly disabled. Setting an explicit value
    * also disables auto-leading over the range (probed `W_LEAD`);
-   * setting `None` clears the explicit value without touching
+   * setting `null` clears the explicit value without touching
    * auto-leading.
    */
   get leading(): number | null {
@@ -1531,7 +1534,7 @@ export class CharacterRange extends _TextRange {
    * AND a manual value is stored for every character in the range
    * (probed `X_TEXT_KERN`: spliced-in characters under NO_AUTO_KERN
    * without values read undefined). Values live in dedicated kerning
-   * runs (`doc["0"]["8"]`) and read `None` when mixed. Setting a
+   * runs (`doc["0"]["8"]`) and read `null` when mixed. Setting a
    * value affects characters `[max(0, start - 1), end)` - AE's pair
    * shift - disables auto-kerning for them, and stores the
    * leading-edge value at `doc["0"]["7"]` when the range starts at 0.
@@ -1567,34 +1570,34 @@ export class CharacterRange extends _TextRange {
     if (start === 0) {
       // Pair position 0 (before the first character): AE stores the
       // leading-edge value at doc["0"]["7"], created after key "8".
-      setdefault((doc as any)._doc, "0", new Map()).set("7", value);
+      setdefault(doc._doc, "0", new Map()).set("7", value);
     }
     _apply_char_key(doc, kern_start, end, "11", AutoKernType.to_binary(AutoKernType.NO_AUTO_KERN));
     this._propagate();
   }
 
-  /** `True` if the range has All Caps enabled; `None` when mixed. Read-only. */
+  /** `true` if the range has All Caps enabled; `null` when mixed. Read-only. */
   get all_caps(): boolean | null {
     const caps = this.font_caps_option;
     if (caps == null) return null;
     return caps === FontCapsOption.FONT_ALL_CAPS;
   }
 
-  /** `True` if the range has Small Caps enabled; `None` when mixed. Read-only. */
+  /** `true` if the range has Small Caps enabled; `null` when mixed. Read-only. */
   get small_caps(): boolean | null {
     const caps = this.font_caps_option;
     if (caps == null) return null;
     return caps === FontCapsOption.FONT_SMALL_CAPS;
   }
 
-  /** `True` if the range is superscript; `None` when mixed. Read-only. */
+  /** `true` if the range is superscript; `null` when mixed. Read-only. */
   get superscript(): boolean | null {
     const baseline = this.font_baseline_option;
     if (baseline == null) return null;
     return baseline === FontBaselineOption.FONT_FAUXED_SUPERSCRIPT;
   }
 
-  /** `True` if the range is subscript; `None` when mixed. Read-only. */
+  /** `true` if the range is subscript; `null` when mixed. Read-only. */
   get subscript(): boolean | null {
     const baseline = this.font_baseline_option;
     if (baseline == null) return null;
@@ -1603,7 +1606,7 @@ export class CharacterRange extends _TextRange {
 
   /** The document's composer engine (document-wide). Read-only. */
   get composer_engine(): ComposerEngine | null {
-    return (this._doc_ref as any).composer_engine;
+    return this._doc_ref.composer_engine;
   }
 }
 
@@ -1683,110 +1686,110 @@ export class ComposedLineRange extends _IndexRange {
 // Descriptor-backed CharacterRange fields (class-body RangeField assignments)
 // ---------------------------------------------------------------------------
 
-/** `font_size`: the range's font size in pixels; `None` when mixed. Read / Write. */
+/** `font_size`: the range's font size in pixels; `null` when mixed. Read / Write. */
 descriptor(CharacterRange, "font_size", RangeField.float("char", "1", { validate: validate_positive_nonzero_number }));
 
-/** `faux_bold`: `True` if faux bold is enabled across the range. Read / Write. */
+/** `faux_bold`: `true` if faux bold is enabled across the range. Read / Write. */
 descriptor(CharacterRange, "faux_bold", RangeField.bool("char", "2"));
 
-/** `faux_italic`: `True` if faux italic is enabled across the range. Read / Write. */
+/** `faux_italic`: `true` if faux italic is enabled across the range. Read / Write. */
 descriptor(CharacterRange, "faux_italic", RangeField.bool("char", "3"));
 
-/** `horizontal_scale`: the range's horizontal scale; `None` when mixed. Read / Write. */
+/** `horizontal_scale`: the range's horizontal scale; `null` when mixed. Read / Write. */
 descriptor(CharacterRange, "horizontal_scale", RangeField.float("char", "6", { validate: validate_number }));
 
-/** `vertical_scale`: the range's vertical scale; `None` when mixed. Read / Write. */
+/** `vertical_scale`: the range's vertical scale; `null` when mixed. Read / Write. */
 descriptor(CharacterRange, "vertical_scale", RangeField.float("char", "7", { validate: validate_number }));
 
-/** `tracking`: the range's spacing between characters; `None` when mixed. Read / Write. */
+/** `tracking`: the range's spacing between characters; `null` when mixed. Read / Write. */
 descriptor(CharacterRange, "tracking", RangeField.int("char", "8", { validate: validate_s4 }));
 
-/** `baseline_shift`: the range's baseline shift in pixels; `None` when mixed. Read / Write. */
+/** `baseline_shift`: the range's baseline shift in pixels; `null` when mixed. Read / Write. */
 descriptor(CharacterRange, "baseline_shift", RangeField.float("char", "9", { validate: validate_number }));
 
-/** `font_caps_option`: the range's font caps option; `None` when mixed. Read / Write. */
+/** `font_caps_option`: the range's font caps option; `null` when mixed. Read / Write. */
 descriptor(CharacterRange, "font_caps_option", RangeField.enum(FontCapsOption, "char", "12"));
 
-/** `font_baseline_option`: the range's font baseline option; `None` when mixed. Read / Write. */
+/** `font_baseline_option`: the range's font baseline option; `null` when mixed. Read / Write. */
 descriptor(CharacterRange, "font_baseline_option", RangeField.enum(FontBaselineOption, "char", "13"));
 
-/** `ligature`: `True` when ligature is used across the range. Read / Write. */
+/** `ligature`: `true` when ligature is used across the range. Read / Write. */
 descriptor(CharacterRange, "ligature", RangeField.bool("char", "18", { default: false }));
 
-/** `baseline_direction`: the range's baseline direction; `None` when mixed. Read / Write. */
+/** `baseline_direction`: the range's baseline direction; `null` when mixed. Read / Write. */
 descriptor(
   CharacterRange,
   "baseline_direction",
   RangeField.enum(BaselineDirection, "char", "35", { default: BaselineDirection.BASELINE_WITH_STREAM }),
 );
 
-/** `tsume`: the range's tsume value (0.0 to 1.0); `None` when mixed. Read / Write. */
+/** `tsume`: the range's tsume value (0.0 to 1.0); `null` when mixed. Read / Write. */
 descriptor(
   CharacterRange,
   "tsume",
   RangeField.float("char", "36", { default: 0.0, validate: validate_normalized_float }),
 );
 
-/** `no_break`: `True` when no-break is applied across the range. Read / Write. */
+/** `no_break`: `true` when no-break is applied across the range. Read / Write. */
 descriptor(CharacterRange, "no_break", RangeField.bool("char", "52", { default: false }));
 
-/** `apply_fill`: when `True`, the range shows a fill; `None` when mixed. Read / Write. */
+/** `apply_fill`: when `true`, the range shows a fill; `null` when mixed. Read / Write. */
 descriptor(CharacterRange, "apply_fill", RangeField.bool("char", "56"));
 
-/** `apply_stroke`: when `True`, the range shows a stroke; `None` when mixed. Read / Write. */
+/** `apply_stroke`: when `true`, the range shows a stroke; `null` when mixed. Read / Write. */
 descriptor(CharacterRange, "apply_stroke", RangeField.bool("char", "57", { default: false }));
 
-/** `stroke_over_fill`: when `True`, the stroke appears over the fill; `None` when mixed. Read / Write. */
+/** `stroke_over_fill`: when `true`, the stroke appears over the fill; `null` when mixed. Read / Write. */
 descriptor(CharacterRange, "stroke_over_fill", RangeField.bool("char", "58", { default: true }));
 
-/** `line_join_type`: the range's line join type for strokes; `None` when mixed. Read / Write. */
+/** `line_join_type`: the range's line join type for strokes; `null` when mixed. Read / Write. */
 descriptor(
   CharacterRange,
   "line_join_type",
   RangeField.enum(LineJoinType, "char", "62", { default: LineJoinType.LINE_JOIN_MITER }),
 );
 
-/** `stroke_width`: the range's stroke thickness; `None` when mixed. Read / Write. */
+/** `stroke_width`: the range's stroke thickness; `null` when mixed. Read / Write. */
 descriptor(
   CharacterRange,
   "stroke_width",
   RangeField.float("char", "63", { default: 1.0, validate: validate_positive_nonzero_number }),
 );
 
-/** `digit_set`: the range's digit set option; `None` when mixed. Read / Write. */
+/** `digit_set`: the range's digit set option; `null` when mixed. Read / Write. */
 descriptor(CharacterRange, "digit_set", RangeField.enum(DigitSet, "char", "70", { default: DigitSet.DEFAULT_DIGITS }));
 
-/** `justification`: the justification of paragraphs in the range; `None` when mixed. Read / Write. */
+/** `justification`: the justification of paragraphs in the range; `null` when mixed. Read / Write. */
 descriptor(CharacterRange, "justification", RangeField.enum(ParagraphJustification, "para", "0"));
 
-/** `first_line_indent`: the paragraphs' first line indent; `None` when mixed. Read / Write. */
+/** `first_line_indent`: the paragraphs' first line indent; `null` when mixed. Read / Write. */
 descriptor(CharacterRange, "first_line_indent", RangeField.float("para", "1", { default: 0.0, validate: validate_number }));
 
-/** `start_indent`: the paragraphs' start indent; `None` when mixed. Read / Write. */
+/** `start_indent`: the paragraphs' start indent; `null` when mixed. Read / Write. */
 descriptor(CharacterRange, "start_indent", RangeField.float("para", "2", { default: 0.0, validate: validate_number }));
 
-/** `end_indent`: the paragraphs' end indent; `None` when mixed. Read / Write. */
+/** `end_indent`: the paragraphs' end indent; `null` when mixed. Read / Write. */
 descriptor(CharacterRange, "end_indent", RangeField.float("para", "3", { default: 0.0, validate: validate_number }));
 
-/** `space_before`: the paragraphs' space before; `None` when mixed. Read / Write. */
+/** `space_before`: the paragraphs' space before; `null` when mixed. Read / Write. */
 descriptor(CharacterRange, "space_before", RangeField.float("para", "4", { default: 0.0, validate: validate_number }));
 
-/** `space_after`: the paragraphs' space after; `None` when mixed. Read / Write. */
+/** `space_after`: the paragraphs' space after; `null` when mixed. Read / Write. */
 descriptor(CharacterRange, "space_after", RangeField.float("para", "5", { default: 0.0, validate: validate_number }));
 
-/** `leading_type`: the paragraphs' leading type; `None` when mixed. Read / Write. */
+/** `leading_type`: the paragraphs' leading type; `null` when mixed. Read / Write. */
 descriptor(CharacterRange, "leading_type", RangeField.enum(LeadingType, "para", "8", { default: LeadingType.ROMAN_LEADING_TYPE }));
 
-/** `auto_hyphenate`: the paragraphs' auto-hyphenate option; `None` when mixed. Read / Write. */
+/** `auto_hyphenate`: the paragraphs' auto-hyphenate option; `null` when mixed. Read / Write. */
 descriptor(CharacterRange, "auto_hyphenate", RangeField.bool("para", "9"));
 
-/** `hanging_roman`: the paragraphs' Roman Hanging Punctuation; `None` when mixed. Read / Write. */
+/** `hanging_roman`: the paragraphs' Roman Hanging Punctuation; `null` when mixed. Read / Write. */
 descriptor(CharacterRange, "hanging_roman", RangeField.bool("para", "21", { default: false }));
 
-/** `every_line_composer`: the paragraphs' Every-Line Composer option; `None` when mixed. Read / Write. */
+/** `every_line_composer`: the paragraphs' Every-Line Composer option; `null` when mixed. Read / Write. */
 descriptor(CharacterRange, "every_line_composer", RangeField.bool("para", "29", { default: false }));
 
-/** `direction`: the paragraphs' direction; `None` when mixed. Read / Write. */
+/** `direction`: the paragraphs' direction; `null` when mixed. Read / Write. */
 descriptor(
   CharacterRange,
   "direction",
@@ -1796,7 +1799,7 @@ descriptor(
 /**
  * `fill_color`: the range's fill color as `[r, g, b]`. Read / Write.
  *
- * Only characters with `apply_fill` participate in the read; `None`
+ * Only characters with `apply_fill` participate in the read; `null`
  * when no character in the range has a fill or the colors are mixed.
  * Setting writes the paint only - like the stroke, it does not enable
  * `apply_fill`.
@@ -1815,7 +1818,7 @@ descriptor(
 /**
  * `stroke_color`: the range's stroke color as `[r, g, b]`. Read / Write.
  *
- * Only characters with `apply_stroke` participate in the read; `None`
+ * Only characters with `apply_stroke` participate in the read; `null`
  * when no character in the range has a stroke or the colors are
  * mixed. Setting writes the paint only - AE does NOT enable
  * `apply_stroke` (probed `W_STROKE_GATE`; the Scripting Guide claims

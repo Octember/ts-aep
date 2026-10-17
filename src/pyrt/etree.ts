@@ -88,6 +88,8 @@ export class Element {
     this.text = this.tail = null;
   }
 
+  get(key: string, default_: string): string;
+  get(key: string, default_?: string | null): string | null;
   get(key: string, default_: string | null = null): string | null {
     const v = this.attrib.get(key);
     return v === undefined ? default_ : v;

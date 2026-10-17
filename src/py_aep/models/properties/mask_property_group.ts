@@ -42,19 +42,19 @@ export const _MASK_COLOR_CYCLE: readonly (readonly [number, number, number])[] =
  *
  * Info:
  *     `MaskPropertyGroup` is a subclass of PropertyGroup object. All methods and
- *     attributes of {@link py_aep.models.properties.property_base.PropertyBase | PropertyBase}
+ *     attributes of {@link PropertyBase | PropertyBase}
  *     object and {@link PropertyGroup}, in addition to those listed below, are available
  *     when working with `MaskPropertyGroup`.
  *
  * @example
- * ```python
- * from py_aep import parse
+ * ```ts
+ * import { parse } from "@bevyl-ai/ts-aep";
  *
- * app = parse("project.aep")
- * comp = app.project.compositions[0]
- * layer = comp.layers[0]
- * mask = layer.masks[0]
- * print(mask.inverted)
+ * const app = parse("project.aep");
+ * const comp = app.project.compositions[0];
+ * const layer = comp.layers[0];
+ * const mask = layer.masks[0];
+ * console.log(mask.inverted);
  * ```
  * @see https://ae-scripting.docsforadobe.dev/property/maskpropertygroup/
  */
@@ -67,11 +67,11 @@ export class MaskPropertyGroup extends PropertyGroup {
    */
   declare color: number[];
 
-  /** When `True`, the mask is inverted. Read / Write. */
+  /** When `true`, the mask is inverted. Read / Write. */
   declare inverted: boolean;
 
   /**
-   * When `True`, the mask is locked and cannot be edited in the user
+   * When `true`, the mask is locked and cannot be edited in the user
    * interface. Read / Write.
    */
   declare locked: boolean;
@@ -95,7 +95,7 @@ export class MaskPropertyGroup extends PropertyGroup {
   declare _mask_shape_tdsb: TdsbChunk | null;
 
   /**
-   * When `True`, the mask uses RotoBezier, enabling curved mask segments
+   * When `true`, the mask uses RotoBezier, enabling curved mask segments
    * without direction handles. Read / Write.
    *
    * The flag lives in the Mask Shape's `tdsb`. A freshly added mask has
@@ -133,10 +133,10 @@ export class MaskPropertyGroup extends PropertyGroup {
     if (!!this._mask_shape_tdsb.roto_bezier === value) {
       return;
     }
-    const path = this.property("ADBE Mask Shape") as Property;
+    const path = this.property("ADBE Mask Shape");
     const shapes = (
       path.keyframes?.length > 0 ? path.keyframes.map((kf) => kf.value) : [path.value]
-    ) as Shape[];
+    );
     if (value) {
       // Measured on AE 2026: switching RotoBezier on gives each vertex
       // of every key tension 1 when both its handles are zero (it stays
@@ -174,15 +174,19 @@ export class MaskPropertyGroup extends PropertyGroup {
    *
    * @param parent_property_ - The Masks parade group to add the atom to.
    * @param property_depth - The depth of the mask atom in the tree.
-   * @param kw - Keyword arguments:
+   * @param kw - Options:
    * - `name`: The display name, stored in the `tdsn` (AE bakes the positional `Mask N` name at
    *     creation).
    * - `mask_id`: 1-based creation id, stored in the `mkif` and used to pick the outline color from
    *     the cycle palette.
    */
-  static _new(parent_property_: any, property_depth: any, kw: any): any {
-    const parent_property = parent_property_ as PropertyGroup;
-    const { name, mask_id } = kw as { name: string; mask_id: number };
+  static _new(
+    parent_property_: any,
+    property_depth: any,
+    kw: any,
+  ): MaskPropertyGroup {
+    const parent_property: PropertyGroup = parent_property_;
+    const { name, mask_id }: { name: string; mask_id: number } = kw;
     const color = _MASK_COLOR_CYCLE[mod(mask_id - 1, _MASK_COLOR_CYCLE.length)];
     const _tdmn = new TdmnChunk({ value: "ADBE Mask Atom" });
     const _mkif = new MkifChunk({
@@ -268,7 +272,7 @@ export class MaskPropertyGroup extends PropertyGroup {
    *
    * Mirrors After Effects: a freshly added mask carries no Mask Shape
    * subtree, and enabling RotoBezier (`roto_bezier=True`) or setting a
-   * plain bezier path (`False` - the tdsb roto flag stays clear, like
+   * plain bezier path (`false` - the tdsb roto flag stays clear, like
    * AE's own imports) materializes the implicit default full-frame
    * rectangle as an explicit path.
    */
@@ -299,7 +303,7 @@ export class MaskPropertyGroup extends PropertyGroup {
     // on write, exactly as AE leaves them).
     const chunks = this._tdgp.chunks;
     const found_at = chunks.findIndex(
-      (c: any) =>
+      (c) =>
         c.chunk_type === "tdmn" &&
         getattr(c, "value", null) === "ADBE Mask Shape" &&
         c.synthetic,
@@ -339,7 +343,7 @@ export class MaskPropertyGroup extends PropertyGroup {
       this._properties.splice(0, 0, mask_path);
     }
     const tdbs = find_by_list_type(oms.chunks, "tdbs");
-    this._mask_shape_tdsb = find_by_type(tdbs.chunks, "tdsb") as TdsbChunk;
+    this._mask_shape_tdsb = find_by_type(tdbs.chunks, "tdsb");
   }
 }
 

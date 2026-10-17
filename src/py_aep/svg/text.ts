@@ -3,10 +3,10 @@
  *
  * After Effects' own SVG importer drops `<text>`; py_aep renders it by outlining
  * each glyph with `fontTools` and converting the contours to the same cubic
- * {@link py_aep.svg.types.Subpath | Subpath}s the shape importer uses, so they flow
+ * {@link Subpath | Subpath}s the shape importer uses, so they flow
  * through the existing shape-layer builder unchanged.
  *
- * A `<text>` is split into {@link py_aep.svg.text.TextRun | TextRun}s (the parent text
+ * A `<text>` is split into {@link TextRun | TextRun}s (the parent text
  * plus each `<tspan>`), laid out left-to-right by glyph advance width. Kerning,
  * bidirectional text, and complex-script shaping are out of scope.
  */
@@ -28,8 +28,30 @@ import {
   hypot,
 } from "../../pyrt/index.ts";
 
+/** The subset of a fontkit glyph this module reads. */
+export interface FontkitGlyph {
+  advanceWidth: number;
+  path: { commands: { command: string; args: number[] }[] };
+}
+
+/** The subset of a fontkit font this module reads. */
+export interface FontkitFont {
+  unitsPerEm: number;
+  numGlyphs: number;
+  getGlyph(id: number): FontkitGlyph;
+  _cmapProcessor: FontkitCmap;
+}
+
+/** fontkit's internal cmap processor. */
+export interface FontkitCmap {
+  lookup(codePoint: number): number;
+}
+
+/** `(names, advances, units_per_em, glyph_set)` for one run's text. */
+export type TextGlyphs = [(number | null)[], number[], number, FontkitFont];
+
 /** Parsed-font cache keyed by file path (one parse per font per process). */
-export const _font_cache = new Map<string, any>();
+export const _font_cache = new Map<string, FontkitFont>();
 
 /**
  * One styled run of text within a `<text>` (the parent text or a `<tspan>`).
@@ -76,12 +98,14 @@ export class TextRun {
   }
 }
 
-export function _load_font(path: Path, font_number = 0): any {
+export function _load_font(path: Path, font_number = 0): FontkitFont {
   const key = `${fspath(path)}#${font_number}`;
-  let font = _font_cache.get(key) ?? null;
+  let font: FontkitFont | null = _font_cache.get(key) ?? null;
   if (font == null) {
     // NOTE(port): lazy=True only defers table parsing (no result difference); a .ttc resolves its face through `.fonts`.
-    const opened: any = fontkit.create(host.fs.readFileSync(fspath(path)) as any);
+    const opened = fontkit.create(host.fs.readFileSync(fspath(path)) as never) as unknown as FontkitFont & {
+      fonts?: FontkitFont[];
+    };
     font = opened.fonts ? opened.fonts[font_number] : opened;
     _font_cache.set(key, font);
   }
@@ -104,7 +128,7 @@ export class _CubicContourPen {
   declare _cur: [number, number];
   declare _start: [number, number];
 
-  constructor(glyph_set: any) {
+  constructor(glyph_set: FontkitFont) {
     // `super().__init__(glyph_set)` is the BasePen call dropped above.
     this.contours = [];
     this._segs = [];
@@ -166,7 +190,7 @@ export class _CubicContourPen {
 }
 
 /** fontTools `glyph.draw(pen)` over fontkit's path commands. */
-export function _draw_glyph(glyph: any, pen: _CubicContourPen): void {
+export function _draw_glyph(glyph: FontkitGlyph, pen: _CubicContourPen): void {
   for (const { command, args } of glyph.path.commands) {
     if (command === "moveTo") {
       pen._moveTo([args[0], args[1]]);
@@ -182,25 +206,25 @@ export function _draw_glyph(glyph: any, pen: _CubicContourPen): void {
   }
 }
 
-export function _glyph_contours(glyph_set: any, glyph_name: number): RawSubpath[] {
+export function _glyph_contours(glyph_set: FontkitFont, glyph_name: number): RawSubpath[] {
   const pen = new _CubicContourPen(glyph_set);
   _draw_glyph(glyph_set.getGlyph(glyph_name), pen);
   return pen.contours;
 }
 
 /** `gname in glyph_set`: a mapped glyph id that exists in the font. */
-export function _in_glyph_set(glyph_set: any, gname: number | null): boolean {
+export function _in_glyph_set(glyph_set: FontkitFont, gname: number | null): gname is number {
   return gname != null && gname < glyph_set.numGlyphs;
 }
 
-export function _glyphs(font: any, text: string): [(number | null)[], number[], number, any] {
+export function _glyphs(font: FontkitFont, text: string): TextGlyphs {
   // `getBestCmap()` is None for a font with no Unicode cmap subtable (the
   // Windows symbol faces Wingdings/Webdings/Symbol/Marlett, and similar). Treat
   // it as empty so every char maps to no glyph and the run is dropped, matching
   // the "unresolved font is skipped" behaviour rather than crashing read_svg.
   // TODO(port): fontkit has no getBestCmap(); its internal cmap processor may pick a different subtable than fontTools' priority order for fonts carrying several Unicode cmaps (e.g. both format 4 and format 12, or differing platform 0/3 subtables), changing which code points map to glyphs.
   // Its lookup returns 0 for unmapped code points, which is reported as null here.
-  let cmap: any = null;
+  let cmap: FontkitCmap | null = null;
   try {
     cmap = font._cmapProcessor;
   } catch {
@@ -224,7 +248,7 @@ export function _glyphs(font: any, text: string): [(number | null)[], number[], 
 /** Advance width of a run's text in user units (incl. letter-spacing). */
 export function _advance_width(
   run: TextRun,
-  glyphs: [(number | null)[], number[], number, any],
+  glyphs: TextGlyphs,
 ): number {
   const [, advances, units_per_em] = glyphs;
   const scale = run.font_size / units_per_em;
@@ -237,7 +261,7 @@ export function _outline_run(
   pen_x: number,
   pen_y: number,
   ctm: Affine,
-  glyphs: [(number | null)[], number[], number, any],
+  glyphs: TextGlyphs,
 ): [Subpath[], number] {
   const [names, advances, units_per_em, glyph_set] = glyphs;
   const scale = run.font_size / units_per_em;

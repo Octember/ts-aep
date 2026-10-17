@@ -11,7 +11,7 @@ import { ChunkField } from "../descriptors.ts";
 import type { CompItem } from "../items/composition.ts";
 import type { Project } from "../project.ts";
 import { _validate_number, validate_bool, validate_positive_int, validate_positive_number, validate_sequence, validate_string } from "../validators.ts";
-import { SettingsView, settings_to_number, settings_to_string } from "./settings.ts";
+import { SettingsView, type SettingsSpec, settings_to_number, settings_to_string } from "./settings.ts";
 import type { RenderQueue } from "./render_queue.ts";
 import {
   deepcopy,
@@ -27,6 +27,7 @@ import {
   StopIteration,
   str,
   ValueError,
+  type ClassAttributes,
 } from "../../../pyrt/index.ts";
 import { OutputModule } from "./output_module.ts";
 import { parse_output_module } from "../../parsers/output_module.ts";
@@ -59,9 +60,10 @@ export function _next_item_id(rq: RenderQueue): number {
  * written by a script on every `setSettings` (AE 2026).
  */
 export class _RenderSettingsView extends SettingsView {
+  declare _owner: RenderQueueItem;
   __setitem__(key: string, value: any): void {
     super.__setitem__(key, value);
-    (this._owner as RenderQueueItem)._ldat.settings_written = 1;
+    this._owner._ldat.settings_written = 1;
   }
 }
 
@@ -69,7 +71,7 @@ export class _RenderSettingsView extends SettingsView {
 // RENDER_SETTINGS: ExtendScript key -> (attribute, optional enum class)
 // ---------------------------------------------------------------------------
 
-export const RENDER_SETTINGS = new Map<string, [string, any]>([
+export const RENDER_SETTINGS: SettingsSpec = new Map([
   ["3:2 Pulldown", ["_pulldown", PulldownSetting]],
   ["Color Depth", ["_color_depth", ColorDepthSetting]],
   ["Disk Cache", ["_disk_cache", DiskCacheSetting]],
@@ -97,20 +99,22 @@ export const RENDER_SETTINGS = new Map<string, [string, any]>([
  * queue. It provides access to the specific settings for an item to be
  * rendered.
  *
- * ```python
- * from py_aep import parse
+ * ```ts
+ * import { parse } from "@bevyl-ai/ts-aep";
  *
- * app = parse("project.aep")
- * rq_item = app.project.render_queue.items[0]
- * print(rq_item.status)
- * for output_module in rq_item:
- *     ...
+ * const app = parse("project.aep");
+ * const rq_item = app.project.render_queue.items[0];
+ * console.log(rq_item.status);
+ * for (const output_module of rq_item) {
+ *   // ...
+ * }
  * ```
  *
  * @example
  * @see https://ae-scripting.docsforadobe.dev/renderqueue/renderqueueitem/
  */
 export class RenderQueueItem {
+  declare ["constructor"]: ClassAttributes<typeof RenderQueueItem>;
   /**
    * The number of seconds that have elapsed in rendering this item.
    * Read-only.
@@ -130,13 +134,13 @@ export class RenderQueueItem {
   declare name: string;
 
   /**
-   * When `True`, a user notification is enabled for this render queue
+   * When `true`, a user notification is enabled for this render queue
    * item, signaling the user upon render completion. Read / Write.
    */
   declare queue_item_notify: boolean;
 
   /**
-   * The date and time when rendering of this item started, or `None` if
+   * The date and time when rendering of this item started, or `null` if
    * the item has not started rendering. Read-only.
    */
   declare start_time: Date | null;
@@ -290,10 +294,10 @@ export class RenderQueueItem {
     // with "Invalid read length".
     this._lom.chunks.push(...lom_chunks);
 
-    const om_ldat = find_by_type(this._list_chunk.chunks, "ldat") as LdatChunk;
+    const om_ldat = find_by_type(this._list_chunk.chunks, "ldat");
     om_ldat.items.push(om._om_ldat);
 
-    const om_lhd3 = find_by_type(this._list_chunk.chunks, "lhd3") as Lhd3Chunk;
+    const om_lhd3 = find_by_type(this._list_chunk.chunks, "lhd3");
     set_lhd3_count(om_lhd3, om_lhd3.count + 1, LHD3_BLOCK_SINGLE);
 
     this._output_modules.push(om);
@@ -352,7 +356,7 @@ export class RenderQueueItem {
    */
   _on_status_changed(): void {
     const status = this.status;
-    if ((this.constructor as typeof RenderQueueItem)._RESET_STATUSES.has(status)) {
+    if (this.constructor._RESET_STATUSES.has(status)) {
       this._ldat.start_time = 0;
       this._ldat.elapsed_seconds = 0;
     }
@@ -364,7 +368,7 @@ export class RenderQueueItem {
   }
 
   /**
-   * When `True`, the item will be rendered when the render queue is
+   * When `true`, the item will be rendered when the render queue is
    * started. Read / Write.
    */
   get render(): boolean {
@@ -395,7 +399,7 @@ export class RenderQueueItem {
         chunk_type: "RCom",
         chunks: [utf8_chunk],
       });
-      const idx = this._litm.chunks.findIndex((c: any) => c === this._list_chunk);
+      const idx = this._litm.chunks.findIndex((c) => c === this._list_chunk);
       if (idx === -1) throw new StopIteration();
       this._litm.chunks.splice(idx, 0, rcom_chunk);
       this._rcom_utf8 = utf8_chunk;
@@ -495,14 +499,16 @@ export class RenderQueueItem {
   }
 
   /**
-   * SettingsView dict
+   * SettingsView map
    * built live from the binary chunk, with ExtendScript-compatible keys
    * matching `get_settings()` output.
    *
    * Supports item assignment:
    *
-   * ```python
-   * rqi.settings["Quality"] = RenderQuality.BEST
+   * ```ts
+   * import { parse, RenderQuality } from "@bevyl-ai/ts-aep";
+   * const rqi = parse("project.aep").project.render_queue.items[0];
+   * rqi.settings.__setitem__("Quality", RenderQuality.BEST);
    * ```
    *
    * @example
@@ -851,13 +857,13 @@ export class RenderQueueItem {
 
     const new_rout_items = this._rout_items.map((ri) => deepcopy(ri));
 
-    const new_list_chunk = clone_chunk_tree(this._list_chunk) as ListChunk;
-    const new_lom = clone_chunk_tree(this._lom) as ListChunk;
+    const new_list_chunk = clone_chunk_tree(this._list_chunk);
+    const new_lom = clone_chunk_tree(this._lom);
 
     let new_rcom: ContainerChunk | null = null;
     let new_rcom_utf8: Utf8Chunk | null = null;
     if (this._rcom != null) {
-      new_rcom = clone_chunk_tree(this._rcom) as ContainerChunk;
+      new_rcom = clone_chunk_tree(this._rcom);
       if (new_rcom.chunks?.length > 0) {
         new_rcom_utf8 = new_rcom.chunks[0] as Utf8Chunk;
       }
@@ -884,7 +890,7 @@ export class RenderQueueItem {
     insert_at += 1;
     this._litm.chunks.splice(insert_at, 0, new_lom);
 
-    const new_om_ldat = find_by_type(new_list_chunk.chunks, "ldat") as LdatChunk;
+    const new_om_ldat = find_by_type(new_list_chunk.chunks, "ldat");
     const om_groups = split_on_type(new_lom.chunks, "Roou");
 
     // Build model first (OMs need parent ref)

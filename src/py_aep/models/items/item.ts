@@ -17,6 +17,7 @@ import {
   getattr,
   py_assert,
   py_eq,
+  type ClassAttributes,
 } from "../../../pyrt/index.ts";
 import { ChunkField } from "../descriptors.ts";
 import { Guide } from "../guide.ts";
@@ -50,6 +51,7 @@ export interface Item {
   name: string;
 }
 export class Item {
+  declare ["constructor"]: ClassAttributes<typeof Item>;
   /**
    * The label color. Colors are represented by their number (0 for None,
    * or 1 to 16 for one of the preset colors in the Labels preferences).
@@ -105,9 +107,9 @@ export class Item {
       this._ldat = null;
     } else {
       this._inner = find_by_list_type(this._gide.chunks, "list");
-      this._lhd3 = find_by_type(this._inner.chunks, "lhd3") as Lhd3Chunk;
+      this._lhd3 = find_by_type(this._inner.chunks, "lhd3");
       try {
-        this._ldat = find_by_type(this._inner.chunks, "ldat") as LdatChunk;
+        this._ldat = find_by_type(this._inner.chunks, "ldat");
       } catch (e) {
         if (!(e instanceof ChunkNotFoundError)) throw e;
         this._ldat = null;
@@ -144,7 +146,7 @@ export class Item {
 
   // Python `__eq__` returns NotImplemented for a non-Item; the reflected
   // comparison then falls back to identity, which is False here.
-  __eq__(other: any): boolean {
+  __eq__(other: unknown): boolean {
     if (!(other instanceof Item)) return false;
     return this.id === other.id;
   }
@@ -153,7 +155,7 @@ export class Item {
   // uses an Item as a set member or dict key (dicts are keyed by int id).
 
   /**
-   * The parent folder of this item. `None` for the root folder.
+   * The parent folder of this item. `null` for the root folder.
    * Read / Write.
    *
    * Setting this moves the item into another folder. The item's binary
@@ -197,10 +199,10 @@ export class Item {
   }
 
   /**
-   * When `True`, this item is selected. Read-only.
+   * When `true`, this item is selected. Read-only.
    *
    * **Note:** Item selection is not stored in the `.aep` binary format; it is a
-   * runtime-only state. Parsed projects always report `False`.
+   * runtime-only state. Parsed projects always report `false`.
    */
   get selected(): boolean {
     return false;
@@ -352,7 +354,7 @@ export class Item {
     const [start, end] = block_slice(
       container,
       this._item_list,
-      (this.constructor as typeof Item)._ITEM_BOUNDARY_LIST_TYPES,
+      this.constructor._ITEM_BOUNDARY_LIST_TYPES,
     );
     const block = container.slice(start, end);
     container.splice(start, end - start);

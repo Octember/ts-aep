@@ -20,6 +20,9 @@ import { FormatOptionsBase } from "./base.ts";
 import type { PngRoptChunk } from "../../../binary/render_chunks.ts";
 import type { Utf8Chunk } from "../../../binary/scalar_chunks.ts";
 
+/** HDR10 metadata JSON as AE stores it (parsed, not validated): the binary is trusted, so values are read as scalars. */
+type Hdr10Meta = Map<string, any>;
+
 /**
  * PNG format-specific render options.
  *
@@ -31,19 +34,20 @@ import type { Utf8Chunk } from "../../../binary/scalar_chunks.ts";
  * is stored separately in a JSON `Utf8` chunk alongside the Ropt chunk.
  *
  * @example
- * ```python
- * from py_aep import PngFormatOptions, parse
+ * ```ts
+ * import { PngFormatOptions, parse } from "@bevyl-ai/ts-aep";
  *
- * app = parse("project.aep")
- * om = app.project.render_queue.items[0].output_modules[0]
- * if isinstance(om.format_options, PngFormatOptions):
- *     print(om.format_options.compression)
+ * const app = parse("project.aep");
+ * const om = app.project.render_queue.items[0].output_modules[0];
+ * if (om.format_options instanceof PngFormatOptions) {
+ *   console.log(om.format_options.compression);
+ * }
  * ```
  */
 export class PngFormatOptions extends FormatOptionsBase {
   declare _body: PngRoptChunk;
   declare _hdr10_utf8: Utf8Chunk | null;
-  declare _hdr10_meta: Map<string, any>;
+  declare _hdr10_meta: Hdr10Meta;
 
   constructor(kw: { _body: PngRoptChunk; _hdr10_utf8?: Utf8Chunk | null }) {
     super();
@@ -107,14 +111,14 @@ export class PngFormatOptions extends FormatOptionsBase {
   /**
    * The color primaries used for HDR10 metadata. Corresponds to the
    * `Color Primaries` dropdown in the PNG Options dialog.
-   * Only meaningful when `include_hdr10_metadata` is `True`. An
+   * Only meaningful when `include_hdr10_metadata` is `true`. An
    * out-of-enum stored value reads back as a raw `int` (the binary
    * is trusted). Read / Write.
    */
   get color_primaries(): Hdr10ColorPrimaries | number {
     const raw = this._hdr10_meta.get("displayPrimaries") ?? null;
     if (raw == null) return Hdr10ColorPrimaries.P3_D65;
-    return enum_or_raw((v: any) => {
+    return enum_or_raw((v: unknown) => {
       // Python `int(v)` raises TypeError for a list / dict; pyrt `int` would not.
       if (!is_real(v) && typeof v !== "string" && typeof v !== "boolean") {
         throw new TypeError_(`int() argument must be a string, a bytes-like object or a real number, not '${type_name(v)}'`);
@@ -131,7 +135,7 @@ export class PngFormatOptions extends FormatOptionsBase {
 
   /**
    * The minimum display luminance in nits for HDR10 metadata, or
-   * `None` if not explicitly set. Corresponds to the
+   * `null` if not explicitly set. Corresponds to the
    * `Luminance Minimum` field in the PNG Options dialog. Read / Write.
    */
   get luminance_min(): number | null {
@@ -151,7 +155,7 @@ export class PngFormatOptions extends FormatOptionsBase {
 
   /**
    * The maximum display luminance in nits for HDR10 metadata, or
-   * `None` if not explicitly set. Corresponds to the
+   * `null` if not explicitly set. Corresponds to the
    * `Luminance Maximum` field in the PNG Options dialog. Read / Write.
    */
   get luminance_max(): number | null {
@@ -171,7 +175,7 @@ export class PngFormatOptions extends FormatOptionsBase {
 
   /**
    * The maximum content light level in nits for HDR10 metadata, or
-   * `None` if not explicitly set. Corresponds to the
+   * `null` if not explicitly set. Corresponds to the
    * `Content Light Maximum` field in the PNG Options dialog. Read / Write.
    */
   get content_light_max(): number | null {
@@ -191,7 +195,7 @@ export class PngFormatOptions extends FormatOptionsBase {
 
   /**
    * The maximum frame average light level in nits for HDR10 metadata,
-   * or `None` if not explicitly set. Corresponds to the
+   * or `null` if not explicitly set. Corresponds to the
    * `Content Light Average` field in the PNG Options dialog. Read / Write.
    */
   get content_light_average(): number | null {

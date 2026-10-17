@@ -36,6 +36,7 @@ import {
   str,
   ValueError,
   zip,
+  type ClassAttributes,
 } from "../../../pyrt/index.ts";
 import { ChunkField } from "../descriptors.ts";
 import { EssentialGraphicsController, SourcePropertyRef } from "../essential_graphics.ts";
@@ -413,7 +414,7 @@ export function _rewrite_eg_identity(
     ) {
       continue;
     }
-    for (const cctl of filter_by_list_type(cif.chunks, "CCtl") as ListChunk[]) {
+    for (const cctl of filter_by_list_type(cif.chunks, "CCtl")) {
       const utf8s = filter_by_type(cctl.chunks, "Utf8");
       if (utf8s?.length > 0) {
         const uuid_utf8 = utf8s[0] as Utf8Chunk;
@@ -454,6 +455,16 @@ export function _rewrite_eg_identity(
   }
 }
 
+export interface LayerTypeCache {
+  av: AVLayer[];
+  text: TextLayer[];
+  shape: ShapeLayer[];
+  camera: CameraLayer[];
+  light: LightLayer[];
+  three_d_model: ThreeDModelLayer[];
+  parametric_mesh: ParametricMeshLayer[];
+}
+
 /**
  * The `CompItem` object represents a composition, and allows you to
  * manipulate and get information about it.
@@ -466,18 +477,20 @@ export function _rewrite_eg_identity(
  *     all of these item types.
  *
  * @example
- * ```python
- * from py_aep import parse
+ * ```ts
+ * import { parse } from "@bevyl-ai/ts-aep";
  *
- * app = parse("project.aep")
- * comp = app.project.compositions[0]
- * print(comp.frame_rate)
- * for layer in comp:
- *     ...
+ * const app = parse("project.aep");
+ * const comp = app.project.compositions[0];
+ * console.log(comp.frame_rate);
+ * for (const layer of comp) {
+ *   // ...
+ * }
  * ```
  * @see https://ae-scripting.docsforadobe.dev/item/compitem/
  */
 export class CompItem extends AVItem {
+  declare ["constructor"]: ClassAttributes<typeof CompItem>;
   static _auto_name: string = "Comp";
 
   /** The background color of the composition. The three array values specify
@@ -485,36 +498,36 @@ export class CompItem extends AVItem {
   declare bg_color: number[];
 
   /**
-   * When `True`, Draft 3D mode is enabled for the composition.
+   * When `true`, Draft 3D mode is enabled for the composition.
    * Read / Write.
    *
    * **Warning:** Deprecated in After Effects 2024 in favor of the new Draft 3D mode.
    */
   declare draft3d: boolean;
 
-  /** When `True`, frame blending is enabled for this Composition. Corresponds
+  /** When `true`, frame blending is enabled for this Composition. Corresponds
    * to the value of the Frame Blending button in the Composition panel.
    * Read / Write. */
   declare frame_blending: boolean;
 
-  /** When `True`, only layers with `shy` set to `False` are shown in the
-   * Timeline panel. When `False`, all layers are visible, including those
-   * whose `shy` value is `True`. Corresponds to the value of the Hide All
+  /** When `true`, only layers with `shy` set to `false` are shown in the
+   * Timeline panel. When `false`, all layers are visible, including those
+   * whose `shy` value is `true`. Corresponds to the value of the Hide All
    * Shy Layers button in the Composition panel. Read / Write. */
   declare hide_shy_layers: boolean;
 
-  /** When `True`, motion blur is enabled for the composition. Corresponds
+  /** When `true`, motion blur is enabled for the composition. Corresponds
    * to the value of the Motion Blur button in the Composition panel.
    * Read / Write. */
   declare motion_blur: boolean;
 
-  /** When `True`, the frame rate of nested compositions is preserved in
+  /** When `true`, the frame rate of nested compositions is preserved in
    * the current composition. Corresponds to the value of the "Preserve frame
    * rate when nested or in render queue" option in the Advanced tab of the
    * Composition Settings dialog box. Read / Write. */
   declare preserve_nested_frame_rate: boolean;
 
-  /** When `True`, the resolution of nested compositions is preserved in
+  /** When `true`, the resolution of nested compositions is preserved in
    * the current composition. Corresponds to the value of the "Preserve
    * Resolution When Nested" option in the Advanced tab of the Composition
    * Settings dialog box. Read / Write. */
@@ -890,7 +903,7 @@ export class CompItem extends AVItem {
     /**
      * Store the work area the way AE's setters do: in whole timebase
      * units, snapped to frames, and with an end at or past the end of the
-     * composition (or `None`) stored as "runs to the end".
+     * composition (or `null`) stored as "runs to the end".
      */
     const cdta = this._cdta;
     const [timebase, units_per_frame] = _grid(cdta);
@@ -948,7 +961,7 @@ export class CompItem extends AVItem {
   }
 
   /**
-   * When `True`, timecode is displayed in drop-frame format. Only
+   * When `true`, timecode is displayed in drop-frame format. Only
    * applicable when `frameRate` is 29.97 or 59.94. Read / Write.
    */
   declare drop_frame: boolean;
@@ -1030,17 +1043,17 @@ export class CompItem extends AVItem {
 
   declare _layers: Layer[];
   declare _layers_by_id: Map<number, Layer> | null;
-  declare __type_cache: Record<string, any[]> | null;
+  declare __type_cache: LayerTypeCache | null;
   declare __layer_id_to_index: Map<number, number> | null;
   declare _cdta: CdtaChunk;
   declare _cdrp: U1Chunk | null;
   declare prin_list: ListChunk;
   declare _prin: PrinChunk;
   declare _prda: PrdaChunk;
-  declare _deferred_layers: [ListChunk[], Map<string, any>] | null;
+  declare _deferred_layers: [ListChunk[], Map<string, Map<string, Map<string, any>>>] | null;
   declare _layers_loaded: boolean;
   declare _deferred_child_chunks: Chunk[] | null;
-  declare _marker_property: Property | null;
+  declare _marker_property: Property<MarkerValue | null> | null;
   declare _eg_template_name_utf8: Utf8Chunk | null;
   declare _eg_controllers: EssentialGraphicsController[];
   declare _view_data: Chunk[];
@@ -1055,7 +1068,7 @@ export class CompItem extends AVItem {
     _name_utf8: Utf8Chunk;
     project: Project;
     parent_folder: FolderItem;
-    effect_param_defs: Map<string, any>;
+    effect_param_defs: Map<string, Map<string, Map<string, any>>>;
     proxy_source: FileSource | SolidSource | PlaceholderSource | null;
   }) {
     // Skip AVItem's extra params - they're all descriptor-backed on
@@ -1078,16 +1091,16 @@ export class CompItem extends AVItem {
     this.__type_cache = null;
     this.__layer_id_to_index = null;
 
-    this._cdta = find_by_type(kw._child_chunks, "cdta") as CdtaChunk;
+    this._cdta = find_by_type(kw._child_chunks, "cdta");
     try {
-      this._cdrp = find_by_type(kw._child_chunks, "cdrp") as U1Chunk;
+      this._cdrp = find_by_type(kw._child_chunks, "cdrp");
     } catch (e) {
       if (!(e instanceof ChunkNotFoundError)) throw e;
       this._cdrp = null;
     }
     this.prin_list = find_by_list_type(kw._child_chunks, "PRin");
-    this._prin = find_by_type(this.prin_list.chunks, "prin") as PrinChunk;
-    this._prda = find_by_type(this.prin_list.chunks, "prda") as PrdaChunk;
+    this._prin = find_by_type(this.prin_list.chunks, "prin");
+    this._prda = find_by_type(this.prin_list.chunks, "prda");
 
     // Layer deferral: collect layer chunks and source IDs now, parse
     // the actual Layer objects on first access via _ensure_layers_loaded.
@@ -1163,7 +1176,7 @@ export class CompItem extends AVItem {
     const [start, end] = block_slice(
       container,
       this._item_list,
-      (this.constructor as typeof CompItem)._ITEM_BOUNDARY_LIST_TYPES,
+      this.constructor._ITEM_BOUNDARY_LIST_TYPES,
     );
     const cloned_block = container.slice(start, end).map((c) => clone_chunk_tree(c));
     const cloned_item = cloned_block[0] as ListChunk;
@@ -1172,18 +1185,18 @@ export class CompItem extends AVItem {
     const new_comp_id = project._allocate_id();
     // Pre-2020 files have no iide; the id then lives only in idta.
     try {
-      (find_by_type(cloned_item.chunks, "iide") as U4LeChunk).value = new_comp_id;
+      find_by_type(cloned_item.chunks, "iide").value = new_comp_id;
     } catch (e) {
       if (!(e instanceof ChunkNotFoundError)) throw e;
     }
-    (find_by_type(cloned_item.chunks, "idta") as IdtaChunk).item_id = new_comp_id;
+    find_by_type(cloned_item.chunks, "idta").item_id = new_comp_id;
 
     // Fresh ids for every ldta - real layers AND viewer pseudo-layers,
     // AE reallocates them all - then remap every intra-comp layer
     // reference. Ids not in the map (0 / stale) stay untouched, and
     // source_id is deliberately kept: footage and precomp sources are
     // shared with the original.
-    const ldta_chunks = recursive_find(cloned_item.chunks, "ldta") as LdtaChunk[];
+    const ldta_chunks = recursive_find(cloned_item.chunks, "ldta");
     const id_map: Map<number, number> = new Map();
     for (const ldta of ldta_chunks) {
       id_map.set(ldta.layer_id, project._allocate_id());
@@ -1196,7 +1209,7 @@ export class CompItem extends AVItem {
       // matte_layer_id is absent (None) in pre-AE23 files.
       const matte = ldta.matte_layer_id;
       if (matte != null && id_map.has(matte)) {
-        ldta.matte_layer_id = id_map.get(matte);
+        ldta.matte_layer_id = id_map.get(matte)!;
       }
     }
     // tdpi layer references: the effect owner (hidden -0000 param) and
@@ -1205,7 +1218,7 @@ export class CompItem extends AVItem {
     for (const tdpi of recursive_find(cloned_item.chunks, "tdpi")) {
       const value = (tdpi as S4Chunk).value;
       if (id_map.has(value)) {
-        (tdpi as S4Chunk).value = id_map.get(value);
+        (tdpi as S4Chunk).value = id_map.get(value)!;
       }
     }
 
@@ -1213,11 +1226,11 @@ export class CompItem extends AVItem {
 
     // Name (the item block's first direct Utf8), numbered like AE.
     const existing = new Set([...project.items.values()].map((item) => item.name));
-    (find_by_type(cloned_item.chunks, "Utf8") as Utf8Chunk).value = auto_name(this.name, existing);
+    find_by_type(cloned_item.chunks, "Utf8").value = auto_name(this.name, existing);
 
     // AE parks the duplicate's current time at 0 (AE 2026: a copy of a
     // comp whose time is 2.5 s reads time 0).
-    const cdta = find_by_type(cloned_item.chunks, "cdta") as CdtaChunk;
+    const cdta = find_by_type(cloned_item.chunks, "cdta");
     cdta.time_dividend = 0;
     cdta.time_divisor = 600;
 
@@ -1233,7 +1246,7 @@ export class CompItem extends AVItem {
       for (const source_id of new_comp._source_ids_for_linking()) {
         const source = project.items.get(source_id) ?? null;
         if (source != null && "_used_in" in source) {
-          (source as any)._used_in.add(new_comp);
+          (source as AVItem)._used_in.add(new_comp);
         }
       }
     }
@@ -1264,7 +1277,7 @@ export class CompItem extends AVItem {
         } else {
           let ldta: LdtaChunk;
           try {
-            ldta = find_by_type(lc.chunks, "ldta") as LdtaChunk;
+            ldta = find_by_type(lc.chunks, "ldta");
           } catch (e) {
             if (!(e instanceof ChunkNotFoundError)) throw e;
             continue;
@@ -1300,7 +1313,7 @@ export class CompItem extends AVItem {
     const [layer_chunks, deferred_effect_param_defs] = deferred;
     this._deferred_layers = null;
 
-    let effect_param_defs: Map<string, any>;
+    let effect_param_defs: Map<string, Map<string, Map<string, any>>>;
     if (deferred_effect_param_defs?.size > 0) {
       effect_param_defs = deferred_effect_param_defs;
     } else if (this._project != null) {
@@ -1337,7 +1350,7 @@ export class CompItem extends AVItem {
     }
   }
 
-  _build_type_cache(): Record<string, any[]> {
+  _build_type_cache(): LayerTypeCache {
     const av: AVLayer[] = [];
     const text: TextLayer[] = [];
     const shape: ShapeLayer[] = [];
@@ -1366,7 +1379,7 @@ export class CompItem extends AVItem {
       }
     }
     this._layers_by_id = by_id;
-    const cache: Record<string, any[]> = {
+    const cache: LayerTypeCache = {
       av,
       text,
       shape,
@@ -1446,7 +1459,7 @@ export class CompItem extends AVItem {
   }
 
   /** The composition's marker property. Read-only. */
-  get marker_property(): Property | null {
+  get marker_property(): Property<MarkerValue | null> | null {
     this._ensure_comp_parsed();
     return this._marker_property;
   }
@@ -1592,7 +1605,7 @@ export class CompItem extends AVItem {
      * each `CcCt` count (AE keeps the `CIFO`/`CIF2`/`CIF3` copies in sync).
      *
      * Returns the CIF3 copy's editable chunks `(name_utf8, ctyp)` for the
-     * controller model - the parser's preferred container - or `None` when
+     * controller model - the parser's preferred container - or `null` when
      * the comp has no CIF containers (not produced by AE or py_aep).
      */
     const containers = this._cif_containers();
@@ -1604,7 +1617,7 @@ export class CompItem extends AVItem {
     for (const cif of containers) {
       const [cctl, name_utf8, ctyp] = build();
       cif.chunks.push(cctl);
-      const ccct = find_by_type(cif.chunks, "CcCt") as S4Chunk;
+      const ccct = find_by_type(cif.chunks, "CcCt");
       ccct.value += 1;
       if (cif.list_type === "CIF3" || model_name_utf8 == null) {
         model_name_utf8 = name_utf8;
@@ -1640,7 +1653,7 @@ export class CompItem extends AVItem {
     /**
      * Add `prop` to this comp's Essential Graphics panel.
      *
-     * Returns `False` (adding nothing) when `prop` cannot be exposed - see
+     * Returns `false` (adding nothing) when `prop` cannot be exposed - see
      * `resolvers.motion_graphics`.
      */
     this._ensure_comp_parsed();
@@ -1666,7 +1679,7 @@ export class CompItem extends AVItem {
      * Add `layer` to this comp's Essential Graphics panel as a Media
      * Replacement (type 14) controller.
      *
-     * Returns `False` (adding nothing) when the layer is not eligible -
+     * Returns `false` (adding nothing) when the layer is not eligible -
      * see `resolvers.motion_graphics.can_add_layer`.
      */
     this._ensure_comp_parsed();
@@ -1765,16 +1778,18 @@ export class CompItem extends AVItem {
    * Read / Write.
    *
    * @example
-   * ```python
-   * comp.renderer_options["Quality"] = 61
-   * comp.renderer_options.quality = 61
+   * ```ts
+   * import { parse } from "@bevyl-ai/ts-aep";
+   *
+   * const comp = parse("project.aep").project.compositions[0];
+   * comp.renderer_options.__setitem__("Quality", 61);
    * ```
    */
   get renderer_options(): RendererOptions {
     return renderer_options_for(this._prda, this);
   }
 
-  set renderer_options(value: Map<string, any>) {
+  set renderer_options(value: Map<string, unknown>) {
     if (!(value instanceof Map)) {
       throw new ValueError("renderer_options must be a mapping of key-value pairs");
     }
@@ -1785,7 +1800,7 @@ export class CompItem extends AVItem {
   }
 
   /**
-   * When `True`, the composition has an audio component.
+   * When `true`, the composition has an audio component.
    *
    * A composition has audio when at least one of its layers has a
    * source with audio.
@@ -1796,22 +1811,26 @@ export class CompItem extends AVItem {
   }
 
   /**
-   * A flat list of {@link MarkerValue} objects for this composition.
+   * A flat array of {@link MarkerValue} objects for this composition.
    *
    * Shortcut for accessing marker data without navigating the property
-   * tree.  Returns an empty list when the composition has no markers.
+   * tree.  Returns an empty array when the composition has no markers.
    *
    * @example
-   * ```python
-   * for marker in comp.markers:
-   *     print(marker.comment)
+   * ```ts
+   * import { parse } from "@bevyl-ai/ts-aep";
+   *
+   * const comp = parse("project.aep").project.compositions[0];
+   * for (const marker of comp.markers) {
+   *   console.log(marker.comment);
+   * }
    * ```
    */
   get markers(): MarkerValue[] {
     if (this.marker_property == null) {
       return [];
     }
-    return this.marker_property.keyframes.map((kf) => kf.value as MarkerValue);
+    return this.marker_property.keyframes.map((kf) => kf.value);
   }
 
   remove_all_markers(): void {
@@ -1831,10 +1850,10 @@ export class CompItem extends AVItem {
   }
 
   /**
-   * The front-most enabled camera layer, or `None`.
+   * The front-most enabled camera layer, or `null`.
    *
    * Returns the first {@link CameraLayer} that is active at the current
-   * composition time. The value is `None` when the composition
+   * composition time. The value is `null` when the composition
    * contains no active camera layers.
    */
   get active_camera(): CameraLayer | null {
@@ -1871,36 +1890,36 @@ export class CompItem extends AVItem {
     } else if (index != null) {
       return at(this.layers, index);
     } else if (py_bool(other_layer) && py_bool(rel_index)) {
-      const other_idx = this.layers.indexOf(other_layer);
+      const other_idx = this.layers.indexOf(other_layer!);
       if (other_idx < 0) {
         throw new ValueError(`${repr(other_layer)} is not in list`);
       }
-      return at(this.layers, other_idx + rel_index);
+      return at(this.layers, other_idx + rel_index!);
     }
     throw new ValueError("Must specify one of name, index, or other_layer and rel_index");
   }
 
   /** Cached layer type lists for O(1) access. */
-  get _type_cache(): Record<string, any[]> {
+  get _type_cache(): LayerTypeCache {
     return this.__type_cache != null ? this.__type_cache : this._build_type_cache();
   }
 
-  /** A list of all {@link AVLayer} objects in this composition. */
+  /** An array of all {@link AVLayer} objects in this composition. */
   get av_layers(): AVLayer[] {
     return this._type_cache.av;
   }
 
-  /** A list of the composition layers whose source are compositions. */
+  /** An array of the composition layers whose source are compositions. */
   get composition_layers(): AVLayer[] {
     return this.av_layers.filter((layer) => layer.source instanceof CompItem);
   }
 
-  /** A list of the composition layers whose source are footages. */
+  /** An array of the composition layers whose source are footages. */
   get footage_layers(): AVLayer[] {
     return this.av_layers.filter((layer) => layer.source instanceof FootageItem);
   }
 
-  /** A list of the layers whose source are file footages. */
+  /** An array of the layers whose source are file footages. */
   get file_layers(): AVLayer[] {
     return this.footage_layers.filter(
       (layer) =>
@@ -1909,7 +1928,7 @@ export class CompItem extends AVItem {
     );
   }
 
-  /** A list of the layers whose source are solids. */
+  /** An array of the layers whose source are solids. */
   get solid_layers(): AVLayer[] {
     return this.footage_layers.filter(
       (layer) =>
@@ -1918,7 +1937,7 @@ export class CompItem extends AVItem {
     );
   }
 
-  /** A list of the layers whose source are placeholders. */
+  /** An array of the layers whose source are placeholders. */
   get placeholder_layers(): AVLayer[] {
     return this.footage_layers.filter(
       (layer) =>
@@ -1927,57 +1946,57 @@ export class CompItem extends AVItem {
     );
   }
 
-  /** A list of the text layers in this composition. */
+  /** An array of the text layers in this composition. */
   get text_layers(): TextLayer[] {
     return this._type_cache.text;
   }
 
-  /** A list of the shape layers in this composition. */
+  /** An array of the shape layers in this composition. */
   get shape_layers(): ShapeLayer[] {
     return this._type_cache.shape;
   }
 
-  /** A list of the camera layers in this composition. */
+  /** An array of the camera layers in this composition. */
   get camera_layers(): CameraLayer[] {
     return this._type_cache.camera;
   }
 
-  /** A list of the light layers in this composition. */
+  /** An array of the light layers in this composition. */
   get light_layers(): LightLayer[] {
     return this._type_cache.light;
   }
 
-  /** A list of the 3D model layers in this composition. */
+  /** An array of the 3D model layers in this composition. */
   get three_d_model_layers(): ThreeDModelLayer[] {
     return this._type_cache.three_d_model;
   }
 
-  /** A list of the parametric mesh layers in this composition. */
+  /** An array of the parametric mesh layers in this composition. */
   get parametric_mesh_layers(): ParametricMeshLayer[] {
     return this._type_cache.parametric_mesh;
   }
 
-  /** A list of the null layers in this composition. */
+  /** An array of the null layers in this composition. */
   get null_layers(): Layer[] {
     return this.layers.filter((layer) => layer.null_layer);
   }
 
-  /** A list of the adjustment layers in this composition. */
+  /** An array of the adjustment layers in this composition. */
   get adjustment_layers(): AVLayer[] {
     return this.av_layers.filter((layer) => layer.adjustment_layer);
   }
 
-  /** A list of the 3D layers in this composition. */
+  /** An array of the 3D layers in this composition. */
   get three_d_layers(): AVLayer[] {
     return this.av_layers.filter((layer) => layer.three_d_layer);
   }
 
-  /** A list of the guide layers in this composition. */
+  /** An array of the guide layers in this composition. */
   get guide_layers(): AVLayer[] {
     return this.av_layers.filter((layer) => layer.guide_layer);
   }
 
-  /** A list of the soloed layers in this composition. */
+  /** An array of the soloed layers in this composition. */
   get solo_layers(): Layer[] {
     return this.layers.filter((layer) => layer.solo);
   }
@@ -2122,7 +2141,7 @@ export class CompItem extends AVItem {
     /**
      * Create a new camera layer at the top of the layer stack.
      *
-     * @param name - Layer name. Auto-generated if `None`.
+     * @param name - Layer name. Auto-generated if `null`.
      * @param center_point - The `[x, y]` center point. Defaults to `[width/2, height/2]`.
      * @returns The newly created {@link CameraLayer}.
      */
@@ -2150,18 +2169,18 @@ export class CompItem extends AVItem {
     const zoom = round((this.width * this.pixel_aspect) / CameraLayer._zoom_dividend, 8);
 
     const transform = layer.transform;
-    const anchor_point = transform.__getitem__("ADBE Anchor Point") as Property;
+    const anchor_point = transform.__getitem__("ADBE Anchor Point");
     anchor_point.value = [center_point[0], center_point[1], 0.0];
     // ExtendScript reports a new two-node camera's position as
     // [0, 0, -zoom] (the point of interest carries the center).
-    const position = transform.__getitem__("ADBE Position") as Property;
+    const position = transform.__getitem__("ADBE Position");
     position.value = [0.0, 0.0, -zoom];
 
     // AE's new-camera Camera Zoom equals the same computed zoom. Without
     // this the property keeps its 0.0 spec placeholder, which violates its
     // own >= 1 minimum and makes keyframing the zoom raise ValueError.
-    const camera_options = layer.__getitem__("ADBE Camera Options Group") as PropertyGroup;
-    const zoom_prop = camera_options.__getitem__("ADBE Camera Zoom") as Property;
+    const camera_options = layer.__getitem__("ADBE Camera Options Group");
+    const zoom_prop = camera_options.__getitem__("ADBE Camera Zoom");
     zoom_prop.value = zoom;
 
     return layer;
@@ -2171,7 +2190,7 @@ export class CompItem extends AVItem {
     /**
      * Create a new light layer at the top of the layer stack.
      *
-     * @param name - Layer name. Auto-generated if `None`.
+     * @param name - Layer name. Auto-generated if `null`.
      * @param center_point - The `[x, y]` center point. Defaults to `[width/2, height/2]`.
      * @returns The newly created {@link LightLayer}.
      */
@@ -2200,11 +2219,11 @@ export class CompItem extends AVItem {
     const zoom = round((this.width * this.pixel_aspect) / LightLayer._zoom_dividend, 8);
 
     const transform = layer.transform;
-    const anchor_point = transform.__getitem__("ADBE Anchor Point") as Property;
+    const anchor_point = transform.__getitem__("ADBE Anchor Point");
     anchor_point.value = [center_point[0], center_point[1], 0.0];
     // Like cameras, lights report position [0, 0, -zoom/2] with the
     // point of interest at the center.
-    const position = transform.__getitem__("ADBE Position") as Property;
+    const position = transform.__getitem__("ADBE Position");
     position.value = [0.0, 0.0, -zoom / 2];
 
     return layer;
@@ -2217,7 +2236,7 @@ export class CompItem extends AVItem {
     /**
      * Create a new parametric mesh layer at the top of the layer stack.
      *
-     * @param name - Layer name. Auto-generated if `None`.
+     * @param name - Layer name. Auto-generated if `null`.
      * @param mesh_type - The type of parametric mesh (required, keyword-only).
      * @returns The newly created {@link ParametricMeshLayer}.
      */
@@ -2312,7 +2331,7 @@ export class CompItem extends AVItem {
      * the matte layer inside the new composition (the original stays
      * untouched).
      *
-     * When `move_all_attributes` is `False` (allowed for a single
+     * When `move_all_attributes` is `false` (allowed for a single
      * source-backed layer only), the selected layer stays in this
      * composition with all its attributes and its source is swapped to
      * the new composition, which is sized from the layer's source and
@@ -2325,12 +2344,12 @@ export class CompItem extends AVItem {
      * @param layer_indices - 0-based indices of the layers to precompose (ExtendScript uses 1-based
      *   indices).
      * @param name - The name of the new composition.
-     * @param move_all_attributes - `True` (default) to move all attributes into the new
-     *   composition; `False` to leave them on the retained layer ("Leave all attributes" in the
+     * @param move_all_attributes - `true` (default) to move all attributes into the new
+     *   composition; `false` to leave them on the retained layer ("Leave all attributes" in the
      *   Pre-compose dialog).
      * @returns The newly created {@link CompItem}.
      * @throws {@link ValueError} If `layer_indices` is empty or contains an out-of-range index, or
-     *   if `move_all_attributes` is `False` with more than one index or with a layer that has no
+     *   if `move_all_attributes` is `false` with more than one index or with a layer that has no
      *   source.
      */
     validate_string(name);
@@ -2416,7 +2435,7 @@ export class CompItem extends AVItem {
     const project = this._project;
     const moved = indices.map((i) => this.layers[i]);
     const top_index = indices[0];
-    const old_ids = new Set(moved.map((ly) => ly.id));
+    const old_ids = new Set<number | null>(moved.map((ly) => ly.id));
     const repl_enabled = moved[0].enabled;
 
     const new_comp = this._create_precomp_item(name, this.width, this.height);
@@ -2470,7 +2489,7 @@ export class CompItem extends AVItem {
             .slice(m_start, m_end)
             .map((c) => clone_chunk_tree(c));
           const m_list = m_block[0] as ListChunk;
-          const m_ldta = find_by_type(m_list.chunks, "ldta") as LdtaChunk;
+          const m_ldta = find_by_type(m_list.chunks, "ldta");
           const copy_id = project._allocate_id();
           m_ldta.layer_id = copy_id;
           rewrite_owner_tdpi(m_list, copy_id);
@@ -2582,7 +2601,7 @@ export class CompItem extends AVItem {
      * Create a new solid layer at the top of the layer stack.
      *
      * @param color - Solid color as `[R, G, B]` in 0.0--1.0 range.
-     * @param name - The solid and layer name. Pass `None` to auto-generate a name from the color
+     * @param name - The solid and layer name. Pass `null` to auto-generate a name from the color
      *   (e.g. `Red Solid 1`).
      * @param width - Solid width in pixels. Defaults to comp width.
      * @param height - Solid height in pixels. Defaults to comp height.
@@ -2651,10 +2670,10 @@ export class CompItem extends AVItem {
      * Build the binary btds/btdk structure for a text layer.
      *
      * @param text - The text content.
-     * @param box_size - `[width, height]` for box text; `None` for point text.
-     * @param line_orientation - Text {@link LineOrientation}; `None` for the default horizontal
+     * @param box_size - `[width, height]` for box text; `null` for point text.
+     * @param line_orientation - Text {@link LineOrientation}; `null` for the default horizontal
      *   orientation.
-     * @returns A `(LIST:btds, btgu, tdmn)` tuple to inject into the root tdgp.
+     * @returns A `(LIST:btds, btgu, tdmn)` array to inject into the root tdgp.
      */
     const td = new TextDocument(text, box_size, line_orientation);
     // AE applies the character-level "Text Style Sheet" preferences to
@@ -2734,7 +2753,7 @@ export class CompItem extends AVItem {
   /**
    * Create a new box (paragraph) text layer at the top of the layer stack.
    *
-   * @param box_size - `[width, height]` of the text box. If `None`, uses the composition
+   * @param box_size - `[width, height]` of the text box. If `null`, uses the composition
    *   dimensions.
    * @param text - Initial text content.
    * @returns The newly created {@link TextLayer}.
@@ -2763,7 +2782,7 @@ export class CompItem extends AVItem {
    * Vertical text flows top-to-bottom with lines stacking right-to-left,
    * matching the Vertical Type Tool default.
    *
-   * @param box_size - `[width, height]` of the text box. If `None`, uses the composition
+   * @param box_size - `[width, height]` of the text box. If `null`, uses the composition
    *   dimensions.
    * @param text - Initial text content.
    * @returns The newly created {@link TextLayer}.
@@ -2789,20 +2808,20 @@ descriptor(
   new ChunkField<number[]>("_cdta", "bg_color", { validate: validate_rgb_color }),
 );
 
-/** When `True`, Draft 3D mode is enabled for the composition. Read / Write. */
+/** When `true`, Draft 3D mode is enabled for the composition. Read / Write. */
 descriptor(CompItem, "draft3d", ChunkField.bool("_cdta", "draft3d"));
 
-/** When `True`, frame blending is enabled for this Composition. Read / Write. */
+/** When `true`, frame blending is enabled for this Composition. Read / Write. */
 descriptor(CompItem, "frame_blending", ChunkField.bool("_cdta", "frame_blending"));
 
-/** When `True`, only layers with `shy` set to `False` are shown in the
+/** When `true`, only layers with `shy` set to `false` are shown in the
  * Timeline panel. Read / Write. */
 descriptor(CompItem, "hide_shy_layers", ChunkField.bool("_cdta", "hide_shy_layers"));
 
-/** When `True`, motion blur is enabled for the composition. Read / Write. */
+/** When `true`, motion blur is enabled for the composition. Read / Write. */
 descriptor(CompItem, "motion_blur", ChunkField.bool("_cdta", "motion_blur"));
 
-/** When `True`, the frame rate of nested compositions is preserved in
+/** When `true`, the frame rate of nested compositions is preserved in
  * the current composition. Read / Write. */
 descriptor(
   CompItem,
@@ -2810,7 +2829,7 @@ descriptor(
   ChunkField.bool("_cdta", "preserve_nested_frame_rate"),
 );
 
-/** When `True`, the resolution of nested compositions is preserved in
+/** When `true`, the resolution of nested compositions is preserved in
  * the current composition. Read / Write. */
 descriptor(
   CompItem,
@@ -2921,14 +2940,14 @@ descriptor(
   }),
 );
 
-/** When `True`, timecode is displayed in drop-frame format. Only
+/** When `true`, timecode is displayed in drop-frame format. Only
  * applicable when `frameRate` is 29.97 or 59.94. Read / Write. */
 descriptor(
   CompItem,
   "drop_frame",
   ChunkField.bool("_cdrp", "value", {
-    transform: (v: any) => py_bool(v),
-    reverse: (v: any) => int(v),
+    transform: (v: unknown) => py_bool(v),
+    reverse: (v: boolean) => int(v),
     default: false,
   }),
 );

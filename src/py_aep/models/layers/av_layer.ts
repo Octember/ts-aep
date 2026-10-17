@@ -27,10 +27,10 @@ import { shape_layer_rect } from "../../resolvers/shape_bounds.ts";
 import { text_ink_rect } from "../../resolvers/text_ink.ts";
 import { type Mat4, build_world_matrix, camera_ray, intersect_layer_plane, project_to_comp, transform_from_points } from "../../resolvers/transform.ts";
 import { ChunkField } from "../descriptors.ts";
+import type { Chunk } from "../../binary/chunk.ts";
 import type { CompItem } from "../items/composition.ts";
 import { Property } from "../properties/property.ts";
 import type { PropertyGroup } from "../properties/property_group.ts";
-import type { TextDocument } from "../text/text_document.ts";
 import { validate_bool, validate_enum, validate_name, validate_number, validate_vector2, validate_vector3 } from "../validators.ts";
 import { Layer } from "./layer.ts";
 import { AVItem } from "../items/av_item.ts";
@@ -55,7 +55,7 @@ export function _would_create_cycle(target_comp: CompItem, new_source: AVItem): 
    * Check if using `new_source` as a layer source would create a cycle.
    *
    * Walks UP from `target_comp` via `_used_in` back-references and returns
-   * `True` if `new_source` is found among the ancestors, meaning the
+   * `true` if `new_source` is found among the ancestors, meaning the
    * replacement would create a circular reference chain.
    */
   if (!hasattr(new_source, "layers")) return false;
@@ -64,7 +64,7 @@ export function _would_create_cycle(target_comp: CompItem, new_source: AVItem): 
   const stack: CompItem[] = [target_comp];
   while (stack.length) {
     const comp = stack.pop()!;
-    if (comp === (new_source as any)) return true;
+    if (comp === (new_source as unknown as CompItem)) return true;
     if (visited.has(comp)) continue;
     visited.add(comp);
     for (const ancestor of comp.used_in) {
@@ -119,19 +119,19 @@ export function _validate_collapse_transformation(value: boolean, obj: AVLayer):
  *     objects.
  *
  * @example
- * ```python
- * from py_aep import parse
+ * ```ts
+ * import { parse } from "@bevyl-ai/ts-aep";
  *
- * app = parse("project.aep")
- * comp = app.project.compositions[0]
- * layer = comp.file_layers[0]
- * print(layer.source)
+ * const app = parse("project.aep");
+ * const comp = app.project.compositions[0];
+ * const layer = comp.file_layers[0];
+ * console.log(layer.source);
  * ```
  * @see https://ae-scripting.docsforadobe.dev/layer/avlayer/
  */
 export class AVLayer extends Layer {
   // NOTE(port): accessor stubs typed for TS only; descriptor(AVLayer, ...) below redefines both on the prototype, so these bodies never run.
-  /** When `True`, the layer is an adjustment layer. Read / Write. */
+  /** When `true`, the layer is an adjustment layer. Read / Write. */
   get adjustment_layer(): boolean {
     return false;
   }
@@ -139,9 +139,9 @@ export class AVLayer extends Layer {
   set adjustment_layer(_value: boolean) {}
 
   /**
-   * `True` if this is an environment layer in a Ray-traced 3D
-   * composition. Setting this to `True` automatically sets
-   * {@link three_d_layer} to `True`. Read / Write.
+   * `true` if this is an environment layer in a Ray-traced 3D
+   * composition. Setting this to `true` automatically sets
+   * {@link three_d_layer} to `true`. Read / Write.
    */
   get environment_layer(): boolean {
     return false;
@@ -150,19 +150,19 @@ export class AVLayer extends Layer {
   set environment_layer(_value: boolean) {}
 
   /**
-   * When `True`, the layer's audio is enabled. This value corresponds
+   * When `true`, the layer's audio is enabled. This value corresponds
    * to the audio toggle switch in the Timeline panel. Read / Write.
    */
   declare audio_enabled: boolean;
 
   /**
-   * `True` if collapse transformation is on for this layer.
+   * `true` if collapse transformation is on for this layer.
    * Read / Write.
    */
   declare collapse_transformation: boolean;
 
   /**
-   * `True` if the layer's effects are active, as indicated by the
+   * `true` if the layer's effects are active, as indicated by the
    * \<f\> icon next to it in the user interface. Read / Write.
    */
   declare effects_active: boolean;
@@ -170,14 +170,14 @@ export class AVLayer extends Layer {
   /** The type of frame blending for the layer. Read / Write. */
   declare frame_blending_type: FrameBlendingType;
 
-  /** `True` if the layer is a guide layer. Read / Write. */
+  /** `true` if the layer is a guide layer. Read / Write. */
   declare guide_layer: boolean;
 
-  /** `True` if motion blur is enabled for the layer. Read / Write. */
+  /** `true` if motion blur is enabled for the layer. Read / Write. */
   declare motion_blur: boolean;
 
   /**
-   * `True` if preserve transparency is enabled for the layer.
+   * `true` if preserve transparency is enabled for the layer.
    * Read / Write.
    */
   declare preserve_transparency: boolean;
@@ -189,8 +189,8 @@ export class AVLayer extends Layer {
   declare sampling_quality: LayerSamplingQuality;
 
   /**
-   * `True` if this layer is a 3D layer. Setting this to `True`
-   * automatically sets {@link environment_layer} to `False`.
+   * `true` if this layer is a 3D layer. Setting this to `true`
+   * automatically sets {@link environment_layer} to `false`.
    * Read / Write.
    */
   declare three_d_layer: boolean;
@@ -201,7 +201,7 @@ export class AVLayer extends Layer {
     return this.three_d_layer;
   }
 
-  /** The layer's pixel dimensions, or `None` when either is zero. */
+  /** The layer's pixel dimensions, or `null` when either is zero. */
   get _pixel_size(): [number, number] | null {
     const width = this.width;
     const height = this.height;
@@ -225,7 +225,7 @@ export class AVLayer extends Layer {
   }
 
   /**
-   * `True` if this layer has the Enable Per-character 3D switch set,
+   * `true` if this layer has the Enable Per-character 3D switch set,
    * allowing its characters to be animated off the plane of the text
    * layer. Applies only to text layers. Read / Write.
    */
@@ -252,8 +252,8 @@ export class AVLayer extends Layer {
     null_layer?: boolean;
     three_d_layer?: boolean;
     label?: number;
-    root_tdgp_extra?: any[] | null;
-    effect_param_defs?: Map<string, any> | null;
+    root_tdgp_extra?: Chunk[] | null;
+    effect_param_defs?: Map<string, Map<string, Map<string, any>>> | null;
   }): AVLayer;
   static _new(kw: any): AVLayer;
   static _new(kw: any): any {
@@ -306,7 +306,7 @@ export class AVLayer extends Layer {
 
   set blending_mode(value: BlendingMode) {
     validate_enum(BlendingMode)(value);
-    value = BlendingMode.of(value) as BlendingMode;
+    value = BlendingMode.of(value);
     // Dancing Dissolve has no transfer-mode value of its own: AE stores it
     // as Dissolve plus the dancing-dissolve flag in the ldta transfer byte.
     if (value === BlendingMode.DANCING_DISSOLVE) {
@@ -337,7 +337,7 @@ export class AVLayer extends Layer {
 
   set track_matte_type(value: TrackMatteType | number) {
     validate_enum(TrackMatteType)(value);
-    value = TrackMatteType.of(value) as TrackMatteType;
+    value = TrackMatteType.of(value);
     const old_matte = this.track_matte_layer;
     this._ldta.track_matte_type = TrackMatteType.to_binary(value);
     if (value === TrackMatteType.NO_TRACK_MATTE && this._ldta.matte_layer_id != null) {
@@ -387,7 +387,7 @@ export class AVLayer extends Layer {
     if (source == null) {
       return false;
     }
-    if (hasattr(source, "main_source") && (source as any).main_source.is_still) {
+    if (hasattr(source, "main_source") && (source as FootageItem).main_source.is_still) {
       return false;
     }
     if (this.time_remap_enabled) {
@@ -448,13 +448,13 @@ export class AVLayer extends Layer {
     this._set_raw_out_point(value);
   }
 
-  /** `True` if frame blending is enabled for this layer. Read-only. */
+  /** `true` if frame blending is enabled for this layer. Read-only. */
   get frame_blending(): boolean {
     return this.frame_blending_type !== FrameBlendingType.NO_FRAME_BLEND;
   }
 
   /**
-   * The source item for this layer. `None` for a text layer. Read-only.
+   * The source item for this layer. `null` for a text layer. Read-only.
    */
   get source(): AVItem | null {
     // An unset `_source` is Python's AttributeError: resolve it on first read.
@@ -507,7 +507,7 @@ export class AVLayer extends Layer {
    * Add this layer to `comp`'s Essential Graphics panel as a Media
    * Replacement controller, named after the layer.
    *
-   * Returns `True` on success, or `False` when the layer cannot be
+   * Returns `true` on success, or `false` when the layer cannot be
    * added (see `can_add_to_motion_graphics_template`).
    *
    * @param comp - The composition to add the layer to.
@@ -520,7 +520,7 @@ export class AVLayer extends Layer {
    * Add this layer to `comp`'s Essential Graphics panel as a Media
    * Replacement controller with an explicit `name`.
    *
-   * Returns `True` on success, or `False` when the layer cannot be
+   * Returns `true` on success, or `false` when the layer cannot be
    * added (see `can_add_to_motion_graphics_template`).
    *
    * @param comp - The composition to add the layer to.
@@ -532,7 +532,7 @@ export class AVLayer extends Layer {
   }
 
   /**
-   * `True` if the layer has a video component. An `AVLayer` has video
+   * `true` if the layer has a video component. An `AVLayer` has video
    * when its {@link source} has video, or when the layer has no external source
    * (text and shape layers always render video). Read-only.
    */
@@ -544,7 +544,7 @@ export class AVLayer extends Layer {
     return !!source.has_video;
   }
 
-  /** `True` if the layer has an audio component. Read-only. */
+  /** `true` if the layer has an audio component. Read-only. */
   get has_audio(): boolean {
     const source = this.source;
     if (source == null) {
@@ -554,10 +554,10 @@ export class AVLayer extends Layer {
   }
 
   /**
-   * `True` if the layer's audio is active at the current time.
+   * `true` if the layer's audio is active at the current time.
    *
-   * For this to be `True`, {@link audio_enabled} must be `True`,
-   * {@link has_audio} must be `True`, no other layer with audio may be
+   * For this to be `true`, {@link audio_enabled} must be `true`,
+   * {@link has_audio} must be `true`, no other layer with audio may be
    * soloing unless this layer is also soloed, and the current
    * {@link time} must be between {@link in_point} and {@link out_point}.
    * Read-only.
@@ -569,10 +569,10 @@ export class AVLayer extends Layer {
   /**
    * Return whether the layer's audio is active at the given time.
    *
-   * For this method to return `True`, four conditions must be met:
+   * For this method to return `true`, four conditions must be met:
    *
-   * 1. {@link has_audio} must be `True`.
-   * 2. {@link audio_enabled} must be `True`.
+   * 1. {@link has_audio} must be `true`.
+   * 2. {@link audio_enabled} must be `true`.
    * 3. No other layer with audio in the
    *    {@link Layer.containing_comp | containing_comp} may be soloed unless
    *    this layer is also {@link Layer.solo | soloed}.
@@ -710,7 +710,7 @@ export class AVLayer extends Layer {
     return _finite(intersect_layer_plane(world, origin, direction));
   }
 
-  /** The front-most enabled camera layer active at `time`, or `None`. */
+  /** The front-most enabled camera layer active at `time`, or `null`. */
   _active_camera_at(time: number): Layer | null {
     for (const camera of this.containing_comp.camera_layers) {
       if (camera.enabled && camera.in_point <= time && time < camera.out_point) {
@@ -737,7 +737,7 @@ export class AVLayer extends Layer {
    * @param point_top_left - `[x, y, z]` comp-space position of the source's top-left corner.
    * @param point_top_right - `[x, y, z]` position of the top-right corner.
    * @param point_bottom_left - `[x, y, z]` position of the bottom-left corner.
-   * @returns A dict of transform property values (`anchor_point`, `position`, `x_rotation`,
+   * @returns An object of transform property values (`anchor_point`, `position`, `x_rotation`,
    *   `y_rotation`, `z_rotation`, `scale`), assignable to the matching transform properties.
    * @throws {@link ValueError} If the points are coincident or collinear.
    */
@@ -745,7 +745,7 @@ export class AVLayer extends Layer {
     point_top_left: number[],
     point_top_right: number[],
     point_bottom_left: number[],
-  ): Record<string, any> {
+  ): Record<string, number | number[]> {
     for (const pt of [point_top_left, point_top_right, point_bottom_left]) {
       validate_vector3(pt);
     }
@@ -777,7 +777,7 @@ export class AVLayer extends Layer {
    * stretched to 200 % reports its layer-second-1 content at `time=1`).
    *
    * @param time - The time index, in seconds of layer time.
-   * @param extents - `True` to include the extents. Only relevant for shape layers.
+   * @param extents - `true` to include the extents. Only relevant for shape layers.
    * @returns A dict with `top`, `left`, `width` and `height` keys.
    * @throws {@link NotImplementedError} For a shape layer using a path operation other than Trim
    *   Paths and Repeater, a text layer using a feature outside the measured envelope (text
@@ -802,7 +802,7 @@ export class AVLayer extends Layer {
       return this._text_ink_rect(comp_time);
     }
     if (layer_type === LayerType.SHAPE) {
-      const contents = this.__getitem__("ADBE Root Vectors Group") as PropertyGroup;
+      const contents = this.__getitem__("ADBE Root Vectors Group");
       return shape_layer_rect(contents, comp_time, extents);
     }
     return {
@@ -814,27 +814,27 @@ export class AVLayer extends Layer {
   }
 
   _text_ink_rect(time: number): { top: number; left: number; width: number; height: number } {
-    const text = this.__getitem__("ADBE Text Properties") as PropertyGroup;
-    const animators = text.__getitem__("ADBE Text Animators") as PropertyGroup;
+    const text = this.__getitem__("ADBE Text Properties");
+    const animators = text.__getitem__("ADBE Text Animators");
     if (animators.properties?.length > 0) {
       throw new NotImplementedError("source_rect_at_time does not model text animators");
     }
-    const path_options = text.__getitem__("ADBE Text Path Options") as PropertyGroup;
+    const path_options = text.__getitem__("ADBE Text Path Options");
     if (py_bool(path_options.__getitem__("ADBE Text Path").value)) {
       throw new NotImplementedError("source_rect_at_time does not model text on a path");
     }
     if (this._ldta.three_d_per_char) {
       throw new NotImplementedError("source_rect_at_time does not model per-character 3D text");
     }
-    const document = (text.__getitem__("ADBE Text Document") as Property).value_at_time(time);
-    return text_ink_rect(document as TextDocument) as { top: number; left: number; width: number; height: number };
+    const document = text.__getitem__("ADBE Text Document").value_at_time(time);
+    return text_ink_rect(document) as { top: number; left: number; width: number; height: number };
   }
 
   /**
-   * `True` if it is possible to set the
+   * `true` if it is possible to set the
    * {@link AVLayer.collapse_transformation | collapse_transformation} value.
    *
-   * Returns `True` for pre-composition layers and solid layers.
+   * Returns `true` for pre-composition layers and solid layers.
    * Read-only.
    */
   get can_set_collapse_transformation(): boolean {
@@ -855,7 +855,7 @@ export class AVLayer extends Layer {
   }
 
   /**
-   * `True` if it is possible to enable time remapping on this layer.
+   * `true` if it is possible to enable time remapping on this layer.
    *
    * Time remapping can be enabled when the layer's source has a
    * non-zero duration (i.e. it is not a still image or text layer).
@@ -868,9 +868,9 @@ export class AVLayer extends Layer {
     return this.source.duration > 0;
   }
 
-  /** `True` if time remapping is enabled for this layer. Read / Write. */
+  /** `true` if time remapping is enabled for this layer. Read / Write. */
   get time_remap_enabled(): boolean {
-    let prop: any;
+    let prop: Property | PropertyGroup;
     try {
       prop = this.__getitem__("ADBE Time Remapping");
     } catch (e) {
@@ -948,14 +948,14 @@ export class AVLayer extends Layer {
   }
 
   /**
-   * `True` if this layer has track matte. When true, this layer's `track_matte_type`
+   * `true` if this layer has track matte. When true, this layer's `track_matte_type`
    * value controls how the matte is applied. Read-only.
    */
   get has_track_matte(): boolean {
     return this.track_matte_type !== TrackMatteType.NO_TRACK_MATTE;
   }
 
-  /** `True` if this layer is being used as a track matte. Read-only. */
+  /** `true` if this layer is being used as a track matte. Read-only. */
   get is_track_matte(): boolean {
     // AE 23+: explicit ID-based references
     if (this.containing_comp.av_layers.some((layer) => layer._matte_layer_id === this.id)) {
@@ -978,7 +978,7 @@ export class AVLayer extends Layer {
   }
 
   /**
-   * The track matte layer for this layer. Returns `None` if this layer has no
+   * The track matte layer for this layer. Returns `null` if this layer has no
    * track matte layer. Read-only.
    */
   get track_matte_layer(): AVLayer | null {
@@ -1039,16 +1039,16 @@ export class AVLayer extends Layer {
 
   /**
    * Sets the track matte layer and type for this layer.
-   * Passing in `None` to `track_matte_layer` parameter removes
+   * Passing in `null` to `track_matte_layer` parameter removes
    * the track matte. See [remove_track_matte] for another way
    * of removing track matte.
    *
    * **Note:** Requires AE 23.0+ file format.
    *
-   * @param track_matte_layer - The layer to use as a track matte, or `None` to remove the track
+   * @param track_matte_layer - The layer to use as a track matte, or `null` to remove the track
    *   matte.
    * @param track_matte_type - The {@link TrackMatteType} to apply. Passing `NO_TRACK_MATTE` with a
-   *   non-`None` layer is a no-op.
+   *   non-`null` layer is a no-op.
    * @throws {@link AttributeError} If the file predates AE 23.0.
    * @throws {@link ValueError} If `track_matte_layer` belongs to a different composition.
    */
@@ -1149,13 +1149,13 @@ export class AVLayer extends Layer {
    *
    * **Warning:** Contrary to ExtendScript, if this method is performed
    * on a null layer, the layer's `null_layer` attribute
-   * changes to `False`, making the layer visible
+   * changes to `false`, making the layer visible
    * in comp viewer and renders.
    *
    * @param new_source - The new source {@link AVItem}.
    * @param fix_expressions - Update expressions that reference the old source name. Not yet
    *   implemented.
-   * @throws {@link NotImplementedError} If `fix_expressions` is `True`.
+   * @throws {@link NotImplementedError} If `fix_expressions` is `true`.
    * @throws {@link ValueError} If the layer has no source (e.g. shape or text layers), if
    *   `new_source` is not in the project, if `new_source` would create a composition cycle, or if
    *   the layer is a 3D model layer.

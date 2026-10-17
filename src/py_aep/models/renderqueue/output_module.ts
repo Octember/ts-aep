@@ -7,7 +7,7 @@ import { AudioBitDepth, AudioChannels, AudioCodec, AudioSampleRate, CineonFileFo
 // and an enum-class membership test is the only way to tell a decoded member from a raw fallback.
 import { map_output_audio, map_output_color_space, profile_id_for_name } from "../../enums/mappings.ts";
 import { ocio_color_space_for_profile_id, ocio_output_profile_id, require_ocio_config, resolve_ocio_config } from "../../color/ocio.ts";
-import { allowed_values, constrained_keys } from "../../data/output_module_rules.ts";
+import { allowed_values, constrained_keys, type RuleValue } from "../../data/output_module_rules.ts";
 import { parse_format_options } from "../../parsers/format_options.ts";
 import { FORMAT_ID_EXTENSIONS, VIDEO_CODEC_NAMES, resolve_output_filename, resolve_time_span } from "../../resolvers/output.ts";
 import { platform_path } from "../../resolvers/platform_paths.ts";
@@ -22,6 +22,7 @@ import { OutputModuleSettingsItem, RoptChunk, RouuChunk, TiffRoptChunk, type Ren
 import { Utf8Chunk } from "../../binary/scalar_chunks.ts";
 import { PENDING_ASCENDCOUNT, alas_platform, build_als2_list, dump_alas, find_by_type, index_by_identity } from "../../binary/utils.ts";
 import type { Chunk } from "../../binary/chunk.ts";
+import type { EnumHelpers } from "../../../pyrt/enum.ts";
 import type { OutputModuleTemplate } from "../../parsers/templates.ts";
 import type { Project } from "../project.ts";
 import type { RenderQueueItem } from "./render_queue_item.ts";
@@ -48,6 +49,7 @@ import {
   ValueError,
   NotImplementedError,
   json_loads,
+  type ClassAttributes,
 } from "../../../pyrt/index.ts";
 
 // NOTE(port): Python's `isinstance(x, bool) or isinstance(x, int)` accepts bools as ints.
@@ -62,7 +64,9 @@ export function is_int(v: unknown): boolean {
  * as a decoded enum member only when it belongs to the enum class that owns its key. A raw
  * out-of-enum fallback fails the membership test, as it does in Python.
  */
-export const _KEY_ENUM = new Map<string, any>([
+type KeyEnum = EnumHelpers<number> & { label?: (v: number) => string | null };
+
+export const _KEY_ENUM = new Map<string, KeyEnum>([
   ["Channels", OutputChannels],
   ["Audio Channels", AudioChannels],
   ["Audio Sample Rate", AudioSampleRate],
@@ -88,18 +92,18 @@ export function _is_enum_member(key: string, value: unknown): boolean {
  * taking the member, `name` is `name_of`). Values that are not members of the key's enum
  * (ints, strings, bools) fall through to `str(v)`.
  */
-export function _label_or_name(key: string | null, v: any): string {
+export function _label_or_name(key: string | null, v: unknown): string {
   const E = key == null ? null : _KEY_ENUM.get(key);
   if (E != null && E.has(v)) {
     const label = typeof E.label === "function" ? E.label(v) : null;
-    if (py_bool(label)) return label;
+    if (py_bool(label)) return label!;
     return E.name_of(v);
   }
   return str(v);
 }
 
 /** Python `getattr(v, "name", None) or str(v)` (see `_label_or_name`). */
-export function _name_or_str(key: string | null, v: any): string {
+export function _name_or_str(key: string | null, v: unknown): string {
   const E = key == null ? null : _KEY_ENUM.get(key);
   if (E != null && E.has(v)) return E.name_of(v);
   return str(v);
@@ -107,7 +111,7 @@ export function _name_or_str(key: string | null, v: any): string {
 
 // NOTE(port): `{value!r}` of an IntEnum member is `<Cls.NAME: n>` in Python but a raw int stays
 // `n`; both are the same number here, so a member of the key's enum always reprs as a member.
-export function _value_repr(key: string, v: any): string {
+export function _value_repr(key: string, v: unknown): string {
   const E = _KEY_ENUM.get(key);
   if (E != null && E.has(v)) return `<${E.__name__}.${E.name_of(v)}: ${v}>`;
   return repr(v);
@@ -156,7 +160,7 @@ export const _AUDIO_ENCODINGS = new Map<number, number>([
  * After Effects has no 24-bit audio output: AE 2026 crashes when a
  * script sets it and reads a stored 24-bit format back as 16 Bit.
  */
-export function _reject_24_bit_audio(value: any, obj: OutputModule): void {
+export function _reject_24_bit_audio(value: unknown, obj: OutputModule): void {
   if (value === AudioBitDepth.TWENTY_FOUR_BIT) {
     throw new ValueError(
       "Audio Bit Depth 24 Bit is not available: After Effects has no " +
@@ -175,9 +179,9 @@ export function _reject_24_bit_audio(value: any, obj: OutputModule): void {
  */
 export function _validate_for_format(
   key: string,
-  pre: ((value: any, obj: OutputModule) => void) | null = null,
-): (value: any, obj: OutputModule) => void {
-  return (value: any, obj: OutputModule): void => {
+  pre: ((value: RuleValue, obj: OutputModule) => void) | null = null,
+): (value: RuleValue, obj: OutputModule) => void {
+  return (value: RuleValue, obj: OutputModule): void => {
     if (pre != null) pre(value, obj);
     obj._check_format_rule(key, value);
   };
@@ -187,7 +191,7 @@ export function _validate_for_format(
 // Reading/writing through the module keeps _CLAMP_ACCESSORS free of
 // isinstance lambdas; every writer is a raw write (validation bypass).
 
-export function _xml_options_of(om: OutputModule, attr: string): any {
+export function _xml_options_of(om: OutputModule, attr: string): unknown {
   const fo = om._format_options;
   if (fo instanceof XmlFormatOptions) {
     return getattr(fo, attr);
@@ -242,18 +246,19 @@ export const OM_SETTINGS = new Map<string, [string, any]>([
  * relating to the file to be rendered.
  *
  * @example
- * ```python
- * from py_aep import parse
+ * ```ts
+ * import { parse } from "@bevyl-ai/ts-aep";
  *
- * app = parse("project.aep")
- * om = app.project.render_queue.items[0].output_modules[0]
- * print(om.file)
+ * const app = parse("project.aep");
+ * const om = app.project.render_queue.items[0].output_modules[0];
+ * console.log(om.file);
  * ```
  * @see https://ae-scripting.docsforadobe.dev/renderqueue/outputmodule/
  */
 export class OutputModule {
+  declare ["constructor"]: ClassAttributes<typeof OutputModule>;
   /**
-   * When `True`, writes all source footage XMP metadata to the output file.
+   * When `true`, writes all source footage XMP metadata to the output file.
    * Read / Write.
    */
   declare include_source_xmp: boolean;
@@ -301,7 +306,7 @@ export class OutputModule {
   declare _name_utf8: Utf8Chunk | null;
   declare _render_settings_ldat: RenderSettingsItem;
   declare _parent_rqi: RenderQueueItem;
-  declare _format_options: any;
+  declare _format_options: CineonFormatOptions | JpegFormatOptions | OpenExrFormatOptions | PngFormatOptions | TargaFormatOptions | TiffFormatOptions | XmlFormatOptions | null;
   declare _batch_depth: number;
 
   /** Bypass accessors used by `_apply_singleton_clamps`: clamps write the
@@ -309,7 +314,7 @@ export class OutputModule {
    * clamp can never recurse into validation. Table invariants in
    * tests/unit/test_output_module_rules.py prove clamped values are
    * always inside the format's own allowed sets. */
-  static _CLAMP_ACCESSORS = new Map<string, [(om: OutputModule) => any, (om: OutputModule, v: any) => void]>([
+  static _CLAMP_ACCESSORS = new Map<string, [(om: OutputModule) => unknown, (om: OutputModule, v: RuleValue) => void]>([
     [
       "Color",
       [
@@ -333,7 +338,7 @@ export class OutputModule {
       [
         (om) => om._audio_sample_rate,
         (om, v) => {
-          om._roou.audio_sample_rate = (AudioSampleRate as any).to_binary(v);
+          om._roou.audio_sample_rate = (AudioSampleRate as unknown as { to_binary(v: unknown): number }).to_binary(v);
         },
       ],
     ],
@@ -371,7 +376,7 @@ export class OutputModule {
    * reads can raise on out-of-enum stored bytes; `validate_state`
    * treats that (and raw fallbacks) as "unclean context -\> skip". 
    */
-  static _STATE_GETTERS = new Map<string, (om: OutputModule) => any>([
+  static _STATE_GETTERS = new Map<string, (om: OutputModule) => unknown>([
     ["Video Output", (om) => om._video_output],
     ["Output Audio", (om) => om._output_audio],
     ["Channels", (om) => om._channels],
@@ -411,7 +416,7 @@ export class OutputModule {
     _name_utf8: Utf8Chunk | null;
     _render_settings_ldat: RenderSettingsItem;
     parent: RenderQueueItem;
-    format_options: any;
+    format_options: OutputModule["_format_options"];
   }) {
     const { _om_ldat, _roou, _alas_utf8, _file_name_utf8, _name_utf8, _render_settings_ldat, parent, format_options } = kw;
     this._om_ldat = _om_ldat;
@@ -492,7 +497,7 @@ export class OutputModule {
    * - {@link TiffFormatOptions} for TIFF sequences
    * - {@link XmlFormatOptions} for XML-based formats (AVI, H.264, MP3,
    *   QuickTime, WAV)
-   * - `None` for formats without parsed format options
+   * - `null` for formats without parsed format options
    *
    * Read-only.
    */
@@ -635,7 +640,7 @@ export class OutputModule {
   _rules_context(): Map<string, any> {
     const context = new Map<string, any>();
     for (const key of ["Channels", "Audio Channels", "Audio Sample Rate"]) {
-      let value: any;
+      let value: unknown;
       try {
         value = getattr(this, getitem(OM_SETTINGS, key)[0]);
       } catch (e) {
@@ -650,7 +655,7 @@ export class OutputModule {
     }
     const fo = this._format_options;
     if (fo instanceof XmlFormatOptions) {
-      const pairs: [string, any][] = [
+      const pairs: [string, RuleValue | null][] = [
         ["Audio Codec", fo.audio_codec],
         ["Video Codec", fo.video_codec],
         ["Audio Format", fo.mpeg_audio_format],
@@ -681,7 +686,7 @@ export class OutputModule {
    * ids - third-party output plugins whose 4cc is not in `OutputFormat` -
    * skip the check entirely.
    */
-  _check_format_rule(key: string, value: any): void {
+  _check_format_rule(key: string, value: RuleValue): void {
     if (this._batch_depth) {
       return;
     }
@@ -695,7 +700,7 @@ export class OutputModule {
     }
     // `label` (output-module enums) > `name` (plain IntEnums, which
     // str() to their bare value on 3.11+) > str (ints, strings).
-    const labels = sorted(allowed as Iterable<any>, (v: any) => [typeof v === "string", v])
+    const labels = sorted(allowed as Iterable<RuleValue>, (v) => [typeof v === "string", v])
       .map((v) => _label_or_name(key, v))
       .join(", ");
     throw new ValueError(
@@ -728,16 +733,16 @@ export class OutputModule {
         continue;
       }
       const forced = [...allowed][0];
-      const [getter, setter] = getitem((this.constructor as typeof OutputModule)._CLAMP_ACCESSORS, key);
-      let current: any;
+      const [getter, setter] = getitem(this.constructor._CLAMP_ACCESSORS, key);
+      let current: RuleValue;
       try {
-        current = getter(this);
+        current = getter(this) as RuleValue;
       } catch (e) {
         if (!(e instanceof ValueError)) throw e;
         continue; // out-of-enum stored byte: leave it alone
       }
       if (current !== forced) {
-        setter(this, forced);
+        setter(this, forced as RuleValue);
       }
     }
   }
@@ -753,9 +758,9 @@ export class OutputModule {
    * audio/video stream, absent format-option params, and raw
    * fallbacks from out-of-enum stored bytes (the binary is trusted).
    */
-  validate_state(): [string, any, ReadonlySet<any>][] {
-    const cls = this.constructor as typeof OutputModule;
-    const violations: [string, any, ReadonlySet<any>][] = [];
+  validate_state(): [string, RuleValue, ReadonlySet<unknown>][] {
+    const cls = this.constructor;
+    const violations: [string, RuleValue, ReadonlySet<unknown>][] = [];
     const fmt = this._format;
     if (!OutputFormat.has(fmt)) {
       return violations;
@@ -774,9 +779,9 @@ export class OutputModule {
       if (allowed == null) {
         continue;
       }
-      let value: any;
+      let value: RuleValue;
       try {
-        value = getitem(cls._STATE_GETTERS, key)(this);
+        value = getitem(cls._STATE_GETTERS, key)(this) as RuleValue;
       } catch (e) {
         if (!(e instanceof ValueError)) throw e;
         continue; // out-of-enum stored byte: unclean, skip
@@ -894,11 +899,14 @@ export class OutputModule {
    * Nested batches are reentrant; the outermost one validates.
    *
    * @example
-   * ```python
-   * with om.batch_edit():
-   *     om.format_options.audio_codec = AudioCodec.GSM_6_10
-   *     om.settings["Audio Channels"] = AudioChannels.MONO
-   *     om.settings["Audio Sample Rate"] = 22050
+   * ```ts
+   * import { parse, AudioChannels } from "@bevyl-ai/ts-aep";
+   *
+   * const om = parse("project.aep").project.render_queue.items[0].output_modules[0];
+   * om.batch_edit(() => {
+   *   om.settings.__setitem__("Audio Channels", AudioChannels.MONO);
+   *   om.settings.__setitem__("Audio Sample Rate", 22050);
+   * });
    * ```
    */
   // NOTE(port): Python's `@contextmanager` + `with` has no TS equivalent; the block is passed
@@ -957,7 +965,7 @@ export class OutputModule {
     const is_rgba = this._om_ldat.channels === int(OutputChannels.RGBA);
     const target = is_rgba ? _DEPTH_PLUS : _DEPTH_MINUS;
     if (target.has(depth_val)) {
-      this._roou.depth = target.get(depth_val);
+      this._roou.depth = target.get(depth_val)!;
     }
   }
 
@@ -1031,13 +1039,13 @@ export class OutputModule {
       }
       roou.audio_encoding = roou.audio_bit_depth === 4 ? 3 : 2;
     } else if (_AUDIO_ENCODINGS.has(roou.audio_bit_depth)) {
-      roou.audio_encoding = _AUDIO_ENCODINGS.get(roou.audio_bit_depth);
+      roou.audio_encoding = _AUDIO_ENCODINGS.get(roou.audio_bit_depth)!;
     }
   }
 
   /** Clamp writer for a `Rouu` audio-format field (no validation). */
   _write_audio_format_raw(field: string, value: number): void {
-    (this._roou as any)[field] = value;
+    (this._roou as unknown as Record<string, number>)[field] = value;
     this._sync_audio_format();
   }
 
@@ -1333,7 +1341,7 @@ export class OutputModule {
    * the project's platform (see {@link py_aep.parse | parse}).
    */
   get file_template(): string {
-    return (this.constructor as typeof OutputModule)._build_file_template(this._folder_path, this._file_name_template, this._is_folder);
+    return this.constructor._build_file_template(this._folder_path, this._file_name_template, this._is_folder);
   }
 
   set file_template(value: string) {
@@ -1631,10 +1639,10 @@ export class OutputModule {
     const [roou_idx, end_idx] = this._block_span(lom_chunks);
     lom_chunks.splice(roou_idx, end_idx - roou_idx);
 
-    const om_ldat = find_by_type(rqi._list_chunk.chunks, "ldat") as LdatChunk;
+    const om_ldat = find_by_type(rqi._list_chunk.chunks, "ldat");
     om_ldat.items.splice(om_idx, 1);
 
-    const om_lhd3 = find_by_type(rqi._list_chunk.chunks, "lhd3") as Lhd3Chunk;
+    const om_lhd3 = find_by_type(rqi._list_chunk.chunks, "lhd3");
     set_lhd3_count(om_lhd3, om_lhd3.count - 1, LHD3_BLOCK_SINGLE);
 
     rqi._output_modules.splice(om_idx, 1);
@@ -1745,8 +1753,8 @@ descriptor(
   "_format",
   ChunkField.enum(OutputFormat, "_roou", "format_id", {
     allow_out_of_enum_values: true,
-    reverse: (v: any) => OutputFormat.to_format_id(v),
-    transform: (v: any) => OutputFormat.from_format_id(v),
+    reverse: (v: number) => OutputFormat.to_format_id(v),
+    transform: (v: string | Uint8Array) => OutputFormat.from_format_id(v),
     read_only: true,
   }),
 );

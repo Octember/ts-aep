@@ -27,12 +27,16 @@
 
 import { range } from "../../pyrt/index.ts";
 
+/** Heterogeneous spec-tree data, read dynamically by the skeleton builder. */
+type SpecBody = Record<string, any>;
+type SpecNode = [string, string, SpecBody];
+
 // ---------------------------------------------------------------------------
 // Shared tdb4 layouts
 // ---------------------------------------------------------------------------
 
 // 1-D scalar property (sliders, rotations, opacity).
-export const _TDB4_SCALAR: Record<string, any> = {
+export const _TDB4_SCALAR: Record<string, number | string | boolean> = {
   value_hint_type: 1,
   value_hint_flag: 255,
   cvot_flags: 255,
@@ -42,7 +46,7 @@ export const _TDB4_SCALAR: Record<string, any> = {
 };
 
 // Boolean / checkbox property.
-export const _TDB4_BOOL: Record<string, any> = {
+export const _TDB4_BOOL: Record<string, number | string | boolean> = {
   value_hint_type: 65535,
   cvot_flags: 4,
   time_base: "$TB",
@@ -51,7 +55,7 @@ export const _TDB4_BOOL: Record<string, any> = {
 };
 
 // 3-D spatial point (Anchor Point / Position).
-export const _TDB4_SPATIAL: Record<string, any> = {
+export const _TDB4_SPATIAL: Record<string, number | string | boolean> = {
   dimensions: 3,
   spatial_static_flags: 15,
   pad2a: 3,
@@ -74,7 +78,7 @@ export const _TDB4_SPATIAL: Record<string, any> = {
 export function _bool_prop(
   match_name: string,
   value: number,
-): [string, string, Record<string, any>] {
+): SpecNode {
   return [
     "prop",
     match_name,
@@ -91,7 +95,7 @@ export function _bool_prop(
 export function _coefficient_prop(
   match_name: string,
   value: number,
-): [string, string, Record<string, any>] {
+): SpecNode {
   return [
     "prop",
     match_name,
@@ -106,7 +110,7 @@ export function _coefficient_prop(
   ];
 }
 
-export const _ANCHOR_POINT: [string, string, Record<string, any>] = [
+export const _ANCHOR_POINT: SpecNode = [
   "prop",
   "ADBE Anchor Point",
   {
@@ -118,10 +122,10 @@ export const _ANCHOR_POINT: [string, string, Record<string, any>] = [
 ];
 
 export function _position_prop(
-  x: any,
-  y: any,
-  z: any,
-): [string, string, Record<string, any>] {
+  x: number | string,
+  y: number | string,
+  z: number | string,
+): SpecNode {
   return [
     "prop",
     "ADBE Position",
@@ -135,10 +139,10 @@ export function _position_prop(
 }
 
 // X / Y / Z separation followers (ADBE Position_0 / _1 / _2).
-export const _SPLIT_POSITIONS: [string, string, Record<string, any>][] = [
+export const _SPLIT_POSITIONS: SpecNode[] = [
   ...range(3),
 ].map(
-  (i): [string, string, Record<string, any>] => [
+  (i): SpecNode => [
     "prop",
     `ADBE Position_${i}`,
     {
@@ -152,7 +156,7 @@ export const _SPLIT_POSITIONS: [string, string, Record<string, any>][] = [
   ],
 );
 
-export const _SCALE: [string, string, Record<string, any>] = [
+export const _SCALE: SpecNode = [
   "prop",
   "ADBE Scale",
   {
@@ -165,7 +169,7 @@ export const _SCALE: [string, string, Record<string, any>] = [
   },
 ];
 
-export const _ROTATE_Z: [string, string, Record<string, any>] = [
+export const _ROTATE_Z: SpecNode = [
   "prop",
   "ADBE Rotate Z",
   {
@@ -176,7 +180,7 @@ export const _ROTATE_Z: [string, string, Record<string, any>] = [
   },
 ];
 
-export const _OPACITY: [string, string, Record<string, any>] = [
+export const _OPACITY: SpecNode = [
   "prop",
   "ADBE Opacity",
   {
@@ -189,16 +193,16 @@ export const _OPACITY: [string, string, Record<string, any>] = [
   },
 ];
 
-export const _ENVIR_APPEAR: [string, string, Record<string, any>] = _bool_prop(
+export const _ENVIR_APPEAR: SpecNode = _bool_prop(
   "ADBE Envir Appear in Reflect",
   1.0,
 );
 
 /** `node` restricted to the releases that write the `gate` part. */
 export function _gated(
-  node: [string, string, Record<string, any>],
+  node: SpecNode,
   gate: string,
-): [string, string, Record<string, any>] {
+): SpecNode {
   const [kind, match_name, body] = node;
   return [kind, match_name, { ...body, gate }];
 }
@@ -211,11 +215,11 @@ export function _gated(
 export function _view_layer(
   list_type: string,
   name: string,
-  position: [any, any, any] | null,
+  position: [number | string, number | string, number | string] | null,
   kw: { has_scale: boolean },
-): Record<string, any> {
+): SpecBody {
   const { has_scale } = kw;
-  const children: any[] = [_ANCHOR_POINT];
+  const children: SpecNode[] = [_ANCHOR_POINT];
   if (position != null) {
     children.push(_position_prop(...position));
   }
@@ -281,7 +285,7 @@ export const _LAYER_STYLE_NAMES: string[] = [
   "frameFX",
 ];
 
-export const _MARKERS_LAYER: Record<string, any> = {
+export const _MARKERS_LAYER: SpecBody = {
   list_type: "SecL",
   name: "Markers",
   ldta: {
@@ -419,7 +423,7 @@ export const _MARKERS_LAYER: Record<string, any> = {
         "ADBE Material Options Group",
         {
           children: [
-            ...[
+            ...([
               _bool_prop("ADBE Casts Shadows", 0.0),
               _coefficient_prop("ADBE Light Transmission", 0.0),
               _bool_prop("ADBE Accepts Shadows", 1.0),
@@ -444,15 +448,15 @@ export const _MARKERS_LAYER: Record<string, any> = {
                   cdat: ["$SHADOW_ALPHA", ...Array(11).fill(0.0)],
                 },
               ],
-            ].map((node: any) => _gated(node, "markers material")),
+            ] satisfies SpecNode[]).map((node) => _gated(node, "markers material")),
             _bool_prop("ADBE Appears in Reflections", 1.0),
-            ...[
+            ...([
               ["ADBE Ambient Coefficient", 100.0],
               ["ADBE Diffuse Coefficient", 50.0],
               ["ADBE Specular Coefficient", 50.0],
               ["ADBE Shininess Coefficient", 5.0],
               ["ADBE Metal Coefficient", 100.0],
-            ].map(([match_name, value]: any) =>
+            ] satisfies [string, number][]).map(([match_name, value]) =>
               _gated(_coefficient_prop(match_name, value), "markers material"),
             ),
             _coefficient_prop("ADBE Reflection Coefficient", 0.0),
@@ -500,7 +504,7 @@ export const _MARKERS_LAYER: Record<string, any> = {
 
 // ---------------------------------------------------------------------------
 
-export const COMP_VIEW_LAYER_SPECS: Record<string, any>[] = [
+export const COMP_VIEW_LAYER_SPECS: SpecBody[] = [
   {
     ..._view_layer("DLay", "Default", null, { has_scale: true }),
     gate: "default view layer",

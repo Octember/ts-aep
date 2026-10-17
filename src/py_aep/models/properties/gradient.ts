@@ -13,6 +13,7 @@ import {
   repr,
   sorted,
   str,
+  type ClassAttributes,
 } from "../../../pyrt/index.ts";
 import { to_f4 } from "../../binary/bin_utils.ts";
 import { Utf8Chunk } from "../../binary/scalar_chunks.ts";
@@ -24,10 +25,11 @@ import { validate_normalized_float, validate_positive_int, validate_rgb_color } 
  * Used on `GradientColorStop`, `GradientAlphaStop`, and `Gradient` to
  * automatically re-serialize gradient XML when a field is modified.
  */
-export class _GradientField<T = any> {
-  static _VALIDATORS: Map<string, (value: any, instance?: any) => void> = new Map<
+export class _GradientField<T = unknown> {
+  declare ["constructor"]: ClassAttributes<typeof _GradientField>;
+  static _VALIDATORS: Map<string, (value: never, instance?: never) => void> = new Map<
     string,
-    (value: any, instance?: any) => void
+    (value: never, instance?: never) => void
   >([
     ["offset", validate_normalized_float],
     ["midpoint", validate_normalized_float],
@@ -43,15 +45,15 @@ export class _GradientField<T = any> {
     this._name = name;
   }
 
-  __get__(obj: any, objtype?: Function | null): T | this {
+  __get__(obj: object | null, objtype?: Function | null): T | this {
     if (obj == null) return this;
     const value: T = object_getattr(obj, this._slot);
     return value;
   }
 
-  __set__(obj: any, value: T): void {
-    const validator = (this.constructor as typeof _GradientField)._VALIDATORS.get(this._name);
-    if (validator != null) validator(value, null);
+  __set__(obj: object, value: T): void {
+    const validator = this.constructor._VALIDATORS.get(this._name);
+    if (validator != null) validator(value as never, null as never);
     object_setattr(obj, this._slot, value);
     const gradient = getattr(obj, "_gradient", obj);
     const serialize = getattr(gradient, "_serialize", null);
@@ -98,7 +100,7 @@ export class GradientColorStop {
     );
   }
 
-  __eq__(other: any): boolean {
+  __eq__(other: unknown): boolean {
     // Python returns NotImplemented for a foreign type; py_eq treats that as False.
     if (!(other instanceof GradientColorStop)) return false;
     return (
@@ -149,7 +151,7 @@ export class GradientAlphaStop {
     );
   }
 
-  __eq__(other: any): boolean {
+  __eq__(other: unknown): boolean {
     // Python returns NotImplemented for a foreign type; py_eq treats that as False.
     if (!(other instanceof GradientAlphaStop)) return false;
     return (
@@ -372,7 +374,7 @@ export class Gradient {
     );
   }
 
-  __eq__(other: any): boolean {
+  __eq__(other: unknown): boolean {
     // Python returns NotImplemented for a foreign type; py_eq treats that as False.
     if (!(other instanceof Gradient)) return false;
     return (

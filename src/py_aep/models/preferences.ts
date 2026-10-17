@@ -93,7 +93,7 @@ export const _PSD_FOOTAGE_DIMENSIONS: Map<number, string> = new Map<number, stri
 
 /**
  * Resolve a `Choose Layer Dialog` popup index to its string value, or
- * `None` when the preference is unset (or holds an unknown index).
+ * `null` when the preference is unset (or holds an unknown index).
  */
 export function _choose_layer_pref(preferences: Preferences, key: string, mapping: Map<number, string>): string | null {
   if (!preferences.have_pref(_CHOOSE_LAYER_SECTION, key, PREFType.PREF_Type_MACHINE_SPECIFIC)) {
@@ -105,7 +105,7 @@ export function _choose_layer_pref(preferences: Preferences, key: string, mappin
 
 /**
  * The sticky Layer Options choice for a PSD/PSB COMP import (`"editable"`
- * or `"merge"`), or `None` when the preference is unset.
+ * or `"merge"`), or `null` when the preference is unset.
  *
  * Mirrors the "PSD Comp Layer Styles Option v2" import-dialog preference
  * that AE's own `importFile` follows.
@@ -116,7 +116,7 @@ export function psd_comp_layer_styles(preferences: Preferences): string | null {
 
 /**
  * The sticky Layer Options choice for a single-layer PSD/PSB FOOTAGE
- * import (`"merge"` or `"ignore"`), or `None` when the preference is unset.
+ * import (`"merge"` or `"ignore"`), or `null` when the preference is unset.
  *
  * Mirrors the "PSD Footage Layer Styles Option" import-dialog preference.
  */
@@ -126,7 +126,7 @@ export function psd_footage_layer_styles(preferences: Preferences): string | nul
 
 /**
  * The sticky Footage Dimensions choice for a single-layer PSD/PSB FOOTAGE
- * import (`"document"` or `"layer"`), or `None` when the preference is unset.
+ * import (`"document"` or `"layer"`), or `null` when the preference is unset.
  *
  * Mirrors the "PSD Dimensions Popup" import-dialog preference.
  */
@@ -215,7 +215,7 @@ export function _sheet_readers(
  * style `addText` gives a new layer. Keys map to `TextDocument`
  * attributes. Missing preferences fall back to AE's factory values.
  */
-export function default_character_style(preferences: Preferences): Record<string, any> {
+export function default_character_style(preferences: Preferences): Record<string, unknown> {
   const [number, flag] = _sheet_readers(preferences, _TEXT_STYLE_SECTION);
   const factory = _FACTORY_CHAR_STYLE;
   const fill = [
@@ -263,7 +263,7 @@ export function default_character_style(preferences: Preferences): Record<string
  * Note that hyphenation has no entry in this sheet, which is why After
  * Effects leaves `auto_hyphenate` untouched on a reset.
  */
-export function default_paragraph_style(preferences: Preferences): Record<string, any> {
+export function default_paragraph_style(preferences: Preferences): Record<string, unknown> {
   const [number, flag] = _sheet_readers(preferences, _PARA_SHEET_SECTION);
   const factory = _FACTORY_PARA_STYLE;
   const raw_justification = preferences.get_pref_as_string(_PARA_SHEET_SECTION, "Justification", PREFType.PREF_Type_MACHINE_SPECIFIC_TEXT, {
@@ -352,9 +352,9 @@ export function apply_text_style_prefs(document: TextDocument, preferences: Pref
 
   const fill = [number("Fill Red"), number("Fill Green"), number("Fill Blue")];
   if (!fill.includes(null)) {
-    const current_fill = document.fill_color?.length > 0 ? document.fill_color : [0.0, 0.0, 0.0];
-    if (zip(current_fill, fill).some(([c, n]) => differs(c, float(n)))) {
-      document.fill_color = fill.map((n) => float(n));
+    const current_fill = document.fill_color?.length! > 0 ? document.fill_color! : [0.0, 0.0, 0.0];
+    if (zip(current_fill, fill as number[]).some(([c, n]) => differs(c, float(n!)))) {
+      document.fill_color = fill.map((n) => float(n!));
     }
   }
 
@@ -391,9 +391,9 @@ export function apply_text_style_prefs(document: TextDocument, preferences: Pref
       }
       const stroke = [number("Stroke Red"), number("Stroke Green"), number("Stroke Blue")];
       if (!stroke.includes(null)) {
-        const current = document.stroke_color?.length > 0 ? document.stroke_color : [0.0, 0.0, 0.0];
-        if (zip(current, stroke).some(([c, n]) => differs(c, float(n)))) {
-          document.stroke_color = stroke.map((n) => float(n));
+        const current = document.stroke_color?.length! > 0 ? document.stroke_color! : [0.0, 0.0, 0.0];
+        if (zip(current, stroke as number[]).some(([c, n]) => differs(c, float(n!)))) {
+          document.stroke_color = stroke.map((n) => float(n!));
         }
       }
     }
@@ -440,22 +440,22 @@ export function default_synthetic_out_point(preferences: Preferences): number | 
  *
  * @see https://ae-scripting.docsforadobe.dev/other/preferences/
  * @example
- * ```python
- * import py_aep
- * from py_aep.enums import PREFType
+ * ```ts
+ * import { parse, PREFType } from "@bevyl-ai/ts-aep";
  *
- * app = py_aep.parse("project.aep", ae_preferences_dir="...")
- * fps = app.preferences.get_pref_as_number(
- *     "Import Options Preference Section",
- *     "Import Options Default Sequence FPS",
- *     PREFType.PREF_Type_MACHINE_INDEPENDENT,
- * )
+ * const app = parse("project.aep", { ae_preferences_dir: "..." });
+ * const fps = app.preferences.get_pref_as_number(
+ *   "Import Options Preference Section",
+ *   "Import Options Default Sequence FPS",
+ *   PREFType.PREF_Type_MACHINE_INDEPENDENT,
+ * );
  * ```
+
  */
 export class Preferences {
   declare _prefs_dir: Path | null;
   declare _files: Map<PREFType, PrefsFile | null>;
-  declare _overrides: Map<string, any>;
+  declare _overrides: Map<string, unknown>;
 
   constructor(prefs_dir: PathLike | null = null) {
     this._prefs_dir = prefs_dir != null ? new Path(prefs_dir) : null;
@@ -481,7 +481,7 @@ export class Preferences {
   /**
    * Return `(found, value, is_override)`.
    *
-   * `value` is a typed Python value when `is_override` is `True`,
+   * `value` is a typed value when `is_override` is `true`,
    * otherwise the raw pref-file text (AE's mixed hex/ASCII encoding).
    */
   _resolve(section_name: string, key_name: string, pref_type: PREFType): [boolean, any, boolean] {
@@ -689,7 +689,7 @@ export class Preferences {
    * Delete the given preference from this object's view.
    *
    * The file value (if any) is masked, not removed from disk:
-   * {@link have_pref} returns `False` and getters fall back to their
+   * {@link have_pref} returns `false` and getters fall back to their
    * `default` afterwards.
    *
    * @param section_name - The name of a preferences section.

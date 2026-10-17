@@ -34,6 +34,7 @@ import { MarkerValue } from "../../src/py_aep/models/properties/marker.ts";
 import { Gradient } from "../../src/py_aep/models/properties/gradient.ts";
 import { TextDocument } from "../../src/py_aep/models/text/text_document.ts";
 import { get_comp, parse_project_fresh } from "../helpers.ts";
+import type { KfPosition } from "../../src/py_aep/binary/ldat_chunks.ts";
 
 const SAMPLES = new Path(import.meta.path).parent.parent.parent.div("samples", "models", "property");
 const SAMPLES_ROOT = new Path(import.meta.path).parent.parent.parent.div("samples");
@@ -1413,7 +1414,7 @@ describe("TestRoundtripAutoBezierWrites", () => {
     const keyframe = prop.keyframes[1];
     keyframe.in_spatial_tangent = [-40.0, -10.0, 0.0];
     keyframe.out_spatial_tangent = [70.0, 25.0, 0.0];
-    const stored = keyframe._ldat_item.kf_data;
+    const stored = keyframe._ldat_item.kf_data as KfPosition;
 
     keyframe.spatial_auto_bezier = true;
 
@@ -1437,7 +1438,7 @@ describe("TestRoundtripAutoBezierWrites", () => {
     const keyframe = prop.keyframes[1];
     keyframe.spatial_auto_bezier = true;
     keyframe.spatial_auto_bezier = false;
-    const stored = keyframe._ldat_item.kf_data;
+    const stored = keyframe._ldat_item.kf_data as KfPosition;
     expect(approx([...stored.out_spatial_tangents], [100.0, 0.0, 0.0])).toBe(true);
   });
 

@@ -136,9 +136,9 @@ export const NAME_KEYS = new Map<number, string>([
  * under a non-English or non-primary platform record: Python finds it, TS
  * returns null.
  */
-export function _name(font: any, ...ids: number[]): string | null {
+export function _name(font: fontkit.Font, ...ids: number[]): string | null {
   // `table = font.get("name"); if table is None: return None`
-  let table: any;
+  let table: unknown;
   try {
     table = font.name;
   } catch (e) {
@@ -148,7 +148,7 @@ export function _name(font: any, ...ids: number[]): string | null {
     return null;
   }
   for (const nid of ids) {
-    const value = font.getName(NAME_KEYS.get(nid));
+    const value = font.getName(NAME_KEYS.get(nid)!);
     if (py_bool(value)) {
       return str(value);
     }
@@ -188,7 +188,7 @@ export function _adobe_font_dirs(): Path[] {
 
 /**
  * PostScript name (name ID 6, lowercased) -\>
- * (font file path, face index, version string from name ID 5 or None).
+ * (font file path, face index, version string from name ID 5 or `null`).
  */
 export let _ps_index: Map<string, [Path, number, string | null]> | null = null;
 
@@ -198,12 +198,14 @@ export let _ps_index: Map<string, [Path, number, string | null]> | null = null;
  *
  * Corrupt/unsupported files yield nothing rather than fail discovery.
  */
-export function* _iter_faces(path: Path): Generator<[number, any]> {
-  let fonts: any[];
+export function* _iter_faces(path: Path): Generator<[number, fontkit.Font]> {
+  let fonts: fontkit.Font[];
   try {
-    const opened: any = fontkit.create(host.fs.readFileSync(path.toString()) as any);
+    const opened = fontkit.create(
+      host.fs.readFileSync(path.toString()),
+    ) as fontkit.Font & { fonts?: fontkit.Font[] };
     if (path.suffix.toLowerCase() === ".ttc") {
-      fonts = [...opened.fonts];
+      fonts = [...opened.fonts!];
     } else {
       // NOTE(port): TTFont(fontNumber=0) on a non-.ttc file; fontkit returns a
       // collection (with `.fonts`) only for collection files, so take face 0.
@@ -288,7 +290,7 @@ export function _postscript_index(): Map<string, [Path, number, string | null]> 
  * Resolve a PostScript name (name ID 6) to an installed font face.
  *
  * Returns `(font file path, face index)` - the index selects a face
- * within a `.ttc` collection - or `None` when no matching font is
+ * within a `.ttc` collection - or `null` when no matching font is
  * installed. This mirrors how AE's text engine identifies fonts, so
  * the composed-line resolver uses it for measurement.
  */
@@ -304,7 +306,7 @@ export function resolve_postscript(
 
 /**
  * The installed font's version string (name ID 5) for a PostScript
- * name, or `None` when no matching font is installed.
+ * name, or `null` when no matching font is installed.
  *
  * AE stamps this host-resolved string on font entries it registers in
  * a text document and on the used-font records (probed via the
@@ -377,7 +379,7 @@ export function _pick(
  * Resolve a single family name to an installed font face, with NO
  * generic fallback.
  *
- * Unlike `resolve_font`, an uninstalled family returns `None` instead
+ * Unlike `resolve_font`, an uninstalled family returns `null` instead
  * of degrading to the sans-serif chain; used where substituting a
  * different font would be wrong (e.g. reading variable-font axes).
  * Returns `(font file path, face index)`.
@@ -399,7 +401,7 @@ export function resolve_font_exact(family: string): [Path, number] | null {
  * `family` may be a comma-separated list (quotes stripped); the first
  * installed family wins. Returns `(font file path, face index)` - the index
  * selects a face within a `.ttc` collection (0 for a single-face file) - or
- * `None` when no listed family is found.
+ * `null` when no listed family is found.
  */
 export function resolve_font(
   family: string,
@@ -416,8 +418,8 @@ export function resolve_font(
       continue;
     }
     const styles = _index.get(name) ?? null;
-    if (styles?.size > 0) {
-      return _pick(styles, bold, italic);
+    if (styles?.size! > 0) {
+      return _pick(styles!, bold, italic);
     }
     if (generic == null && _GENERIC_FALLBACKS.has(name)) {
       generic = name;
@@ -427,8 +429,8 @@ export function resolve_font(
   // requested generic, or sans-serif for an unknown family).
   for (const candidate of (_GENERIC_FALLBACKS.get(generic || "sans-serif") ?? [] as readonly string[])) {
     const styles = _index.get(candidate) ?? null;
-    if (styles?.size > 0) {
-      return _pick(styles, bold, italic);
+    if (styles?.size! > 0) {
+      return _pick(styles!, bold, italic);
     }
   }
   return null;

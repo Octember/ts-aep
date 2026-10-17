@@ -59,16 +59,16 @@ export class FlattenedPsdError extends UnsupportedPsdLayersError {}
 export class PsdStyleBlocks {
   /**
    * The effects descriptor block body (`lmfx` when present, else `lfx2`;
-   * `lfxs` for a group header). `None` when the layer carries blend-options
+   * `lfxs` for a group header). `null` when the layer carries blend-options
    * blocks (`iOpa`/`infx`/`brst`) but no styles - Photoshop's Fill slider
    * is independent of layer styles, and AE imports it either way.
    */
   readonly effects: Uint8Array | null;
 
-  /** `iOpa` fill opacity byte (0-255), or `None` when absent. */
+  /** `iOpa` fill opacity byte (0-255), or `null` when absent. */
   readonly fill_opacity: number | null;
 
-  /** `infx` "Blend Interior Effects as Group" flag, or `None` when absent. */
+  /** `infx` "Blend Interior Effects as Group" flag, or `null` when absent. */
   readonly blend_interior: boolean | null;
 
   /** `brst` channel-restrictions block body (empty when absent). */
@@ -93,20 +93,20 @@ export class PsdStyleBlocks {
     yield this.channel_restrictions;
   }
 
-  static readonly _fields = ["effects", "fill_opacity", "blend_interior", "channel_restrictions"];
+  static readonly _fields = ["effects", "fill_opacity", "blend_interior", "channel_restrictions"] as const satisfies readonly (keyof PsdStyleBlocks)[];
 
   /** `t._replace(field=...)`: a copy with the given fields replaced. */
   _replace(kw: Partial<PsdStyleBlocks>): PsdStyleBlocks {
-    const args = PsdStyleBlocks._fields.map((f) => (f in kw ? (kw as any)[f] : (this as any)[f]));
-    return new (PsdStyleBlocks as any)(...args);
+    const args = PsdStyleBlocks._fields.map((f) => (f in kw ? kw[f] : this[f]));
+    return new PsdStyleBlocks(...(args as ConstructorParameters<typeof PsdStyleBlocks>));
   }
 
-  _asdict(): Record<string, any> {
-    return Object.fromEntries(PsdStyleBlocks._fields.map((f) => [f, (this as any)[f]]));
+  _asdict(): Record<string, PsdStyleBlocks[(typeof PsdStyleBlocks._fields)[number]]> {
+    return Object.fromEntries(PsdStyleBlocks._fields.map((f) => [f, this[f]]));
   }
 
   /** NamedTuple equality: tuple-wise comparison of the fields. */
-  __eq__(other: any): boolean {
+  __eq__(other: Iterable<unknown> | null | undefined): boolean {
     if (other == null || typeof other[Symbol.iterator] !== "function") return false;
     return py_eq([...this], [...other]);
   }
@@ -134,19 +134,19 @@ export class PsdLayer {
   readonly record_index: number;
 
   /**
-   * `True` when the layer is an adjustment layer (Levels, Hue/Saturation,
+   * `true` when the layer is an adjustment layer (Levels, Hue/Saturation,
    * ...).
    */
   readonly is_adjustment: boolean;
 
   /**
-   * Raw layer-style tagged blocks, or `None` when the record carries no
+   * Raw layer-style tagged blocks, or `null` when the record carries no
    * effects descriptor.
    */
   readonly style_blocks: PsdStyleBlocks | null;
 
   /**
-   * Raw `vmsk`/`vsms` vector-mask block body (path records), or `None`
+   * Raw `vmsk`/`vsms` vector-mask block body (path records), or `null`
    * when the layer has no vector mask. Shape layers carry one too - AE
    * imports both as an AE mask on the comp layer. Decoded by
    * `resolvers.psd_paths`.
@@ -154,14 +154,14 @@ export class PsdLayer {
   readonly vector_mask: Uint8Array | null;
 
   /**
-   * `True` when the layer is clipped to the layer below (the record's
+   * `true` when the layer is clipped to the layer below (the record's
    * clipping byte). AE auto-precomposes a base + its clipped layers into
    * a nested comp, with preserve-transparency on the clipped ones.
    */
   readonly clipped: boolean;
 
   /**
-   * `True` for a fill layer (solid color, gradient or pattern - the
+   * `true` for a fill layer (solid color, gradient or pattern - the
    * `SoCo`/`GdFl`/`PtFl` blocks; a shape layer is one). Its content is
    * unbounded: the record's pixels are only Photoshop's rasterized preview.
    */
@@ -171,18 +171,18 @@ export class PsdLayer {
    * Where the layer shows through its enabled raster layer mask, as
    * `(left, top, right, bottom)` canvas pixels: the bounds of the pixels
    * whose alpha and mask are both non-zero, over the record bounds (over the
-   * canvas for a fill layer). `None` when the layer has no such mask.
+   * canvas for a fill layer). `null` when the layer has no such mask.
    */
   readonly mask_box: [number, number, number, number] | null;
 
   /**
-   * `False` when the record has no transparency channel: Photoshop's
+   * `false` when the record has no transparency channel: Photoshop's
    * Background layer, which After Effects imports without alpha.
    */
   readonly has_transparency: boolean;
 
   /**
-   * `False` when the layer is hidden in Photoshop; After Effects imports
+   * `false` when the layer is hidden in Photoshop; After Effects imports
    * it with the comp layer's video switch off.
    */
   readonly visible: boolean;
@@ -230,20 +230,20 @@ export class PsdLayer {
     yield this.visible;
   }
 
-  static readonly _fields = ["name", "layer_id", "bounds", "record_index", "is_adjustment", "style_blocks", "vector_mask", "clipped", "is_fill", "mask_box", "has_transparency", "visible"];
+  static readonly _fields = ["name", "layer_id", "bounds", "record_index", "is_adjustment", "style_blocks", "vector_mask", "clipped", "is_fill", "mask_box", "has_transparency", "visible"] as const satisfies readonly (keyof PsdLayer)[];
 
   /** `t._replace(field=...)`: a copy with the given fields replaced. */
   _replace(kw: Partial<PsdLayer>): PsdLayer {
-    const args = PsdLayer._fields.map((f) => (f in kw ? (kw as any)[f] : (this as any)[f]));
-    return new (PsdLayer as any)(...args);
+    const args = PsdLayer._fields.map((f) => (f in kw ? kw[f] : this[f]));
+    return new PsdLayer(...(args as ConstructorParameters<typeof PsdLayer>));
   }
 
-  _asdict(): Record<string, any> {
-    return Object.fromEntries(PsdLayer._fields.map((f) => [f, (this as any)[f]]));
+  _asdict(): Record<string, PsdLayer[(typeof PsdLayer._fields)[number]]> {
+    return Object.fromEntries(PsdLayer._fields.map((f) => [f, this[f]]));
   }
 
   /** NamedTuple equality: tuple-wise comparison of the fields. */
-  __eq__(other: any): boolean {
+  __eq__(other: Iterable<unknown> | null | undefined): boolean {
     if (other == null || typeof other[Symbol.iterator] !== "function") return false;
     return py_eq([...this], [...other]);
   }
@@ -266,12 +266,12 @@ export class PsdGroup {
   readonly children: PsdNode[];
 
   /**
-   * Raw layer-style tagged blocks of the group header record, or `None`
+   * Raw layer-style tagged blocks of the group header record, or `null`
    * when the group carries no effects descriptor.
    */
   readonly style_blocks: PsdStyleBlocks | null;
 
-  /** `False` when the group is hidden in Photoshop. */
+  /** `false` when the group is hidden in Photoshop. */
   readonly visible: boolean;
 
   constructor(
@@ -296,20 +296,20 @@ export class PsdGroup {
     yield this.visible;
   }
 
-  static readonly _fields = ["name", "layer_id", "children", "style_blocks", "visible"];
+  static readonly _fields = ["name", "layer_id", "children", "style_blocks", "visible"] as const satisfies readonly (keyof PsdGroup)[];
 
   /** `t._replace(field=...)`: a copy with the given fields replaced. */
   _replace(kw: Partial<PsdGroup>): PsdGroup {
-    const args = PsdGroup._fields.map((f) => (f in kw ? (kw as any)[f] : (this as any)[f]));
-    return new (PsdGroup as any)(...args);
+    const args = PsdGroup._fields.map((f) => (f in kw ? kw[f] : this[f]));
+    return new PsdGroup(...(args as ConstructorParameters<typeof PsdGroup>));
   }
 
-  _asdict(): Record<string, any> {
-    return Object.fromEntries(PsdGroup._fields.map((f) => [f, (this as any)[f]]));
+  _asdict(): Record<string, PsdGroup[(typeof PsdGroup._fields)[number]]> {
+    return Object.fromEntries(PsdGroup._fields.map((f) => [f, this[f]]));
   }
 
   /** NamedTuple equality: tuple-wise comparison of the fields. */
-  __eq__(other: any): boolean {
+  __eq__(other: Iterable<unknown> | null | undefined): boolean {
     if (other == null || typeof other[Symbol.iterator] !== "function") return false;
     return py_eq([...this], [...other]);
   }
@@ -471,7 +471,7 @@ export class _UserMask {
  * @param file - Path to a `.psd` or `.psb` file.
  * @param kw - Keyword arguments:
  * - `mask_boxes`: Decode each raster layer mask's channel data for `PsdLayer.mask_box` (a full
- *     decode of the masked layers' pixels). `False` leaves it `None`, for callers that only need
+ *     decode of the masked layers' pixels). `false` leaves it `null`, for callers that only need
  *     names and indices.
  * @returns Top-level nodes bottom-first: {@link PsdLayer} leaves and {@link PsdGroup} groups
  *   (groups nest recursively).
@@ -627,7 +627,7 @@ export function read_psd_layers(file: PathLike, kw: { mask_boxes?: boolean } = {
 
 /**
  * The enabled, user-painted raster mask described by a record's layer
- * mask data, or `None`.
+ * mask data, or `null`.
  *
  * Photoshop also renders a vector mask into the mask channel (flags bit
  * 3); AE ignores that copy and applies the path itself. When a layer has
@@ -668,7 +668,7 @@ export function _user_mask(mask: Uint8Array, file_name: string, layer_name: stri
 
 /**
  * The bounds of the pixels of `region` where the layer's alpha (fully
- * opaque when `alpha` is `None`) and its mask are both non-zero, as AE
+ * opaque when `alpha` is `null`) and its mask are both non-zero, as AE
  * crops a masked layer (measured on AE 2026 with alpha holes under the
  * mask). An empty result is `(0, 0, 0, 0)`.
  */
@@ -875,16 +875,16 @@ export function _build_layer_tree(records: _Record[]): PsdNode[] {
 }
 
 /**
- * Extract `(name, layer_id, section_divider, is_adjustment, style_blocks, vector_mask, is_fill, mask_data)`; `layer_id` is `None` without an `lyid`
+ * Extract `(name, layer_id, section_divider, is_adjustment, style_blocks, vector_mask, is_fill, mask_data)`; `layer_id` is `null` without an `lyid`
  * block.
  *
  * `section_divider` is the `lsct` value: 0 (or absent) for a normal layer,
  * 1/2 for an open/closed group header, 3 for the hidden bounding divider that
- * ends a group. `is_adjustment` is `True` when an adjustment-type key is
- * present. `style_blocks` carries the raw layer-style tagged blocks, `None`
+ * ends a group. `is_adjustment` is `true` when an adjustment-type key is
+ * present. `style_blocks` carries the raw layer-style tagged blocks, `null`
  * when the record has no effects descriptor. `vector_mask` is the raw
- * `vmsk`/`vsms` block body, `None` when the layer has no vector mask.
- * `is_fill` is `True` when a fill-layer key is present. `mask_data` is the
+ * `vmsk`/`vsms` block body, `null` when the layer has no vector mask.
+ * `is_fill` is `true` when a fill-layer key is present. `mask_data` is the
  * layer mask data sub-block body (empty when the layer has no mask).
  */
 export function _parse_layer_extra(
@@ -1001,7 +1001,7 @@ export function translate(data: Uint8Array, table: Uint8Array): Uint8Array {
 
 // NOTE(port): bytes[start::step] via py_slice (which returns a plain array for bytes), re-wrapped as Uint8Array.
 export function strided(row: Uint8Array, start: number, step: number): Uint8Array {
-  return Uint8Array.from(py_slice(row, start, null, step) as any);
+  return Uint8Array.from(py_slice(row, start, null, step));
 }
 
 // NOTE(port): int.from_bytes(data, "big") as an exact bigint; pyrt's int_from_bytes returns a Number and loses bits past 2^53.

@@ -37,7 +37,7 @@ export class Affine {
     yield this.f;
   }
 
-  __eq__(other: any): boolean {
+  __eq__(other: unknown): boolean {
     return other instanceof Affine && this.a === other.a && this.b === other.b && this.c === other.c && this.d === other.d && this.e === other.e && this.f === other.f;
   }
 
@@ -78,7 +78,7 @@ export const _FUNC_RE = /([a-zA-Z]+)\s*\(([^)]*)\)/g;
 export const _FUNCTIONS: ReadonlySet<string> = new Set(["matrix", "translate", "scale", "rotate", "skewX", "skewY"]);
 
 export function _numbers(text: string): number[] {
-  return pattern_findall(NUMBER_RE, text).map((m) => float(m));
+  return pattern_findall(NUMBER_RE, text).map((m) => float(m as string));
 }
 
 /**

@@ -227,7 +227,7 @@ describe("TestValueSpaces", () => {
     const layer = TestValueSpaces._probe_layer("probe_solid");
     const prop = _find(layer, "ADBE Mask Shape");
     expect(prop._value != null).toBe(true);
-    expect(prop._value._layer).toBe(layer);
+    expect((prop._value as { _layer: unknown })._layer).toBe(layer);
     for (const keyframe of prop.keyframes) {
       expect(keyframe._value._layer).toBe(layer);
     }

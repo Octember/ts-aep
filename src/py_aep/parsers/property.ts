@@ -3,8 +3,8 @@
 import { ListChunk } from "../binary/chunk.ts";
 import type { Chunk } from "../binary/chunk.ts";
 import type { MkifChunk } from "../binary/misc_chunks.ts";
-import type { TdmnChunk, TdsbChunk, TdsnChunk, VfdnChunk } from "../binary/property_chunks.ts";
-import type { U4Chunk, Utf8Chunk } from "../binary/scalar_chunks.ts";
+import type { TdmnChunk, TdsbChunk } from "../binary/property_chunks.ts";
+import type { Utf8Chunk } from "../binary/scalar_chunks.ts";
 import { ChunkNotFoundError, filter_by_list_type, filter_by_type, find_by_list_type, find_by_type } from "../binary/utils.ts";
 import { VF_AXIS_PREFIX } from "../data/match_names.ts";
 import { _suppress_materialization } from "../models/descriptors.ts";
@@ -13,6 +13,7 @@ import { PropertyGroup } from "../models/properties/property_group.ts";
 import type { CompItem } from "../models/items/composition.ts";
 import type { Layer } from "../models/layers/layer.ts";
 import { parse_effect } from "./effect.ts";
+import type { ParamDef } from "./effect.ts";
 import { parse_markers } from "./marker.ts";
 import { parse_property } from "./property_value.ts";
 import { parse_gradient, parse_orientation, parse_shape, parse_text_document } from "./specialized_properties.ts";
@@ -45,7 +46,7 @@ export class _ParseContext {
 
   readonly child_depth: number;
 
-  readonly effect_param_defs: Map<string, Map<string, Map<string, any>>>;
+  readonly effect_param_defs: Map<string, Map<string, ParamDef>>;
 
   readonly composition: CompItem;
 
@@ -56,7 +57,7 @@ export class _ParseContext {
    * layer, not the composition, so the layer has to travel with the
    * parse. It is the layer itself rather than its size so the size stays
    * lazy - a mask `Shape` reads it back at value-read time, and so
-   * follows the layer if its source is later replaced. `None` only where
+   * follows the layer if its source is later replaced. `null` only where
    * there is genuinely no layer (a project-level parse).
    */
   readonly layer: Layer | null;
@@ -66,7 +67,7 @@ export class _ParseContext {
     chunks: Chunk[],
     first_chunk: ListChunk,
     child_depth: number,
-    effect_param_defs: Map<string, Map<string, Map<string, any>>>,
+    effect_param_defs: Map<string, Map<string, ParamDef>>,
     composition: CompItem,
     layer: Layer | null = null,
   ) {
@@ -79,7 +80,11 @@ export class _ParseContext {
     this.layer = layer;
   }
 
-  *[Symbol.iterator](): Generator<unknown> {
+  *[Symbol.iterator](): Generator<
+    _ParseContext[
+      "match_name" | "chunks" | "first_chunk" | "child_depth" | "effect_param_defs" | "composition" | "layer"
+    ]
+  > {
     yield this.match_name;
     yield this.chunks;
     yield this.first_chunk;
@@ -91,7 +96,7 @@ export class _ParseContext {
 
   /** The group's first match-name chunk. */
   get tdmn(): TdmnChunk {
-    return find_by_type(this.chunks, "tdmn") as TdmnChunk;
+    return find_by_type(this.chunks, "tdmn");
   }
 }
 
@@ -127,7 +132,7 @@ export function _property_parser(
 export function parse_properties(
   match_name_runs: [string, Chunk[]][],
   child_depth: number,
-  effect_param_defs: Map<string, Map<string, Map<string, any>>>,
+  effect_param_defs: Map<string, Map<string, ParamDef>>,
   composition: CompItem,
   layer: Layer | null = null,
 ): (Property | PropertyGroup)[] {
@@ -172,7 +177,7 @@ export function parse_properties(
 
 export function _dispatch_sspc(ctx: _ParseContext): (Property | PropertyGroup)[] {
   /** Parse effect chunks - iterates all sspc LISTs for the match name. */
-  const tdmns = filter_by_type(ctx.chunks, "tdmn") as TdmnChunk[];
+  const tdmns = filter_by_type(ctx.chunks, "tdmn");
   const sspcs = filter_by_list_type(ctx.chunks, "sspc");
   const results: (Property | PropertyGroup)[] = [];
   for (const [tdmn, sspc] of zip(tdmns, sspcs)) {
@@ -193,10 +198,10 @@ _property_parser("sspc")(_dispatch_sspc);
 
 export function _dispatch_tdgp(ctx: _ParseContext): (Property | PropertyGroup)[] {
   /** Parse property group chunks - handles masks and indexed groups. */
-  const tdmns = filter_by_type(ctx.chunks, "tdmn") as TdmnChunk[];
+  const tdmns = filter_by_type(ctx.chunks, "tdmn");
   if (ctx.match_name === "ADBE Mask Atom") {
     const tdgps = [...filter_by_list_type(ctx.chunks, "tdgp")];
-    const mkifs = [...filter_by_type(ctx.chunks, "mkif")] as MkifChunk[];
+    const mkifs = [...filter_by_type(ctx.chunks, "mkif")];
     const masks: (Property | PropertyGroup)[] = [];
     for (const [i, [tdmn, tdgp_c, mkif_c]] of enumerate(zip(tdmns, tdgps, mkifs), 1)) {
       const mask = _parse_mask_atom(
@@ -247,10 +252,10 @@ export function _dispatch_tdbs(ctx: _ParseContext): (Property | PropertyGroup)[]
   if (ctx.match_name === "ADBE Layer Source Alternate") {
     const blsi = filter_by_type(ctx.chunks, "blsi");
     if (blsi?.length > 0) {
-      prop._blsi = blsi[0] as U4Chunk;
+      prop._blsi = blsi[0];
       const blsv = filter_by_type(ctx.chunks, "blsv");
       if (blsv?.length > 0) {
-        prop._blsv = blsv[0] as U4Chunk;
+        prop._blsv = blsv[0];
       }
     }
   }
@@ -259,7 +264,7 @@ export function _dispatch_tdbs(ctx: _ParseContext): (Property | PropertyGroup)[]
   if (ctx.match_name.startsWith(VF_AXIS_PREFIX)) {
     const vfdn = filter_by_type(ctx.chunks, "vfdn");
     if (vfdn?.length > 0) {
-      prop._vfdn = vfdn[0] as VfdnChunk;
+      prop._vfdn = vfdn[0];
     }
   }
   // Curves keeps its curves as the effect's arbitrary data, an aRbp in a
@@ -402,7 +407,7 @@ export const parse_property_group = _suppress_materialization().decorate(functio
   tdgp_chunk: ListChunk,
   group_match_name: string,
   property_depth: number,
-  effect_param_defs: Map<string, Map<string, Map<string, any>>>,
+  effect_param_defs: Map<string, Map<string, ParamDef>>,
   composition: CompItem,
   tdmn: TdmnChunk,
   layer: Layer | null = null,
@@ -419,7 +424,7 @@ export const parse_property_group = _suppress_materialization().decorate(functio
   // Leaf properties always have a tdsb; groups may or may not.
   let group_tdsb: TdsbChunk | null;
   try {
-    group_tdsb = find_by_type(tdgp_chunk.chunks, "tdsb") as TdsbChunk;
+    group_tdsb = find_by_type(tdgp_chunk.chunks, "tdsb");
   } catch (e) {
     if (!(e instanceof ChunkNotFoundError)) throw e;
     group_tdsb = null;
@@ -428,7 +433,7 @@ export const parse_property_group = _suppress_materialization().decorate(functio
   // Resolve _name_utf8 from the tdgp's tdsn child
   let name_utf8: Utf8Chunk | null;
   try {
-    const tdsn = find_by_type(tdgp_chunk.chunks, "tdsn") as TdsnChunk;
+    const tdsn = find_by_type(tdgp_chunk.chunks, "tdsn");
     name_utf8 = tdsn.utf8;
   } catch (e) {
     if (!(e instanceof ChunkNotFoundError)) throw e;
@@ -467,7 +472,7 @@ export const _parse_mask_atom = _suppress_materialization().decorate(function _p
   tdgp_chunk: ListChunk,
   mkif_chunk: MkifChunk,
   property_depth: number,
-  effect_param_defs: Map<string, Map<string, Map<string, any>>>,
+  effect_param_defs: Map<string, Map<string, ParamDef>>,
   composition: CompItem,
   tdmn: TdmnChunk,
   layer: Layer | null = null,
@@ -490,7 +495,7 @@ export const _parse_mask_atom = _suppress_materialization().decorate(function _p
     if (chunk instanceof ListChunk && chunk.list_type === "om-s") {
       try {
         const tdbs = find_by_list_type(chunk.chunks, "tdbs");
-        mask_shape_tdsb = find_by_type(tdbs.chunks, "tdsb") as TdsbChunk;
+        mask_shape_tdsb = find_by_type(tdbs.chunks, "tdsb");
       } catch (e) {
         if (!(e instanceof ChunkNotFoundError)) throw e;
       }

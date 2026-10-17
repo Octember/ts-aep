@@ -141,7 +141,7 @@ export function _get_field_names(obj: any): readonly string[] | null {
     // ChunkField (binary-backed) and CosField (COS-dict-backed)
     // descriptors both expose a backing-store attribute name.
     const is_descriptor = "chunk_attr" in attr || "dict_attr" in attr;
-    if (is_descriptor && typeof (attr as any).__get__ === "function") names.add(name);
+    if (is_descriptor && typeof (attr as { __get__?: unknown }).__get__ === "function") names.add(name);
   }
   if (names.size > 0) {
     const result = sorted(names);
@@ -268,7 +268,7 @@ export function _to_dict(obj: any, memo: Map<any, [any, any]>): any {
 }
 
 /** Get enum value as int if it's an IntEnum, else return as-is. */
-export function get_enum_value(val: any): any {
+export function get_enum_value<T>(val: T): T {
   // Enum members are their own values in the TS port (pyrt enum.ts): `val.value` is `val`.
   return val;
 }
@@ -299,7 +299,7 @@ export function compare_values(expected: any, parsed: any, tolerance = 0.001): b
   if (expected == null || parsed == null) return false;
   if (typeof expected === "boolean" && typeof parsed === "boolean") return expected === parsed;
   // `isinstance(x, (int, float))` also holds for bool (and a bigint int).
-  const is_num = (x: any): boolean => is_real(x) || typeof x === "boolean" || typeof x === "bigint";
+  const is_num = (x: unknown): boolean => is_real(x) || typeof x === "boolean" || typeof x === "bigint";
   if (is_num(expected) && is_num(parsed)) {
     return isclose(Number(expected), Number(parsed), tolerance, tolerance);
   }
@@ -332,7 +332,7 @@ export class ValidationResult {
   }
 
   /** Add a difference. */
-  add_diff(path: string, expected: any, parsed: any, category = "other"): void {
+  add_diff(path: string, expected: unknown, parsed: unknown, category = "other"): void {
     this.differences.push(`${path}: expected ${repr(expected)}, got ${repr(parsed)}`);
     this.categories.set(category, ((this.categories.get(category) ?? 0) as number) + 1);
   }
@@ -1248,14 +1248,14 @@ export function compare_folder_hierarchy(
   result: ValidationResult,
 ): void {
   /** Compare folder hierarchy. */
-  const expected_folders = new Map<any, Dict>();
+  const expected_folders = new Map<number, Dict>();
   for (const item of expected_items) {
     if ((item.get("itemType") ?? null) === "FolderItem") {
       expected_folders.set(getitem(item, "id"), item);
     }
   }
 
-  const parsed_folders = new Map<any, Dict>();
+  const parsed_folders = new Map<number, Dict>();
   for (const [item_id, item] of parsed_items) {
     if (dict_get(item, "type_name") === "Folder") {
       parsed_folders.set(item_id, item);
@@ -1692,7 +1692,7 @@ export function validate_aep(
   if (verbose) console.log("\n=== Comparing Footage Items ===");
   const expected_footage = expected_items.filter((i: Dict) => (i.get("itemType") ?? null) === "FootageItem");
   const parsed_items_dict: Dict = dict_get(parsed, "items", new Map());
-  const parsed_footage_by_id = new Map<any, Dict>();
+  const parsed_footage_by_id = new Map<unknown, Dict>();
   for (const [item_id, item] of parsed_items_dict) {
     if (dict_get(item, "type_name") === "Footage") parsed_footage_by_id.set(item_id, item);
   }

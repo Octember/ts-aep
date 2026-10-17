@@ -1,6 +1,6 @@
 /** Import options for importing files into an After Effects project. */
 
-import { AI_COMP_EXTENSIONS, COMP_CONVERSION_EXTENSIONS, PSD_COMP_EXTENSIONS, get_file_format, get_import_as_types } from "../data/file_formats.ts";
+import { AI_COMP_EXTENSIONS, COMP_CONVERSION_EXTENSIONS, PSD_COMP_EXTENSIONS, get_file_format, get_import_as_types, type FileFormat } from "../data/file_formats.ts";
 import { ImportAsType } from "../enums/index.ts";
 import { validate_bool, validate_enum, validate_one_of, validate_path, validate_positive_int, validate_u4 } from "./validators.ts";
 import { Path, ValueError, int, repr, type PathLike, py_re } from "../../pyrt/index.ts";
@@ -37,13 +37,12 @@ export const CURRENT_VALUE = new _CurrentValue();
  * Unlike most py_aep classes, `ImportOptions` has no chunk backing -
  * import settings are not stored in the `.aep` binary format.
  *
- * ```python
- * from pathlib import Path
- * from py_aep import ImportOptions, ImportAsType
+ * ```ts
+ * import { ImportOptions, ImportAsType } from "@bevyl-ai/ts-aep";
  *
- * opts = ImportOptions(Path("footage/shot_001.png"))
- * opts.sequence = True
- * opts.import_as = ImportAsType.FOOTAGE
+ * const opts = new ImportOptions("footage/shot_001.png");
+ * opts.sequence = true;
+ * opts.import_as = ImportAsType.FOOTAGE;
  * ```
  *
  * @example
@@ -77,7 +76,7 @@ export class ImportOptions {
    * The single layer to import from a layered file (`.psd`/`.psb`/
    * `.ai`/`.pdf`), as its 0-based position in the list returned by
    * `list_layers` (top layer first - the order of the "Choose Layer"
-   * dropdown of AE's import dialog). `None` (the default) imports the
+   * dropdown of AE's import dialog). `null` (the default) imports the
    * file like AE's "Merged Layers" / whole-document option. Only valid
    * with `ImportAsType.FOOTAGE`. Read / Write.
    *
@@ -107,7 +106,7 @@ export class ImportOptions {
   /**
    * Footage dimensions for a `layer_index` import: `"document"` (the
    * full canvas) or `"layer"` (the layer's content box), matching the
-   * "Footage Dimensions" option of AE's import dialog. `None` (the
+   * "Footage Dimensions" option of AE's import dialog. `null` (the
    * default) follows the machine's sticky "Footage Dimensions" preference
    * for a `.psd`/`.psb` import when the project was parsed with an
    * `ae_preferences_dir`, and imports at document size otherwise (always,
@@ -136,7 +135,7 @@ export class ImportOptions {
    * How a Photoshop (`.psd`/`.psb`) import treats the source layer
    * styles, matching the "Layer Options" of AE's import dialog:
    * `"editable"` (Editable Layer Styles), `"merge"` (Merge Layer Styles
-   * into Footage) or `"ignore"` (Ignore Layer Styles). `None` (the
+   * into Footage) or `"ignore"` (Ignore Layer Styles). `null` (the
    * default) follows the machine's sticky "Layer Options" preference when
    * the project was parsed with an `ae_preferences_dir`, falling back to
    * AE's dialog default for the context: `"editable"` for a COMP /
@@ -200,7 +199,7 @@ export class ImportOptions {
   }
 
   /**
-   * When `True`, import the file as part of a numbered image
+   * When `true`, import the file as part of a numbered image
    * sequence. Read / Write.
    */
   get sequence(): boolean {
@@ -213,14 +212,14 @@ export class ImportOptions {
   }
 
   /**
-   * When `True` and `sequence` is also `True`, use alphabetical
+   * When `true` and `sequence` is also `true`, use alphabetical
    * order for sequence frame numbering. Read / Write.
    *
    * Like After Effects, the sequence then takes every file of the
    * imported file's type in its folder, numbered or not, in
    * case-insensitive name order, and is named after the folder.
    *
-   * Setting `True` resets {@link ImportOptions.range_start | range_start} and
+   * Setting `true` resets {@link ImportOptions.range_start | range_start} and
    * {@link ImportOptions.range_end | range_end} to 0 (matching After Effects:
    * an alphabetical sequence cannot carry a frame range).
    */
@@ -244,11 +243,11 @@ export class ImportOptions {
    *
    * Frame numbers refer to the digits in the filenames, not ordinal
    * positions. Has no effect unless {@link ImportOptions.sequence | sequence}
-   * is `True`. A `range_end` of 0 with a non-zero `range_start` is
+   * is `true`. A `range_end` of 0 with a non-zero `range_start` is
    * rejected at import time, as is `range_end < range_start` (both
    * matching After Effects).
    *
-   * @throws {@link ValueError} If set while `force_alphabetical` is `True` (After Effects: "You
+   * @throws {@link ValueError} If set while `force_alphabetical` is `true` (After Effects: "You
    *   cannot set sequence range start for an alphabetical sequence"), or if the value does not fit
    *   the `sspc` `start_frame` field (a `u4`: 0..4294967295).
    */
@@ -276,7 +275,7 @@ export class ImportOptions {
    * not clamped to After Effects' 3-hour ceiling - AE 2026 opens a
    * longer ranged sequence without complaint.
    *
-   * @throws {@link ValueError} If set while `force_alphabetical` is `True`, or if the value does
+   * @throws {@link ValueError} If set while `force_alphabetical` is `true`, or if the value does
    *   not fit the `sspc` `end_frame` field (a `u4`: 0..4294967295).
    */
   get range_end(): number {
@@ -297,16 +296,16 @@ export class ImportOptions {
    * Gates on what py_aep can actually import: the per-extension
    * capability table (`get_import_as_types`) reflects After Effects,
    * while a file whose format py_aep does not implement (absent from
-   * `data.file_formats`, or marked unsupported) returns `False` for
+   * `data.file_formats`, or marked unsupported) returns `false` for
    * every type. `ImportAsType.PROJECT` is never importable (py_aep does
    * not implement project import for any format), so it always returns
-   * `False` even though AE can import `.mov`/`.m4a`/`.aep`/`.aet` as a
-   * project. Likewise `ImportAsType.COMP_CROPPED_LAYERS` is `True` only
+   * `false` even though AE can import `.mov`/`.m4a`/`.aep`/`.aet` as a
+   * project. Likewise `ImportAsType.COMP_CROPPED_LAYERS` is `true` only
    * for SVG, `.ai`/`.pdf` and `.psd`/`.psb`, the formats py_aep crops
    * (AE also crops `.eps` and multi-layer `.exr`).
    *
    * @param type - The import type to check.
-   * @returns `True` if the file can be imported as `type`.
+   * @returns `true` if the file can be imported as `type`.
    */
   can_import_as(type: number): boolean {
     validate_enum(ImportAsType)(type);
@@ -316,9 +315,9 @@ export class ImportOptions {
     if (COMP_CONVERSION_EXTENSIONS.has(suffix)) {
       // Comp-conversion formats (e.g. SVG) have no media-format entry;
       // gate on the import-type table alone.
-      return get_import_as_types(suffix).has(type as any);
+      return get_import_as_types(suffix).has(type as ImportAsType);
     }
-    let fmt: any;
+    let fmt: FileFormat;
     try {
       fmt = get_file_format(suffix);
     } catch (e) {
@@ -336,13 +335,13 @@ export class ImportOptions {
       // Photoshop only.
       return false;
     }
-    return get_import_as_types(suffix).has(type as any);
+    return get_import_as_types(suffix).has(type as ImportAsType);
   }
 
   /**
    * Check whether the filename ends with a number.
    *
-   * @returns A tuple of `(is_numbered, first_number)` where `is_numbered` is `True` when the
+   * @returns A tuple of `(is_numbered, first_number)` where `is_numbered` is `true` when the
    *   filename stem ends with digits and `first_number` is the parsed integer value (or `0` when
    *   not numbered).
    */

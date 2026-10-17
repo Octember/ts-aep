@@ -13,7 +13,7 @@
 
 import { TypeError_ } from "./errors.ts";
 
-export type Factory<T = any> = { readonly __factory__: () => T };
+export type Factory<T = unknown> = { readonly __factory__: () => T };
 
 export function Factory<T>(fn: () => T): Factory<T> {
   return { __factory__: fn };
@@ -60,7 +60,7 @@ export function init_name(name: string): string {
  * orders them.
  */
 export function define<C extends Function>(cls: C, own: Record<string, FieldSpec> = {}): C {
-  const base = Object.getPrototypeOf(cls);
+  const base: Function | null = Object.getPrototypeOf(cls);
   const inherited = (base && FIELDS.get(base)) || [];
   const own_attrs: Attribute[] = Object.entries(own).map(([name, spec]) => ({
     name,
@@ -82,10 +82,10 @@ export function define<C extends Function>(cls: C, own: Record<string, FieldSpec
     Object.defineProperty(cls.prototype, a.name, {
       configurable: true,
       enumerable: true,
-      get(this: any) {
+      get(this: Record<string, unknown>) {
         return this[slot];
       },
-      set(this: any, value: any) {
+      set(this: Record<string, unknown>, value: unknown) {
         this[slot] = convert(value);
       },
     });
@@ -96,7 +96,7 @@ export function define<C extends Function>(cls: C, own: Record<string, FieldSpec
 /** `attrs.fields(cls)` */
 export function fields(cls: Function): readonly Attribute[] {
   // An undecorated subclass inherits its base's `__attrs_attrs__`.
-  for (let c: any = cls; c && c !== Function.prototype; c = Object.getPrototypeOf(c)) {
+  for (let c: Function | null = cls; c && c !== Function.prototype; c = Object.getPrototypeOf(c)) {
     const f = FIELDS.get(c);
     if (f) return f;
   }
@@ -116,10 +116,10 @@ export function has(cls: Function): boolean {
 /** Pass as the constructor argument to skip attrs' `__init__` (a hand-written `__init__` sets fields itself). */
 export const NO_INIT: unique symbol = Symbol("NO_INIT");
 
-function default_of(a: Attribute): any {
+function default_of(a: Attribute): unknown {
   const d = a.default;
   if (d === NOTHING) return NOTHING;
-  if (d && typeof d === "object" && "__factory__" in d) return d.__factory__();
+  if (d && typeof d === "object" && "__factory__" in d) return (d as Factory).__factory__();
   return d;
 }
 
@@ -223,7 +223,7 @@ function attrs_init_slow(self: any, cls: Function, kw: Record<string, any>): voi
       if (d !== NOTHING) self[a.name] = d;
       continue;
     }
-    let v: any;
+    let v: unknown;
     if (Object.prototype.hasOwnProperty.call(kw, a.alias) && kw[a.alias] !== undefined) {
       v = kw[a.alias];
       seen.add(a.alias);

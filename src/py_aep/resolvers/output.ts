@@ -391,14 +391,14 @@ export function resolve_output_filename(
  * Time Span mode (Work Area, Length of Comp, or Custom).
  *
  * @param comp - The composition being rendered.
- * @param rq_settings - The render settings dict.
+ * @param rq_settings - The render settings map.
  * @param effective_frame_rate - The effective frame rate for rendering.
- * @returns Dict with keys: start_frame, end_frame, duration_frames,
+ * @returns Object with keys: start_frame, end_frame, duration_frames,
  *   start_time, end_time, duration_time.
  */
 export function resolve_time_span(
   comp: CompItem,
-  rq_settings: Map<string, any>,
+  rq_settings: Map<string, number | string>,
   effective_frame_rate: number,
 ): {
   start_frame: number;
@@ -422,9 +422,9 @@ export function resolve_time_span(
     duration_frames = round(comp.duration * effective_frame_rate);
     first_rendered_frame = int(comp.display_start_time * effective_frame_rate);
   } else {
-    time_span_start = getitem(rq_settings, "Time Span Start");
-    duration_time = getitem(rq_settings, "Time Span Duration");
-    time_span_end = getitem(rq_settings, "Time Span End");
+    time_span_start = getitem(rq_settings, "Time Span Start") as number;
+    duration_time = getitem(rq_settings, "Time Span Duration") as number;
+    time_span_end = getitem(rq_settings, "Time Span End") as number;
     duration_frames = round(duration_time * effective_frame_rate);
     first_rendered_frame =
       int(comp.display_start_time * effective_frame_rate) +

@@ -31,7 +31,7 @@ export class Fraction {
         [n, d] = float_as_ratio(numerator);
       }
     } else {
-      n = BigInt(numerator as number);
+      n = BigInt(numerator);
       d = BigInt(denominator);
     }
     if (d === 0n) throw new ZeroDivisionError(`Fraction(${n}, 0)`);

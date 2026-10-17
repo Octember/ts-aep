@@ -1,6 +1,6 @@
 // Python's `json.loads` / `json.dumps` (CPython 3.12 C scanner and encoder).
 //
-// Decoded values keep Python's types: an object is a `Map` (a `dict`; source
+// Decoded values keep Python's types: an object is a `Map` (source
 // key order, a repeated key keeps its first position and its last value), a
 // number with a fraction or exponent is a boxed `PyFloat` (so `1.0` stays a
 // float), an integer beyond 2**53 is a `bigint`. NaN / Infinity / -Infinity
@@ -38,13 +38,13 @@ function count_nl(s: string, end: number): number {
 
 export type LoadsOptions = {
   /** `parse_float`: called with the number's text; default boxes it as `PyFloat`. */
-  parse_float?: (text: string) => any;
+  parse_float?: (text: string) => unknown;
   /** `parse_int`: called with the number's text; default `number`, or `bigint` past 2**53. */
-  parse_int?: (text: string) => any;
+  parse_int?: (text: string) => unknown;
   /** `parse_constant`: called with "NaN", "Infinity" or "-Infinity". */
-  parse_constant?: (text: string) => any;
+  parse_constant?: (text: string) => unknown;
   /** `object_pairs_hook`: builds an object from its `[key, value]` pairs (default: `Map`). */
-  object_pairs_hook?: (pairs: [string, any][]) => any;
+  object_pairs_hook?: (pairs: [string, unknown][]) => unknown;
 };
 
 function default_int(text: string): number | bigint {
@@ -92,7 +92,7 @@ export function json_loads(s: string | Uint8Array, opts: LoadsOptions = {}): any
   const parse_float = opts.parse_float ?? default_float;
   const parse_int = opts.parse_int ?? default_int;
   const parse_constant = opts.parse_constant ?? ((c: string) => CONSTANTS[c]);
-  const pairs_hook = opts.object_pairs_hook ?? ((pairs: [string, any][]) => new Map(pairs));
+  const pairs_hook = opts.object_pairs_hook ?? ((pairs: [string, unknown][]) => new Map(pairs));
   const n = text.length;
   const fail = (msg: string, pos: number): never => {
     throw new JSONDecodeError(msg, text, pos);
@@ -151,7 +151,7 @@ export function json_loads(s: string | Uint8Array, opts: LoadsOptions = {}): any
   const NUM = /-?(?:0|[1-9][0-9]*)(\.[0-9]+)?([eE][-+]?[0-9]+)?/y;
 
   // scan_once: returns [value, end] or null (StopIteration) at `i`.
-  const scan_once = (i: number): [any, number] | null => {
+  const scan_once = (i: number): [unknown, number] | null => {
     if (i >= n) return null;
     const c = text[i];
     if (c === '"') return scanstring(i + 1);
@@ -170,8 +170,8 @@ export function json_loads(s: string | Uint8Array, opts: LoadsOptions = {}): any
     return [m[1] !== undefined || m[2] !== undefined ? parse_float(m[0]) : parse_int(m[0]), end];
   };
 
-  const parse_object = (i: number): [any, number] => {
-    const pairs: [string, any][] = [];
+  const parse_object = (i: number): [unknown, number] => {
+    const pairs: [string, unknown][] = [];
     i = skip(i);
     if (text[i] === "}") return [pairs_hook(pairs), i + 1];
     for (;;) {
@@ -190,8 +190,8 @@ export function json_loads(s: string | Uint8Array, opts: LoadsOptions = {}): any
     }
   };
 
-  const parse_array = (i: number): [any[], number] => {
-    const out: any[] = [];
+  const parse_array = (i: number): [unknown[], number] => {
+    const out: unknown[] = [];
     i = skip(i);
     if (text[i] === "]") return [out, i + 1];
     for (;;) {
@@ -220,7 +220,7 @@ export type DumpsOptions = {
   indent?: number | string | null;
   separators?: readonly [string, string] | null;
   /** `default`: called for an object json cannot serialize; returns a serializable stand-in. */
-  default_?: ((o: any) => any) | null;
+  default_?: ((o: unknown) => unknown) | null;
   skipkeys?: boolean;
 };
 
@@ -262,7 +262,7 @@ export function encode_basestring(s: string): string {
   return out + '"';
 }
 
-function is_plain_object(o: any): boolean {
+function is_plain_object(o: unknown): o is Record<string, unknown> {
   if (o === null || typeof o !== "object") return false;
   const p = Object.getPrototypeOf(o);
   return p === Object.prototype || p === null;
@@ -275,16 +275,16 @@ function int_repr(x: number): string {
 
 /**
  * `json.dumps(obj, ...)`. Python types map as elsewhere in pyrt: a `Map` or a
- * plain object is a dict, an array a list/tuple, an integral `number` or a
+ * plain object is a JSON object, an array a JSON array, an integral `number` or a
  * `bigint` an int, a non-integral `number` or a `PyFloat` a float.
  */
-export function json_dumps(obj: any, opts: DumpsOptions = {}): string {
+export function json_dumps(obj: unknown, opts: DumpsOptions = {}): string {
   const { ensure_ascii = true, allow_nan = true, sort_keys = false, skipkeys = false } = opts;
   const default_ = opts.default_ ?? null;
   const indent = typeof opts.indent === "number" ? " ".repeat(opts.indent) : (opts.indent ?? null);
   const [item_sep, key_sep] = opts.separators ?? (indent !== null ? [",", ": "] : [", ", ": "]);
   const enc = ensure_ascii ? encode_basestring_ascii : encode_basestring;
-  const markers = new Set<any>();
+  const markers = new Set<unknown>();
 
   const floatstr = (x: number): string => {
     let text: string;
@@ -296,7 +296,7 @@ export function json_dumps(obj: any, opts: DumpsOptions = {}): string {
     return text;
   };
 
-  const encode_scalar = (o: any): string | undefined => {
+  const encode_scalar = (o: unknown): string | undefined => {
     if (o == null) return "null";
     if (o === true) return "true";
     if (o === false) return "false";
@@ -307,7 +307,7 @@ export function json_dumps(obj: any, opts: DumpsOptions = {}): string {
     return undefined;
   };
 
-  const key_str = (k: any): string | null => {
+  const key_str = (k: unknown): string | null => {
     if (typeof k === "string" || k instanceof String) return String(k);
     if (k instanceof PyFloat) return floatstr(k.value);
     if (typeof k === "number") return Number.isInteger(k) ? int_repr(k) : floatstr(k);
@@ -319,7 +319,7 @@ export function json_dumps(obj: any, opts: DumpsOptions = {}): string {
     throw new TypeError_(`keys must be str, int, float, bool or None, not ${type_name(k)}`);
   };
 
-  const encode = (o: any, level: number): string => {
+  const encode = (o: unknown, level: number): string => {
     const s = encode_scalar(o);
     if (s !== undefined) return s;
     const is_list = Array.isArray(o);
@@ -333,7 +333,7 @@ export function json_dumps(obj: any, opts: DumpsOptions = {}): string {
       return r;
     }
     if (markers.has(o)) throw new ValueError("Circular reference detected");
-    let items: [any, any][] | any[];
+    let items: [unknown, unknown][];
     if (is_list) {
       if (o.length === 0) return "[]";
       items = o;
@@ -355,7 +355,7 @@ export function json_dumps(obj: any, opts: DumpsOptions = {}): string {
     if (is_list) {
       for (const v of items) parts.push(encode(v, inner));
     } else {
-      for (const [k, v] of items as [any, any][]) {
+      for (const [k, v] of items) {
         const ks = key_str(k);
         if (ks === null) continue;
         parts.push(enc(ks) + key_sep + encode(v, inner));

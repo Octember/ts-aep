@@ -10,7 +10,7 @@ import type { ClassicPrdaChunk } from "../../../binary/misc_chunks.ts";
 export class ClassicRendererOptions extends RendererOptionsBase {
   declare _body: ClassicPrdaChunk;
 
-  static _SPEC: Map<string, [string, any]> = new Map<string, [string, any]>([
+  static _SPEC: Map<string, [string, typeof ShadowMapResolution]> = new Map<string, [string, typeof ShadowMapResolution]>([
     ["Shadow Map Resolution", ["shadow_map_resolution", ShadowMapResolution]],
   ]);
 
