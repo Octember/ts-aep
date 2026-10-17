@@ -262,8 +262,8 @@ export function _reorder_and_fill(
   const ordered: (Property | PropertyGroup)[] = [];
   for (const spec of specs) {
     const mn = spec.match_name;
-    if (existing.has(mn)) {
-      const child = existing.get(mn)!;
+    const child = existing.get(mn);
+    if (child !== undefined) {
       child._auto_name = spec.auto_name;
       if (!(spec instanceof GroupSpec) && child instanceof Property) {
         instance_dict(child).set("_color", spec.color);
@@ -1292,7 +1292,7 @@ export class PropertyGroup extends PropertyBase {
       match_name,
       this._free_numbered_name(base, same_type + 1),
       {
-        subgroups: (_VECTOR_SUBGROUPS.get(match_name) ?? []) as [string, number, number][],
+        subgroups: _VECTOR_SUBGROUPS.get(match_name) ?? [],
         path_time_base,
       },
     );
