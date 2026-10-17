@@ -63,6 +63,9 @@ export class Struct {
   /** Number of values `unpack` yields. */
   readonly n_values: number;
 
+  /** Compiled `unpack_from` body; null where code generation is blocked (CSP, Workers). */
+  private unpacker: Unpacker | null | undefined;
+
   unpack(data: Uint8Array): any[] {
     if (data.length !== this.size) {
       throw new StructError(`unpack requires a buffer of ${this.size} bytes`);
@@ -74,6 +77,8 @@ export class Struct {
     if (data.length - offset < this.size) {
       throw new StructError(`unpack_from requires a buffer of at least ${this.size + offset} bytes`);
     }
+    if (this.unpacker === undefined) this.unpacker = compile_unpack(this.codes, this.le);
+    if (this.unpacker !== null) return this.unpacker(data, offset, scratch, half_to_float);
     // Integers are assembled from bytes and floats go through a scratch view:
     // `data.buffer` would make JSC materialize a backing store per call.
     const d = data;
@@ -206,6 +211,59 @@ export class Struct {
         p += SIZES[ch];
       }
     }
+  }
+}
+
+type Unpacker = (
+  d: Uint8Array,
+  p: number,
+  scratch: (d: Uint8Array, p: number, n: number) => DataView,
+  half_to_float: (h: number) => number,
+) => any[];
+
+/** Straight-line `unpack_from` for `codes`: one expression per value at a fixed offset. */
+function compile_unpack(codes: Code[], le: boolean): Unpacker | null {
+  const u16 = (k: number) => (le ? `(d[p+${k}]|d[p+${k + 1}]<<8)` : `(d[p+${k}]<<8|d[p+${k + 1}])`);
+  const u32 = (k: number) =>
+    le
+      ? `(d[p+${k}]|d[p+${k + 1}]<<8|d[p+${k + 2}]<<16|d[p+${k + 3}]<<24)`
+      : `(d[p+${k}]<<24|d[p+${k + 1}]<<16|d[p+${k + 2}]<<8|d[p+${k + 3}])`;
+  const exprs: string[] = [];
+  let k = 0;
+  for (const { ch, count } of codes) {
+    if (ch === "x") {
+      k += count;
+      continue;
+    }
+    if (ch === "s" || ch === "p") {
+      exprs.push(`d.slice(p+${k},p+${k + count})`);
+      k += count;
+      continue;
+    }
+    if (exprs.length + count > 256) return null;
+    for (let i = 0; i < count; i++) {
+      switch (ch) {
+        case "c": exprs.push(`d.slice(p+${k},p+${k + 1})`); break;
+        case "b": exprs.push(`d[p+${k}]<<24>>24`); break;
+        case "B": exprs.push(`d[p+${k}]`); break;
+        case "?": exprs.push(`d[p+${k}]!==0`); break;
+        case "h": exprs.push(`${u16(k)}<<16>>16`); break;
+        case "H": exprs.push(u16(k)); break;
+        case "i": case "l": exprs.push(`${u32(k)}|0`); break;
+        case "I": case "L": exprs.push(`${u32(k)}>>>0`); break;
+        case "q": exprs.push(`scratch(d,p+${k},8).getBigInt64(0,${le})`); break;
+        case "Q": exprs.push(`scratch(d,p+${k},8).getBigUint64(0,${le})`); break;
+        case "e": exprs.push(`half_to_float(${u16(k)})`); break;
+        case "f": exprs.push(`scratch(d,p+${k},4).getFloat32(0,${le})`); break;
+        case "d": exprs.push(`scratch(d,p+${k},8).getFloat64(0,${le})`); break;
+      }
+      k += SIZES[ch];
+    }
+  }
+  try {
+    return new Function("d", "p", "scratch", "half_to_float", `return [${exprs.join(",")}];`) as Unpacker;
+  } catch {
+    return null;
   }
 }
 
