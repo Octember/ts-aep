@@ -222,10 +222,8 @@ export function _coerce_enum(enum_class: LabeledEnum, value: unknown): number {
     throw new TypeError_(`Expected ${enum_class.__name__}, int, or str, got bool`);
   }
   if (typeof value === "number" && Number.isInteger(value)) {
-    try {
-      return enum_class.of(value);
-    } catch (e) {
-      if (!(e instanceof ValueError)) throw e;
+    const member = enum_class.of_or_null(value);
+    if (member === null) {
       const members = enum_class
         .members()
         .map((m) => `${enum_class.name_of(m)} (${int(m)})`)
@@ -235,6 +233,7 @@ export function _coerce_enum(enum_class: LabeledEnum, value: unknown): number {
           `Valid members: ${members}`,
       );
     }
+    return member;
   }
   if (typeof value === "string") {
     const by_label = new Map<string, number>();

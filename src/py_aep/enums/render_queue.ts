@@ -4,7 +4,7 @@
  * These enums match the values used in After Effects ExtendScript.
  */
 
-import { int, int_enum, ValueError, type EnumValue } from "../../pyrt/index.ts";
+import { int, int_enum, type EnumValue } from "../../pyrt/index.ts";
 
 /**
  * Format for getting render settings.
@@ -32,12 +32,7 @@ export const LogType = int_enum("LogType", {
 }, {
   /** Convert binary value to LogType. */
   from_binary(value: number): number {
-    try {
-      return this.of(value + 3212);
-    } catch (e) {
-      if (!(e instanceof ValueError)) throw e;
-      return this.ERRORS_ONLY;
-    }
+    return this.of_or_null(value + 3212) ?? this.ERRORS_ONLY;
   },
 
   /** Convert LogType to binary value. */
@@ -64,12 +59,7 @@ export const RQItemStatus = int_enum("RQItemStatus", {
 }, {
   /** Convert binary value to RQItemStatus. */
   from_binary(value: number): number {
-    try {
-      return this.of(value + 3013);
-    } catch (e) {
-      if (!(e instanceof ValueError)) throw e;
-      return this.UNQUEUED;
-    }
+    return this.of_or_null(value + 3013) ?? this.UNQUEUED;
   },
 
   /** Convert RQItemStatus to binary value. */
