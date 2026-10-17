@@ -73,7 +73,13 @@ type Kwargs<V> = ChunkFieldOptions<V, object>;
  * the field is installed on.
  */
 export type ChunkFieldOptions<T, O> = {
-  transform?: ((value: FieldValue) => T) | null;
+  /**
+   * Reads the stored field value as `T`. Each field's transform takes that
+   * field's own raw type, which the shared option type cannot name; method
+   * syntax compares the parameter bivariantly so a transform typed for its
+   * field is accepted.
+   */
+  transform?: { read(value: FieldValue): T }["read"] | null;
   reverse?: ((value: NoInfer<T>) => unknown) | null;
   read_only?: boolean;
   validate?: ((value: NoInfer<T>, obj: NoInfer<O>) => void) | null;
@@ -437,7 +443,7 @@ export class ChunkField<
    *   declared field type (`declare depth: OutputColorDepth | number`).
    */
   static enum<
-    E extends EnumHelpers<unknown>,
+    E extends EnumHelpers<number | string>,
     Raw = never,
     O extends object = object,
     A extends AttrName<O> = AttrName<O>,
@@ -449,7 +455,7 @@ export class ChunkField<
     kw: ChunkFieldEnumKw<EnumValue<E> | Raw, O, RawField<O, A, F>> & { allow_out_of_enum_values: true },
   ): ChunkField<EnumValue<E> | Raw, O>;
   static enum<
-    E extends EnumHelpers<unknown>,
+    E extends EnumHelpers<number | string>,
     O extends object = object,
     A extends AttrName<O> = AttrName<O>,
     F extends ChunkFieldKey<O, A> = ChunkFieldKey<O, A>,
@@ -459,21 +465,21 @@ export class ChunkField<
     field: string & F,
     kw?: ChunkFieldEnumKw<EnumValue<E>, O, RawField<O, A, F>> & { allow_out_of_enum_values?: false },
   ): ChunkField<EnumValue<E>, O>;
-  static enum<V extends number>(
+  static enum<V extends number | string, R extends V>(
     enum_cls: EnumHelpers<V>,
     chunk_attr: string,
     field: string,
-    kw: { allow_out_of_enum_values?: boolean } & Kwargs<V> = {},
+    kw: { allow_out_of_enum_values?: boolean } & ChunkFieldEnumKw<V, object, R> = {},
   ): ChunkField<V> {
     const { allow_out_of_enum_values = false, ...kwargs } = kw;
     if (!("transform" in kwargs)) kwargs.transform = bound_enum_method(enum_cls, "from_binary", enum_cls);
     if (!("reverse" in kwargs)) kwargs.reverse = bound_enum_method(enum_cls, "to_binary", int);
     if (allow_out_of_enum_values) {
+      // A stored value outside the enum reads back raw instead of raising;
+      // the overloads require the raw field type to fit the declared one.
       const transform = kwargs.transform;
       if (transform != null) kwargs.transform = enum_or_raw(transform);
-      if (!kwargs.read_only) {
-        if (!("validate" in kwargs)) kwargs.validate = validate_enum(enum_cls);
-      }
+      if (!kwargs.read_only && !("validate" in kwargs)) kwargs.validate = validate_enum(enum_cls);
     }
     return new this(chunk_attr, field, kwargs);
   }
