@@ -60,6 +60,21 @@ export class BytesIO {
     return data.length;
   }
 
+  /** `fp.write(s.pack(*values))`, packing straight into the buffer when appending. */
+  pack(s: Struct, values: any[]): number {
+    if (this.pos !== this.len) return this.write(s.pack(...values));
+    const end = this.pos + s.size;
+    if (end > this.buf.length) {
+      const grown = new Uint8Array(Math.max(end, this.buf.length * 2));
+      grown.set(this.buf.subarray(0, this.len));
+      this.buf = grown;
+    }
+    // Bytes past `len` are never observable, so a failed pack leaves no trace.
+    s.pack_to(this.buf, this.pos, values);
+    this.pos = this.len = end;
+    return s.size;
+  }
+
   tell(): number {
     return this.pos;
   }

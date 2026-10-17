@@ -32,10 +32,36 @@ import {
   struct,
   type IO,
 } from "../../pyrt/index.ts";
-import { _HEADER_STRUCT, read_bytes, read_fmt, read_pad, write_bytes, write_fmt, write_pad } from "./bin_utils.ts";
+import {
+  _HEADER_STRUCT,
+  _get_struct_be,
+  read_bytes,
+  read_fmt,
+  read_pad,
+  write_bytes,
+  write_fmt,
+  write_pad,
+  write_values,
+} from "./bin_utils.ts";
 import { _decode_fields, _encode_value, _struct_info, type FmtItem } from "./fmt_field.ts";
 import { CHUNK_TYPES, register } from "./registry.ts";
 import type { HeadChunk } from "./item_chunks.ts";
+
+const _PREFIX_STRUCTS = new WeakMap<object, struct.Struct[]>();
+
+/** Big-endian struct for the first `n` of `data_fields`, whose formats join to `fmt`. */
+function _prefix_struct(fmt: string, data_fields: readonly any[], n: number): struct.Struct {
+  if (n === data_fields.length) return _get_struct_be(fmt);
+  let by_n = _PREFIX_STRUCTS.get(data_fields);
+  if (by_n === undefined) _PREFIX_STRUCTS.set(data_fields, (by_n = []));
+  let s = by_n[n];
+  if (s === undefined) {
+    let parts = "";
+    for (let i = 0; i < n; i++) parts += data_fields[i].metadata["fmt"];
+    s = by_n[n] = _get_struct_be(parts);
+  }
+  return s;
+}
 
 // ---------------------------------------------------------------------------
 // Chunk base (also serves as fallback for unregistered types)
@@ -219,19 +245,14 @@ export class Chunk extends AttrsBase {
         written += write_bytes(fp, struct.pack(fe + f.metadata["fmt"], value));
       }
     } else {
-      // Build format for fields we're writing
-      const write_parts: string[] = [];
-      for (let i = 0; i < last_idx; i++) write_parts.push(data_fields[i].metadata["fmt"]);
-      const w_fmt = write_parts.join("");
-
-      const write_values: any[] = [];
+      const values: any[] = [];
       for (let i = 0; i < last_idx; i++) {
         const f = data_fields[i];
         let value = getattr(this, f.name);
         value = _encode_value(value, i, encodings, coerces, ">", f.metadata["fmt"]);
-        write_values.push(value);
+        values.push(value);
       }
-      written = write_parts.length ? write_fmt(fp, w_fmt, ...write_values) : 0;
+      written = last_idx ? write_values(fp, _prefix_struct(fmt, data_fields, last_idx), values) : 0;
     }
 
     if (items_info != null) {

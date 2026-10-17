@@ -103,7 +103,7 @@ export function _get_struct(full_fmt: string): struct.Struct {
 const _BE_STRUCTS = new Map<string, struct.Struct>();
 
 /** `_get_struct(">" + fmt)` without building the key string on a hit. */
-function _get_struct_be(fmt: string): struct.Struct {
+export function _get_struct_be(fmt: string): struct.Struct {
   let s = _BE_STRUCTS.get(fmt);
   if (s === undefined) {
     s = _get_struct(">" + fmt);
@@ -143,8 +143,16 @@ export function read_fmt(fmt: string, fp: IO, endian = ">"): any[] {
 export function write_fmt(fp: IO, fmt: string, ...args: any[]): number {
   const last = args[args.length - 1];
   const opts = last !== null && typeof last === "object" && Object.getPrototypeOf(last) === Object.prototype ? args.pop() : {};
-  const data = _get_struct((opts.endian ?? ">") + fmt).pack(...args);
-  fp.write(data);
+  const endian = opts.endian ?? ">";
+  return write_values(fp, endian === ">" ? _get_struct_be(fmt) : _get_struct(endian + fmt), args);
+}
+
+/** `write_fmt` with a resolved struct and the values as an array. */
+export function write_values(fp: IO, s: struct.Struct, values: any[]): number {
+  const sink: { write(data: Uint8Array): unknown } = fp;
+  if (fp instanceof BytesIO) return fp.pack(s, values);
+  const data = s.pack(...values);
+  sink.write(data);
   return data.length;
 }
 

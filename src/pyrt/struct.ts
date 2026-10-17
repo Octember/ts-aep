@@ -113,22 +113,35 @@ export class Struct {
   }
 
   pack(...values: any[]): Uint8Array {
+    const out = new Uint8Array(this.size);
+    this.pack_to(out, 0, values);
+    return out;
+  }
+
+  /**
+   * `pack(*values)` written into `out` at `offset`, which must have room for
+   * `size` bytes. Pad bytes are zeroed, so `out` need not be zero-filled; on a
+   * bad value, bytes before the failing field are already written.
+   */
+  pack_to(out: Uint8Array, offset: number, values: any[]): void {
     if (values.length !== this.n_values) {
       throw new StructError(`pack expected ${this.n_values} items for packing (got ${values.length})`);
     }
-    const out = new Uint8Array(this.size);
     const le = this.le;
-    let p = 0;
+    let p = offset;
     let vi = 0;
     for (const { ch, count } of this.codes) {
       if (ch === "x") {
+        out.fill(0, p, p + count);
         p += count;
         continue;
       }
       if (ch === "s" || ch === "p") {
         const v = values[vi++];
         if (!(v instanceof Uint8Array)) throw new StructError("argument for 's' must be a bytes object");
-        out.set(v.subarray(0, count), p);
+        const n = Math.min(v.length, count);
+        for (let i = 0; i < n; i++) out[p + i] = v[i];
+        if (n < count) out.fill(0, p + n, p + count);
         p += count;
         continue;
       }
@@ -193,7 +206,6 @@ export class Struct {
         p += SIZES[ch];
       }
     }
-    return out;
   }
 }
 
