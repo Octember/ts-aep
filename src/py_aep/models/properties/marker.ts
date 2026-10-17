@@ -169,7 +169,7 @@ export class MarkerValue {
       }
       if (added.length > 0) {
         const kept = new_.slice(0, new_.length - added.length);
-        const anchor = kept.length > 0 ? kept.at(-1)! : this._cue_point_name_utf8;
+        const anchor = kept.length > 0 ? kept[kept.length - 1] :this._cue_point_name_utf8;
         let pos: number;
         try {
           pos = index_by_identity(chunks, anchor);

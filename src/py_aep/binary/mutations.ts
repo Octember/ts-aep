@@ -958,7 +958,7 @@ export function build_vector_element(
   match_name: string,
   name: string,
   kw: {
-    subgroups?: [string, number, number][];
+    subgroups?: ReadonlyArray<readonly [string, number, number]>;
     path_time_base?: number | null;
   } = {},
 ): [TdmnChunk, ListChunk] {

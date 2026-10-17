@@ -34,14 +34,15 @@ import { _EMPTY_CDAT_PAD, GRADIENT_KIND, MARKER_KIND, ORIENTATION_KIND, SHAPE_KI
 import { PropertyBase } from "./property_base.ts";
 import { Shape } from "./shape.ts";
 import type { PropertyGroup } from "./property_group.ts";
-import { type MaskPropertyGroup } from "./mask_property_group.ts";
-import { deferred, deepcopy, getitem, isclose, py_eq, sorted, warn, int, round, floordiv, TypeError_, ValueError, IndexError, AttributeError, NotImplementedError, py_assert, repr, hasattr, getattr, min, max, range, zip, float, lshift, rshift, and, or, b, descriptor, list_mul, type_name, type ClassAttributes, py_or } from "../../../pyrt/index.ts";
+import { deferred, deepcopy, getitem, isclose, py_eq, sorted, warn, int, round, floordiv, TypeError_, ValueError, IndexError, AttributeError, NotImplementedError, StopIteration, py_assert, repr, hasattr, getattr, min, max, range, zip, float, lshift, rshift, and, or, b, descriptor, list_mul, type_name, type ClassAttributes, py_or } from "../../../pyrt/index.ts";
 
 const _property_group = deferred<typeof import("./property_group.ts")>("py_aep/models/properties/property_group");
 import { AVItem } from "../items/av_item.ts";
 import { FootageItem } from "../items/footage.ts";
 import { resolve_essential_property_controller, resolve_essential_property_source } from "../../resolvers/essential_properties.ts";
 const _folder = deferred<typeof import("../items/folder.ts")>("py_aep/models/items/folder");
+const _av_layer = deferred<typeof import("../layers/av_layer.ts")>("py_aep/models/layers/av_layer");
+const _mask_property_group = deferred<typeof import("./mask_property_group.ts")>("py_aep/models/properties/mask_property_group");
 
 export const logger = {
   debug(_m: string) {},
@@ -81,7 +82,11 @@ export const _UNSET: unique symbol = Symbol("_UNSET"); // sentinel for unset min
 export const _PERCENT_MATCH_NAMES: Set<string> = new Set(["ADBE Opacity", "ADBE Scale", "ADBE Mask Opacity"]);
 
 export const _SEPARATION_LEADER = "ADBE Position";
-export const _SEPARATION_FOLLOWERS: string[] = ["ADBE Position_0", "ADBE Position_1", "ADBE Position_2"];
+export const _SEPARATION_FOLLOWERS: readonly string[] & readonly ["ADBE Position_0", "ADBE Position_1", "ADBE Position_2"] = [
+  "ADBE Position_0",
+  "ADBE Position_1",
+  "ADBE Position_2",
+];
 
 export function _get_max(prop: Property): number | null {
   const v = prop.max_value;
@@ -976,13 +981,13 @@ export class Property<V extends PropertyValue = any> extends PropertyBase {
     if (!this._tdsb.synthetic) return;
 
     const parent = this.parent_property;
-    if (this.match_name === "ADBE Mask Shape" && parent != null && parent._is_mask) {
+    if (this.match_name === "ADBE Mask Shape" && parent != null && parent._is_mask && parent instanceof _mask_property_group().MaskPropertyGroup) {
       // A path-less mask stores no path. Whatever first writes its
       // Mask Path (a value, a key, an expression) makes AE write the
       // default full-frame rectangle it stands for; a bare placeholder
       // instead is "file is damaged" (AE 2026). The builder replaces
       // the placeholder in place and rebinds this property to it.
-      (parent as MaskPropertyGroup)._materialize_mask_shape();
+      parent._materialize_mask_shape();
       return;
     }
     if (parent != null) parent._ensure_materialized();
@@ -1009,8 +1014,8 @@ export class Property<V extends PropertyValue = any> extends PropertyBase {
     this._tdbs.synthetic = value;
     for (const chunk of this._tdbs.chunks) {
       chunk.synthetic = value;
-      if (hasattr(chunk, "chunks")) {
-        for (const nested of (chunk as ContainerChunk).chunks) nested.synthetic = value;
+      if (hasattr(chunk, "chunks") && (chunk instanceof ListChunk || chunk instanceof ContainerChunk)) {
+        for (const nested of chunk.chunks) nested.synthetic = value;
       }
     }
   }
@@ -1416,6 +1421,8 @@ export class Property<V extends PropertyValue = any> extends PropertyBase {
    * Applied in reverse order: effect point normalization, color
    * conversion, then percent scaling.
    */
+  _unresolve_value(value: number | number[]): number | number[];
+  _unresolve_value(value: _ValueType | boolean): _ValueType | boolean;
   _unresolve_value(value: _ValueType | boolean): _ValueType | boolean {
     if (value == null) return null;
     if (!(typeof value === "number" || typeof value === "boolean" || Array.isArray(value))) return value;
@@ -1443,7 +1450,7 @@ export class Property<V extends PropertyValue = any> extends PropertyBase {
     // 1. Reverse percent (0-100 -> 0-1 fraction)
     if (_PERCENT_MATCH_NAMES.has(this.match_name)) {
       if (typeof value === "number" || typeof value === "boolean") {
-        value = (value as number) / 100.0;
+        value = Number(value) / 100.0;
       } else if (Array.isArray(value)) {
         value = value.map((v) => v / 100.0);
       }
@@ -1508,8 +1515,8 @@ export class Property<V extends PropertyValue = any> extends PropertyBase {
   _separation_followers(): Property<number>[] | null {
     if (!this.is_separation_leader || !this.dimensions_separated) return null;
     const followers = Array.from(range(3), (dim) => this.get_separation_follower(dim));
-    if (followers.some((follower) => follower == null)) return null;
-    return followers as Property<number>[];
+    if (!followers.every((follower) => follower != null)) return null;
+    return followers;
   }
 
   /** The Curves effect's static curves, decoded from its aRbp. */
@@ -1574,7 +1581,8 @@ export class Property<V extends PropertyValue = any> extends PropertyBase {
     const keys = this.keyframes;
     if (time <= keys[0].time) return this._keyframe_curves(keys[0]);
     if (time >= keys[keys.length - 1].time) return this._keyframe_curves(keys[keys.length - 1]);
-    const previous = [...keys].reverse().find((k) => k.time <= time)!;
+    const previous = [...keys].reverse().find((k) => k.time <= time);
+    if (previous === undefined) throw new StopIteration();
     if (isclose(previous.time, time, 0.0, 1e-9) || previous.out_interpolation_type === KeyframeInterpolationType.HOLD) {
       return this._keyframe_curves(previous);
     }
@@ -1666,7 +1674,9 @@ export class Property<V extends PropertyValue = any> extends PropertyBase {
       // once one is needed. Built on every read, not cached, so it
       // follows the layer's source and a read, edited and re-assigned
       // value is still written.
-      const [w, h] = (this._containing_layer as AVLayer)._mask_scale;
+      const layer = this._containing_layer;
+      if (!(layer instanceof _av_layer().AVLayer)) throw new AttributeError("_mask_scale");
+      const [w, h] = layer._mask_scale;
       return new Shape([
         [0.0, 0.0],
         [0.0, h],
@@ -1773,8 +1783,8 @@ export class Property<V extends PropertyValue = any> extends PropertyBase {
       // stays all-zeros); _ensure_materialized has appended one.
       const index = typeof value === "number" || typeof value === "boolean" ? int(value) : 0;
       for (const chunk of this._tdbs.chunks) {
-        if (("chunk_type" in chunk ? chunk.chunk_type : "") === "tdli") {
-          (chunk as S4Chunk).value = index;
+        if (("chunk_type" in chunk ? chunk.chunk_type : "") === "tdli" && chunk instanceof S4Chunk) {
+          chunk.value = index;
           break;
         }
       }
@@ -1906,9 +1916,8 @@ export class Property<V extends PropertyValue = any> extends PropertyBase {
     // is 3D-spatial but degrees), so it must win over the pixels heuristic.
     const mapped = UNITS_TEXT_MAP.get(this.match_name) ?? null;
     if (mapped != null) return mapped;
-    if (
-      ([PropertyValueType.TwoD_SPATIAL, PropertyValueType.ThreeD_SPATIAL] as number[]).includes(this._property_value_type!)
-    ) {
+    const value_type = this._property_value_type;
+    if (value_type === PropertyValueType.TwoD_SPATIAL || value_type === PropertyValueType.ThreeD_SPATIAL) {
       return "pixels";
     }
     return "";
@@ -2034,14 +2043,14 @@ export class Property<V extends PropertyValue = any> extends PropertyBase {
     for (const part of this._dropdown_param_defs()) {
       let current: string | null = null;
       for (const chunk of part.chunks) {
-        if (chunk.chunk_type === "tdmn") {
-          current = (chunk as TdmnChunk).value;
+        if (chunk.chunk_type === "tdmn" && chunk instanceof TdmnChunk) {
+          current = chunk.value;
         } else if (current === this.match_name) {
           if (chunk instanceof EnumPardChunk) {
             // AE keeps the default choice unchanged.
             chunk.nb_options = items.length;
-          } else if (chunk.chunk_type === "pdnm") {
-            const utf8 = find_by_type((chunk as ContainerChunk).chunks, "Utf8");
+          } else if (chunk.chunk_type === "pdnm" && chunk instanceof ContainerChunk) {
+            const utf8 = find_by_type(chunk.chunks, "Utf8");
             utf8.value = joined;
             written = true;
           }
@@ -2089,7 +2098,8 @@ export class Property<V extends PropertyValue = any> extends PropertyBase {
     // The residue table first: a synthesized effect parameter carries its
     // pard's verdict in `_can_vary_over_time`, and the Puppet Engine's
     // pard claims it varies where AE says it does not.
-    if (_CANVARY_OVERRIDES.has(this.match_name)) return _CANVARY_OVERRIDES.get(this.match_name)!;
+    const override = _CANVARY_OVERRIDES.get(this.match_name);
+    if (override !== undefined) return override;
     if (this._can_vary_over_time != null) return this._can_vary_over_time;
     // NO_VALUE properties always report canVaryOverTime=True in AE,
     // even though the binary byte says otherwise.
@@ -2134,10 +2144,10 @@ export class Property<V extends PropertyValue = any> extends PropertyBase {
     }
 
     const followers = Array.from(range(3), (dim) => this.get_separation_follower(dim));
-    if (followers.some((follower) => follower == null)) {
+    if (!followers.every((follower) => follower != null)) {
       throw new ValueError(`${repr(this.match_name)} has no separation followers to transfer to`);
     }
-    const live = followers as Property<number>[];
+    const live = followers;
     const animated = this.keyframes?.length > 0 || live.some((follower) => follower.keyframes?.length > 0);
     if (value) {
       if (animated) {
@@ -2308,8 +2318,8 @@ export class Property<V extends PropertyValue = any> extends PropertyBase {
     // first dimension that has a keyframe at that time.
     const interpolation = times.map((time) => {
       for (const per_dimension of keys_at) {
-        if (per_dimension.has(time)) {
-          const kf = per_dimension.get(time)!;
+        const kf = per_dimension.get(time);
+        if (kf !== undefined) {
           return [kf.in_interpolation_type, kf.out_interpolation_type] as const;
         }
       }
@@ -2638,7 +2648,7 @@ export class Property<V extends PropertyValue = any> extends PropertyBase {
     }
     const match_name = _SEPARATION_FOLLOWERS[dim];
     // A separated leader on a 2D layer genuinely has no Z follower.
-    return parent._child_or_null(match_name) as Property<number> | null;
+    return parent._child_or_null(match_name);
   }
 
   /**
@@ -2684,7 +2694,8 @@ export class Property<V extends PropertyValue = any> extends PropertyBase {
       const leader = this.separation_leader;
       if (leader != null && !leader.dimensions_separated) {
         const layer = this._containing_layer;
-        if (([LayerType.CAMERA, LayerType.LIGHT] as number[]).includes(layer._ldta.layer_type)) return true;
+        const layer_type = layer._ldta.layer_type;
+        if (layer_type === LayerType.CAMERA || layer_type === LayerType.LIGHT) return true;
       }
     }
     // Source Text has no meaningful default - always modified when it
@@ -3075,14 +3086,16 @@ export class Property<V extends PropertyValue = any> extends PropertyBase {
     const interp = KeyframeInterpolationType.of(type);
     if (!this.can_vary_over_time) return false;
     if (interp === KeyframeInterpolationType.HOLD) return true;
-    if (([PropertyValueType.MARKER, PropertyValueType.TEXT_DOCUMENT] as number[]).includes(this.property_value_type)) {
+    const value_type = this.property_value_type;
+    if (value_type === PropertyValueType.MARKER || value_type === PropertyValueType.TEXT_DOCUMENT) {
       return false;
     }
     // Only the pard-derived control type is authoritative for the
     // checkbox/dropdown test: the tdb4 flag fallback in
     // _determine_property_types maps any 1-D integer scalar to BOOLEAN,
     // but integer sliders (e.g. Mosaic blocks) interpolate in AE.
-    return !([PropertyControlType.BOOLEAN, PropertyControlType.ENUM] as number[]).includes(this._property_control_type!);
+    const control_type = this._property_control_type;
+    return !(control_type === PropertyControlType.BOOLEAN || control_type === PropertyControlType.ENUM);
   }
 
   // -- Keyframe mutation -------------------------------------------------
@@ -3760,7 +3773,9 @@ export class Property<V extends PropertyValue = any> extends PropertyBase {
     let dst_w: number;
     let dst_h: number;
     if (is_mask_path) {
-      [dst_w, dst_h] = (this._containing_layer as AVLayer)._mask_scale;
+      const layer = this._containing_layer;
+      if (!(layer instanceof _av_layer().AVLayer)) throw new AttributeError("_mask_scale");
+      [dst_w, dst_h] = layer._mask_scale;
     } else {
       [dst_w, dst_h] = [1.0, 1.0];
     }
@@ -3776,8 +3791,8 @@ export class Property<V extends PropertyValue = any> extends PropertyBase {
     }
     let tensions: number[] | null = null;
     const mask = this._parent_property;
-    if (is_mask_path && mask != null && mask._is_mask) {
-      if ((mask as MaskPropertyGroup).roto_bezier) {
+    if (is_mask_path && mask != null && mask._is_mask && mask instanceof _mask_property_group().MaskPropertyGroup) {
+      if (mask.roto_bezier) {
         const own = shape._own_tensions();
         const count = floordiv(points.length, 3);
         tensions = own.length === count ? own : list_mul([1.0], count);
@@ -3965,8 +3980,7 @@ export class Property<V extends PropertyValue = any> extends PropertyBase {
     let wrapper = this._wrapper;
     if (wrapper == null) {
       wrapper =
-        chunks.find((c) => c instanceof ListChunk && c.chunks.some((cc) => cc === this._tdbs)) as ListChunk | undefined ??
-        null;
+        chunks.find((c): c is ListChunk => c instanceof ListChunk && c.chunks.some((cc) => cc === this._tdbs)) ?? null;
     }
     if (wrapper != null) {
       // The wrapper exists but has no value container: add it after
@@ -4519,7 +4533,7 @@ export class _EssentialOverrideProperty extends Property {
    */
   _override_source(): Property | null {
     const cached = this._ov_src !== undefined ? this._ov_src : _UNSET;
-    if (cached !== _UNSET) return cached as Property | null;
+    if (cached !== _UNSET) return cached;
     const src = this.essential_property_source;
     const resolved = src instanceof Property ? src : null;
     this._ov_src = resolved;
@@ -4533,7 +4547,7 @@ export class _EssentialOverrideProperty extends Property {
    */
   _override_controller_name(): string | null {
     const cached = this._ov_ctrl_name !== undefined ? this._ov_ctrl_name : _UNSET;
-    if (cached !== _UNSET) return cached as string | null;
+    if (cached !== _UNSET) return cached;
     const controller = resolve_essential_property_controller(this);
     const name = controller != null ? controller.name : null;
     this._ov_ctrl_name = name;
