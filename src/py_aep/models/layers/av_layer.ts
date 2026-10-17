@@ -27,7 +27,9 @@ import { shape_layer_rect } from "../../resolvers/shape_bounds.ts";
 import { text_ink_rect } from "../../resolvers/text_ink.ts";
 import { type Mat4, build_world_matrix, camera_ray, intersect_layer_plane, project_to_comp, transform_from_points } from "../../resolvers/transform.ts";
 import { ChunkField } from "../descriptors.ts";
+import type { Chunk } from "../../binary/chunk.ts";
 import type { AVItem } from "../items/av_item.ts";
+import type { FootageItem } from "../items/footage.ts";
 import type { CompItem } from "../items/composition.ts";
 import { Property } from "../properties/property.ts";
 import type { PropertyGroup } from "../properties/property_group.ts";
@@ -66,7 +68,7 @@ export function _would_create_cycle(target_comp: CompItem, new_source: AVItem): 
   const stack: CompItem[] = [target_comp];
   while (stack.length) {
     const comp = stack.pop()!;
-    if (comp === (new_source as any)) return true;
+    if (comp === (new_source as unknown as CompItem)) return true;
     if (visited.has(comp)) continue;
     visited.add(comp);
     for (const ancestor of comp.used_in) {
@@ -121,13 +123,13 @@ export function _validate_collapse_transformation(value: boolean, obj: AVLayer):
  *     objects.
  *
  * @example
- * ```python
- * from py_aep import parse
+ * ```ts
+ * import { parse } from "@bevyl-ai/ts-aep";
  *
- * app = parse("project.aep")
- * comp = app.project.compositions[0]
- * layer = comp.file_layers[0]
- * print(layer.source)
+ * const app = parse("project.aep");
+ * const comp = app.project.compositions[0];
+ * const layer = comp.file_layers[0];
+ * console.log(layer.source);
  * ```
  * @see https://ae-scripting.docsforadobe.dev/layer/avlayer/
  */
@@ -254,8 +256,8 @@ export class AVLayer extends Layer {
     null_layer?: boolean;
     three_d_layer?: boolean;
     label?: number;
-    root_tdgp_extra?: any[] | null;
-    effect_param_defs?: Map<string, any> | null;
+    root_tdgp_extra?: Chunk[] | null;
+    effect_param_defs?: Map<string, Map<string, Map<string, any>>> | null;
   }): AVLayer;
   static _new(kw: any): AVLayer;
   static _new(kw: any): any {
@@ -389,7 +391,7 @@ export class AVLayer extends Layer {
     if (source == null) {
       return false;
     }
-    if (hasattr(source, "main_source") && (source as any).main_source.is_still) {
+    if (hasattr(source, "main_source") && (source as FootageItem).main_source.is_still) {
       return false;
     }
     if (this.time_remap_enabled) {
@@ -739,7 +741,7 @@ export class AVLayer extends Layer {
    * @param point_top_left - `[x, y, z]` comp-space position of the source's top-left corner.
    * @param point_top_right - `[x, y, z]` position of the top-right corner.
    * @param point_bottom_left - `[x, y, z]` position of the bottom-left corner.
-   * @returns A dict of transform property values (`anchor_point`, `position`, `x_rotation`,
+   * @returns An object of transform property values (`anchor_point`, `position`, `x_rotation`,
    *   `y_rotation`, `z_rotation`, `scale`), assignable to the matching transform properties.
    * @throws {@link ValueError} If the points are coincident or collinear.
    */
@@ -747,7 +749,7 @@ export class AVLayer extends Layer {
     point_top_left: number[],
     point_top_right: number[],
     point_bottom_left: number[],
-  ): Record<string, any> {
+  ): Record<string, number | number[]> {
     for (const pt of [point_top_left, point_top_right, point_bottom_left]) {
       validate_vector3(pt);
     }
@@ -872,7 +874,7 @@ export class AVLayer extends Layer {
 
   /** `true` if time remapping is enabled for this layer. Read / Write. */
   get time_remap_enabled(): boolean {
-    let prop: any;
+    let prop: unknown;
     try {
       prop = this.__getitem__("ADBE Time Remapping");
     } catch (e) {

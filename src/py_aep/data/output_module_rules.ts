@@ -35,10 +35,11 @@ import { contains, dict_get, getitem, py_eq, setdefault } from "../../pyrt/index
 
 /**
  * One conditional rule: (conditions, constraints). Every condition must
- * match the context (a tuple value means "in"); constraints then apply.
+ * match the context (an array value means "in"); constraints then apply.
  */
-export type Rule = [Map<string, any>, Map<string, ReadonlySet<any>>];
-export type Constraints = Map<string, ReadonlySet<any>>;
+export type RuleValue = number | string | boolean;
+export type Rule = [Map<string, RuleValue | RuleValue[]>, Map<string, ReadonlySet<RuleValue>>];
+export type Constraints = Map<string, ReadonlySet<RuleValue>>;
 
 export const _MILLIONS = OutputColorDepth.MILLIONS_OF_COLORS;
 export const _MILLIONS_PLUS = OutputColorDepth.MILLIONS_OF_COLORS_PLUS;
@@ -47,32 +48,32 @@ export const _TRILLIONS_PLUS = OutputColorDepth.TRILLIONS_OF_COLORS_PLUS;
 export const _FLOAT = OutputColorDepth.FLOATING_POINT;
 export const _FLOAT_PLUS = OutputColorDepth.FLOATING_POINT_PLUS;
 
-export const _8_TO_16_BPC: ReadonlySet<any> = new Set([_MILLIONS, _MILLIONS_PLUS, _TRILLIONS, _TRILLIONS_PLUS]);
-export const _8_TO_32_BPC: ReadonlySet<any> = new Set([..._8_TO_16_BPC, _FLOAT, _FLOAT_PLUS]);
+export const _8_TO_16_BPC: ReadonlySet<RuleValue> = new Set([_MILLIONS, _MILLIONS_PLUS, _TRILLIONS, _TRILLIONS_PLUS]);
+export const _8_TO_32_BPC: ReadonlySet<RuleValue> = new Set([..._8_TO_16_BPC, _FLOAT, _FLOAT_PLUS]);
 
-export const _RGB_OR_ALPHA: ReadonlySet<any> = new Set([OutputChannels.RGB, OutputChannels.ALPHA]);
+export const _RGB_OR_ALPHA: ReadonlySet<RuleValue> = new Set([OutputChannels.RGB, OutputChannels.ALPHA]);
 
 // Rates AE offers for plain PCM-style audio (AIFF, WAV Uncompressed, AVI).
-export const _PCM_RATES: ReadonlySet<any> = new Set([8000, 11025, 16000, 22050, 32000, 44100, 48000, 88200, 96000]);
+export const _PCM_RATES: ReadonlySet<RuleValue> = new Set([8000, 11025, 16000, 22050, 32000, 44100, 48000, 88200, 96000]);
 
 // WAV ADPCM/GSM codecs offer this reduced set; A-Law/u-Law add 16000.
-export const _ADPCM_RATES: ReadonlySet<any> = new Set([8000, 11025, 22050, 44100]);
-export const _CCITT_RATES: ReadonlySet<any> = new Set([..._ADPCM_RATES, 16000]);
+export const _ADPCM_RATES: ReadonlySet<RuleValue> = new Set([8000, 11025, 22050, 44100]);
+export const _CCITT_RATES: ReadonlySet<RuleValue> = new Set([..._ADPCM_RATES, 16000]);
 
-export const _SIXTEEN_BIT_ONLY: ReadonlySet<any> = new Set([AudioBitDepth.SIXTEEN_BIT]);
+export const _SIXTEEN_BIT_ONLY: ReadonlySet<RuleValue> = new Set([AudioBitDepth.SIXTEEN_BIT]);
 
 export const _KIND_RULES = new Map<FormatKind, Constraints>([
   [
     FormatKind.AUDIO,
-    new Map<string, ReadonlySet<any>>([
+    new Map<string, ReadonlySet<RuleValue>>([
       ["Video Output", new Set([false])],
       ["Output Audio", new Set([OutputAudio.ON])],
     ]),
   ],
-  [FormatKind.MOVIE, new Map<string, ReadonlySet<any>>([])],
+  [FormatKind.MOVIE, new Map<string, ReadonlySet<RuleValue>>([])],
   [
     FormatKind.SEQUENCE,
-    new Map<string, ReadonlySet<any>>([
+    new Map<string, ReadonlySet<RuleValue>>([
       ["Video Output", new Set([true])],
       ["Output Audio", new Set([OutputAudio.OFF])],
     ]),
@@ -82,11 +83,11 @@ export const _KIND_RULES = new Map<FormatKind, Constraints>([
 export const _FORMAT_RULES = new Map<OutputFormat, Constraints>([
   [
     OutputFormat.AIFF,
-    new Map<string, ReadonlySet<any>>([["Audio Sample Rate", _PCM_RATES]]),
+    new Map<string, ReadonlySet<RuleValue>>([["Audio Sample Rate", _PCM_RATES]]),
   ],
   [
     OutputFormat.AVI,
-    new Map<string, ReadonlySet<any>>([
+    new Map<string, ReadonlySet<RuleValue>>([
       // 48/64 only reachable via V210 (union over codecs); the 64
       // entry keeps the channels<->depth pairing closed under RGBA.
       ["Depth", new Set([_MILLIONS, _MILLIONS_PLUS, _TRILLIONS, _TRILLIONS_PLUS])],
@@ -95,11 +96,11 @@ export const _FORMAT_RULES = new Map<OutputFormat, Constraints>([
   ],
   [
     OutputFormat.DPX_CINEON_SEQUENCE,
-    new Map<string, ReadonlySet<any>>([["Depth", new Set([_TRILLIONS, _TRILLIONS_PLUS])]]),
+    new Map<string, ReadonlySet<RuleValue>>([["Depth", new Set([_TRILLIONS, _TRILLIONS_PLUS])]]),
   ],
   [
     OutputFormat.H264,
-    new Map<string, ReadonlySet<any>>([
+    new Map<string, ReadonlySet<RuleValue>>([
       ["Channels", _RGB_OR_ALPHA],
       ["Depth", new Set([_MILLIONS])],
       // Union over audio formats: AAC set + MPEG {32k,44.1k,48k} + PCM
@@ -109,18 +110,18 @@ export const _FORMAT_RULES = new Map<OutputFormat, Constraints>([
   ],
   [
     OutputFormat.IFF_SEQUENCE,
-    new Map<string, ReadonlySet<any>>([["Depth", _8_TO_16_BPC]]),
+    new Map<string, ReadonlySet<RuleValue>>([["Depth", _8_TO_16_BPC]]),
   ],
   [
     OutputFormat.JPEG_SEQUENCE,
-    new Map<string, ReadonlySet<any>>([
+    new Map<string, ReadonlySet<RuleValue>>([
       ["Channels", _RGB_OR_ALPHA],
       ["Depth", new Set([_MILLIONS])],
     ]),
   ],
   [
     OutputFormat.MP3,
-    new Map<string, ReadonlySet<any>>([
+    new Map<string, ReadonlySet<RuleValue>>([
       // The depth control is hidden; AE always stores 16-bit (verified
       // across the 18-bitrate sweep in samples/unused/output_module_settings).
       ["Audio Bit Depth", _SIXTEEN_BIT_ONLY],
@@ -131,19 +132,19 @@ export const _FORMAT_RULES = new Map<OutputFormat, Constraints>([
   ],
   [
     OutputFormat.OPENEXR_SEQUENCE,
-    new Map<string, ReadonlySet<any>>([["Depth", new Set([_FLOAT, _FLOAT_PLUS])]]),
+    new Map<string, ReadonlySet<RuleValue>>([["Depth", new Set([_FLOAT, _FLOAT_PLUS])]]),
   ],
   [
     OutputFormat.PNG_SEQUENCE,
-    new Map<string, ReadonlySet<any>>([["Depth", _8_TO_16_BPC]]),
+    new Map<string, ReadonlySet<RuleValue>>([["Depth", _8_TO_16_BPC]]),
   ],
   [
     OutputFormat.PHOTOSHOP_SEQUENCE,
-    new Map<string, ReadonlySet<any>>([["Depth", _8_TO_32_BPC]]),
+    new Map<string, ReadonlySet<RuleValue>>([["Depth", _8_TO_32_BPC]]),
   ],
   [
     OutputFormat.QUICKTIME,
-    new Map<string, ReadonlySet<any>>([
+    new Map<string, ReadonlySet<RuleValue>>([
       // Alpha IS QuickTime-legal despite the dialog research notes:
       // AE's own factory template "High Quality with Alpha" writes a
       // QT Rouu with depth 32 (millions+), and alpha-capable codecs
@@ -155,26 +156,26 @@ export const _FORMAT_RULES = new Map<OutputFormat, Constraints>([
   ],
   [
     OutputFormat.RADIANCE_SEQUENCE,
-    new Map<string, ReadonlySet<any>>([
+    new Map<string, ReadonlySet<RuleValue>>([
       ["Channels", _RGB_OR_ALPHA],
       ["Depth", new Set([_FLOAT])],
     ]),
   ],
   [
     OutputFormat.SGI_SEQUENCE,
-    new Map<string, ReadonlySet<any>>([["Depth", _8_TO_16_BPC]]),
+    new Map<string, ReadonlySet<RuleValue>>([["Depth", _8_TO_16_BPC]]),
   ],
   [
     OutputFormat.TIFF_SEQUENCE,
-    new Map<string, ReadonlySet<any>>([["Depth", _8_TO_32_BPC]]),
+    new Map<string, ReadonlySet<RuleValue>>([["Depth", _8_TO_32_BPC]]),
   ],
   [
     OutputFormat.TARGA_SEQUENCE,
-    new Map<string, ReadonlySet<any>>([["Depth", new Set([_MILLIONS, _MILLIONS_PLUS])]]),
+    new Map<string, ReadonlySet<RuleValue>>([["Depth", new Set([_MILLIONS, _MILLIONS_PLUS])]]),
   ],
   [
     OutputFormat.WAV,
-    new Map<string, ReadonlySet<any>>([
+    new Map<string, ReadonlySet<RuleValue>>([
       // Unions over codecs; per-codec rows below narrow them.
       ["Audio Sample Rate", _PCM_RATES],
       [
@@ -258,7 +259,7 @@ getitem(_FORMAT_RULES, OutputFormat.QUICKTIME).set(
 // they are transcribed literally from the AE dialog research.
 export function _aac_bitrate_rows(): Rule[] {
   const rows: Rule[] = [];
-  const matrix: [any, [number[], any, number[]][]][] = [
+  const matrix: [AudioCodec, [number[], AudioChannels, number[]][]][] = [
     [
       AudioCodec.AAC,
       [
@@ -315,15 +316,15 @@ export function _aac_bitrate_rows(): Rule[] {
   ];
   for (const [codec, groups] of matrix) {
     for (const [rates, channels, kbps] of groups) {
-      const rate_cond: any = rates.length > 1 ? rates : rates[0];
+      const rate_cond: number | number[] = rates.length > 1 ? rates : rates[0];
       rows.push([
-        new Map<string, any>([
+        new Map<string, RuleValue | RuleValue[]>([
           ["Audio Format", MPEGAudioFormat.AAC],
           ["Audio Codec", codec],
           ["Audio Sample Rate", rate_cond],
-          ["Audio Channels", channels],
+          ["Audio Channels", channels as number],
         ]),
-        new Map<string, ReadonlySet<any>>([["Audio Bitrate", new Set(kbps)]]),
+        new Map<string, ReadonlySet<RuleValue>>([["Audio Bitrate", new Set(kbps)]]),
       ]);
     }
   }
@@ -337,14 +338,14 @@ export const _CONDITIONAL_RULES = new Map<OutputFormat, Rule[]>([
     OutputFormat.AVI,
     [
       [
-        new Map<string, any>([["Video Codec", VideoCodec.NONE]]),
-        new Map<string, ReadonlySet<any>>([
+        new Map<string, RuleValue | RuleValue[]>([["Video Codec", VideoCodec.NONE]]),
+        new Map<string, ReadonlySet<RuleValue>>([
           ["Channels", new Set([OutputChannels.RGB, OutputChannels.RGBA, OutputChannels.ALPHA])],
           ["Depth", new Set([_MILLIONS, _MILLIONS_PLUS])],
         ]),
       ],
       [
-        new Map<string, any>([
+        new Map<string, RuleValue | RuleValue[]>([
           [
             "Video Codec",
             [
@@ -356,14 +357,14 @@ export const _CONDITIONAL_RULES = new Map<OutputFormat, Rule[]>([
             ],
           ],
         ]),
-        new Map<string, ReadonlySet<any>>([
+        new Map<string, ReadonlySet<RuleValue>>([
           ["Channels", _RGB_OR_ALPHA],
           ["Depth", new Set([_MILLIONS])],
         ]),
       ],
       [
-        new Map<string, any>([["Video Codec", VideoCodec.V210]]),
-        new Map<string, ReadonlySet<any>>([
+        new Map<string, RuleValue | RuleValue[]>([["Video Codec", VideoCodec.V210]]),
+        new Map<string, ReadonlySet<RuleValue>>([
           ["Channels", _RGB_OR_ALPHA],
           ["Depth", new Set([_TRILLIONS])],
         ]),
@@ -374,18 +375,18 @@ export const _CONDITIONAL_RULES = new Map<OutputFormat, Rule[]>([
     OutputFormat.H264,
     [
       [
-        new Map<string, any>([["Audio Format", MPEGAudioFormat.AAC]]),
-        new Map<string, ReadonlySet<any>>([
+        new Map<string, RuleValue | RuleValue[]>([["Audio Format", MPEGAudioFormat.AAC]]),
+        new Map<string, ReadonlySet<RuleValue>>([
           ["Audio Sample Rate", new Set([16000, 22050, 24000, 32000, 44100, 48000])],
         ]),
       ],
       [
-        new Map<string, any>([["Audio Format", MPEGAudioFormat.MPEG]]),
-        new Map<string, ReadonlySet<any>>([["Audio Sample Rate", new Set([32000, 44100, 48000])]]),
+        new Map<string, RuleValue | RuleValue[]>([["Audio Format", MPEGAudioFormat.MPEG]]),
+        new Map<string, ReadonlySet<RuleValue>>([["Audio Sample Rate", new Set([32000, 44100, 48000])]]),
       ],
       [
-        new Map<string, any>([["Audio Format", MPEGAudioFormat.PCM]]),
-        new Map<string, ReadonlySet<any>>([["Audio Sample Rate", new Set([48000, 96000])]]),
+        new Map<string, RuleValue | RuleValue[]>([["Audio Format", MPEGAudioFormat.PCM]]),
+        new Map<string, ReadonlySet<RuleValue>>([["Audio Sample Rate", new Set([48000, 96000])]]),
       ],
     ],
   ],
@@ -396,8 +397,8 @@ export const _CONDITIONAL_RULES = new Map<OutputFormat, Rule[]>([
       // included; with plain RGB the stored byte is inert and AE-saved
       // files hold either value.
       [
-        new Map<string, any>([["Channels", OutputChannels.RGBA]]),
-        new Map<string, ReadonlySet<any>>([["Color", new Set([OutputColorMode.PREMULTIPLIED])]]),
+        new Map<string, RuleValue | RuleValue[]>([["Channels", OutputChannels.RGBA]]),
+        new Map<string, ReadonlySet<RuleValue>>([["Color", new Set([OutputColorMode.PREMULTIPLIED])]]),
       ],
     ],
   ],
@@ -405,8 +406,8 @@ export const _CONDITIONAL_RULES = new Map<OutputFormat, Rule[]>([
     OutputFormat.PNG_SEQUENCE,
     [
       [
-        new Map<string, any>([["Channels", OutputChannels.RGBA]]),
-        new Map<string, ReadonlySet<any>>([["Color", new Set([OutputColorMode.STRAIGHT_UNMATTED])]]),
+        new Map<string, RuleValue | RuleValue[]>([["Channels", OutputChannels.RGBA]]),
+        new Map<string, ReadonlySet<RuleValue>>([["Color", new Set([OutputColorMode.STRAIGHT_UNMATTED])]]),
       ],
     ],
   ],
@@ -469,11 +470,11 @@ export const _CONDITIONAL_RULES = new Map<OutputFormat, Rule[]>([
     ].flatMap(([channels, table]) =>
       (table as number[][]).map(
         ([kbps, rate]): Rule => [
-          new Map<string, any>([
-            ["BitRate", kbps],
-            ["Audio Channels", channels],
+          new Map<string, RuleValue | RuleValue[]>([
+            ["BitRate", kbps as number],
+            ["Audio Channels", channels as number],
           ]),
-          new Map<string, ReadonlySet<any>>([["Audio Sample Rate", new Set([rate])]]),
+          new Map<string, ReadonlySet<RuleValue>>([["Audio Sample Rate", new Set([rate])]]),
         ],
       ),
     ),
@@ -482,8 +483,8 @@ export const _CONDITIONAL_RULES = new Map<OutputFormat, Rule[]>([
     OutputFormat.WAV,
     [
       [
-        new Map<string, any>([["Audio Codec", AudioCodec.UNCOMPRESSED]]),
-        new Map<string, ReadonlySet<any>>([
+        new Map<string, RuleValue | RuleValue[]>([["Audio Codec", AudioCodec.UNCOMPRESSED]]),
+        new Map<string, ReadonlySet<RuleValue>>([
           ["Audio Sample Rate", _PCM_RATES],
           [
             "Audio Bit Depth",
@@ -492,22 +493,22 @@ export const _CONDITIONAL_RULES = new Map<OutputFormat, Rule[]>([
         ]),
       ],
       [
-        new Map<string, any>([["Audio Codec", [AudioCodec.IMA_ADPCM, AudioCodec.MICROSOFT_ADPCM]]]),
-        new Map<string, ReadonlySet<any>>([
+        new Map<string, RuleValue | RuleValue[]>([["Audio Codec", [AudioCodec.IMA_ADPCM, AudioCodec.MICROSOFT_ADPCM]]]),
+        new Map<string, ReadonlySet<RuleValue>>([
           ["Audio Sample Rate", _ADPCM_RATES],
           ["Audio Bit Depth", _SIXTEEN_BIT_ONLY],
         ]),
       ],
       [
-        new Map<string, any>([["Audio Codec", [AudioCodec.CCITT_A_LAW, AudioCodec.CCITT_U_LAW]]]),
-        new Map<string, ReadonlySet<any>>([
+        new Map<string, RuleValue | RuleValue[]>([["Audio Codec", [AudioCodec.CCITT_A_LAW, AudioCodec.CCITT_U_LAW]]]),
+        new Map<string, ReadonlySet<RuleValue>>([
           ["Audio Sample Rate", _CCITT_RATES],
           ["Audio Bit Depth", _SIXTEEN_BIT_ONLY],
         ]),
       ],
       [
-        new Map<string, any>([["Audio Codec", AudioCodec.GSM_6_10]]),
-        new Map<string, ReadonlySet<any>>([
+        new Map<string, RuleValue | RuleValue[]>([["Audio Codec", AudioCodec.GSM_6_10]]),
+        new Map<string, ReadonlySet<RuleValue>>([
           ["Audio Sample Rate", _ADPCM_RATES],
           ["Audio Bit Depth", _SIXTEEN_BIT_ONLY],
           // AE forces mono for GSM and writes the byte (sample-verified).
@@ -522,50 +523,50 @@ export const _CONDITIONAL_RULES = new Map<OutputFormat, Rule[]>([
 // the kbps ladder (transcribed literally - the ladders are irregular).
 getitem(_CONDITIONAL_RULES, OutputFormat.H264).push(
   [
-    new Map<string, any>([["Multiplexer", MPEGMultiplexer.MP4]]),
-    new Map<string, ReadonlySet<any>>([["Audio Format", new Set([MPEGAudioFormat.AAC, MPEGAudioFormat.MPEG])]]),
+    new Map<string, RuleValue | RuleValue[]>([["Multiplexer", MPEGMultiplexer.MP4]]),
+    new Map<string, ReadonlySet<RuleValue>>([["Audio Format", new Set([MPEGAudioFormat.AAC, MPEGAudioFormat.MPEG])]]),
   ],
   [
-    new Map<string, any>([["Multiplexer", MPEGMultiplexer.THREEGPP]]),
-    new Map<string, ReadonlySet<any>>([["Audio Format", new Set([MPEGAudioFormat.AAC])]]),
+    new Map<string, RuleValue | RuleValue[]>([["Multiplexer", MPEGMultiplexer.THREEGPP]]),
+    new Map<string, ReadonlySet<RuleValue>>([["Audio Format", new Set([MPEGAudioFormat.AAC])]]),
   ],
   [
-    new Map<string, any>([["Multiplexer", MPEGMultiplexer.NONE]]),
-    new Map<string, ReadonlySet<any>>([
+    new Map<string, RuleValue | RuleValue[]>([["Multiplexer", MPEGMultiplexer.NONE]]),
+    new Map<string, ReadonlySet<RuleValue>>([
       ["Audio Format", new Set([MPEGAudioFormat.AAC, MPEGAudioFormat.MPEG, MPEGAudioFormat.PCM])],
     ]),
   ],
   [
-    new Map<string, any>([
+    new Map<string, RuleValue | RuleValue[]>([
       ["Audio Format", MPEGAudioFormat.MPEG],
       ["Audio Layer", MPEGAudioLayer.LAYER_I],
     ]),
-    new Map<string, ReadonlySet<any>>([
+    new Map<string, ReadonlySet<RuleValue>>([
       ["Audio Bitrate", new Set([128, 160, 192, 224, 256, 288, 320, 352, 384, 416, 448])],
     ]),
   ],
   [
-    new Map<string, any>([
+    new Map<string, RuleValue | RuleValue[]>([
       ["Audio Format", MPEGAudioFormat.MPEG],
       ["Audio Layer", MPEGAudioLayer.LAYER_II],
       ["Audio Channels", AudioChannels.MONO],
     ]),
-    new Map<string, ReadonlySet<any>>([["Audio Bitrate", new Set([64, 96, 112, 128, 160, 192])]]),
+    new Map<string, ReadonlySet<RuleValue>>([["Audio Bitrate", new Set([64, 96, 112, 128, 160, 192])]]),
   ],
   [
-    new Map<string, any>([
+    new Map<string, RuleValue | RuleValue[]>([
       ["Audio Format", MPEGAudioFormat.MPEG],
       ["Audio Layer", MPEGAudioLayer.LAYER_II],
       ["Audio Channels", AudioChannels.STEREO],
     ]),
-    new Map<string, ReadonlySet<any>>([
+    new Map<string, ReadonlySet<RuleValue>>([
       ["Audio Bitrate", new Set([64, 96, 112, 128, 160, 192, 224, 256, 320, 384])],
     ]),
   ],
   // HE-AACv2 is parametric stereo: mono is not offered at all.
   [
-    new Map<string, any>([["Audio Codec", AudioCodec.AAC_PLUS_V2]]),
-    new Map<string, ReadonlySet<any>>([["Audio Channels", new Set([AudioChannels.STEREO])]]),
+    new Map<string, RuleValue | RuleValue[]>([["Audio Codec", AudioCodec.AAC_PLUS_V2]]),
+    new Map<string, ReadonlySet<RuleValue>>([["Audio Channels", new Set([AudioChannels.STEREO])]]),
   ],
 );
 getitem(_CONDITIONAL_RULES, OutputFormat.H264).push(..._aac_bitrate_rows());
@@ -584,20 +585,20 @@ getitem(_CONDITIONAL_RULES, OutputFormat.H264).push(..._aac_bitrate_rows());
 // generated conditional rows so Depth writes, validate_state and batch
 // exits all enforce it through the ordinary lookup. Inserted FIRST so
 // codec-specific Depth rows still win the general->specific merge.
-export const _PLUS_DEPTHS: ReadonlySet<any> = new Set([_MILLIONS_PLUS, _TRILLIONS_PLUS, _FLOAT_PLUS]);
+export const _PLUS_DEPTHS: ReadonlySet<RuleValue> = new Set([_MILLIONS_PLUS, _TRILLIONS_PLUS, _FLOAT_PLUS]);
 for (const [_fmt, _fmt_rules] of _FORMAT_RULES) {
   const _depths = _fmt_rules.get("Depth") ?? null;
   if (_depths == null) continue;
   const _rows = setdefault(_CONDITIONAL_RULES, _fmt, [] as Rule[]);
   const _rgba_depths = new Set([..._depths].filter((d) => _PLUS_DEPTHS.has(d)));
   if (_rgba_depths.size > 0) {
-    _rows.unshift([new Map<string, any>([["Channels", OutputChannels.RGBA]]), new Map<string, ReadonlySet<any>>([["Depth", _rgba_depths]])]);
+    _rows.unshift([new Map<string, RuleValue | RuleValue[]>([["Channels", OutputChannels.RGBA]]), new Map<string, ReadonlySet<RuleValue>>([["Depth", _rgba_depths]])]);
   }
   const _base_depths = new Set([..._depths].filter((d) => !_PLUS_DEPTHS.has(d)));
   if (_base_depths.size > 0) {
     _rows.unshift([
-      new Map<string, any>([["Channels", [OutputChannels.RGB, OutputChannels.ALPHA]]]),
-      new Map<string, ReadonlySet<any>>([["Depth", _base_depths]]),
+      new Map<string, RuleValue | RuleValue[]>([["Channels", [OutputChannels.RGB, OutputChannels.ALPHA]]]),
+      new Map<string, ReadonlySet<RuleValue>>([["Depth", _base_depths]]),
     ]);
   }
 }
@@ -621,10 +622,10 @@ export const CLAMP_DEPENDENTS: Map<string, readonly string[]> = new Map<string, 
 /**
  * True when every condition matches the context.
  *
- * A tuple condition value means "in"; a context key that is absent
+ * An array condition value means "in"; a context key that is absent
  * never matches (permissive degradation).
  */
-export function _conditions_match(conditions: Map<string, any>, context: Map<string, any>): boolean {
+export function _conditions_match(conditions: Map<string, RuleValue | RuleValue[]>, context: Map<string, unknown>): boolean {
   for (const [key, expected] of conditions) {
     const actual = context.get(key) ?? null;
     if (actual == null) return false;
@@ -645,7 +646,7 @@ export function _conditions_match(conditions: Map<string, any>, context: Map<str
  */
 export function constrained_keys(fmt: OutputFormat): ReadonlySet<string> {
   const keys = new Set<string>(getitem(_KIND_RULES, OutputFormat.kind(fmt)).keys());
-  for (const k of dict_get(_FORMAT_RULES, fmt, new Map<string, ReadonlySet<any>>()).keys()) keys.add(k);
+  for (const k of dict_get(_FORMAT_RULES, fmt, new Map<string, ReadonlySet<RuleValue>>()).keys()) keys.add(k);
   for (const [, constraints] of dict_get(_CONDITIONAL_RULES, fmt, [] as Rule[])) {
     for (const k of constraints.keys()) keys.add(k);
   }
@@ -665,12 +666,12 @@ export function constrained_keys(fmt: OutputFormat): ReadonlySet<string> {
 export function allowed_values(
   fmt: OutputFormat,
   key: string,
-  context: Map<string, any> | null = null,
-): ReadonlySet<any> | null {
-  const rules = new Map<string, ReadonlySet<any>>();
+  context: Map<string, unknown> | null = null,
+): ReadonlySet<unknown> | null {
+  const rules = new Map<string, ReadonlySet<RuleValue>>();
   for (const [k, v] of getitem(_KIND_RULES, OutputFormat.kind(fmt))) rules.set(k, v);
-  for (const [k, v] of dict_get(_FORMAT_RULES, fmt, new Map<string, ReadonlySet<any>>())) rules.set(k, v);
-  if (context == null) context = new Map<string, any>();
+  for (const [k, v] of dict_get(_FORMAT_RULES, fmt, new Map<string, ReadonlySet<RuleValue>>())) rules.set(k, v);
+  if (context == null) context = new Map<string, unknown>();
   for (const [conditions, constraints] of dict_get(_CONDITIONAL_RULES, fmt, [] as Rule[])) {
     if (_conditions_match(conditions, context)) {
       for (const [k, v] of constraints) rules.set(k, v);

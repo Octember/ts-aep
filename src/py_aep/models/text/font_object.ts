@@ -5,15 +5,15 @@ import { CosField } from "../../cos/descriptors.ts";
 
 /** Decode the COS design vector (16.16 fixed-point ints) to floats. */
 export function _design_vector_from_cos(raw: number[]): number[] {
-  if (raw == null || typeof (raw as any)[Symbol.iterator] !== "function") {
+  if (raw == null || typeof (raw as Partial<Iterable<number>>)[Symbol.iterator] !== "function") {
     throw new TypeError_("object is not iterable");
   }
-  return Array.from(raw, (v: any) => {
+  return Array.from(raw, (v: unknown) => {
     // Python `str / float` raises TypeError (JS would yield NaN)
     if (!is_real(v) && typeof v !== "boolean") {
       throw new TypeError_("unsupported operand type(s) for /");
     }
-    return (v as any) / 65536.0;
+    return (v as number) / 65536.0;
   });
 }
 
@@ -24,13 +24,13 @@ export function _design_vector_from_cos(raw: number[]): number[] {
  * the font technology used, helping disambiguate when multiple fonts
  * sharing the same PostScript name are installed on the system.
  *
- * ```python
- * from py_aep import parse
+ * ```ts
+ * import { parse } from "@bevyl-ai/ts-aep";
  *
- * app = parse("project.aep")
- * comp = app.project.compositions[0]
- * font = comp.text_layers[0].text.source_text.value.font_object
- * print(font.post_script_name)
+ * const app = parse("project.aep");
+ * const comp = app.project.compositions[0];
+ * const font = comp.text_layers[0].text.source_text.value.font_object;
+ * console.log(font.post_script_name);
  * ```
  *
  * **Note:** 

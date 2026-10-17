@@ -25,7 +25,7 @@ import type { AdvancedPrdaChunk } from "../../../binary/misc_chunks.ts";
 export class AdvancedRendererOptions extends RendererOptionsBase {
   declare _body: AdvancedPrdaChunk;
 
-  static _SPEC: Map<string, [string, any]> = new Map<string, [string, any]>([
+  static _SPEC: Map<string, [string, typeof EnvironmentLightShadowResolution | null]> = new Map<string, [string, typeof EnvironmentLightShadowResolution | null]>([
     ["Quality", ["quality", null]],
     ["Resolution", ["resolution", EnvironmentLightShadowResolution]],
     ["Smoothness", ["smoothness", null]],

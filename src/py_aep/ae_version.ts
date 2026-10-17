@@ -110,7 +110,7 @@ export function get_ae_version_major(obj: any): number {
 export function requires_version(min_major: number): (method: F) => F {
   return function decorator(method: F): F {
     // NOTE(port): functools.wraps; __name__ is the only attribute read back (error message and introspection).
-    const wrapper = function (this: any, ...args: any[]): any {
+    const wrapper = function (this: unknown, ...args: unknown[]): unknown {
       const major = get_ae_version_major(this);
       if (major < min_major) {
         throw new AttributeError(

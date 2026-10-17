@@ -172,10 +172,10 @@ export class ColorProfile {
     return this.profile_type === PROFILE_TYPE_ICC;
   }
 
-  /** The OCIO `(colorSpace1[, colorSpace2])` names, or `()` if not OCIO. */
+  /** The OCIO `(colorSpace1[, colorSpace2])` names, or an empty array if not OCIO. */
   get ocio_color_spaces(): readonly string[] {
     if (!this.is_ocio) return [];
-    const inner: Map<string, any> = json_loads(this.data);
+    const inner: Map<string, string> = json_loads(this.data);
     const names = [getitem(inner, "colorSpace1")];
     if (inner.has("colorSpace2")) names.push(getitem(inner, "colorSpace2"));
     return names;
@@ -188,11 +188,11 @@ export class ColorProfile {
  * @param envelope_json - The raw `Utf8` chunk value (the outer JSON string).
  */
 export function parse_envelope(envelope_json: string): ColorProfile {
-  const outer: Map<string, any> = json_loads(envelope_json);
-  const base: Map<string, any> = getitem(outer, "baseColorProfile");
+  const outer: Map<string, unknown> = json_loads(envelope_json);
+  const base: Map<string, string> = getitem(outer, "baseColorProfile") as Map<string, string>;
   return new ColorProfile(
     getitem(base, "colorProfileName"),
-    getitem(outer, "baseProfileType"),
+    getitem(outer, "baseProfileType") as number,
     b64decode(getitem(base, "colorProfileData")),
   );
 }

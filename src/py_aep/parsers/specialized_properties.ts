@@ -22,8 +22,8 @@ import { BytesIO, OverflowError, ValueError, warn, zip, instance_dict } from "..
 
 // `logging.getLogger(__name__)`: only the warning path is wired to pyrt `warn`.
 export const logger = {
-  debug(..._args: any[]) {},
-  info(..._args: any[]) {},
+  debug(..._args: unknown[]) {},
+  info(..._args: unknown[]) {},
   warning: (m: string) => warn(m),
 };
 
@@ -120,10 +120,10 @@ export function _parse_shape_shap(shap_chunk: ListChunk, layer: Layer | null, ma
 
   // An empty path (no vertices) carries only the lhd3 header, no ldat;
   // treat it as zero points so the value is an empty Shape, not None.
-  let points: any[];
+  let points: Parameters<typeof Shape._from_binary>[0]["_points"];
   try {
     const ldat = find_by_type(list_chunk.chunks, "ldat") as LdatChunk;
-    points = ldat.items;
+    points = ldat.items as typeof points;
   } catch (e) {
     if (!(e instanceof ChunkNotFoundError)) throw e;
     points = [];
@@ -249,7 +249,7 @@ export function parse_text_document(
   prop._property_value_type = PropertyValueType.TEXT_DOCUMENT;
 
   let btdk_chunk: ListChunk;
-  let cos_data: any;
+  let cos_data: unknown;
   try {
     btdk_chunk = find_by_list_type(btds_chunk.chunks, "btdk");
     // btdk is a ListChunk with list_type="btdk"; raw data stored in .data

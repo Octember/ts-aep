@@ -37,6 +37,20 @@ export class FontDesignAxis {
   }
 }
 
+interface FvarAxisInfo {
+  name?: string | null;
+  min: number;
+  default: number;
+  max: number;
+}
+
+interface OpenedFont {
+  fonts?: OpenedFont[] | null;
+  directory: { tables: Record<string, unknown> };
+  name?: unknown;
+  variationAxes: Record<string, FvarAxisInfo>;
+}
+
 /**
  * Read the design axes of a variable font file.
  *
@@ -48,13 +62,13 @@ export class FontDesignAxis {
  */
 export function read_design_axes(font_file: _PathLike, font_number: number = 0): FontDesignAxis[] {
   // NOTE(port): fontTools lazy=True defers table reads; fontkit reads eagerly. Results are identical, only I/O cost differs.
-  const opened: any = fontkit.create(host.fs.readFileSync(str(font_file)) as any);
+  const opened = fontkit.create(host.fs.readFileSync(str(font_file)) as never) as unknown as OpenedFont;
   // TODO(port): fontTools raises on an out-of-range fontNumber; here an
   // out-of-range index yields undefined and fails later on property access.
-  const font: any = opened.fonts != null ? opened.fonts[font_number] : opened;
+  const font: OpenedFont | undefined = opened.fonts != null ? opened.fonts[font_number] : opened;
   if (font == null) {
     throw new Error(
-      `specify a font number between 0 and ${opened.fonts.length - 1} (inclusive)`,
+      `specify a font number between 0 and ${opened.fonts!.length - 1} (inclusive)`,
     );
   }
   try {
@@ -66,7 +80,7 @@ export function read_design_axes(font_file: _PathLike, font_number: number = 0):
     // TODO(port): fontkit exposes variationAxes as an object keyed by tag, so
     // order follows JS key order; only a font whose fvar tag is an integer-like
     // string (e.g. "1234") would be reordered vs fvar table order.
-    for (const [axis_tag, info] of Object.entries<any>(font.variationAxes)) {
+    for (const [axis_tag, info] of Object.entries(font.variationAxes)) {
       let axis_name: string | null = null;
       if (name_table != null) {
         // TODO(port): fontTools getDebugName(axis.axisNameID) falls back across

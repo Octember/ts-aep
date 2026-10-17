@@ -100,7 +100,7 @@ export class PrdaChunk extends Chunk {
   static read(
     fp: IO,
     size: number,
-    kw: { chunk_type?: string; renderer_match_name?: string } & Record<string, any> = {},
+    kw: { chunk_type?: string; renderer_match_name?: string } & Record<string, unknown> = {},
   ): PrdaChunk {
     const { chunk_type = "", renderer_match_name = "" } = kw;
     if (this !== PrdaChunk) {
@@ -572,7 +572,7 @@ export class PardChunk extends Chunk {
   static read(
     fp: IO,
     size: number,
-    kw: { chunk_type?: string } & Record<string, any> = {},
+    kw: { chunk_type?: string } & Record<string, unknown> = {},
   ): PardChunk {
     const { chunk_type = "" } = kw;
     if (this !== PardChunk) {

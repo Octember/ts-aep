@@ -80,8 +80,8 @@ export class Path {
   read_bytes(): Uint8Array {
     try {
       return new Uint8Array(fs.readFileSync(this.path));
-    } catch (e: any) {
-      if (e?.code === "ENOENT") throw new FileNotFoundError(`[Errno 2] No such file or directory: '${this.path}'`);
+    } catch (e: unknown) {
+      if ((e as NodeJS.ErrnoException | null)?.code === "ENOENT") throw new FileNotFoundError(`[Errno 2] No such file or directory: '${this.path}'`);
       throw e;
     }
   }
@@ -258,7 +258,7 @@ export class PurePath {
         paths.push(String(a));
       }
     }
-    (this as any)._raw_paths = paths;
+    (this as { _raw_paths: string[] })._raw_paths = paths;
     const f = this._flavour;
     let path = paths.length === 0 ? "" : paths.length === 1 ? paths[0] : f.join(paths[0], ...paths.slice(1));
     let drv = "";
@@ -274,14 +274,14 @@ export class PurePath {
       }
       tail = rel.split(f.sep).filter((x) => x && x !== ".");
     }
-    (this as any).drive = drv;
-    (this as any).root = root;
-    (this as any)._tail = tail;
+    (this as { drive: string }).drive = drv;
+    (this as { root: string }).root = root;
+    (this as { _tail: string[] })._tail = tail;
   }
 
   /** A new path of the same flavour from the given segments (`with_segments`). */
   protected _with(...args: (string | PurePath)[]): this {
-    return new (this.constructor as any)(...args);
+    return new (this.constructor as unknown as new (...a: (string | PurePath)[]) => this)(...args);
   }
 
   get anchor(): string {

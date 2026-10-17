@@ -32,7 +32,7 @@ export function parse_composition(
   _gide: ListChunk | null,
   project: Project,
   parent_folder: FolderItem,
-  effect_param_defs: Map<string, Map<string, Map<string, any>>>,
+  effect_param_defs: Map<string, Map<string, Map<string, unknown>>>,
 ): CompItem {
   const pin_chunks = filter_by_list_type(child_chunks, "Pin ");
   const proxy_source = pin_chunks?.length > 0 ? parse_source(pin_chunks[0]) : null;

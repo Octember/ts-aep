@@ -918,11 +918,11 @@ export function build_ai_layer_opti_data(
 export class OptiChunk extends Chunk {
   declare chunk_type: string;
 
-  static read(fp: IO, size: number, kw: { chunk_type?: string; [key: string]: any } = {}): OptiChunk {
+  static read(fp: IO, size: number, kw: { chunk_type?: string; [key: string]: unknown } = {}): OptiChunk {
     const { chunk_type = "" } = kw;
     if (this !== OptiChunk) {
       // Variant subclass - use its own read
-      return super.read(fp, size, { chunk_type }) as any; // returns Self
+      return super.read(fp, size, { chunk_type }) as OptiChunk; // returns Self
     }
     if (size < 6) {
       return new this({ chunk_type, data: read_bytes(fp, size) });

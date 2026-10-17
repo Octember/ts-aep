@@ -17,13 +17,13 @@ import type { PropertyGroup } from "../properties/property_group.ts";
  *     attributes of {@link Layer} are available when working with `CameraLayer`.
  *
  * @example
- * ```python
- * from py_aep import parse
+ * ```ts
+ * import { parse } from "@bevyl-ai/ts-aep";
  *
- * app = parse("project.aep")
- * comp = app.project.compositions[0]
- * camera = comp.camera_layers[0]
- * print(camera.name)
+ * const app = parse("project.aep");
+ * const comp = app.project.compositions[0];
+ * const camera = comp.camera_layers[0];
+ * console.log(camera.name);
  * ```
  * @see https://ae-scripting.docsforadobe.dev/layer/cameralayer/
  */
@@ -77,7 +77,7 @@ export class CameraLayer extends Layer {
     layer_id: number;
     duration: number;
     containing_comp: CompItem;
-    effect_param_defs?: Map<string, Map<string, Map<string, any>>> | null;
+    effect_param_defs?: Map<string, Map<string, Map<string, unknown>>> | null;
   }): CameraLayer;
   static _new(...args: any[]): any;
   static _new(kw: {
@@ -85,7 +85,7 @@ export class CameraLayer extends Layer {
     layer_id: number;
     duration: number;
     containing_comp: CompItem;
-    effect_param_defs?: Map<string, Map<string, Map<string, any>>> | null;
+    effect_param_defs?: Map<string, Map<string, Map<string, unknown>>> | null;
   }): CameraLayer {
     const {
       name,

@@ -21,6 +21,9 @@ import {
 import { get_ae_version_major } from "../ae_version.ts";
 import { validate_bool, validate_enum } from "./validators.ts";
 
+/** Callable applied to a chunk value on read (`transform`) or write (`reverse`). */
+export type ChunkTransform = (...args: any[]) => any;
+
 export const _SENTINEL: unique symbol = Symbol("_SENTINEL");
 
 // While a parser runs this is set to False so that `ChunkField.__set__`
@@ -55,8 +58,8 @@ export function _run_suppressed<R>(body: () => R): R {
  * `@_suppress_materialization()` becomes `.decorate(fn)`.
  */
 export function _suppress_materialization() {
-  function decorate<F extends (...args: any[]) => any>(fn: F): F {
-    return function (this: unknown, ...args: any[]) {
+  function decorate<F extends (...args: never[]) => unknown>(fn: F): F {
+    return function (this: unknown, ...args: unknown[]) {
       return _run_suppressed(() => fn.apply(this, args));
     } as unknown as F;
   }
@@ -79,7 +82,7 @@ export function is_enum(x: any): boolean {
  * Detects a `from_binary` classmethod (via `__self__`) or a direct
  * enum class reference.
  */
-export function _enum_class(transform: ((...args: any[]) => any) | null | undefined): any {
+export function _enum_class(transform: ChunkTransform | null | undefined): any {
   if (transform == null) return null;
   let enum_cls = getattr(transform, "__self__", null);
   if (enum_cls == null && is_enum(transform)) enum_cls = transform;
@@ -96,7 +99,7 @@ export function bound_enum_method(enum_cls: any, name: string, dflt: any): any {
   const m = getattr(enum_cls, name, dflt);
   // Python's default is the enum class itself, which is callable (`E(v)`); a
   // py_enum object is not, so use `E.of` and keep `__self__` for `_enum_class`.
-  if (m === dflt && is_enum(m)) return Object.assign((v: any) => m.of(v), { __self__: m });
+  if (m === dflt && is_enum(m)) return Object.assign((v: unknown) => m.of(v), { __self__: m });
   if (m === dflt || typeof m !== "function") return m;
   return Object.assign(m.bind(enum_cls), { __self__: enum_cls });
 }
@@ -136,7 +139,7 @@ export function enum_or_raw(convert: (value: any) => any): (value: any) => any {
  * Raw ints must appear in the enum's value map; any other type must
  * already be an instance of the enum.
  */
-export function _validate_enum_member(enum_cls: any, value: any, public_name: string): void {
+export function _validate_enum_member(enum_cls: any, value: unknown, public_name: string): void {
   if (enum_cls.has(value)) return;
   // NOTE(port): int/float — integral values are plain numbers by design (RULEBOOK §4); an integer-valued float such as 2.0 takes the int branch and gets the "Invalid value" message instead of "is not a valid".
   // A Python bool is an int that hashes like 0/1, so it is checked as its int value.
@@ -145,7 +148,7 @@ export function _validate_enum_member(enum_cls: any, value: any, public_name: st
     if (!enum_cls.has(key)) {
       const members = enum_cls
         .members()
-        .map((m: any) => `${enum_cls.name_of(m)} (${m})`)
+        .map((m: unknown) => `${enum_cls.name_of(m)} (${m})`)
         .join(", ");
       throw new ValueError(
         `Invalid value ${repr(value)} for ${repr(public_name)}. ` +
@@ -179,10 +182,10 @@ export function _validate_enum_member(enum_cls: any, value: any, public_name: st
 export class ChunkField<T> {
   declare chunk_attr: string;
   declare field: string;
-  declare transform: ((...args: any[]) => any) | null;
-  declare reverse: ((...args: any[]) => any) | null;
+  declare transform: ChunkTransform | null;
+  declare reverse: ChunkTransform | null;
   declare read_only: boolean;
-  declare validate: ((value: any, obj: any) => void) | null;
+  declare validate: ((value: T, obj: any) => void) | null;
   declare default: any;
   declare pre_set: string | null;
   declare post_set: ((obj: any) => void) | string | null;
@@ -194,10 +197,10 @@ export class ChunkField<T> {
     chunk_attr: string,
     field: string,
     kw: {
-      transform?: ((...args: any[]) => any) | null;
-      reverse?: ((...args: any[]) => any) | null;
+      transform?: ChunkTransform | null;
+      reverse?: ChunkTransform | null;
       read_only?: boolean;
-      validate?: ((value: any, obj: any) => void) | null;
+      validate?: ((value: T, obj: any) => void) | null;
       default?: any;
       pre_set?: string | null;
       post_set?: ((obj: any) => void) | string | null;

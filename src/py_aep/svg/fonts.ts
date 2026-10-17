@@ -137,9 +137,9 @@ export const NAME_KEYS = new Map<number, string>([
  * under a non-English or non-primary platform record: Python finds it, TS
  * returns null.
  */
-export function _name(font: any, ...ids: number[]): string | null {
+export function _name(font: fontkit.Font, ...ids: number[]): string | null {
   // `table = font.get("name"); if table is None: return None`
-  let table: any;
+  let table: unknown;
   try {
     table = font.name;
   } catch (e) {
@@ -189,7 +189,7 @@ export function _adobe_font_dirs(): Path[] {
 
 /**
  * PostScript name (name ID 6, lowercased) -\>
- * (font file path, face index, version string from name ID 5 or None).
+ * (font file path, face index, version string from name ID 5 or `null`).
  */
 export let _ps_index: Map<string, [Path, number, string | null]> | null = null;
 
@@ -199,10 +199,12 @@ export let _ps_index: Map<string, [Path, number, string | null]> | null = null;
  *
  * Corrupt/unsupported files yield nothing rather than fail discovery.
  */
-export function* _iter_faces(path: Path): Generator<[number, any]> {
-  let fonts: any[];
+export function* _iter_faces(path: Path): Generator<[number, fontkit.Font]> {
+  let fonts: fontkit.Font[];
   try {
-    const opened: any = fontkit.create(host.fs.readFileSync(path.toString()) as any);
+    const opened = fontkit.create(
+      host.fs.readFileSync(path.toString()) as Uint8Array as Buffer,
+    ) as fontkit.Font & { fonts?: fontkit.Font[] };
     if (path.suffix.toLowerCase() === ".ttc") {
       fonts = [...opened.fonts];
     } else {

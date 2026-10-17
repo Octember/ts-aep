@@ -21,7 +21,7 @@ import { map_media_color_space, profile_id_for_name } from "../../enums/mappings
 import { ChunkField } from "../descriptors.ts";
 import { _validate_number, validate_bool, validate_conform_frame_rate, validate_rgb_color, validate_string } from "../validators.ts";
 
-import type { ListChunk } from "../../binary/chunk.ts";
+import type { Chunk, ListChunk } from "../../binary/chunk.ts";
 import type { SspcChunk } from "../../binary/footage_chunks.ts";
 import type { U1Chunk, Utf8Chunk } from "../../binary/scalar_chunks.ts";
 import type { ColorProfile } from "../../color/envelope.ts";
@@ -51,7 +51,7 @@ export const _CLRS_RECORDS_SINCE: ReadonlyArray<readonly [string, readonly [numb
  * writing a mode over it would claim an alpha channel the media does not
  * have. AE greys the whole alpha section out for such footage.
  */
-export function _validate_has_alpha(value: any, instance: any = null): void {
+export function _validate_has_alpha(value: unknown, instance: { has_alpha?: boolean } | null = null): void {
   if (instance != null && !instance.has_alpha) {
     throw new ValueError(
       "cannot set alpha_mode: the footage has no alpha channel " +
@@ -441,7 +441,7 @@ export class FootageSource {
       ),
     );
     const chunks = this._clrs.chunks;
-    const kept: any[] = [];
+    const kept: Chunk[] = [];
     let index = 0;
     while (index < chunks.length) {
       if (dropped.has(chunks[index].chunk_type)) {
@@ -634,7 +634,7 @@ export class FootageSource {
   /** The `Utf8` chunk after the CLRS `ocsp` marker (the assigned space). */
   _ocsp_utf8(): Utf8Chunk | null {
     if (this._clrs == null) return null;
-    let after: any[];
+    let after: Chunk[];
     try {
       after = find_chunks_after(this._clrs.chunks, "Utf8", "ocsp");
     } catch (e) {
@@ -653,7 +653,7 @@ export class FootageSource {
   /** The embedded source profile envelope (CLRS `Mcsp` Utf8), or `{}`. */
   _embedded_envelope(): string {
     if (this._clrs == null) return "{}";
-    let after: any[];
+    let after: Chunk[];
     try {
       after = find_chunks_after(this._clrs.chunks, "Utf8", "Mcsp");
     } catch (e) {

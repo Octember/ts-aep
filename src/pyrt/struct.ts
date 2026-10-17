@@ -111,7 +111,7 @@ export class Struct {
     return out;
   }
 
-  pack(...values: any[]): Uint8Array {
+  pack(...values: unknown[]): Uint8Array {
     if (values.length !== this.n_values) {
       throw new StructError(`pack expected ${this.n_values} items for packing (got ${values.length})`);
     }
@@ -193,7 +193,7 @@ export class Struct {
   }
 }
 
-function to_int(v: any): number {
+function to_int(v: unknown): number {
   if (typeof v === "boolean") return v ? 1 : 0;
   if (typeof v === "bigint") return Number(v);
   if (typeof v !== "number" || !Number.isInteger(v)) {
@@ -202,12 +202,12 @@ function to_int(v: any): number {
   return v;
 }
 
-function to_bigint(v: any): bigint {
+function to_bigint(v: unknown): bigint {
   if (typeof v === "bigint") return v;
   return BigInt(to_int(v));
 }
 
-function to_float(v: any): number {
+function to_float(v: unknown): number {
   if (typeof v === "boolean") return v ? 1 : 0;
   if (typeof v === "bigint") return Number(v);
   if (typeof v !== "number") throw new StructError("required argument is not a float");
@@ -250,7 +250,7 @@ function get(format: string): Struct {
 }
 
 /** `struct.pack(fmt, *values)` */
-export function pack(format: string, ...values: any[]): Uint8Array {
+export function pack(format: string, ...values: unknown[]): Uint8Array {
   return get(format).pack(...values);
 }
 
@@ -265,7 +265,7 @@ export function unpack_from(format: string, data: Uint8Array, offset = 0): any[]
 }
 
 /** `struct.pack_into(fmt, buffer, offset, *values)` (negative offsets count from the end). */
-export function pack_into(format: string, buffer: Uint8Array, offset: number, ...values: any[]): void {
+export function pack_into(format: string, buffer: Uint8Array, offset: number, ...values: unknown[]): void {
   const s = get(format);
   if (offset < 0) {
     if (offset + s.size > 0) throw new StructError(`no space to pack ${s.size} bytes at offset ${offset}`);

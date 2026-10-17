@@ -47,7 +47,7 @@ export class _ParseContext {
 
   readonly child_depth: number;
 
-  readonly effect_param_defs: Map<string, Map<string, Map<string, any>>>;
+  readonly effect_param_defs: Map<string, Map<string, Map<string, unknown>>>;
 
   readonly composition: CompItem;
 
@@ -68,7 +68,7 @@ export class _ParseContext {
     chunks: Chunk[],
     first_chunk: ListChunk,
     child_depth: number,
-    effect_param_defs: Map<string, Map<string, Map<string, any>>>,
+    effect_param_defs: Map<string, Map<string, Map<string, unknown>>>,
     composition: CompItem,
     layer: Layer | null = null,
   ) {
@@ -129,7 +129,7 @@ export function _property_parser(
 export function parse_properties(
   match_name_runs: [string, Chunk[]][],
   child_depth: number,
-  effect_param_defs: Map<string, Map<string, Map<string, any>>>,
+  effect_param_defs: Map<string, Map<string, Map<string, unknown>>>,
   composition: CompItem,
   layer: Layer | null = null,
 ): (Property | PropertyGroup)[] {
@@ -404,7 +404,7 @@ export const parse_property_group = _suppress_materialization().decorate(functio
   tdgp_chunk: ListChunk,
   group_match_name: string,
   property_depth: number,
-  effect_param_defs: Map<string, Map<string, Map<string, any>>>,
+  effect_param_defs: Map<string, Map<string, Map<string, unknown>>>,
   composition: CompItem,
   tdmn: TdmnChunk,
   layer: Layer | null = null,
@@ -469,7 +469,7 @@ export const _parse_mask_atom = _suppress_materialization().decorate(function _p
   tdgp_chunk: ListChunk,
   mkif_chunk: MkifChunk,
   property_depth: number,
-  effect_param_defs: Map<string, Map<string, Map<string, any>>>,
+  effect_param_defs: Map<string, Map<string, Map<string, unknown>>>,
   composition: CompItem,
   tdmn: TdmnChunk,
   layer: Layer | null = null,

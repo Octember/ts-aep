@@ -51,23 +51,26 @@ import type { RenderQueueItem } from "../models/renderqueue/render_queue_item.ts
 /** `TextIO` as used by the formatters: anything with `write(str)`. */
 export type TextIO = { write(s: string): unknown };
 
-/** A node of the uniform tree the formatters consume (`dict[str, Any]` in Python). */
+/** A node attribute value: scalars, floats or small arrays; `null` entries are skipped when printing. */
+export type AttrValue = unknown;
+
+/** A node of the uniform tree the formatters consume (a `Map` of attributes plus children). */
 export type Node = {
   type: string;
-  name: any;
-  /** `dict[str, Any]`: a Map so that insertion order and Python repr hold. */
-  attrs: Map<string, any>;
+  name: string;
+  /** A Map so that insertion order and Python repr hold. */
+  attrs: Map<string, AttrValue>;
   children: Node[];
 };
 
 // =============================================================================
-// Node builders - Convert model objects to a uniform dict structure
+// Node builders - Convert model objects to a uniform tree structure
 // =============================================================================
 
 /** Build the root project node. */
 export function build_project_node(app: Application, include_properties: boolean = true): Node {
   const project = app.project;
-  const attrs: Map<string, any> = new Map<string, any>([
+  const attrs: Map<string, AttrValue> = new Map<string, AttrValue>([
     ["version", app.version],
     ["build_number", app.build_number],
     ["bits_per_channel", BitsPerChannel.name_of(project.bits_per_channel)],
@@ -109,7 +112,7 @@ export function build_item_node(item: Item, project: Project, include_properties
     return {
       type: "Item",
       name: item.name,
-      attrs: new Map<string, any>([["type_name", item.type_name]]),
+      attrs: new Map<string, AttrValue>([["type_name", item.type_name]]),
       children: [],
     };
   }
@@ -125,7 +128,7 @@ export function build_folder_node(folder: FolderItem, project: Project, include_
   return {
     type: "Folder",
     name: folder.name,
-    attrs: new Map<string, any>([
+    attrs: new Map<string, AttrValue>([
       ["label", py_bool(folder.label) ? Label.name_of(folder.label).toLowerCase() : null],
     ]),
     children,
@@ -134,7 +137,7 @@ export function build_folder_node(folder: FolderItem, project: Project, include_
 
 /** Build a composition node with layers. */
 export function build_comp_node(comp: CompItem, project: Project, include_properties: boolean = true): Node {
-  const attrs: Map<string, any> = new Map<string, any>([
+  const attrs: Map<string, AttrValue> = new Map<string, AttrValue>([
     ["size", `${comp.width}x${comp.height}`],
     ["duration", `${format(comp.duration, ".2f")}s`],
     ["frame_rate", pyfloat(comp.frame_rate)],
@@ -157,7 +160,7 @@ export function build_comp_node(comp: CompItem, project: Project, include_proper
 
 /** Build a footage item node. */
 export function build_footage_node(footage: FootageItem): Node {
-  const attrs: Map<string, any> = new Map<string, any>([
+  const attrs: Map<string, AttrValue> = new Map<string, AttrValue>([
     ["asset_type", footage.asset_type],
     ["size", `${footage.width}x${footage.height}`],
   ]);
@@ -174,7 +177,7 @@ export function build_footage_node(footage: FootageItem): Node {
 
 /** Build a layer node with properties. */
 export function build_layer_node(layer: Layer, project: Project, include_properties: boolean = true): Node {
-  const attrs: Map<string, any> = new Map<string, any>([
+  const attrs: Map<string, AttrValue> = new Map<string, AttrValue>([
     ["type", layer.layer_type],
     ["enabled", layer.enabled],
   ]);
@@ -226,7 +229,7 @@ export function build_property_or_group_node(prop: Property | PropertyGroup): No
 
 /** Build a property node. */
 export function build_property_node(prop: Property): Node {
-  const attrs: Map<string, any> = new Map<string, any>();
+  const attrs: Map<string, AttrValue> = new Map<string, AttrValue>();
   if (prop._animated) {
     attrs.set("animated", true);
     attrs.set("keyframes", prop.keyframes.length);
@@ -257,7 +260,7 @@ export function build_render_queue_node(project: Project): Node {
   if (project.render_queue == null) {
     throw new RuntimeError("Project render_queue should not be None");
   }
-  const attrs: Map<string, any> = new Map<string, any>([["items", project.render_queue.items.length]]);
+  const attrs: Map<string, AttrValue> = new Map<string, AttrValue>([["items", project.render_queue.items.length]]);
 
   const children: Node[] = [];
   for (const [i, item] of project.render_queue.items.entries()) {
@@ -274,7 +277,7 @@ export function build_render_queue_node(project: Project): Node {
 
 /** Build a render queue item node with output modules. */
 export function build_render_queue_item_node(item: RenderQueueItem, index: number, project: Project): Node {
-  const attrs: Map<string, any> = new Map<string, any>([["output_modules", item.output_modules.length]]);
+  const attrs: Map<string, AttrValue> = new Map<string, AttrValue>([["output_modules", item.output_modules.length]]);
 
   // Try to find the comp name
   const comp = item.comp;
@@ -295,7 +298,7 @@ export function build_render_queue_item_node(item: RenderQueueItem, index: numbe
 
 /** Build an output module node. */
 export function build_output_module_node(om: OutputModule): Node {
-  const attrs: Map<string, any> = new Map<string, any>();
+  const attrs: Map<string, AttrValue> = new Map<string, AttrValue>();
   if (om.file) attrs.set("file", new Path(om.file).name);
   if (om.file_template) attrs.set("name_template", om.file_template);
 
@@ -345,7 +348,7 @@ export function format_text(
   let attrs_str = "";
   if (node.attrs?.size > 0) {
     // Filter out None values
-    const filtered = new Map<string, any>([...node.attrs].filter(([, v]) => v != null));
+    const filtered = new Map<string, AttrValue>([...node.attrs].filter(([, v]) => v != null));
     if (filtered.size > 0) {
       attrs_str = " " + repr(filtered);
     }
@@ -372,7 +375,7 @@ export function format_dot(node: Node, output: TextIO, max_depth: number | null 
   output.write("    edge [fontsize=8];\n");
   output.write("\n");
 
-  const node_id = [0]; // Use list for mutable counter in nested function
+  const node_id = [0]; // Use array for mutable counter in nested function
 
   function get_node_id(): string {
     node_id[0] += 1;
@@ -494,18 +497,18 @@ export function format_mermaid(node: Node, output: TextIO, max_depth: number | n
 export function format_json(node: Node, output: TextIO, max_depth: number | null = null): void {
   function filter_depth(n: Node, depth: number = 0): Node {
     if (max_depth != null && depth >= max_depth) {
-      const result: any = { ...n };
+      const result = { ...n } as unknown as { children: Node[] | string };
       if (py_bool(result.children)) {
         result.children = `[${len(result.children)} children omitted]`;
       }
-      return result;
+      return result as unknown as Node;
     }
 
-    const result: any = { ...n };
+    const result = { ...n } as unknown as { children: Node[] | string };
     if (py_bool(result.children)) {
-      result.children = result.children.map((c: Node) => filter_depth(c, depth + 1));
+      result.children = (result.children as Node[]).map((c: Node) => filter_depth(c, depth + 1));
     }
-    return result;
+    return result as unknown as Node;
   }
 
   const filtered = filter_depth(node);

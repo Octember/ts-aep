@@ -27,13 +27,13 @@ export function _validate_params(value: Map<string, string>): void {
  * link, or Flash Video cue point with a particular point in a layer.
  *
  * @example
- * ```python
- * from py_aep import parse
+ * ```ts
+ * import { parse } from "@bevyl-ai/ts-aep";
  *
- * app = parse("project.aep")
- * comp = app.project.compositions[0]
- * marker = comp.markers[0]
- * print(marker.comment)
+ * const app = parse("project.aep");
+ * const comp = app.project.compositions[0];
+ * const marker = comp.markers[0];
+ * console.log(marker.comment);
  * ```
  * @see https://ae-scripting.docsforadobe.dev/other/markervalue/
  */

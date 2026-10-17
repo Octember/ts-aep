@@ -399,7 +399,7 @@ export class LdatItem extends AttrsBase {
   declare in_interpolation_type: number;
   declare out_interpolation_type: number;
   declare _key_flags: number;
-  declare kf_data: any;
+  declare kf_data: FmtItem | KfPosition | KfMultiDimensional | Uint8Array;
   declare _trailing: Uint8Array;
   declare roving: boolean;
   declare temporal_auto_bezier: boolean;
@@ -421,7 +421,7 @@ export class LdatItem extends AttrsBase {
 
     const payload = data.slice(8);
     const num_value = _NUM_VALUE.get(item_type) ?? null;
-    let kf_data: any;
+    let kf_data: FmtItem | KfPosition | KfMultiDimensional | Uint8Array;
     let trailing: Uint8Array;
 
     if (item_type === LdatItemType.color) {
@@ -523,7 +523,7 @@ export class LdatChunk extends Chunk {
       item_size?: number;
       count?: number;
       is_spatial?: boolean;
-      [key: string]: any;
+      [key: string]: unknown;
     } = {},
   ): LdatChunk {
     let { chunk_type = "", item_type = LdatItemType.unknown, item_size = 0, count = 0, is_spatial = false } = kw;
@@ -541,7 +541,7 @@ export class LdatChunk extends Chunk {
         item_size,
       });
     }
-    const items: any[] = [];
+    const items: (FmtItem | LdatItem)[] = [];
     for (let i = 0, n = count; i < n; i++) {
       const item_data = read_bytes(fp, item_size);
       items.push(_read_item(item_data, item_type));

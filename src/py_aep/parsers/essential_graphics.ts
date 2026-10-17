@@ -18,14 +18,14 @@ export const _BY_NAME_INDEX = 0xffffffff;
  * the source property the controller exposes.
  */
 export function _parse_source_property_path(raw: string): SourcePropertyRef[] {
-  const nodes: Map<string, any> = json_loads(raw);
+  const nodes: Map<string, Map<string, unknown>> = json_loads(raw);
   const path: SourcePropertyRef[] = [];
   for (const key of sorted(nodes.keys(), int)) {
-    const node: Map<string, any> = getitem(nodes, key);
-    const index = node.get("index") ?? null;
+    const node: Map<string, unknown> = getitem(nodes, key);
+    const index = node.get("index") as number | undefined ?? null;
     path.push(
       new SourcePropertyRef(
-        dict_get(node, "matchName", ""),
+        dict_get(node, "matchName", "") as string,
         py_eq(index, _BY_NAME_INDEX) ? null : index,
       ),
     );

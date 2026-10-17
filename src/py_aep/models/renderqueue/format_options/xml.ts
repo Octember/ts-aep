@@ -25,6 +25,7 @@ import { AudioCodec, AudioInterleave, DnxResolution, MPEGAudioFormat, MPEGAudioL
 import { ChunkField } from "../../descriptors.ts";
 import { _validate_number, validate_enum, validate_int } from "../../validators.ts";
 import { FormatOptionsBase } from "./base.ts";
+import type { EnumHelpers } from "../../../../pyrt/enum.ts";
 import type { RoptChunk } from "../../../binary/render_chunks.ts";
 import type { OutputModule } from "../output_module.ts";
 
@@ -71,7 +72,7 @@ type ETElement = ET.Element;
 
 /** `dict(*args).items()` for `ParamsDict.update`. */
 // NOTE(port): covers every `dict(*args)` source `update` receives: mapping, list of pairs, plain record.
-export function _dict_items(args: any[]): Iterable<[string, string]> {
+export function _dict_items(args: unknown[]): Iterable<[string, string]> {
   if (args.length === 0) return [];
   const src = args[0];
   if (src instanceof Map) return src.entries();
@@ -82,10 +83,10 @@ export function _dict_items(args: any[]): Iterable<[string, string]> {
 /** Descriptor for XML enum parameters (read/write). */
 export class _EnumParam {
   declare _key: string;
-  declare _enum_cls: any;
+  declare _enum_cls: EnumHelpers<number>;
   declare _name: string;
 
-  constructor(key: string, enum_cls: any) {
+  constructor(key: string, enum_cls: EnumHelpers<number>) {
     this._key = key;
     this._enum_cls = enum_cls;
   }
@@ -94,12 +95,12 @@ export class _EnumParam {
     this._name = name;
   }
 
-  __get__(obj: XmlFormatOptions | null, objtype?: Function | null): any {
+  __get__(obj: XmlFormatOptions | null, objtype?: Function | null): number | null | this {
     if (obj == null) return this;
     return obj._enum_param(this._key, this._enum_cls);
   }
 
-  __set__(obj: XmlFormatOptions, value: any): void {
+  __set__(obj: XmlFormatOptions, value: number | null): void {
     obj._set_enum_param(this._key, value, this._enum_cls);
   }
 }
@@ -123,7 +124,7 @@ export class _ScalarParam {
     this._name = name;
   }
 
-  __get__(obj: XmlFormatOptions | null, objtype?: Function | null): any {
+  __get__(obj: XmlFormatOptions | null, objtype?: Function | null): number | string | null | this {
     if (obj == null) return this;
     const raw = dict_get(obj.params, this._key, "");
     if (!raw) return null;
@@ -135,7 +136,7 @@ export class _ScalarParam {
     }
   }
 
-  __set__(obj: XmlFormatOptions, value: any): void {
+  __set__(obj: XmlFormatOptions, value: number | null): void {
     if (value == null) return;
     validate_int(value);
     obj._check_param_rule(this._key, value);
@@ -182,7 +183,7 @@ export function _extract_params(
 }
 
 /** Try to parse an int, then map to an enum; fall back to int. */
-export function _try_enum_or_int(enum_cls: any, raw_str: string): any {
+export function _try_enum_or_int(enum_cls: EnumHelpers<number>, raw_str: string): number | null {
   let raw_value: number;
   try {
     raw_value = int(raw_str);
@@ -231,7 +232,7 @@ export class ParamsDict extends Map<string, string> {
   }
 
   // NOTE(port): `**kwargs` has no TS equivalent; callers pass a mapping as the positional arg.
-  update(...args: any[]): void {
+  update(...args: unknown[]): void {
     for (const [key, value] of _dict_items(args)) {
       this.set(key, value);
     }
@@ -271,7 +272,7 @@ export class ParamsDict extends Map<string, string> {
   // `|` (__or__) needs no override: it returns a new plain dict rather
   // than mutating, so it cannot desync the XML. Only `|=` does.
   /** Python `__ior__` (`|=`) */
-  __ior__(other: any): ParamsDict {
+  __ior__(other: unknown): ParamsDict {
     this.update(other);
     return this;
   }
@@ -287,17 +288,18 @@ export class ParamsDict extends Map<string, string> {
  * elements. Applicable formats include AVI (`.AVI`), H.264 (`H264`),
  * MP3 (`Mp3 `), QuickTime (`MooV`), and WAV (`wao_`).
  *
- * Individual parameters are stored in the `params` dictionary, keyed by
+ * Individual parameters are stored in the `params` map, keyed by
  * their Adobe parameter identifier (e.g. `"ADBEVideoCodec"`).
  *
  * @example
- * ```python
- * from py_aep import XmlFormatOptions, parse
+ * ```ts
+ * import { XmlFormatOptions, parse } from "@bevyl-ai/ts-aep";
  *
- * app = parse("project.aep")
- * om = app.project.render_queue.items[0].output_modules[0]
- * if isinstance(om.format_options, XmlFormatOptions):
- *     print(om.format_options.video_codec)
+ * const app = parse("project.aep");
+ * const om = app.project.render_queue.items[0].output_modules[0];
+ * if (om.format_options instanceof XmlFormatOptions) {
+ *   console.log(om.format_options.video_codec);
+ * }
  * ```
  */
 export class XmlFormatOptions extends FormatOptionsBase {
@@ -418,7 +420,7 @@ export class XmlFormatOptions extends FormatOptionsBase {
   }
 
   /** Set an Adobe parameter from an enum or int value. */
-  _set_enum_param(key: string, value: any, enum_cls: any = null): void {
+  _set_enum_param(key: string, value: number | null, enum_cls: EnumHelpers<number> | null = null): void {
     if (value == null) return;
     // NOTE(port): int/float — integral values are plain numbers by design (RULEBOOK §4); an integral float such as 2.0 is accepted where Python raises TypeError.
     if (!((typeof value === "number" && Number.isInteger(value)) || typeof value === "boolean")) {
@@ -429,7 +431,7 @@ export class XmlFormatOptions extends FormatOptionsBase {
     if (enum_cls != null && !enum_cls.has(int_value)) {
       const members = enum_cls
         .members()
-        .map((m: any) => `${enum_cls.name_of(m)} (${m})`)
+        .map((m: number) => `${enum_cls.name_of(m)} (${m})`)
         .join(", ");
       throw new ValueError(
         `Invalid value ${repr(value)} for ${repr(key)}. ` +
@@ -467,7 +469,7 @@ export class XmlFormatOptions extends FormatOptionsBase {
    *
    * Params outside `_PARAM_RULE_KEYS` are not format-gated.
    */
-  _check_param_rule(param_key: string, value: any): void {
+  _check_param_rule(param_key: string, value: number): void {
     const rule_key = _PARAM_RULE_KEYS.get(param_key) ?? null;
     if (rule_key == null) return;
     this._require_om()._check_format_rule(rule_key, value);
@@ -530,7 +532,7 @@ export class XmlFormatOptions extends FormatOptionsBase {
    *
    * Returns `null` when the param is absent or non-numeric.
    */
-  _enum_param(key: string, enum_cls: any): any {
+  _enum_param(key: string, enum_cls: EnumHelpers<number>): number | null {
     const raw = dict_get(this.params, key, "");
     if (!raw) return null;
     return _try_enum_or_int(enum_cls, raw);
@@ -543,7 +545,7 @@ export class XmlFormatOptions extends FormatOptionsBase {
    * not in the {@link VideoCodec} enum.
    * Read / Write.
    */
-  declare video_codec: any;
+  declare video_codec: VideoCodec | number | null;
 
   /**
    * The audio codec as an {@link AudioCodec} integer value extracted from
@@ -552,7 +554,7 @@ export class XmlFormatOptions extends FormatOptionsBase {
    * {@link AudioCodec} enum.
    * Read / Write.
    */
-  declare audio_codec: any;
+  declare audio_codec: AudioCodec | number | null;
 
   /**
    * The output frame rate in frames per second, derived from the
@@ -591,7 +593,7 @@ export class XmlFormatOptions extends FormatOptionsBase {
    * in the {@link MPEGAudioFormat} enum.
    * Read / Write.
    */
-  declare mpeg_audio_format: any;
+  declare mpeg_audio_format: MPEGAudioFormat | number | null;
 
   /**
    * The MPEG-1 audio layer as an {@link MPEGAudioLayer} value extracted
@@ -599,7 +601,7 @@ export class XmlFormatOptions extends FormatOptionsBase {
    * parameter is absent. Only meaningful when `mpeg_audio_format` is
    * `MPEGAudioFormat.MPEG`. Read / Write.
    */
-  declare mpeg_audio_layer: any;
+  declare mpeg_audio_layer: MPEGAudioLayer | number | null;
 
   /**
    * The AVI audio interleave interval as an {@link AudioInterleave} value
@@ -607,19 +609,19 @@ export class XmlFormatOptions extends FormatOptionsBase {
    * `null` choice stores no parameter, so reads return `null` for it.
    * Read / Write.
    */
-  declare audio_interleave: any;
+  declare audio_interleave: AudioInterleave | number | null;
 
   /**
    * The MP3 audio bitrate in kbps, from the `BitRate` parameter
    * (note: not ADBE-prefixed), or `null` when absent. Read / Write.
    */
-  declare bitrate: any;
+  declare bitrate: number | string | null;
 
   /**
    * The H.264 audio bitrate in kbps, from the `ADBEAudioBitrate`
    * parameter, or `null` when absent. Read / Write.
    */
-  declare audio_bitrate: any;
+  declare audio_bitrate: number | string | null;
 
   /**
    * The H.264 encoding profile as an {@link MPEGProfile} value from the
@@ -633,7 +635,7 @@ export class XmlFormatOptions extends FormatOptionsBase {
    * back to a plain `int` when the stored value is not in the
    * {@link MPEGProfile} enum.
    */
-  get profile(): any {
+  get profile(): MPEGProfile | number {
     const raw = dict_get(this.params, "ADBEVideoMPEGProfile", "");
     if (!raw) return MPEGProfile.BASELINE;
     const result = _try_enum_or_int(MPEGProfile, raw);
@@ -642,7 +644,7 @@ export class XmlFormatOptions extends FormatOptionsBase {
     return result;
   }
 
-  set profile(value: any) {
+  set profile(value: MPEGProfile | number) {
     validate_enum(MPEGProfile)(value);
     if (MPEGProfile.of(value) === MPEGProfile.BASELINE) {
       this.params.pop("ADBEVideoMPEGProfile", "");
@@ -656,7 +658,7 @@ export class XmlFormatOptions extends FormatOptionsBase {
    * `ADBEVideoMPEGProfileLevel` parameter (level x 10, e.g. `41` for
    * 4.1; `100` is Unrestricted), or `null` when absent. Read / Write.
    */
-  declare level: any;
+  declare level: number | string | null;
 
   /**
    * The DNxHR/DNxHD resolution preset as a {@link DnxResolution} value
@@ -666,7 +668,7 @@ export class XmlFormatOptions extends FormatOptionsBase {
    * under other codecs). Falls back to a plain `int` when the value is
    * not in the {@link DnxResolution} enum. Read / Write.
    */
-  declare resolution: any;
+  declare resolution: DnxResolution | number | null;
 
   /**
    * The DNxHR/DNxHD `Alpha` choice from the `ADBEDNxHDAlphaType`
@@ -675,7 +677,7 @@ export class XmlFormatOptions extends FormatOptionsBase {
    * (`ADBEVideoAlphaType` is unrelated - it reads `true` on every
    * sampled module.) Read / Write.
    */
-  declare dnx_alpha_type: any;
+  declare dnx_alpha_type: number | string | null;
 
   /**
    * The MPEG multiplexer as an {@link MPEGMultiplexer} FourCC integer
@@ -684,7 +686,7 @@ export class XmlFormatOptions extends FormatOptionsBase {
    * when the value is not in the {@link MPEGMultiplexer} enum.
    * Read / Write.
    */
-  declare mpeg_multiplexer: any;
+  declare mpeg_multiplexer: MPEGMultiplexer | number | null;
 
   /**
    * The MPEG mux stream compatibility as an
@@ -694,7 +696,7 @@ export class XmlFormatOptions extends FormatOptionsBase {
    * is not in the {@link MPEGMuxStreamCompatibility} enum.
    * Read / Write.
    */
-  declare mpeg_mux_stream_compatibility: any;
+  declare mpeg_mux_stream_compatibility: MPEGMuxStreamCompatibility | number | null;
 }
 
 // Descriptors assigned in the class body above, installed on the prototype

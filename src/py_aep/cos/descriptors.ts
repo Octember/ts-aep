@@ -41,9 +41,9 @@ export const _SENTINEL: unique symbol = Symbol("_SENTINEL");
  * mixed-value resolution.
  */
 export function _extract(
-  d: Map<string, any>,
+  d: Map<string, unknown>,
   key: string,
-  transform: ((x: any) => any) | null,
+  transform: ((x: unknown) => unknown) | null,
   default_: any,
 ): any {
   const raw = dict_get(d, key, _SENTINEL);
@@ -71,8 +71,8 @@ export function _extract(
 }
 
 // NOTE(port): pyrt int()/float() do not raise TypeError for None/containers like CPython; this guard supplies it so `_extract` returns the default.
-export function _int_float_guard(fn: (x: any) => number): (x: any) => number {
-  return (x: any) => {
+export function _int_float_guard(fn: (x: unknown) => number): (x: unknown) => number {
+  return (x: unknown) => {
     if (!is_real(x) && typeof x !== "string" && typeof x !== "boolean" && typeof x !== "bigint") {
       throw new TypeError_(`argument must be a string or a real number, not '${type_name(x)}'`);
     }
@@ -101,6 +101,15 @@ export function _int_float_guard(fn: (x: any) => number): (x: any) => number {
  * @param min_version - Minimum AE major version required to *set* this field. Writes to an older
  *   file raise `AttributeError`; reads are always allowed. Mirrors `models.descriptors.ChunkField`.
  */
+export interface CosFieldOptions {
+  transform?: ((x: any) => any) | null;
+  reverse?: ((x: any) => any) | null;
+  read_only?: boolean;
+  validate?: ((value: any, obj: any) => void) | null;
+  default?: any;
+  min_version?: number | null;
+}
+
 export class CosField<T> {
   declare dict_attr: string;
   declare key: string;
@@ -115,14 +124,7 @@ export class CosField<T> {
   constructor(
     dict_attr: string,
     key: string,
-    kw: {
-      transform?: ((x: any) => any) | null;
-      reverse?: ((x: any) => any) | null;
-      read_only?: boolean;
-      validate?: ((value: any, obj: any) => void) | null;
-      default?: any;
-      min_version?: number | null;
-    } = {},
+    kw: CosFieldOptions = {},
   ) {
     const {
       transform = null,
@@ -146,12 +148,12 @@ export class CosField<T> {
     this.public_name = name;
   }
 
-  __get__(obj: any, objtype?: Function): any {
+  __get__(obj: unknown, objtype?: Function): any {
     if (obj == null) return this;
     // Instance-dict overrides (set by parser or user when no dict)
     const idict = instance_dict(obj);
     if (idict.has(this.public_name)) return idict.get(this.public_name);
-    const d: Map<string, any> | null = getattr(obj, this.dict_attr);
+    const d: Map<string, unknown> | null = getattr(obj, this.dict_attr);
     if (d == null) return this.default;
     return _extract(d, this.key, this.transform, this.default);
   }
@@ -160,7 +162,7 @@ export class CosField<T> {
    * Raise if this field cannot be written to `obj` - read-only, or
    * the file predates the field's `min_version`.
    */
-  _check_writable(obj: any): void {
+  _check_writable(obj: unknown): void {
     if (this.read_only) {
       throw new AttributeError(`${repr(this.public_name)} is read-only.`);
     }
@@ -177,17 +179,17 @@ export class CosField<T> {
    * Validate a non-`null` user value and reverse-transform it to
    * the form stored in the COS dict.
    */
-  _coerce(obj: any, value: any): any {
+  _coerce(obj: unknown, value: unknown): unknown {
     if (this.validate != null) this.validate(value, obj);
     if (this.reverse != null) return this.reverse(value);
     return value;
   }
 
-  __set__(obj: any, value: any): void {
+  __set__(obj: unknown, value: unknown): void {
     this._check_writable(obj);
     // Clear any instance-dict override
     instance_dict(obj).delete(this.public_name);
-    const d: Map<string, any> | null = getattr(obj, this.dict_attr);
+    const d: Map<string, unknown> | null = getattr(obj, this.dict_attr);
     if (d == null) {
       // No backing dict - store as instance override
       instance_dict(obj).set(this.public_name, value);
@@ -211,7 +213,7 @@ export class CosField<T> {
    * need the dict attribute and key.
    */
   // NOTE(port): Python raises TypeError on a repeated transform/reverse keyword; no call site repeats them, so the kwargs-win spread is never observable.
-  static bool(dict_attr: string, key: string, kwargs: Record<string, any> = {}): CosField<boolean | null> {
+  static bool(dict_attr: string, key: string, kwargs: CosFieldOptions = {}): CosField<boolean | null> {
     return new this(dict_attr, key, { transform: py_bool, reverse: py_bool, ...kwargs });
   }
 
@@ -224,7 +226,7 @@ export class CosField<T> {
    * itself is used. If the enum has a `to_binary` method it is used
    * as `reverse`; otherwise `int` is used.
    */
-  static enum<T>(enum_cls: any, dict_attr: string, key: string, kwargs: Record<string, any> = {}): CosField<T> {
+  static enum<T>(enum_cls: any, dict_attr: string, key: string, kwargs: CosFieldOptions = {}): CosField<T> {
     // NOTE(port): py_aep enums are not classes; Python's fallback `enum_cls(v)` is `enum_cls.of(v)`.
     kwargs = { ...kwargs };
     if (!("transform" in kwargs)) {
@@ -243,10 +245,10 @@ export class CosField<T> {
    * these keys as floats, and an `int` passed by a caller would
    * serialize without the decimal marker.
    */
-  static float<T>(dict_attr: string, key: string, kwargs: Record<string, any> = {}): CosField<number | null> {
+  static float<T>(dict_attr: string, key: string, kwargs: CosFieldOptions = {}): CosField<number | null> {
     kwargs = { ...kwargs };
     // The stored value is a Python float, so box it to keep `1.0` from serializing as `1`.
-    if (!("reverse" in kwargs)) kwargs.reverse = (x: any) => pyfloat(float(x));
+    if (!("reverse" in kwargs)) kwargs.reverse = (x: number | string | boolean) => pyfloat(float(x));
     // NOTE(port): a repeated transform keyword raises TypeError in Python; no call site passes one. _int_float_guard supplies float(None)'s TypeError.
     return new this(dict_attr, key, { transform: _int_float_guard(float), ...kwargs });
   }
@@ -259,7 +261,7 @@ export class CosField<T> {
    * misread at 16.16 scale (stored `50.0` read back as `3276800`,
    * probed AE 2026), so the write-side coercion matters for fidelity.
    */
-  static int<T>(dict_attr: string, key: string, kwargs: Record<string, any> = {}): CosField<number | null> {
+  static int<T>(dict_attr: string, key: string, kwargs: CosFieldOptions = {}): CosField<number | null> {
     kwargs = { ...kwargs };
     if (!("reverse" in kwargs)) kwargs.reverse = round;
     // NOTE(port): a repeated transform keyword raises TypeError in Python; no call site passes one.

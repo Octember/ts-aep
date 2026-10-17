@@ -1,6 +1,6 @@
 /** Import options for importing files into an After Effects project. */
 
-import { AI_COMP_EXTENSIONS, COMP_CONVERSION_EXTENSIONS, PSD_COMP_EXTENSIONS, get_file_format, get_import_as_types } from "../data/file_formats.ts";
+import { AI_COMP_EXTENSIONS, COMP_CONVERSION_EXTENSIONS, PSD_COMP_EXTENSIONS, get_file_format, get_import_as_types, type FileFormat } from "../data/file_formats.ts";
 import { ImportAsType } from "../enums/index.ts";
 import { validate_bool, validate_enum, validate_one_of, validate_path, validate_positive_int, validate_u4 } from "./validators.ts";
 import { Path, ValueError, int, repr, type PathLike, py_re } from "../../pyrt/index.ts";
@@ -37,13 +37,12 @@ export const CURRENT_VALUE = new _CurrentValue();
  * Unlike most py_aep classes, `ImportOptions` has no chunk backing -
  * import settings are not stored in the `.aep` binary format.
  *
- * ```python
- * from pathlib import Path
- * from py_aep import ImportOptions, ImportAsType
+ * ```ts
+ * import { ImportOptions, ImportAsType } from "@bevyl-ai/ts-aep";
  *
- * opts = ImportOptions(Path("footage/shot_001.png"))
- * opts.sequence = True
- * opts.import_as = ImportAsType.FOOTAGE
+ * const opts = new ImportOptions("footage/shot_001.png");
+ * opts.sequence = true;
+ * opts.import_as = ImportAsType.FOOTAGE;
  * ```
  *
  * @example
@@ -316,9 +315,9 @@ export class ImportOptions {
     if (COMP_CONVERSION_EXTENSIONS.has(suffix)) {
       // Comp-conversion formats (e.g. SVG) have no media-format entry;
       // gate on the import-type table alone.
-      return get_import_as_types(suffix).has(type as any);
+      return get_import_as_types(suffix).has(type as ImportAsType);
     }
-    let fmt: any;
+    let fmt: FileFormat;
     try {
       fmt = get_file_format(suffix);
     } catch (e) {
@@ -336,7 +335,7 @@ export class ImportOptions {
       // Photoshop only.
       return false;
     }
-    return get_import_as_types(suffix).has(type as any);
+    return get_import_as_types(suffix).has(type as ImportAsType);
   }
 
   /**

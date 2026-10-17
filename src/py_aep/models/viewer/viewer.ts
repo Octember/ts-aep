@@ -8,12 +8,12 @@ import type { View } from "./view.ts";
 /**
  * The `Viewer` object represents a Composition, Layer, or Footage panel.
  *
- * ```python
- * from py_aep import parse
+ * ```ts
+ * import { parse } from "@bevyl-ai/ts-aep";
  *
- * app = parse("project.aep")
- * viewer = app.active_viewer
- * print(viewer.type)
+ * const app = parse("project.aep");
+ * const viewer = app.active_viewer;
+ * console.log(viewer.type);
  * ```
  *
  * @example
@@ -49,7 +49,7 @@ export class Viewer {
   }
 
   /**
-   * The index of the active view in the viewer's `views` list.
+   * The index of the active view in the viewer's `views` array.
    * Read / Write.
    *
    * **Note:** The active locked view index is not persisted in the binary
@@ -82,7 +82,7 @@ descriptor(
   Viewer,
   "type",
   ChunkField.enum<ViewerType>(ViewerType, "_fitt", "value", {
-    transform: (v: any) => ViewerType.from_string(v),
+    transform: (v: string) => ViewerType.from_string(v),
     read_only: true,
   }),
 );

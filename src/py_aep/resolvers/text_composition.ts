@@ -93,6 +93,16 @@ function _hb(): any {
   return _hbjs;
 }
 
+/** One glyph of harfbuzzjs's `buffer.json()` output. */
+interface _HbJsGlyph {
+  g: number;
+  cl: number;
+  ax: number;
+  ay: number;
+  dx: number;
+  dy: number;
+}
+
 class _HbBlob {
   declare data: Uint8Array;
   constructor(data: Uint8Array) {
@@ -132,12 +142,12 @@ class _HbBuffer {
     this._buf.guessSegmentProperties();
   }
   get glyph_infos(): { codepoint: number; cluster: number }[] {
-    return this._buf.json().map((g: any) => ({ codepoint: g.g, cluster: g.cl }));
+    return this._buf.json().map((g: _HbJsGlyph) => ({ codepoint: g.g, cluster: g.cl }));
   }
   get glyph_positions(): { x_advance: number; y_advance: number; x_offset: number; y_offset: number }[] {
     return this._buf
       .json()
-      .map((g: any) => ({ x_advance: g.ax, y_advance: g.ay, x_offset: g.dx, y_offset: g.dy }));
+      .map((g: _HbJsGlyph) => ({ x_advance: g.ax, y_advance: g.ay, x_offset: g.dx, y_offset: g.dy }));
   }
 }
 
@@ -172,7 +182,7 @@ export const _RTL_BIDI_SCRIPT =
 // The font index is process-lifetime, so an indexed file can vanish
 // (CoreSync eviction, uninstall) before its first shaping; those opens
 // must refuse, not leak OS/HarfBuzz errors into innocuous reads.
-export const _FONT_OPEN_ERRORS: any[] = [OSError];
+export const _FONT_OPEN_ERRORS: (abstract new (...args: never[]) => unknown)[] = [OSError];
 if (hb != null && "HarfBuzzError" in hb) {
   _FONT_OPEN_ERRORS.push(hb.HarfBuzzError);
 }
@@ -212,7 +222,7 @@ export class ComposedLines {
   }
 }
 
-export const _hb_cache = new Map<string, [any, number]>();
+export const _hb_cache = new Map<string, [_HbFont, number]>();
 export const _ascender_cache = new Map<string, number>();
 
 export function _resolve_face(ps_name: string): [Path, number] {
@@ -223,11 +233,11 @@ export function _resolve_face(ps_name: string): [Path, number] {
   return resolved;
 }
 
-export function _hb_font(ps_name: string): [any, number] {
+export function _hb_font(ps_name: string): [_HbFont, number] {
   const [path, face_index] = _resolve_face(ps_name);
   const key = tkey(str(path), face_index);
   if (!_hb_cache.has(key)) {
-    let face: any;
+    let face: _HbFace;
     try {
       const blob = hb.Blob.from_file_path(str(path));
       face = new hb.Face(blob, face_index);
@@ -435,7 +445,7 @@ export function _char_styles(doc: TextDocument, raw: string): _CharStyle[] {
  * Shape one same-style stretch: the HarfBuzz buffer (one cluster per
  * character) and the font-unit-to-pixel scale.
  */
-export function _shape_glyphs(text: string, style: _CharStyle): [any, number] {
+export function _shape_glyphs(text: string, style: _CharStyle): [_HbBuffer, number] {
   const [font, upem] = _hb_font(style.font);
   const shaped_text = style.caps === 1 || style.caps === 2 ? text.toUpperCase() : text;
   if (shaped_text.length !== text.length) {
@@ -464,11 +474,11 @@ export function _shape_stretch(text: string, style: _CharStyle): number[] {
 }
 
 /** Per-character advances of a stretch shaped by `_shape_glyphs`. */
-export function _glyph_advances(text: string, style: _CharStyle, buf: any, scale: number): number[] {
+export function _glyph_advances(text: string, style: _CharStyle, buf: _HbBuffer, scale: number): number[] {
   // Text here is BMP-only (`_check_envelope` refuses astral characters
   // first), so UTF-16 indexing matches Python's code-point indexing.
   const per_cluster: number[] = new Array<number>(text.length).fill(0.0);
-  for (const [info, pos] of zip<[any[], any[]]>(buf.glyph_infos, buf.glyph_positions)) {
+  for (const [info, pos] of zip<[_HbBuffer["glyph_infos"], _HbBuffer["glyph_positions"]]>(buf.glyph_infos, buf.glyph_positions)) {
     per_cluster[info.cluster] += pos.x_advance * scale;
   }
   const advances: number[] = [];

@@ -21,7 +21,7 @@ const _project = deferred<typeof import("./project.ts")>("py_aep/models/project"
 export const _LAYOUT_PARTS = ["matte layer id", "media replacement folder id"] as const;
 
 /** A version whose file layout matches the project's. */
-export function _validate_version(value: any, obj: Application): void {
+export function _validate_version(value: unknown, obj: Application): void {
   validate_ae_version(value);
   const current = obj._head.ae_version_major;
   const target = int(split(str(value), ".", 1)[0]);
@@ -53,11 +53,11 @@ export function _validate_version(value: any, obj: Application): void {
  * the binary file.
  *
  * @example
- * ```python
- * from py_aep import parse
+ * ```ts
+ * import { parse } from "@bevyl-ai/ts-aep";
  *
- * app = parse("project.aep")
- * print(app.version)
+ * const app = parse("project.aep");
+ * console.log(app.version);
  * ```
  * @see https://ae-scripting.docsforadobe.dev/general/application/
  */

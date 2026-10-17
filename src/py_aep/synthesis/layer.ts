@@ -143,11 +143,11 @@ export class LayerSpec {
   }
 
   /** NamedTuple equality: field-wise. */
-  __eq__(other: any): boolean {
+  __eq__(other: unknown): boolean {
     return other instanceof LayerSpec && py_eq([...this], [...other]);
   }
 
-  *[Symbol.iterator](): Generator<any> {
+  *[Symbol.iterator](): Generator<unknown> {
     yield this.name;
     yield this.opti_data;
     yield this.width;
@@ -220,11 +220,11 @@ export class LayerGroupSpec {
   }
 
   /** NamedTuple equality: field-wise. */
-  __eq__(other: any): boolean {
+  __eq__(other: unknown): boolean {
     return other instanceof LayerGroupSpec && py_eq([...this], [...other]);
   }
 
-  *[Symbol.iterator](): Generator<any> {
+  *[Symbol.iterator](): Generator<unknown> {
     yield this.name;
     yield this.children;
     yield this.comp_name;

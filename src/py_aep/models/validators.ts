@@ -9,6 +9,7 @@
  * cross-field validation (e.g. checking that one field is \>= another).
  */
 
+import type { EnumHelpers } from "../../pyrt/enum.ts";
 import { FLOAT32_MAX } from "../binary/bin_utils.ts";
 import { AE_VERSION_RE, FORMAT_VERSIONS } from "../binary/item_chunks.ts";
 import {
@@ -27,8 +28,8 @@ import {
   type_name,
 } from "../../pyrt/index.ts";
 
-export type Validator = (value: any, instance?: any) => void;
-export type NumBound = number | ((instance: any) => number | null) | null;
+export type Validator = (value: unknown, instance?: unknown) => void;
+export type NumBound = number | ((instance: unknown) => number | null) | null;
 
 /**
  * Return a validator that checks a numeric value.
@@ -49,7 +50,7 @@ export function _validate_number(
   const { min: min_ = null, max: max_ = null, integer = false, exclusive_min = false } = kw;
   const type_label = integer ? "an integer" : "a number";
 
-  return function _validator(value: any, instance: any = null): void {
+  return function _validator(value: unknown, instance: unknown = null): void {
     if (Array.isArray(value)) {
       throw new TypeError_(`expected ${type_label}, got ${type_name(value)}`);
     }
@@ -105,7 +106,7 @@ export function _validate_number(
  */
 export function validate_sequence(
   kw: {
-    length?: number | ((instance: any) => number | null) | null;
+    length?: number | ((instance: unknown) => number | null) | null;
     min?: NumBound;
     max?: NumBound;
     integer?: boolean;
@@ -116,7 +117,7 @@ export function validate_sequence(
   const type_label = integer ? "an integer" : "a number";
   const _element_validator = _validate_number({ min: min_, max: max_, integer, exclusive_min });
 
-  return function _validator(value: any, instance: any = null): void {
+  return function _validator(value: unknown, instance: unknown = null): void {
     const n = typeof length === "function" ? length(instance) : length;
     if (!Array.isArray(value)) {
       throw new TypeError_(`expected a sequence${n != null ? ` of ${n} elements` : ""}`);
@@ -139,7 +140,7 @@ export function validate_sequence(
       } catch (exc) {
         if (!(exc instanceof TypeError_ || exc instanceof ValueError)) throw exc;
         // `raise type(exc)(...) from None`: same exception class, no chained cause.
-        throw new (exc.constructor as any)(`element [${i}] ${(exc as Error).message}`);
+        throw new (exc.constructor as new (message: string) => Error)(`element [${i}] ${(exc as Error).message}`);
       }
     }
   };
@@ -151,7 +152,7 @@ export function validate_sequence(
  * `DocumentWideCosField.enum` for the same field - would otherwise hold
  * distinct instances; memoizing keeps them identity-equal.
  */
-export const _ENUM_VALIDATORS = new Map<any, Validator>();
+export const _ENUM_VALIDATORS = new Map<EnumHelpers<unknown>, Validator>();
 
 /**
  * Return a validator that checks value is a member of `enum_cls`.
@@ -162,11 +163,11 @@ export const _ENUM_VALIDATORS = new Map<any, Validator>();
  *
  * @param enum_cls - The enum class the value must be a member of.
  */
-export function validate_enum(enum_cls: any): Validator {
+export function validate_enum(enum_cls: EnumHelpers<unknown>): Validator {
   const cached = _ENUM_VALIDATORS.get(enum_cls) ?? null;
   if (cached != null) return cached;
 
-  const _validator = function (value: any, instance: any = null): void {
+  const _validator = function (value: unknown, instance: unknown = null): void {
     // NOTE(port): enum members are plain numbers, so `has` also accepts member ints; Python's int branch accepts those too (enum_cls(value) succeeds), so outcomes match.
     if (enum_cls.has(value)) return;
     // Before the int branch: `bool` subclasses `int`, so `om.format =
@@ -200,7 +201,7 @@ export function validate_one_of(allowed: Iterable<unknown>): Validator {
   const allowed_set = new Set(allowed_list);
   const formatted = allowed_list.map((v) => str(v)).join(", ");
 
-  return function _validator(value: any, instance: any = null): void {
+  return function _validator(value: unknown, instance: unknown = null): void {
     if (!allowed_set.has(value instanceof String ? String(value) : value)) {
       throw new ValueError(`must be one of [${formatted}], got ${repr(value)}`);
     }
@@ -226,7 +227,7 @@ export function _validate_str(
 ): Validator {
   const { allow_empty = true, max_length = null, max_bytes = null, allow_null = true } = kw;
 
-  return function _validator(value: any, instance: any = null): void {
+  return function _validator(value: any, instance: unknown = null): void {
     // `_NulTailStr` (a `str` subclass) arrives as a String object.
     if (!(typeof value === "string" || value instanceof String)) {
       throw new TypeError_(`expected a string, got ${type_name(value)}`);
@@ -263,7 +264,7 @@ export function _validate_path(
 ): Validator {
   const { must_exist = null, must_be_file = false } = kw;
 
-  return function _validator(value: any, instance: any = null): void {
+  return function _validator(value: unknown, instance: unknown = null): void {
     if (!(typeof value === "string" || value instanceof String || value instanceof Path)) {
       throw new TypeError_(`expected a file system path, got ${type_name(value)}`);
     }
@@ -279,7 +280,7 @@ export function _validate_path(
 }
 
 /** Validate that a value is a `bool` (rejects 0/1 integers). */
-export function validate_bool(value: any, instance: any = null): void {
+export function validate_bool(value: unknown, instance: unknown = null): void {
   if (typeof value !== "boolean") {
     throw new TypeError_(`expected a bool, got ${type_name(value)}`);
   }
@@ -405,7 +406,7 @@ export const validate_f4_point = validate_sequence({ length: 2, min: -FLOAT32_MA
  * The head chunk holds the major in 8 bits, the minor in 4 and the build
  * in 8.
  */
-export function validate_ae_version(value: any, instance: any = null): void {
+export function validate_ae_version(value: unknown, instance: unknown = null): void {
   if (!(typeof value === "string" || value instanceof String)) {
     throw new TypeError_(`expected a version string, got ${type_name(value)}`);
   }
@@ -426,7 +427,7 @@ export function validate_ae_version(value: any, instance: any = null): void {
  * release py_aep has a file-format stamp for (`FORMAT_VERSIONS`: AE 15-18
  * and 22-26, there was no AE 19-21), or a newer one.
  */
-export function validate_ae_release(value: any, instance: any = null): void {
+export function validate_ae_release(value: unknown, instance: unknown = null): void {
   validate_ae_version(value);
   const major = int(split(str(value), ".", 1)[0]);
   if (!FORMAT_VERSIONS.has(major) && major < max([...FORMAT_VERSIONS.keys()])) {

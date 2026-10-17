@@ -13,13 +13,13 @@ import { AVLayer } from "./av_layer.ts";
  * **Note:** This functionality was added in After Effects 24.4
  *
  * @example
- * ```python
- * from py_aep import parse
+ * ```ts
+ * import { parse } from "@bevyl-ai/ts-aep";
  *
- * app = parse("project.aep")
- * comp = app.project.compositions[0]
- * model_layer = comp.three_d_model_layers[0]
- * print(model_layer.source)
+ * const app = parse("project.aep");
+ * const comp = app.project.compositions[0];
+ * const model_layer = comp.three_d_model_layers[0];
+ * console.log(model_layer.source);
  * ```
  * @see https://ae-scripting.docsforadobe.dev/layer/threedmodellayer/
  */

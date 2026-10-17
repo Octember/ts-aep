@@ -36,7 +36,7 @@ import { validate_bool, validate_box_size, validate_enum, validate_font_name, va
 import { FontObject } from "./font_object.ts";
 import { CHARACTER_RANGE_OOB, NOT_ASSOCIATED, CharacterRange, ComposedLineRange, DocumentWideCosField, ParagraphRange, _apply_char_key, _build_color_paint, _cached_line_data, _cached_line_nodes, _char_run_spans, _composed_line_spans, _fresh_composed_spans, _line_advances, _line_data_from_nodes, _line_origin, _para_run_spans, _parse_color, _raw_text, _rebuild_kern_runs, _register_font_at, _visible_length, u16_len, u16_slice } from "./ranges.ts";
 
-/** A COS dict (`dict[str, Any]`): a `Map` so numeric-looking keys keep their order. */
+/** A COS dict (`Map<string, any>`): a `Map` so numeric-looking keys keep their order. */
 export type Dict = Map<string, any>;
 
 /**
@@ -109,13 +109,13 @@ export class TextDocument {
   /**
    * Stores a value for a TextLayer's Source Text property.
    *
-   * ```python
-   * from py_aep import parse
+   * ```ts
+   * import { parse } from "@bevyl-ai/ts-aep";
    *
-   * app = parse("project.aep")
-   * comp = app.project.compositions[0]
-   * text_doc = comp.text_layers[0].text.source_text.value
-   * print(text_doc.text)
+   * const app = parse("project.aep");
+   * const comp = app.project.compositions[0];
+   * const text_doc = comp.text_layers[0].text.source_text.value;
+   * console.log(text_doc.text);
    * ```
    *
    * @example
@@ -253,7 +253,7 @@ export class TextDocument {
     if (this._char_style == null) return AutoKernType.NO_AUTO_KERN;
     const raw = this._char_style.get("11");
     if (raw == null) return AutoKernType.NO_AUTO_KERN;
-    return AutoKernType.from_binary(raw as any) as AutoKernType;
+    return AutoKernType.from_binary(raw as number) as AutoKernType;
   }
 
   set auto_kern_type(value: AutoKernType) {
@@ -411,14 +411,14 @@ export class TextDocument {
     const cos: Dict = deepcopy(get_cos_template());
     const btdk = new ListChunk({ list_type: "btdk", data: serialize(cos) });
     const doc: Dict = at(getitem(getitem(cos, "1"), "1"), 0);
-    const doc_0: any = getitem(doc, "0");
-    const doc_0_6_0: any = getitem(getitem(doc_0, "6") as any, "0");
-    const run_0: any = at(doc_0_6_0, 0);
-    const char_style: Dict = getitem(getitem(getitem(run_0, "0") as any, "0") as any, "6");
-    const doc_0_5_0: any = getitem(getitem(doc_0, "5") as any, "0");
-    const para_run_0: any = at(doc_0_5_0, 0);
-    const para_style: Dict = getitem(getitem(getitem(para_run_0, "0") as any, "0") as any, "5");
-    const fonts = (getitem(getitem(getitem(cos, "0") as any, "1") as any, "0") as any[]).map(
+    const doc_0: Dict = getitem(doc, "0");
+    const doc_0_6_0: Dict[] = getitem(getitem(doc_0, "6") as Dict, "0");
+    const run_0: Dict = at(doc_0_6_0, 0);
+    const char_style: Dict = getitem(getitem(getitem(run_0, "0") as Dict, "0") as Dict, "6");
+    const doc_0_5_0: Dict[] = getitem(getitem(doc_0, "5") as Dict, "0");
+    const para_run_0: Dict = at(doc_0_5_0, 0);
+    const para_style: Dict = getitem(getitem(getitem(para_run_0, "0") as Dict, "0") as Dict, "5");
+    const fonts = (getitem(getitem(getitem(cos, "0") as Dict, "1") as Dict, "0") as Dict[]).map(
       (entry: Dict) =>
         new FontObject({
           _font_data: getitem(getitem(entry, "0"), "0"),
@@ -863,7 +863,7 @@ export class TextDocument {
   /** The Text layer's line orientation. Read / Write. */
   get line_orientation(): LineOrientation {
     const val = cos_get(this._cos_data, "0", "8", "0", 0, "0", "2", "1");
-    if (typeof val === "number" && Number.isInteger(val)) return LineOrientation.from_binary(val as any) as LineOrientation;
+    if (typeof val === "number" && Number.isInteger(val)) return LineOrientation.from_binary(val as number) as LineOrientation;
     return LineOrientation.HORIZONTAL;
   }
 
@@ -997,7 +997,7 @@ export class TextDocument {
   /** The box's vertical text alignment. Read / Write. */
   get box_vertical_alignment(): BoxVerticalAlignment {
     const raw = cos_get(this._box_frame(), "2", "13");
-    if (typeof raw === "number" && Number.isInteger(raw)) return BoxVerticalAlignment.from_binary(raw as any) as BoxVerticalAlignment;
+    if (typeof raw === "number" && Number.isInteger(raw)) return BoxVerticalAlignment.from_binary(raw as number) as BoxVerticalAlignment;
     return BoxVerticalAlignment.TOP;
   }
 
@@ -1008,7 +1008,7 @@ export class TextDocument {
   /** The box's auto-fit policy. Read / Write. */
   get box_auto_fit_policy(): BoxAutoFitPolicy {
     const raw = cos_get(this._box_frame(), "2", "14");
-    if (typeof raw === "number" && Number.isInteger(raw)) return BoxAutoFitPolicy.from_binary(raw as any) as BoxAutoFitPolicy;
+    if (typeof raw === "number" && Number.isInteger(raw)) return BoxAutoFitPolicy.from_binary(raw as number) as BoxAutoFitPolicy;
     return BoxAutoFitPolicy.NONE;
   }
 
@@ -1020,7 +1020,7 @@ export class TextDocument {
   get box_first_baseline_alignment(): BoxFirstBaselineAlignment {
     const sub = cos_get(this._box_frame(), "2", "10");
     if (sub instanceof Map && typeof sub.get("0") === "number" && Number.isInteger(sub.get("0"))) {
-      return BoxFirstBaselineAlignment.from_binary(sub.get("0") as any) as BoxFirstBaselineAlignment;
+      return BoxFirstBaselineAlignment.from_binary(sub.get("0") as number) as BoxFirstBaselineAlignment;
     }
     return BoxFirstBaselineAlignment.ASCENT;
   }
@@ -1218,7 +1218,13 @@ export class TextDocument {
   reset_char_style(): void {
     this._require_association();
     // NOTE(port): default_character_style returns a plain identifier-keyed object (preferences.ts), read by name like Python's dict[str, Any] literal.
-    const style = default_character_style(this._effective_preferences());
+    const style = default_character_style(this._effective_preferences()) as Pick<
+      TextDocument,
+      | "font" | "font_size" | "faux_bold" | "faux_italic" | "apply_fill" | "fill_color"
+      | "stroke_color" | "stroke_width" | "stroke_over_fill" | "apply_stroke" | "tracking"
+      | "tsume" | "horizontal_scale" | "vertical_scale" | "baseline_shift" | "auto_leading"
+      | "auto_kern_type"
+    >;
     this.font = style.font;
     this.font_size = style.font_size;
     this.faux_bold = style.faux_bold;
@@ -1262,7 +1268,11 @@ export class TextDocument {
   reset_paragraph_style(): void {
     this._require_association();
     // NOTE(port): default_paragraph_style returns a plain identifier-keyed object, same as default_character_style.
-    const style = default_paragraph_style(this._effective_preferences());
+    const style = default_paragraph_style(this._effective_preferences()) as Pick<
+      TextDocument,
+      | "justification" | "first_line_indent" | "start_indent" | "end_indent"
+      | "space_before" | "space_after" | "hanging_roman" | "every_line_composer"
+    >;
     this.justification = style.justification;
     this.first_line_indent = style.first_line_indent;
     this.start_indent = style.start_indent;

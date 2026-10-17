@@ -175,6 +175,21 @@ after):
 The prose still speaks Python (`None`, `True`, Python examples, `py_aep.x`
 paths); pass 3 rewrites it in TypeScript terms.
 
+## Pass 3: TSDoc to TypeScript
+
+Types and docs only. `bun tools/js_equal.ts <base>` must show that the
+JavaScript TypeScript emits for every touched file is unchanged.
+
+- `tools/codemods/pass3_ts_terms.ts`: `` `None` `` / `` `True` `` / `` `False` `` →
+  `` `null` `` / `` `true` `` / `` `false` ``; `{@link py_aep.models.x.Name}` → `{@link Name}`.
+- Per file, from the Python annotations of the same symbol: `any` → real types
+  (port classes, enums, `Map<…>`, `unknown` where nothing reads the value).
+  `any` stays only where the value is genuinely dynamic: parsed COS/JSON data,
+  property values whose type depends on the property kind, Python duck typing,
+  and overload-compatibility signatures.
+- Every Python example is a TypeScript example importing from
+  `@bevyl-ai/ts-aep`; `tools/doc_examples.ts` typechecks them all (in the gate).
+
 ## Later passes
 
 Each of these changes structure and needs its own guide section first:

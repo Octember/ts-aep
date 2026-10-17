@@ -29,6 +29,20 @@ const _property = deferred<typeof import("./property.ts")>("py_aep/models/proper
 // TYPE_CHECKING: `_ValueType = Union[list[float], float, Curves, Gradient, MarkerValue, Shape, TextDocument, None]`
 export type _ValueType = number[] | number | Curves | Gradient | MarkerValue | Shape | TextDocument | null;
 
+/**
+ * Duck-typed view of `LdatItem.kf_data`: which of these slots exist depends on
+ * the keyframe kind (`Kf*` chunk class), and the code probes with `in`.
+ */
+interface _KfData {
+  value: number[];
+  in_speed: number | number[];
+  out_speed: number | number[];
+  in_spatial_tangents: number[];
+  out_spatial_tangents: number[];
+  spatial_auto_bezier: boolean;
+  spatial_continuous: boolean;
+}
+
 /** sentinel: read value from _ldat_item */
 export const _VALUE_FROM_CHUNK: unique symbol = Symbol("_VALUE_FROM_CHUNK");
 
@@ -101,14 +115,14 @@ export function _validate_roving(value: boolean, keyframe: Keyframe): void {
 /**
  * The `Keyframe` object represents a keyframe of a property.
  *
- * ```python
- * from py_aep import parse
+ * ```ts
+ * import { parse } from "@bevyl-ai/ts-aep";
  *
- * app = parse("project.aep")
- * comp = app.project.compositions[0]
- * position = comp.layers[0].transform.property("ADBE Position")
- * keyframe = position.keyframes[0]
- * print(keyframe.time)
+ * const app = parse("project.aep");
+ * const comp = app.project.compositions[0];
+ * const position = comp.layers[0].transform.property("ADBE Position");
+ * const keyframe = position.keyframes[0];
+ * console.log(keyframe.time);
  * ```
  *
  * **Warning:** `Keyframe` object does not exist in ExtendScript API. It has been added
@@ -358,12 +372,12 @@ export class Keyframe {
   /**
    * Read raw value from the binary chunk data.
    *
-   * Returns a scalar for 1-dimensional properties, a list for
+   * Returns a scalar for 1-dimensional properties, an array for
    * multi-dimensional or color properties, and `null` when the
    * keyframe type carries no value (e.g. markers).
    */
   _extract_raw_value(): number[] | number | null {
-    const kf_data: any = this._ldat_item.kf_data;
+    const kf_data: _KfData = this._ldat_item.kf_data as _KfData;
     if (!("value" in kf_data)) return null;
     const values: number[] = [...kf_data.value];
     if (values.length === 1) return values[0];
@@ -373,14 +387,14 @@ export class Keyframe {
   /**
    * Create in/out temporal ease objects from the binary chunk data.
    *
-   * Returns a `(in_ease, out_ease)` tuple. Each element is a list of
+   * Returns a `[in_ease, out_ease]` pair. Each element is an array of
    * {@link KeyframeEase} objects - one per dimension for
    * multi-dimensional properties, or a single element for scalar /
    * spatial types. Returns `([], [])` when the keyframe type
    * carries no ease data (e.g. markers).
    */
   _create_ease(): [KeyframeEase[], KeyframeEase[]] {
-    const kf_data: any = this._ldat_item.kf_data;
+    const kf_data: _KfData = this._ldat_item.kf_data as _KfData;
     if (!("in_speed" in kf_data)) return [[], []];
 
     const factor = this._property != null ? this._property._speed_factor : 1.0;
@@ -391,7 +405,7 @@ export class Keyframe {
       in_ease = Array.from({ length: kf_data.in_speed.length }, (_, i) =>
         KeyframeEase._from_binary(kf_data, i, "in", factor),
       );
-      out_ease = Array.from({ length: kf_data.out_speed.length }, (_, i) =>
+      out_ease = Array.from({ length: (kf_data.out_speed as number[]).length }, (_, i) =>
         KeyframeEase._from_binary(kf_data, i, "out", factor),
       );
     } else {
@@ -414,13 +428,13 @@ export class Keyframe {
    * `ThreeD_SPATIAL`).
    *
    * - If the property value type is `PropertyValueType.TwoD_SPATIAL`, the
-   *   list contains 2 floating-point values.
+   *   array contains 2 floating-point values.
    * - If the property value type is `PropertyValueType.ThreeD_SPATIAL`, the
-   *   list contains 3 floating-point values.
+   *   array contains 3 floating-point values.
    * - If the property value type is neither of these types, returns `null`.
    */
   get in_spatial_tangent(): number[] | null {
-    const kf_data: any = this._ldat_item.kf_data;
+    const kf_data: _KfData = this._ldat_item.kf_data as _KfData;
     if (!("in_spatial_tangents" in kf_data)) return null;
     if (this.spatial_auto_bezier) {
       const derived = this._auto_spatial_tangents();
@@ -434,7 +448,7 @@ export class Keyframe {
   set in_spatial_tangent(value: number[] | null) {
     if (value == null || this.in_spatial_tangent == null) return;
     validate_sequence({ length: this.in_spatial_tangent.length })(value);
-    const kf_data: any = this._ldat_item.kf_data;
+    const kf_data: _KfData = this._ldat_item.kf_data as _KfData;
     this._leave_spatial_auto_bezier();
     if ("in_spatial_tangents" in kf_data) {
       kf_data.in_spatial_tangents = this._rescale_tangent(value, { invert: true });
@@ -448,13 +462,13 @@ export class Keyframe {
    * `ThreeD_SPATIAL`).
    *
    * - If the property value type is `PropertyValueType.TwoD_SPATIAL`, the
-   *   list contains 2 floating-point values.
+   *   array contains 2 floating-point values.
    * - If the property value type is `PropertyValueType.ThreeD_SPATIAL`, the
-   *   list contains 3 floating-point values.
+   *   array contains 3 floating-point values.
    * - If the property value type is neither of these types, returns `null`.
    */
   get out_spatial_tangent(): number[] | null {
-    const kf_data: any = this._ldat_item.kf_data;
+    const kf_data: _KfData = this._ldat_item.kf_data as _KfData;
     if (!("out_spatial_tangents" in kf_data)) return null;
     if (this.spatial_auto_bezier) {
       const derived = this._auto_spatial_tangents();
@@ -468,7 +482,7 @@ export class Keyframe {
   set out_spatial_tangent(value: number[] | null) {
     if (value == null || this.out_spatial_tangent == null) return;
     validate_sequence({ length: this.out_spatial_tangent.length })(value);
-    const kf_data: any = this._ldat_item.kf_data;
+    const kf_data: _KfData = this._ldat_item.kf_data as _KfData;
     this._leave_spatial_auto_bezier();
     if (value != null && "out_spatial_tangents" in kf_data) {
       kf_data.out_spatial_tangents = this._rescale_tangent(value, { invert: true });
@@ -484,7 +498,7 @@ export class Keyframe {
    * side not written keeps the derived tangent it had.
    */
   _leave_spatial_auto_bezier(): void {
-    const kf_data: any = this._ldat_item.kf_data;
+    const kf_data: _KfData = this._ldat_item.kf_data as _KfData;
     if (!getattr(kf_data, "spatial_auto_bezier", false)) return;
     const derived = this._auto_spatial_tangents();
     if (derived != null) {
@@ -519,9 +533,9 @@ export class Keyframe {
    * return. Returns `null` when the keyframe carries no spatial data.
    */
   _auto_spatial_tangents(): [number[], number[]] | null {
-    if (!("in_spatial_tangents" in (this._ldat_item.kf_data as any))) return null;
+    if (!("in_spatial_tangents" in (this._ldat_item.kf_data as _KfData))) return null;
     const [window, index] = this._neighbour_window();
-    const values = window.map((kf) => [...kf._ldat_item.kf_data.value]);
+    const values = window.map((kf) => [...(kf._ldat_item.kf_data as _KfData).value]);
     return auto_spatial_tangents(values, index);
   }
 
@@ -595,7 +609,7 @@ export class Keyframe {
   /**
    * The value of the keyframe. For a 1D property (e.g. Opacity, Rotation),
    * this is a single `float`. For a multi-dimensional property (e.g.
-   * Position, Scale), this is a `list[float]`. For shape/mask path
+   * Position, Scale), this is a `number[]`. For shape/mask path
    * properties, this is a {@link Shape}. For text properties, this is a
    * {@link TextDocument}. For marker properties, this is a {@link MarkerValue}.
    * For the Curves effect's curves, this is a {@link Curves}. For properties
@@ -606,7 +620,7 @@ export class Keyframe {
     if (this._property._arbs != null) {
       return this._property._keyframe_curves(this);
     }
-    return this._property._mask_inert_z(this._stored_value);
+    return this._property._mask_inert_z(this._stored_value) as _ValueType;
   }
 
   set value(value: _ValueType) {
@@ -661,12 +675,12 @@ export class Keyframe {
     if (prop != null && prop._kf_value_container != null) {
       const kind = prop._parallel_kind();
       if (kind != null && kind !== TEXT_KIND) {
-        prop._write_parallel_kf_value(this, kind.coerce(value), kind);
+        prop._write_parallel_kf_value(this, kind.coerce(value) as _ValueType, kind);
         return;
       }
     }
     if (prop != null && (typeof value === "number" || Array.isArray(value))) {
-      const raw = prop._unresolve_value(value);
+      const raw = prop._unresolve_value(value) as number | number[];
       this._write_kf_value(raw);
       this._value = raw;
       prop._redistribute_roving_keyframes();
@@ -685,7 +699,7 @@ export class Keyframe {
     const val =
       this._value !== _VALUE_FROM_CHUNK ? this._value : this._extract_raw_value();
     if (this._property != null && (typeof val === "number" || Array.isArray(val))) {
-      return this._property._resolve_value(val);
+      return this._property._resolve_value(val) as _ValueType;
     }
     return val;
   }
@@ -704,7 +718,7 @@ export class Keyframe {
   _cache_value(value: _ValueType): void {
     const prop = this._property;
     if (prop != null && (typeof value === "number" || Array.isArray(value))) {
-      const raw = prop._unresolve_value(value);
+      const raw = prop._unresolve_value(value) as number | number[];
       this._write_kf_value(raw);
       this._value = raw;
     } else {
@@ -726,7 +740,7 @@ export class Keyframe {
    * mismatch is a genuine dimension error from the caller and is raised.
    */
   _write_kf_value(raw: number[] | number | null): void {
-    const kf_data: any = this._ldat_item.kf_data;
+    const kf_data: _KfData = this._ldat_item.kf_data as _KfData;
     if (!("value" in kf_data)) return;
     let new_: number[] | null = typeof raw === "number" ? [float(raw)] : null;
     if (new_ == null && Array.isArray(raw)) new_ = raw.map((v) => float(v));
@@ -751,7 +765,7 @@ export class Keyframe {
    *   contains 2 objects.
    * - If the property value type is `PropertyValueType.ThreeD`, the list
    *   contains 3 objects.
-   * - For any other value type, the list contains 1 object.
+   * - For any other value type, the array contains 1 object.
    */
   get in_temporal_ease(): KeyframeEase[] {
     this._ensure_ease();
@@ -772,7 +786,7 @@ export class Keyframe {
    *   contains 2 objects.
    * - If the property value type is `PropertyValueType.ThreeD`, the list
    *   contains 3 objects.
-   * - For any other value type, the list contains 1 object.
+   * - For any other value type, the array contains 1 object.
    */
   get out_temporal_ease(): KeyframeEase[] {
     this._ensure_ease();
@@ -803,7 +817,7 @@ export class Keyframe {
       const prop = this._property;
       if (prop == null || prop.is_interpolation_type_valid(bezier)) {
         // NOTE(port): Python setattr() with a computed name; indexed assignment hits the same accessor.
-        (this as any)[name] = bezier;
+        (this as unknown as Record<string, KeyframeInterpolationType>)[name] = bezier;
       }
     }
     this._retime_roving_runs();
@@ -813,7 +827,7 @@ export class Keyframe {
    * Copy `value`'s speed/influence into the chunk-backed ease objects.
    *
    * A user-constructed {@link KeyframeEase} is detached (it carries its own
-   * `speed`/`influence` and no chunk), so assigning the list itself
+   * `speed`/`influence` and no chunk), so assigning the array itself
    * would keep the numbers in Python only and lose them on save. The
    * binary-backed objects live in `_in_temporal_ease` / `_out_temporal_ease`;
    * the *getter* may return computed copies (LINEAR, HOLD and boundary
@@ -1035,7 +1049,7 @@ export class Keyframe {
    * `ThreeD_SPATIAL`, the value is `false`.
    */
   get spatial_auto_bezier(): boolean {
-    const kf_data: any = this._ldat_item.kf_data;
+    const kf_data: _KfData = this._ldat_item.kf_data as _KfData;
     return getattr(kf_data, "spatial_auto_bezier", false);
   }
 
@@ -1045,7 +1059,7 @@ export class Keyframe {
     // for it; the getter tolerantly reads False there, but a write must not
     // silently vanish (ExtendScript's setSpatialAutoBezierAtKey errors).
     validate_bool(value);
-    const kf_data: any = this._ldat_item.kf_data;
+    const kf_data: _KfData = this._ldat_item.kf_data as _KfData;
     if (!("spatial_auto_bezier" in kf_data)) {
       throw new ValueError("spatial_auto_bezier can only be set on spatial keyframes");
     }
@@ -1074,14 +1088,14 @@ export class Keyframe {
    * `false`.
    */
   get spatial_continuous(): boolean {
-    const kf_data: any = this._ldat_item.kf_data;
+    const kf_data: _KfData = this._ldat_item.kf_data as _KfData;
     return getattr(kf_data, "spatial_continuous", false);
   }
 
   set spatial_continuous(value: boolean) {
     // See spatial_auto_bezier: non-spatial kf_data has no such slot.
     validate_bool(value);
-    const kf_data: any = this._ldat_item.kf_data;
+    const kf_data: _KfData = this._ldat_item.kf_data as _KfData;
     if (!("spatial_continuous" in kf_data)) {
       throw new ValueError("spatial_continuous can only be set on spatial keyframes");
     }

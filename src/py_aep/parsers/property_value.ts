@@ -52,7 +52,7 @@ export const parse_property = _suppress_materialization().decorate(function pars
 
   // Static value is read lazily by Property.value from _cdat via
   // _resolve_value.  Only extract here for non-cdat overrides.
-  let value: any = null;
+  let value: number | null = null;
 
   // For LAYER control properties, keep the tdpi chunk reference so the
   // layer index can be resolved lazily (it changes on layer reorder).

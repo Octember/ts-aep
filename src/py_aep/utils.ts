@@ -11,19 +11,19 @@ import { warn } from "../pyrt/index.ts";
  * @param message - Explanation shown in the warning (e.g. migration path).
  */
 export function deprecated(message: string) {
-  return function decorator<R>(func: (...args: any[]) => R): (...args: any[]) => R {
-    function wrapper(this: any, ...args: any[]): R {
+  return function decorator<R>(func: (...args: never[]) => R): (...args: unknown[]) => R {
+    function wrapper(this: unknown, ...args: unknown[]): R {
       // TODO(port): pyrt warn(message) records only the message string, so the DeprecationWarning
       // category and stacklevel=2 (caller attribution) are not represented; affects only warning-filter
       // and location semantics, not the message text.
       // TODO(port): JS functions have no __qualname__; func.name is used, so a decorated method warns as
       // "m is deprecated..." where Python says "Cls.m is deprecated...". No call sites exist in src yet.
       warn(`${func.name} is deprecated. ${message}`);
-      return func.apply(this, args);
+      return func.apply(this, args as never[]);
     }
     // functools.wraps(func): copy __name__ and set __wrapped__ (no __doc__/__qualname__ in JS).
     Object.defineProperty(wrapper, "name", { value: func.name, configurable: true });
-    (wrapper as any).__wrapped__ = func;
+    (wrapper as unknown as { __wrapped__: unknown }).__wrapped__ = func;
     return wrapper;
   };
 }

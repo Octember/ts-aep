@@ -59,7 +59,7 @@ export function latin1(c: Uint8Array): string {
 
 // Python's dataclass repr uses repr() on each field; dicts and lists need to
 // recurse so nested Maps print like Python dicts.
-export function repr_field(x: any): string {
+export function repr_field(x: unknown): string {
   if (x instanceof Map) {
     return `{${[...x].map(([k, v]) => `${repr_field(k)}: ${repr_field(v)}`).join(", ")}}`;
   }
@@ -102,7 +102,7 @@ export function enum_repr(E: any, v: any): string {
 /**
  * Safely traverse parsed COS data by successive keys.
  *
- * Each key is tried as a dict string key first and then as a list
+ * Each key is tried as a Map string key first and then as an array
  * index. Returns `null` when any step along the path is missing.
  *
  * @example
@@ -110,8 +110,8 @@ export function enum_repr(E: any, v: any): string {
  *
  * cos_get(data, "1", "1", 0, "0", "0")  // -\> text string
  */
-export function cos_get(data: any, ...keys: (string | number)[]): any {
-  let cur: any = data;
+export function cos_get(data: unknown, ...keys: (string | number)[]): any {
+  let cur: unknown = data;
   for (const key of keys) {
     if (cur == null) return null;
     if (cur instanceof Map) {
@@ -150,7 +150,7 @@ export function run_spans(
   if (!Array.isArray(runs)) return spans;
   let pos = 0;
   for (const run of runs) {
-    const length: any = run instanceof Map ? run.get("1") ?? null : null;
+    const length: unknown = run instanceof Map ? run.get("1") ?? null : null;
     // Python `isinstance(True, int)` is True, so booleans count as lengths 1/0 (`int()` below).
     const is_int = typeof length === "boolean" || (typeof length === "number" && Number.isInteger(length));
     if (!is_int) continue;
@@ -201,7 +201,7 @@ export class Token {
     return `Token(type=${enum_repr(TokenType, this.type)}, value=${repr_field(this.value)})`;
   }
 
-  __eq__(other: any): boolean {
+  __eq__(other: unknown): boolean {
     return other instanceof Token && this.type === other.type && py_eq(this.value, other.value);
   }
 }
@@ -222,7 +222,7 @@ export class IndirectObject {
     return `IndirectObject(object_number=${repr(this.object_number)}, generation_number=${repr(this.generation_number)}, data=${repr_field(this.data)})`;
   }
 
-  __eq__(other: any): boolean {
+  __eq__(other: unknown): boolean {
     return (
       other instanceof IndirectObject &&
       this.object_number === other.object_number &&
@@ -246,7 +246,7 @@ export class IndirectReference {
     return `IndirectReference(object_number=${repr(this.object_number)}, generation_number=${repr(this.generation_number)})`;
   }
 
-  __eq__(other: any): boolean {
+  __eq__(other: unknown): boolean {
     return (
       other instanceof IndirectReference &&
       this.object_number === other.object_number &&
@@ -309,7 +309,7 @@ export class CosName {
     return `CosName(value=${repr(this.value)})`;
   }
 
-  __eq__(other: any): boolean {
+  __eq__(other: unknown): boolean {
     return other instanceof CosName && py_eq(this.value, other.value);
   }
 }
@@ -328,7 +328,7 @@ export class Stream {
     return `Stream(dictionary=${repr_field(this.dictionary)}, data=${repr_bytes(this.data)})`;
   }
 
-  __eq__(other: any): boolean {
+  __eq__(other: unknown): boolean {
     return other instanceof Stream && py_eq(this.dictionary, other.dictionary) && py_eq(this.data, other.data);
   }
 }

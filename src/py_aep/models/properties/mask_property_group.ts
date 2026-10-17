@@ -47,14 +47,14 @@ export const _MASK_COLOR_CYCLE: readonly (readonly [number, number, number])[] =
  *     when working with `MaskPropertyGroup`.
  *
  * @example
- * ```python
- * from py_aep import parse
+ * ```ts
+ * import { parse } from "@bevyl-ai/ts-aep";
  *
- * app = parse("project.aep")
- * comp = app.project.compositions[0]
- * layer = comp.layers[0]
- * mask = layer.masks[0]
- * print(mask.inverted)
+ * const app = parse("project.aep");
+ * const comp = app.project.compositions[0];
+ * const layer = comp.layers[0];
+ * const mask = layer.masks[0];
+ * console.log(mask.inverted);
  * ```
  * @see https://ae-scripting.docsforadobe.dev/property/maskpropertygroup/
  */
@@ -174,13 +174,13 @@ export class MaskPropertyGroup extends PropertyGroup {
    *
    * @param parent_property_ - The Masks parade group to add the atom to.
    * @param property_depth - The depth of the mask atom in the tree.
-   * @param kw - Keyword arguments:
+   * @param kw - Options:
    * - `name`: The display name, stored in the `tdsn` (AE bakes the positional `Mask N` name at
    *     creation).
    * - `mask_id`: 1-based creation id, stored in the `mkif` and used to pick the outline color from
    *     the cycle palette.
    */
-  static _new(parent_property_: any, property_depth: any, kw: any): any {
+  static _new(parent_property_: any, property_depth: any, kw: any): MaskPropertyGroup {
     const parent_property = parent_property_ as PropertyGroup;
     const { name, mask_id } = kw as { name: string; mask_id: number };
     const color = _MASK_COLOR_CYCLE[mod(mask_id - 1, _MASK_COLOR_CYCLE.length)];
@@ -299,7 +299,7 @@ export class MaskPropertyGroup extends PropertyGroup {
     // on write, exactly as AE leaves them).
     const chunks = this._tdgp.chunks;
     const found_at = chunks.findIndex(
-      (c: any) =>
+      (c) =>
         c.chunk_type === "tdmn" &&
         getattr(c, "value", null) === "ADBE Mask Shape" &&
         c.synthetic,

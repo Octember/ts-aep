@@ -33,7 +33,7 @@ const _FFLATE_MESSAGES: Record<number, string> = {
 };
 
 function _rethrow(e: unknown): never {
-  const code = (e as any)?.code;
+  const code = (e as { code?: unknown } | null | undefined)?.code;
   if (code === 0) _fail(Z_BUF_ERROR, "incomplete or truncated stream");
   if (typeof code === "number" && code in _FFLATE_MESSAGES) _fail(Z_DATA_ERROR, _FFLATE_MESSAGES[code]);
   throw e;
@@ -94,12 +94,12 @@ function _inflate(body: Uint8Array, limit: number, step: number): _Inflated {
   const chunks: Uint8Array[] = [];
   let total = 0;
   let ended = false;
-  const inf: any = new Inflate((chunk: Uint8Array) => {
+  const inf = new Inflate((chunk: Uint8Array) => {
     if (chunk.length) {
       chunks.push(chunk);
       total += chunk.length;
     }
-  });
+  }) as unknown as { push(chunk: Uint8Array, final: boolean): void; s: { f: number; l: number; p: number }; p: Uint8Array };
   let pushed = 0;
   for (let off = 0; ; off += step) {
     const piece = body.subarray(off, off + step);

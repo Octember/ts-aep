@@ -215,7 +215,7 @@ export function _sheet_readers(
  * style `addText` gives a new layer. Keys map to `TextDocument`
  * attributes. Missing preferences fall back to AE's factory values.
  */
-export function default_character_style(preferences: Preferences): Record<string, any> {
+export function default_character_style(preferences: Preferences): Record<string, unknown> {
   const [number, flag] = _sheet_readers(preferences, _TEXT_STYLE_SECTION);
   const factory = _FACTORY_CHAR_STYLE;
   const fill = [
@@ -263,7 +263,7 @@ export function default_character_style(preferences: Preferences): Record<string
  * Note that hyphenation has no entry in this sheet, which is why After
  * Effects leaves `auto_hyphenate` untouched on a reset.
  */
-export function default_paragraph_style(preferences: Preferences): Record<string, any> {
+export function default_paragraph_style(preferences: Preferences): Record<string, unknown> {
   const [number, flag] = _sheet_readers(preferences, _PARA_SHEET_SECTION);
   const factory = _FACTORY_PARA_STYLE;
   const raw_justification = preferences.get_pref_as_string(_PARA_SHEET_SECTION, "Justification", PREFType.PREF_Type_MACHINE_SPECIFIC_TEXT, {
@@ -440,22 +440,22 @@ export function default_synthetic_out_point(preferences: Preferences): number | 
  *
  * @see https://ae-scripting.docsforadobe.dev/other/preferences/
  * @example
- * ```python
- * import py_aep
- * from py_aep.enums import PREFType
+ * ```ts
+ * import { parse, PREFType } from "@bevyl-ai/ts-aep";
  *
- * app = py_aep.parse("project.aep", ae_preferences_dir="...")
- * fps = app.preferences.get_pref_as_number(
- *     "Import Options Preference Section",
- *     "Import Options Default Sequence FPS",
- *     PREFType.PREF_Type_MACHINE_INDEPENDENT,
- * )
+ * const app = parse("project.aep", { ae_preferences_dir: "..." });
+ * const fps = app.preferences.get_pref_as_number(
+ *   "Import Options Preference Section",
+ *   "Import Options Default Sequence FPS",
+ *   PREFType.PREF_Type_MACHINE_INDEPENDENT,
+ * );
  * ```
+
  */
 export class Preferences {
   declare _prefs_dir: Path | null;
   declare _files: Map<PREFType, PrefsFile | null>;
-  declare _overrides: Map<string, any>;
+  declare _overrides: Map<string, unknown>;
 
   constructor(prefs_dir: PathLike | null = null) {
     this._prefs_dir = prefs_dir != null ? new Path(prefs_dir) : null;
@@ -481,7 +481,7 @@ export class Preferences {
   /**
    * Return `(found, value, is_override)`.
    *
-   * `value` is a typed Python value when `is_override` is `true`,
+   * `value` is a typed value when `is_override` is `true`,
    * otherwise the raw pref-file text (AE's mixed hex/ASCII encoding).
    */
   _resolve(section_name: string, key_name: string, pref_type: PREFType): [boolean, any, boolean] {

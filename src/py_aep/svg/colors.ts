@@ -192,7 +192,7 @@ export function parse_color(value: string | null, current: Rgba = [0.0, 0.0, 0.0
   if (v.startsWith("rgb")) {
     const m = pattern_match(_RGB_RE, v);
     if (m) {
-      const parts = pattern_findall(NUMBER_PCT_RE, m[1]);
+      const parts = pattern_findall(NUMBER_PCT_RE, m[1]) as string[];
       if (parts.length >= 3) {
         const r = _component(parts[0]);
         const g = _component(parts[1]);
@@ -234,7 +234,7 @@ export function _parse_hex(h: string): Rgba | null {
 export function _parse_hsl(v: string): Rgba | null {
   const m = pattern_match(_HSL_RE, v);
   if (!m) return null;
-  const parts = pattern_findall(NUMBER_PCT_RE, m[1]);
+  const parts = pattern_findall(NUMBER_PCT_RE, m[1]) as string[];
   if (parts.length < 3) return null;
   const h = mod(float(rstrip(parts[0], "%")), 360.0) / 360.0;
   // CSS clamps saturation and lightness to [0, 100 %] before converting

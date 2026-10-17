@@ -152,7 +152,7 @@ export const _INLINE_IMAGE_END = /[ \t\n\r\f\v\x00]EI[ \t\n\r\f\v\x00]|[ \t\n\r\
 // geometry
 
 /** `str(x)` for a content-stream operand: every number there is a Python float (`1.0`). */
-export function _operand_str(x: any): string {
+export function _operand_str(x: unknown): string {
   return is_real(x) ? num_str(x, true) : str(x);
 }
 
@@ -239,7 +239,7 @@ export class _Acc {
 }
 
 /** The dictionary of a plain dict or of a `Stream` object. */
-export function _as_dict(value: any): Map<string, any> | null {
+export function _as_dict(value: unknown): Map<string, any> | null {
   if (value instanceof Map) return value;
   const dictionary = getattr(value, "dictionary", null);
   return dictionary instanceof Map ? dictionary : null;
@@ -287,7 +287,7 @@ export class _Document {
   _data: Uint8Array;
   _name: string;
   _offsets: Map<number, number>;
-  _cache: Map<number, any>;
+  _cache: Map<number, unknown>;
   _catalog: Map<string, any> | null;
 
   constructor(data: Uint8Array, name: string) {
@@ -324,7 +324,7 @@ export class _Document {
   }
 
   /** Follow an indirect reference to its object; pass values through. */
-  resolve(value: any): any {
+  resolve(value: unknown): any {
     while (value instanceof IndirectReference) {
       const number = value.object_number;
       if (this._cache.has(number)) {
@@ -340,24 +340,24 @@ export class _Document {
     return value;
   }
 
-  number(value: any, default_: number = 0.0): number {
+  number(value: unknown, default_: number = 0.0): number {
     const resolved = this.resolve(value);
     if (!is_real(resolved)) return default_;
     return float(resolved);
   }
 
-  get(mapping: any, key: string, default_: any = null): any {
+  get(mapping: unknown, key: string, default_: unknown = null): any {
     const table = _as_dict(this.resolve(mapping));
     if (table == null || !table.has(key)) return default_;
     return this.resolve(table.get(key));
   }
 
   /** The decoded body of a stream object. */
-  stream(value: any): Uint8Array {
+  stream(value: unknown): Uint8Array {
     const reference = value;
     value = this.resolve(value);
     let body: Uint8Array | null = null;
-    let info: any = new Map<string, any>();
+    let info: Map<string, any> = new Map<string, any>();
     // `Stream` instances carry (dict, raw); a plain dict needs the raw
     // bytes located from the object's own offset.
     const raw = getattr(value, "data", null);
@@ -370,7 +370,7 @@ export class _Document {
     }
     if (body == null) throw this._reject("unreadable content stream");
     const filters = this.get(info, "Filter");
-    const names: any[] = !Array.isArray(filters) ? [filters] : filters;
+    const names: unknown[] = !Array.isArray(filters) ? [filters] : filters;
     if (this.get(info, "DecodeParms") != null) {
       throw this._reject(
         "the content stream uses a decode-parameter filter " +
@@ -396,7 +396,7 @@ export class _Document {
     return body;
   }
 
-  _raw_stream(number: number, info: any): Uint8Array | null {
+  _raw_stream(number: number, info: unknown): Uint8Array | null {
     const offset = this._offsets.get(number) ?? null;
     if (offset == null) return null;
     let start = bytes_.find(this._data, b("stream"), offset);
@@ -469,7 +469,7 @@ export class _Document {
   /** The page's content stream(s), concatenated and decoded. */
   page_content(page: Map<string, any>): Uint8Array {
     const contents = this.resolve(dict_get(this.resolve(page), "Contents"));
-    const parts: any[] = Array.isArray(contents) ? contents : [contents];
+    const parts: unknown[] = Array.isArray(contents) ? contents : [contents];
     return join_bytes(
       NEWLINE,
       parts.filter((part) => part != null).map((part) => this.stream(part)),
@@ -647,9 +647,9 @@ export function _read_hex_string(data: Uint8Array, pos: number): [Uint8Array, nu
   return [bytes_.fromhex(digits), end + 1];
 }
 
-export function _read_array(data: Uint8Array, pos: number): [any[], number] {
+export function _read_array(data: Uint8Array, pos: number): [unknown[], number] {
   pos += 1;
-  const out: any[] = [];
+  const out: unknown[] = [];
   const size = data.length;
   while (pos < size) {
     if (bytes_eq(data.subarray(pos, pos + 1), RBRACKET)) return [out, pos + 1];
@@ -832,7 +832,7 @@ export function _type0_metrics(doc: _Document, font: Map<string, any>): Metrics 
   const default_ = py_or(doc.number(doc.get(child, "DW"), 1000.0), 1000.0);
   const widths = new Map<number, number>();
   const table = doc.get(child, "W");
-  const entries: any[] = Array.isArray(table) ? table : [];
+  const entries: unknown[] = Array.isArray(table) ? table : [];
   let index = 0;
   while (index < entries.length) {
     const start = doc.number(entries[index]);
@@ -858,7 +858,7 @@ export function _type0_metrics(doc: _Document, font: Map<string, any>): Metrics 
 
 export function _vertical_extent(
   doc: _Document,
-  descriptor: any,
+  descriptor: unknown,
   std: [number, number] | null,
 ): [number, number] {
   const bbox = doc.get(descriptor, "FontBBox");
@@ -904,17 +904,17 @@ export class _Measurer {
     return null;
   }
 
-  _resource(resources: any, category: string, name: any): any {
+  _resource(resources: unknown, category: string, name: unknown): any {
     return this._doc.get(this._doc.get(resources, category), _operand_str(name));
   }
 
-  _resource_ref(resources: any, category: string, name: any): any {
+  _resource_ref(resources: unknown, category: string, name: unknown): any {
     const table = _as_dict(this._doc.resolve(this._doc.get(resources, category)));
     if (table == null) return null;
     return table.get(_operand_str(name)) ?? null;
   }
 
-  run(content: Uint8Array, resources: any): void {
+  run(content: Uint8Array, resources: unknown): void {
     let gs = new _GState();
     const saved: _GState[] = [];
     let operands: any[] = [];
@@ -1065,7 +1065,7 @@ export class _Measurer {
           text_matrix = line_matrix;
         }
         const shown = operands.at(-1);
-        const items: any[] = Array.isArray(shown) ? shown : [shown];
+        const items: unknown[] = Array.isArray(shown) ? shown : [shown];
         text_matrix = this._show_text(gs, text_matrix, items);
       }
       operands = [];
@@ -1118,7 +1118,7 @@ export class _Measurer {
   }
 
   /** A form or image XObject contributes its box with no expansion. */
-  _draw_xobject(gs: _GState, resources: any, name: any): void {
+  _draw_xobject(gs: _GState, resources: unknown, name: unknown): void {
     const xobject = _as_dict(this._resource(resources, "XObject", name));
     if (xobject == null) return;
     const target = this._target();
@@ -1161,7 +1161,7 @@ export class _Measurer {
   }
 
   /** Measure a text-showing operator and advance the text matrix. */
-  _show_text(gs: _GState, text_matrix: Matrix, items: any[]): Matrix {
+  _show_text(gs: _GState, text_matrix: Matrix, items: unknown[]): Matrix {
     const [widths, default_, y_min, y_max, two_byte] = gs.metrics;
     const target = this._target();
     const scale = gs.h_scale / 100.0;

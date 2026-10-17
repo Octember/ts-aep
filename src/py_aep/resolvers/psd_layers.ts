@@ -97,16 +97,16 @@ export class PsdStyleBlocks {
 
   /** `t._replace(field=...)`: a copy with the given fields replaced. */
   _replace(kw: Partial<PsdStyleBlocks>): PsdStyleBlocks {
-    const args = PsdStyleBlocks._fields.map((f) => (f in kw ? (kw as any)[f] : (this as any)[f]));
-    return new (PsdStyleBlocks as any)(...args);
+    const args = PsdStyleBlocks._fields.map((f) => (f in kw ? (kw as Record<string, unknown>)[f] : (this as unknown as Record<string, unknown>)[f]));
+    return new (PsdStyleBlocks as unknown as new (...a: unknown[]) => PsdStyleBlocks)(...args);
   }
 
-  _asdict(): Record<string, any> {
-    return Object.fromEntries(PsdStyleBlocks._fields.map((f) => [f, (this as any)[f]]));
+  _asdict(): Record<string, unknown> {
+    return Object.fromEntries(PsdStyleBlocks._fields.map((f) => [f, (this as unknown as Record<string, unknown>)[f]]));
   }
 
   /** NamedTuple equality: tuple-wise comparison of the fields. */
-  __eq__(other: any): boolean {
+  __eq__(other: Iterable<unknown> | null | undefined): boolean {
     if (other == null || typeof other[Symbol.iterator] !== "function") return false;
     return py_eq([...this], [...other]);
   }
@@ -234,16 +234,16 @@ export class PsdLayer {
 
   /** `t._replace(field=...)`: a copy with the given fields replaced. */
   _replace(kw: Partial<PsdLayer>): PsdLayer {
-    const args = PsdLayer._fields.map((f) => (f in kw ? (kw as any)[f] : (this as any)[f]));
-    return new (PsdLayer as any)(...args);
+    const args = PsdLayer._fields.map((f) => (f in kw ? (kw as Record<string, unknown>)[f] : (this as unknown as Record<string, unknown>)[f]));
+    return new (PsdLayer as unknown as new (...a: unknown[]) => PsdLayer)(...args);
   }
 
-  _asdict(): Record<string, any> {
-    return Object.fromEntries(PsdLayer._fields.map((f) => [f, (this as any)[f]]));
+  _asdict(): Record<string, unknown> {
+    return Object.fromEntries(PsdLayer._fields.map((f) => [f, (this as unknown as Record<string, unknown>)[f]]));
   }
 
   /** NamedTuple equality: tuple-wise comparison of the fields. */
-  __eq__(other: any): boolean {
+  __eq__(other: Iterable<unknown> | null | undefined): boolean {
     if (other == null || typeof other[Symbol.iterator] !== "function") return false;
     return py_eq([...this], [...other]);
   }
@@ -300,16 +300,16 @@ export class PsdGroup {
 
   /** `t._replace(field=...)`: a copy with the given fields replaced. */
   _replace(kw: Partial<PsdGroup>): PsdGroup {
-    const args = PsdGroup._fields.map((f) => (f in kw ? (kw as any)[f] : (this as any)[f]));
-    return new (PsdGroup as any)(...args);
+    const args = PsdGroup._fields.map((f) => (f in kw ? (kw as Record<string, unknown>)[f] : (this as unknown as Record<string, unknown>)[f]));
+    return new (PsdGroup as unknown as new (...a: unknown[]) => PsdGroup)(...args);
   }
 
-  _asdict(): Record<string, any> {
-    return Object.fromEntries(PsdGroup._fields.map((f) => [f, (this as any)[f]]));
+  _asdict(): Record<string, unknown> {
+    return Object.fromEntries(PsdGroup._fields.map((f) => [f, (this as unknown as Record<string, unknown>)[f]]));
   }
 
   /** NamedTuple equality: tuple-wise comparison of the fields. */
-  __eq__(other: any): boolean {
+  __eq__(other: Iterable<unknown> | null | undefined): boolean {
     if (other == null || typeof other[Symbol.iterator] !== "function") return false;
     return py_eq([...this], [...other]);
   }
@@ -1001,7 +1001,7 @@ export function translate(data: Uint8Array, table: Uint8Array): Uint8Array {
 
 // NOTE(port): bytes[start::step] via py_slice (which returns a plain array for bytes), re-wrapped as Uint8Array.
 export function strided(row: Uint8Array, start: number, step: number): Uint8Array {
-  return Uint8Array.from(py_slice(row, start, null, step) as any);
+  return Uint8Array.from(py_slice(row, start, null, step) as ArrayLike<number>);
 }
 
 // NOTE(port): int.from_bytes(data, "big") as an exact bigint; pyrt's int_from_bytes returns a Number and loses bits past 2^53.

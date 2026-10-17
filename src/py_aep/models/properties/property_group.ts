@@ -124,7 +124,7 @@ export function _baked_effect_def(name: string): [string, string, ListChunk] | n
   return [match_name, display, sspc];
 }
 
-export function _insert_before_group_end(tdgp: ListChunk, chunk: any): void {
+export function _insert_before_group_end(tdgp: ListChunk, chunk: Chunk): void {
   /**
    * Insert *chunk* before the 'ADBE Group End' tdmn in *tdgp*.
    *
@@ -234,7 +234,7 @@ export function _reorder_and_fill(
   child_depth: number,
   kw: {
     skip?: ReadonlySet<string>;
-    value_overrides?: Map<string, [any, any]> | null;
+    value_overrides?: Map<string, [unknown, unknown]> | null;
     tail_mode?: "none" | "groups" | "all";
     ae_major: number;
   },
@@ -400,15 +400,17 @@ export function _derive_layer_styles_enabled(
  *     layer or mask groups.
  *
  * @example
- * ```python
- * from py_aep import parse
+ * ```ts
+ * import { parse } from "@bevyl-ai/ts-aep";
  *
- * app = parse("project.aep")
- * comp = app.project.compositions[0]
- * effects = comp.layers[0].effects
- * if effects is not None:
- *     for effect in effects:
- *         ...
+ * const app = parse("project.aep");
+ * const comp = app.project.compositions[0];
+ * const effects = comp.layers[0].effects;
+ * if (effects !== null) {
+ *   for (const effect of effects) {
+ *     // ...
+ *   }
+ * }
  * ```
  * @see https://ae-scripting.docsforadobe.dev/property/propertygroup/
  */
@@ -649,7 +651,7 @@ export class PropertyGroup extends PropertyBase {
     }
   }
 
-  _synthesis_value_overrides(): Map<string, [any, any]> | null {
+  _synthesis_value_overrides(): Map<string, [unknown, unknown]> | null {
     /**
      * Comp-dependent default values for synthesized children.
      *
@@ -662,13 +664,13 @@ export class PropertyGroup extends PropertyBase {
     let zoom: number;
     try {
       // `None._default_zoom` / a layer without it is an AttributeError in Python.
-      const layer = this._containing_layer as any;
+      const layer = this._containing_layer as unknown as { _default_zoom?: () => number };
       zoom = getattr(layer, "_default_zoom").call(layer);
     } catch (e) {
       if (e instanceof ValueError || e instanceof AttributeError) return null;
       throw e;
     }
-    return new Map<string, [any, any]>([
+    return new Map<string, [unknown, unknown]>([
       ["ADBE Camera Zoom", [zoom, zoom]],
       ["ADBE Camera Focus Distance", [zoom, zoom]],
     ]);
@@ -715,9 +717,11 @@ export class PropertyGroup extends PropertyBase {
      * against the lowered, underscore-separated display names of
      * child properties.  This allows natural syntax such as:
      *
-     * ```python
-     * layer.transform.position.value
-     * layer.transform.anchor_point.value
+     * ```ts
+     * import { parse } from "@bevyl-ai/ts-aep";
+     * const layer = parse("project.aep").project.compositions[0].layers[0];
+     * layer.transform.position.value;
+     * layer.transform.anchor_point.value;
      * ```
      *
      * **Note:** Only invoked when normal attribute lookup has already
@@ -748,7 +752,7 @@ export class PropertyGroup extends PropertyBase {
     }
   }
 
-  __setattr__(name: string, value: any): void {
+  __setattr__(name: string, value: unknown): void {
     // A name the class does not define would only become a Python
     // attribute: nothing reaches the file, and it would shadow the child
     // that attribute access resolves (`transform.position = [...]` leaves
@@ -779,15 +783,17 @@ export class PropertyGroup extends PropertyBase {
      * `__getattr__` (snake_case attribute access) delegate here.
      *
      * @example
-     * ```python
-     * layer["ADBE Transform Group"]["ADBE Position"]
-     * layer["ADBE Masks"][0]
-     * layer[0]
+     * ```ts
+     * import { parse, type PropertyGroup } from "@bevyl-ai/ts-aep";
+     * const layer = parse("project.aep").project.compositions[0].layers[0];
+     * (layer.__getitem__("ADBE Transform Group") as PropertyGroup).__getitem__("ADBE Position");
+     * (layer.__getitem__("ADBE Masks") as PropertyGroup).__getitem__(0);
+     * layer.__getitem__(0);
      * ```
-     * @param key - An `int` index or a `str` display name / match name.
+     * @param key - A `number` index or a `string` display name / match name.
      * @throws {@link KeyError} If the string key does not match any child.
      * @throws {@link IndexError} If the integer index is out of range.
-     * @throws {@link TypeError} If `key` is neither `int` nor `str`.
+     * @throws {@link TypeError} If `key` is neither a `number` nor a `string`.
      */
     if (typeof key === "number" && Number.isInteger(key)) {
       return at(this.properties, key);
@@ -970,7 +976,7 @@ export class PropertyGroup extends PropertyBase {
       if (existing == null) {
         const created = new TdumChunk({ chunk_type, values: [bound] });
         tdbs.chunks.push(created);
-        (slot as any)[attr] = created;
+        (slot as unknown as Record<string, TdumChunk>)[attr] = created;
       } else {
         existing.values = [bound];
       }
@@ -1351,7 +1357,7 @@ export class PropertyGroup extends PropertyBase {
     /**
      * Look up a child property by index or name.
      *
-     * @param key - An `int` index or a `str` display name / match name.
+     * @param key - A `number` index or a `string` display name / match name.
      */
     // NOTE This property needs to be defined last to avoid ghosting the
     // @property decorator
@@ -1366,7 +1372,7 @@ PropertyGroup.prototype.add_variable_font_axis = requires_version(26)(
 ) as any;
 
 /** Class-level attributes (TS statics) of `ctor` and its bases, excluding Function built-ins. */
-function hasClassStatic(ctor: any, name: string): boolean {
+function hasClassStatic(ctor: Function, name: string): boolean {
   if (name === "name" || name === "length" || name === "prototype") return false;
   for (let c = ctor; c && c !== Function.prototype; c = Object.getPrototypeOf(c)) {
     if (Object.prototype.hasOwnProperty.call(c, name)) return true;

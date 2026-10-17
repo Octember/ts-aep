@@ -230,7 +230,7 @@ export function split_on_type(chunks: Chunk[], chunk_type: string): Chunk[][] {
 /**
  * Parse path information from an Als2/alas chunk structure.
  *
- * @returns Dictionary with alas data (fullpath, target_is_folder, etc.), or empty dict if not found
+ * @returns Map of alas data (fullpath, target_is_folder, etc.), or an empty Map if not found
  *   or invalid.
  */
 export function parse_alas_data(parent_chunks: Chunk[]): Map<string, any> {
@@ -275,7 +275,7 @@ export function alas_platform(fullpath: string): number {
  * Serialize an `alas` record the way After Effects writes it: sorted
  * keys, no whitespace.
  */
-export function dump_alas(data: Map<string, any>): string {
+export function dump_alas(data: Map<string, unknown>): string {
   return json_dumps(data, { sort_keys: true, separators: [",", ":"] });
 }
 
@@ -288,7 +288,7 @@ export function dump_alas(data: Map<string, any>): string {
  * `Project.save` to compute.
  *
  * @param fullpath - Absolute path to the file, or the containing folder for an image sequence.
- * @param kw - Keyword arguments:
+ * @param kw - Options:
  * - `target_is_folder`: `true` when `fullpath` is a sequence folder.
  */
 export function build_als2_list(
@@ -296,7 +296,7 @@ export function build_als2_list(
   kw: { target_is_folder: boolean },
 ): ListChunk {
   const { target_is_folder } = kw;
-  const data = new Map<string, any>([
+  const data = new Map<string, unknown>([
     ["ascendcount_base", PENDING_ASCENDCOUNT],
     ["ascendcount_target", PENDING_ASCENDCOUNT],
     ["fullpath", fullpath],

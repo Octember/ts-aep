@@ -649,7 +649,7 @@ export class PropertyBase {
     const comp = layer.containing_comp;
 
     // Get effect param defs from the project
-    let effect_param_defs: Map<string, Map<string, Map<string, any>>> = new Map();
+    let effect_param_defs: Map<string, Map<string, Map<string, unknown>>> = new Map();
     const project = comp._project;
     if (project != null) {
       effect_param_defs = project._effect_param_defs;

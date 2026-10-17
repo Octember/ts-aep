@@ -356,11 +356,11 @@ export function pattern_search(re: RegExp, s: string, pos = 0): RegExpExecArray 
 
 /**
  * `pattern.findall(s)`: every non-overlapping match - the whole match when
- * the pattern has no groups, group 1 when it has one, else a tuple of all
+ * the pattern has no groups, group 1 when it has one, else an array of all
  * groups (an unmatched group is "").
  */
-export function pattern_findall(re: RegExp, s: string): any[] {
-  const out: any[] = [];
+export function pattern_findall(re: RegExp, s: string): (string | string[])[] {
+  const out: (string | string[])[] = [];
   for (const m of s.matchAll(variant(global, re, "g"))) {
     if (m.length === 1) out.push(m[0]);
     else if (m.length === 2) out.push(m[1] ?? "");

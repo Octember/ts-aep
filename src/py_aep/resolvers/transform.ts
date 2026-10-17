@@ -395,8 +395,8 @@ export function build_world_matrix(
 
 /** Pixel aspect of a layer's own pixels: its source's, else square. */
 export function layer_source_aspect(layer: Layer): number {
-  const source = hasattr(layer, "source") ? (layer as any).source : null;
-  const aspect = hasattr(source, "pixel_aspect") ? source.pixel_aspect : null;
+  const source = hasattr(layer, "source") ? (layer as unknown as { source: { pixel_aspect?: number | null } | null }).source : null;
+  const aspect = hasattr(source, "pixel_aspect") ? source!.pixel_aspect : null;
   return py_bool(aspect) ? float(aspect) : 1.0;
 }
 
@@ -874,7 +874,7 @@ export function _vec3_normalize(v: number[]): number[] {
  * @param bottom_left - `[x, y, z]` position of the source's bottom-left.
  * @param width - Layer source width in pixels.
  * @param height - Layer source height in pixels.
- * @returns A dict with `anchor_point`, `position`, `x_rotation`, `y_rotation`, `z_rotation` and
+ * @returns An object with `anchor_point`, `position`, `x_rotation`, `y_rotation`, `z_rotation` and
  *   `scale` keys, matching the transform property values AE's `calculateTransformFromPoints()`
  *   returns.
  * @throws {@link ValueError} If the points are coincident or collinear.
@@ -885,7 +885,7 @@ export function transform_from_points(
   bottom_left: number[],
   width: number,
   height: number,
-): Record<string, any> {
+): Record<string, number | number[]> {
   const x_axis = [0, 1, 2].map((i) => top_right[i] - top_left[i]);
   const y_axis = [0, 1, 2].map((i) => bottom_left[i] - top_left[i]);
   const x_len = _vec3_norm(x_axis);

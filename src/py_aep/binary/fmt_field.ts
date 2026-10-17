@@ -93,7 +93,7 @@ export function _fixed_str_converter(encoding: string, size: number): (value: an
 }
 
 export type FmtFieldOptions = {
-  default?: any;
+  default?: unknown;
   repr?: boolean;
   encoding?: string | null;
   optional?: boolean;
@@ -105,7 +105,7 @@ export type FmtFieldOptions = {
  * Declare an attrs field with its struct format in metadata.
  *
  * @param fmt - struct format character(s) (e.g. `"B"`, `"48s"`).
- * @param kw - Keyword arguments:
+ * @param kw - Options:
  * - `default`: Default value for the field. When omitted, bytes formats (`"Ns"`) default to
  *     `b"\\x00" * N` and all other formats default to `0`.
  * - `repr`: Whether to include this field in `repr()`.
@@ -143,7 +143,7 @@ export function fmt_field(fmt: string, kw: FmtFieldOptions = {}): FieldSpec {
       default_ = coerce != null ? coerce(0) : 0;
     }
   }
-  const md: Record<string, any> = { fmt };
+  const md: Record<string, string | boolean | ((value: any) => any)> = { fmt };
   let converter: ((value: any) => any) | null = null;
   if (encoding != null) {
     md["encoding"] = encoding;
@@ -244,7 +244,7 @@ export function _struct_info_uncached(cls: Function): _StructInfo | null {
   /**
    * Derive struct layout metadata for a chunk class.
    *
-   * Returns a 10-tuple `(fmt, data_fields, encodings, optional_start, endians, items_info, coerces, init_names, simple, expected_size)` or `null` for raw-bytes chunks that have neither
+   * Returns a 10-element array `[fmt, data_fields, encodings, optional_start, endians, items_info, coerces, init_names, simple, expected_size]` or `null` for raw-bytes chunks that have neither
    * `fmt_field` nor `items_field` fields.
    *
    * - `encodings`: field-index -\> encoding name.
@@ -355,7 +355,7 @@ export function _init_name(name: string): string {
 }
 
 /**
- * Decode raw struct values into init keyword arguments.
+ * Decode raw struct values into init options.
  *
  * Applies encoding (bytes \> str) and coerce (e.g. int \> bool) transforms
  * declared via `fmt_field()`. Shared by `Chunk.read()` and

@@ -37,6 +37,7 @@
 import { PropertyType } from "../enums/general.ts";
 import { PropertyControlType, PropertyValueType } from "../enums/property.ts";
 import type { CompItem } from "../models/items/composition.ts";
+import type { AVItem } from "../models/items/av_item.ts";
 import type { AVLayer } from "../models/layers/av_layer.ts";
 import type { Layer } from "../models/layers/layer.ts";
 import type { Property } from "../models/properties/property.ts";
@@ -62,7 +63,7 @@ export const CONTROLLER_TEXT = 6;
 
 /** The `Layer` that owns `prop`, or `null` if not layer-owned. */
 export function _owning_layer(prop: Property): Layer | null {
-  let group: any = prop.parent_property;
+  let group: PropertyGroup | null = prop.parent_property;
   while (group != null) {
     if (group instanceof _layer().Layer) return group;
     group = group.parent_property;
@@ -76,7 +77,7 @@ export function _owning_layer(prop: Property): Layer | null {
  * `prop_index` is `null` for by-name resolution (serialized as
  * `0xFFFFFFFF`); a number is AE's hidden-param-aware child index (see the
  * module docstring). Named `prop_index`, not `index`, to avoid shadowing
- * `tuple.index` - mirroring `SourcePropertyRef`.
+ * `Array.prototype.indexOf` - mirroring `SourcePropertyRef`.
  */
 export class PathNode {
   readonly match_name: string;
@@ -102,7 +103,7 @@ export class PathNode {
  * every `* Control-0001` -\> 1).
  */
 export function _effect_param_index(layer: Layer, effect_mn: string, param_mn: string): number | null {
-  const defs: any = dict_get((layer as any).containing_comp._project._effect_param_defs, effect_mn);
+  const defs: Map<string, unknown> | null = dict_get(layer.containing_comp._project._effect_param_defs, effect_mn);
   if (!py_bool(defs)) return null;
   const keys = [...defs.keys()];
   if (!keys.includes(param_mn)) return null;
@@ -117,13 +118,13 @@ export function _effect_param_index(layer: Layer, effect_mn: string, param_mn: s
  * instances are fine - the index disambiguates them.
  */
 export function _effect_param_path(prop: Property): [PathNode[], Layer] | null {
-  const effect: any = prop.parent_property;
+  const effect: PropertyGroup | null = prop.parent_property;
   if (effect == null || !effect.is_effect) return null;
-  const parade: any = effect.parent_property;
+  const parade: PropertyGroup | null = effect.parent_property;
   if (parade == null || parade.match_name !== "ADBE Effect Parade") return null;
-  const layer: any = parade.parent_property;
+  const layer: PropertyGroup | null = parade.parent_property;
   if (!(layer instanceof _layer().Layer)) return null;
-  const effect_index = parade.properties.findIndex((e: any) => e === effect);
+  const effect_index = parade.properties.findIndex((e) => e === effect);
   if (effect_index === -1) return null;
   const leaf_index = _effect_param_index(layer, effect.match_name, prop.match_name);
   if (leaf_index == null) return null;
@@ -163,8 +164,8 @@ export function _source_property_path(prop: Property): [PathNode[], Layer] | nul
   if (effect_path != null) return effect_path;
 
   const chain: PathNode[] = [];
-  let node: any = prop as Property | PropertyGroup;
-  let parent: any = prop.parent_property;
+  let node: Property | PropertyGroup = prop;
+  let parent: PropertyGroup | null = prop.parent_property;
   while (parent != null && !(parent instanceof _layer().Layer)) {
     if (parent.is_effect || parent.match_name === "ADBE Effect Parade") {
       // Effect subtrees are handled by _effect_param_path only; a
@@ -172,11 +173,11 @@ export function _source_property_path(prop: Property): [PathNode[], Layer] | nul
       return null;
     }
     if (parent.property_type === PropertyType.INDEXED_GROUP) {
-      const idx = parent.properties.findIndex((c: any) => c === node);
+      const idx = parent.properties.findIndex((c) => c === node);
       if (idx === -1) return null;
       chain.push(new PathNode(node.match_name, idx));
     } else {
-      if (parent.properties.filter((c: any) => c.match_name === node.match_name).length !== 1) {
+      if (parent.properties.filter((c) => c.match_name === node.match_name).length !== 1) {
         return null;
       }
       chain.push(new PathNode(node.match_name, null));
@@ -186,7 +187,7 @@ export function _source_property_path(prop: Property): [PathNode[], Layer] | nul
   }
   if (!(parent instanceof _layer().Layer)) return null;
   // The layer's top-level group resolves by name too.
-  if (parent.properties.filter((c: any) => c.match_name === node.match_name).length !== 1) {
+  if (parent.properties.filter((c) => c.match_name === node.match_name).length !== 1) {
     return null;
   }
   chain.push(new PathNode(node.match_name, null));
@@ -196,7 +197,7 @@ export function _source_property_path(prop: Property): [PathNode[], Layer] | nul
 /** Serialize a CPrp path into AE's JSON (by-name nodes as `0xFFFFFFFF`). */
 export function _path_json(nodes: PathNode[]): string {
   const body = new Map(
-    nodes.map((node, i): [string, any] => [
+    nodes.map((node, i): [string, { index: number; matchName: string }] => [
       String(i),
       {
         index: node.prop_index != null ? node.prop_index : _BY_NAME_INDEX,
@@ -245,9 +246,9 @@ export function classify_property(prop: Property): number | null {
  */
 export function _already_added(comp: CompItem, layer_id: number, nodes: PathNode[]): boolean {
   const wanted = nodes.map((node) => [node.match_name, node.prop_index]);
-  for (const ctrl of (comp as any).motion_graphics_controllers) {
+  for (const ctrl of comp.motion_graphics_controllers) {
     if (ctrl.source_layer_id !== layer_id) continue;
-    const stored = ctrl.source_property_path.map((ref: any) => [ref.match_name, ref.prop_index]);
+    const stored = ctrl.source_property_path.map((ref) => [ref.match_name, ref.prop_index]);
     if (py_eq(stored, wanted)) return true;
   }
   return false;
@@ -289,7 +290,7 @@ export function property_controller_plan(prop: Property, comp: CompItem): Proper
   if (resolved == null) return null;
   const [nodes, layer] = resolved;
   if (layer.containing_comp !== comp) return null;
-  if (_already_added(comp, (layer as any)._ldta.layer_id, nodes)) return null;
+  if (_already_added(comp, layer._ldta.layer_id, nodes)) return null;
   return new PropertyControllerPlan(controller_type, nodes, _path_json(nodes), layer);
 }
 
@@ -303,8 +304,8 @@ export function can_add_property(prop: Property, comp: CompItem): boolean {
  * current TextDocument (AE 2025 key order).
  */
 export function font_caps_json(prop: Property): string {
-  const value: any = prop.value;
-  let font: any = "";
+  const value: unknown = prop.value;
+  let font: string | null = "";
   let size: number = 0;
   if (value instanceof _text_document().TextDocument) {
     font = value.font || "";
@@ -352,7 +353,7 @@ export function media_controller_path(): [PathNode[], string] {
 export function can_add_layer(layer: AVLayer, comp: CompItem): boolean {
   if (layer.containing_comp !== comp) return false;
   if (!layer.has_video || layer.adjustment_layer || layer.null_layer) return false;
-  const source: any = layer.source;
+  const source: AVItem | null = layer.source;
   if (source instanceof _footage().FootageItem) {
     if (source.main_source instanceof _solid().SolidSource) return false;
   } else if (!(source instanceof _composition().CompItem)) {
@@ -362,5 +363,5 @@ export function can_add_layer(layer: AVLayer, comp: CompItem): boolean {
   // controllers (slider/checkbox/...) on the same layer coexist with a
   // Media Replacement in AE.
   const [nodes] = media_controller_path();
-  return !_already_added(comp, (layer as any)._ldta.layer_id, nodes);
+  return !_already_added(comp, layer._ldta.layer_id, nodes);
 }

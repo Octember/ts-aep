@@ -176,7 +176,7 @@ export class RoptChunk extends Chunk {
     return "";
   }
 
-  static read(fp: IO, size: number, kw: { chunk_type?: string; [k: string]: any } = {}): RoptChunk {
+  static read(fp: IO, size: number, kw: { chunk_type?: string; [k: string]: unknown } = {}): RoptChunk {
     const { chunk_type = "" } = kw;
     if (this !== RoptChunk) {
       // Variant subclass - use standard fmt_field parsing
@@ -542,7 +542,7 @@ export class RenderSettingsItem extends FmtItem {
    */
   copy_settings_from(source: RenderSettingsItem): void {
     for (const field of (this.constructor as typeof RenderSettingsItem)._TEMPLATE_FIELDS) {
-      (this as any)[field] = getattr(source, field);
+      (this as unknown as Record<string, unknown>)[field] = getattr(source, field);
     }
   }
 
@@ -763,7 +763,7 @@ export class OutputModuleSettingsItem extends FmtItem {
    */
   copy_settings_from(source: OutputModuleSettingsItem): void {
     for (const field of (this.constructor as typeof OutputModuleSettingsItem)._TEMPLATE_FIELDS) {
-      (this as any)[field] = getattr(source, field);
+      (this as unknown as Record<string, unknown>)[field] = getattr(source, field);
     }
   }
 
@@ -776,7 +776,7 @@ export class OutputModuleSettingsItem extends FmtItem {
    */
   restore_from(source: OutputModuleSettingsItem): void {
     for (const field of fields(OutputModuleSettingsItem)) {
-      (this as any)[field.name] = getattr(source, field.name);
+      (this as unknown as Record<string, unknown>)[field.name] = getattr(source, field.name);
     }
   }
 }

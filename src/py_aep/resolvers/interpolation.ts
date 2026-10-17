@@ -1868,12 +1868,12 @@ export function interpolate_keyframes(
 
   // Before first keyframe or single keyframe
   if (n === 1 || time <= keyframes[0]._layer_time) {
-    return keyframes[0]._stored_value as any;
+    return keyframes[0]._stored_value as number[] | number | Shape | null;
   }
 
   // After last keyframe
   if (time >= keyframes[keyframes.length - 1]._layer_time) {
-    return keyframes[keyframes.length - 1]._stored_value as any;
+    return keyframes[keyframes.length - 1]._stored_value as number[] | number | Shape | null;
   }
 
   // Find the segment
@@ -1893,8 +1893,8 @@ export function interpolate_keyframes(
   const t1 = kf_right._layer_time;
 
   // At exactly a keyframe time
-  if (Math.abs(time - t0) < 1e-12) return kf_left._stored_value as any;
-  if (Math.abs(time - t1) < 1e-12) return kf_right._stored_value as any;
+  if (Math.abs(time - t0) < 1e-12) return kf_left._stored_value as number[] | number | Shape | null;
+  if (Math.abs(time - t1) < 1e-12) return kf_right._stored_value as number[] | number | Shape | null;
 
   const v0 = kf_left._stored_value as any;
   const v1 = kf_right._stored_value as any;

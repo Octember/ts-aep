@@ -21,7 +21,7 @@ export function _require_environment_lights(comp: CompItem, what: string): void 
   }
 }
 
-export function _validate_light_type(value: any, obj: LightLayer): void {
+export function _validate_light_type(value: number, obj: LightLayer): void {
   if (value === LightType.ENVIRONMENT) {
     _require_environment_lights(obj.containing_comp, "LightType.ENVIRONMENT");
   }
@@ -30,13 +30,13 @@ export function _validate_light_type(value: any, obj: LightLayer): void {
 /**
  * The `LightLayer` object represents a light layer within a composition.
  *
- * ```python
- * from py_aep import parse
+ * ```ts
+ * import { parse } from "@bevyl-ai/ts-aep";
  *
- * app = parse("project.aep")
- * comp = app.project.compositions[0]
- * light = comp.light_layers[0]
- * print(light.light_type)
+ * const app = parse("project.aep");
+ * const comp = app.project.compositions[0];
+ * const light = comp.light_layers[0];
+ * console.log(light.light_type);
  * ```
  *
  * Info:
@@ -85,7 +85,7 @@ export class LightLayer extends Layer {
     match_name: string,
     auto_name: string,
     property_depth: number,
-    kw?: any,
+    kw?: unknown,
   ): PropertyGroup;
   static _new(kw: {
     name: string;
@@ -93,9 +93,9 @@ export class LightLayer extends Layer {
     duration: number;
     containing_comp: CompItem;
     light_type?: number;
-    effect_param_defs?: Map<string, Map<string, Map<string, any>>> | null;
+    effect_param_defs?: Map<string, Map<string, Map<string, unknown>>> | null;
   }): LightLayer;
-  static _new(kw: any): LightLayer;
+  static _new(kw: unknown): LightLayer;
   static _new(kw: any): any {
     // NOTE(port): Python `# type: ignore[override]` is type-only; overloads above mirror Layer._new's signature set.
     const {

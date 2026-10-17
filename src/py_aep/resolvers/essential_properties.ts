@@ -164,7 +164,7 @@ export function _preorder_index(root: PropertyGroup, target: Property): number |
  * override leaf or the controller cannot be resolved (e.g. it was removed).
  */
 export function resolve_essential_property_controller(prop: Property): EssentialGraphicsController | null {
-  let root: any = prop._parent_property;
+  let root: PropertyGroup | Property | null = prop._parent_property;
   while (root != null && root.match_name !== "ADBE Layer Overrides") {
     root = root._parent_property;
   }

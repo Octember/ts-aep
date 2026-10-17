@@ -28,7 +28,7 @@ export const _LAYER_CLASSES: Map<number, typeof Layer> = new Map<number, typeof 
   [LayerType.SHAPE, ShapeLayer],
   [LayerType.THREE_D_MODEL, ThreeDModelLayer],
   [LayerType.PARAMETRIC_MESH, ParametricMeshLayer],
-] as Array<[number, any]>);
+] as Array<[number, typeof Layer]>);
 
 /**
  * Extract Essential Properties override UUIDs from LIST:OvG2 chunks.
@@ -68,7 +68,7 @@ export function _parse_ovg2_uuids(tdgp_chunks: Chunk[]): string[] {
 export const parse_layer = _suppress_materialization().decorate(function parse_layer(
   layer_chunk: ListChunk,
   composition: CompItem,
-  effect_param_defs: Map<string, Map<string, Map<string, any>>>,
+  effect_param_defs: Map<string, Map<string, Map<string, unknown>>>,
 ): Layer {
   const child_chunks = layer_chunk.chunks;
 

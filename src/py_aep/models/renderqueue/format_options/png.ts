@@ -31,19 +31,20 @@ import type { Utf8Chunk } from "../../../binary/scalar_chunks.ts";
  * is stored separately in a JSON `Utf8` chunk alongside the Ropt chunk.
  *
  * @example
- * ```python
- * from py_aep import PngFormatOptions, parse
+ * ```ts
+ * import { PngFormatOptions, parse } from "@bevyl-ai/ts-aep";
  *
- * app = parse("project.aep")
- * om = app.project.render_queue.items[0].output_modules[0]
- * if isinstance(om.format_options, PngFormatOptions):
- *     print(om.format_options.compression)
+ * const app = parse("project.aep");
+ * const om = app.project.render_queue.items[0].output_modules[0];
+ * if (om.format_options instanceof PngFormatOptions) {
+ *   console.log(om.format_options.compression);
+ * }
  * ```
  */
 export class PngFormatOptions extends FormatOptionsBase {
   declare _body: PngRoptChunk;
   declare _hdr10_utf8: Utf8Chunk | null;
-  declare _hdr10_meta: Map<string, any>;
+  declare _hdr10_meta: Map<string, unknown>;
 
   constructor(kw: { _body: PngRoptChunk; _hdr10_utf8?: Utf8Chunk | null }) {
     super();
@@ -114,7 +115,7 @@ export class PngFormatOptions extends FormatOptionsBase {
   get color_primaries(): Hdr10ColorPrimaries | number {
     const raw = this._hdr10_meta.get("displayPrimaries") ?? null;
     if (raw == null) return Hdr10ColorPrimaries.P3_D65;
-    return enum_or_raw((v: any) => {
+    return enum_or_raw((v: unknown) => {
       // Python `int(v)` raises TypeError for a list / dict; pyrt `int` would not.
       if (!is_real(v) && typeof v !== "string" && typeof v !== "boolean") {
         throw new TypeError_(`int() argument must be a string, a bytes-like object or a real number, not '${type_name(v)}'`);
@@ -136,7 +137,7 @@ export class PngFormatOptions extends FormatOptionsBase {
    */
   get luminance_min(): number | null {
     const raw = this._hdr10_meta.get("minLuminance") ?? null;
-    return raw != null ? float(raw) : null;
+    return raw != null ? float(raw as number) : null;
   }
 
   set luminance_min(value: number | null) {
@@ -156,7 +157,7 @@ export class PngFormatOptions extends FormatOptionsBase {
    */
   get luminance_max(): number | null {
     const raw = this._hdr10_meta.get("maxLuminance") ?? null;
-    return raw != null ? float(raw) : null;
+    return raw != null ? float(raw as number) : null;
   }
 
   set luminance_max(value: number | null) {
@@ -176,7 +177,7 @@ export class PngFormatOptions extends FormatOptionsBase {
    */
   get content_light_max(): number | null {
     const raw = this._hdr10_meta.get("maxContentLightLevel") ?? null;
-    return raw != null ? float(raw) : null;
+    return raw != null ? float(raw as number) : null;
   }
 
   set content_light_max(value: number | null) {
@@ -196,7 +197,7 @@ export class PngFormatOptions extends FormatOptionsBase {
    */
   get content_light_average(): number | null {
     const raw = this._hdr10_meta.get("maxFrameAverageLightLevel") ?? null;
-    return raw != null ? float(raw) : null;
+    return raw != null ? float(raw as number) : null;
   }
 
   set content_light_average(value: number | null) {

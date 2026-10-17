@@ -37,13 +37,14 @@ export function _ensure_materialized(chunk: Chunk): void {
  * particular After Effects project. Attributes provide access to items in
  * the render queue and their render status.
  *
- * ```python
- * from py_aep import parse
+ * ```ts
+ * import { parse } from "@bevyl-ai/ts-aep";
  *
- * app = parse("project.aep")
- * render_queue = app.project.render_queue
- * for rq_item in render_queue:
- *     ...
+ * const app = parse("project.aep");
+ * const render_queue = app.project.render_queue;
+ * for (const rq_item of render_queue) {
+ *   // ...
+ * }
  * ```
  *
  * @example

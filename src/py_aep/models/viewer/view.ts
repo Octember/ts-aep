@@ -6,12 +6,12 @@ import type { Viewer } from "./viewer.ts";
  * The `View` object represents a specific view.
  *
  * @example
- * ```python
- * from py_aep import parse
+ * ```ts
+ * import { parse } from "@bevyl-ai/ts-aep";
  *
- * app = parse("project.aep")
- * view = app.active_viewer.views[0]
- * print(view.options)
+ * const app = parse("project.aep");
+ * const view = app.active_viewer.views[0];
+ * console.log(view.options);
  * ```
  * @see https://ae-scripting.docsforadobe.dev/other/view/
  */

@@ -8,12 +8,12 @@ import type { AVItem } from "../items/av_item.ts";
 /**
  * The `ViewOptions` object represents the options for a given {@link View} object.
  *
- * ```python
- * from py_aep import parse
+ * ```ts
+ * import { parse } from "@bevyl-ai/ts-aep";
  *
- * app = parse("project.aep")
- * options = app.active_viewer.views[0].options
- * print(options.zoom)
+ * const app = parse("project.aep");
+ * const options = app.active_viewer.views[0].options;
+ * console.log(options.zoom);
  * ```
  *
  * @example
@@ -162,7 +162,7 @@ descriptor(
   new ChunkField<number>("_fips", "roi_top", {
     validate: _validate_number({
       min: 0,
-      max: (self: any) => self.roi_bottom - 1,
+      max: (self: ViewOptions) => self.roi_bottom - 1,
       integer: true,
     }),
   }),
@@ -174,7 +174,7 @@ descriptor(
   new ChunkField<number>("_fips", "roi_left", {
     validate: _validate_number({
       min: 0,
-      max: (self: any) => self.roi_right - 1,
+      max: (self: ViewOptions) => self.roi_right - 1,
       integer: true,
     }),
   }),
@@ -185,8 +185,8 @@ descriptor(
   "roi_bottom",
   new ChunkField<number>("_fips", "roi_bottom", {
     validate: _validate_number({
-      min: (self: any) => self.roi_top + 1,
-      max: (self: any) => (self._item ? self._item.height : null),
+      min: (self: ViewOptions) => self.roi_top + 1,
+      max: (self: ViewOptions) => (self._item ? self._item.height : null),
       integer: true,
     }),
   }),
@@ -197,8 +197,8 @@ descriptor(
   "roi_right",
   new ChunkField<number>("_fips", "roi_right", {
     validate: _validate_number({
-      min: (self: any) => self.roi_left + 1,
-      max: (self: any) => (self._item ? self._item.width : null),
+      min: (self: ViewOptions) => self.roi_left + 1,
+      max: (self: ViewOptions) => (self._item ? self._item.width : null),
       integer: true,
     }),
   }),

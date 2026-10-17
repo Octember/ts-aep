@@ -48,7 +48,7 @@ export function build_layer_view_block(): Chunk[] {
 
 // NOTE(port): the only specs in data/comp_skeleton_specs.ts are `+`/`-`/unary minus over env names and int
 // literals (`W2 - ZV`, `-ZV`, `H2 + 5000`, `TB`); there JS doubles and CPython eval agree, so Function stands in.
-export function _evaluate(value: any, env: Record<string, number>): any {
+export function _evaluate(value: unknown, env: Record<string, number>): any {
   if (typeof value === "string" && value.startsWith("$")) {
     const names = Object.keys(env);
     return new Function(...names, `return (${value.slice(1)});`)(...names.map((n) => env[n]));
@@ -72,7 +72,7 @@ export function _build_tdbs(spec: Record<string, any>, env: Record<string, numbe
   ];
   if ("cdat" in spec) {
     chunks.push(
-      new CdatChunk({ values: spec["cdat"].map((v: any) => float(_evaluate(v, env))) }),
+      new CdatChunk({ values: spec["cdat"].map((v: unknown) => float(_evaluate(v, env))) }),
     );
   }
   if ("tdum" in spec) {
@@ -115,7 +115,7 @@ export function _build_tdgp(
     } else if (kind === "prop") {
       chunks.push(_build_tdbs(body, env));
     } else if (kind === "orientation") {
-      const otda_values = body["otda"].map((v: any) => float(_evaluate(v, env)));
+      const otda_values = body["otda"].map((v: unknown) => float(_evaluate(v, env)));
       const inner = Object.fromEntries(Object.entries(body).filter(([k]) => k !== "otda"));
       const otky = new ListChunk({
         list_type: "otky",
@@ -141,7 +141,7 @@ export function _build_view_layer(
   layer_id: number,
   ae_major: number,
 ): ListChunk {
-  const ldta_kwargs: Record<string, any> = Object.fromEntries(
+  const ldta_kwargs: Record<string, unknown> = Object.fromEntries(
     Object.entries(spec["ldta"]).map(([k, v]) => [k, _evaluate(v, env)]),
   );
   if (!ae_writes("matte layer id", ae_major)) {

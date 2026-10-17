@@ -15,13 +15,14 @@ import { validate_f8 } from "./validators.ts";
  * **Note:** Guide class has no ExtendScript equivalent.
  *
  * @example
- * ```python
- * from py_aep import parse
+ * ```ts
+ * import { parse } from "@bevyl-ai/ts-aep";
  *
- * app = parse("project.aep")
- * comp = app.project.compositions[0]
- * for guide in comp.guides:
- *     print(guide.orientation_type, guide.position)
+ * const app = parse("project.aep");
+ * const comp = app.project.compositions[0];
+ * for (const guide of comp.guides) {
+ *   console.log(guide.orientation_type, guide.position);
+ * }
  * ```
  */
 export class Guide {

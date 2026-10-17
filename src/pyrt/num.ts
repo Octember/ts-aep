@@ -31,7 +31,7 @@ export class PyFloat {
   __bool__(): boolean {
     return this.value !== 0;
   }
-  __eq__(other: any): boolean {
+  __eq__(other: unknown): boolean {
     return unbox(other) === this.value;
   }
   __deepcopy__(): PyFloat {
@@ -45,13 +45,13 @@ export function pyfloat(x: number | PyFloat): PyFloat {
 }
 
 /** `isinstance(x, (int, float))` without the bool case: a JS number or a boxed `PyFloat`. */
-export function is_real(x: any): x is number | PyFloat {
+export function is_real(x: unknown): x is number | PyFloat {
   return typeof x === "number" || x instanceof PyFloat;
 }
 
 /** The plain JS number behind a possibly boxed `PyFloat`; other values pass through. */
 export function unbox<T>(x: T): T extends PyFloat ? number : T {
-  return (x instanceof PyFloat ? x.value : x) as any;
+  return (x instanceof PyFloat ? x.value : x) as T extends PyFloat ? number : T;
 }
 
 /**

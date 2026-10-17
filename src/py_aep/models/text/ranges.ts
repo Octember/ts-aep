@@ -66,7 +66,7 @@ import type { TextDocument } from "./text_document.ts";
 // NOTE(port): thin alias of pyrt py_bool (Python truthiness), exported under the builtin name.
 export const bool = (x: unknown): boolean => py_bool(x);
 
-/** A COS dict (`dict[str, Any]`): a `Map` so numeric-looking keys keep their order. */
+/** A COS dict (string keys to any value): a `Map` so numeric-looking keys keep their order. */
 export type Dict = Map<string, any>;
 
 // AE's exact error strings (AE 26.3, English locale); py_aep raises these
@@ -106,7 +106,7 @@ export function u16_slice(s: string, start: number, end: number): string {
 
 /** The stored text, including the terminator `\r`. */
 export function _raw_text(doc: TextDocument): string {
-  const val = cos_get((doc as any)._doc, "0", "0");
+  const val = cos_get(doc._doc, "0", "0");
   return val != null ? str(val) : "";
 }
 
@@ -126,17 +126,17 @@ export function _visible_length(doc: TextDocument): number {
 
 /** Character style-run spans. */
 export function _char_run_spans(doc: TextDocument): [number, number, Dict][] {
-  return run_spans((doc as any)._doc, "6", "6");
+  return run_spans(doc._doc, "6", "6");
 }
 
 /** Paragraph style-run spans (one run per paragraph). */
 export function _para_run_spans(doc: TextDocument): [number, number, Dict][] {
-  return run_spans((doc as any)._doc, "5", "5");
+  return run_spans(doc._doc, "5", "5");
 }
 
 /** Manual-kerning run spans; payload key `"0"` holds the value. */
 export function _kern_run_spans(doc: TextDocument): [number, number, Dict][] {
-  return run_spans((doc as any)._doc, "8", null);
+  return run_spans(doc._doc, "8", null);
 }
 
 /**
@@ -147,11 +147,11 @@ export function _kern_run_spans(doc: TextDocument): [number, number, Dict][] {
  * document has no cache.
  */
 export function _cached_line_nodes(doc: TextDocument): Dict[] {
-  const entries = cos_get((doc as any)._doc, "1", "2");
+  const entries = cos_get(doc._doc, "1", "2");
   if (!Array.isArray(entries)) return [];
   const lines: Dict[] = [];
 
-  const collect = (node: any): void => {
+  const collect = (node: unknown): void => {
     if (!(node instanceof Map)) return;
     if (str(node.get("99") ?? null) === "L") {
       lines.push(node);
@@ -302,7 +302,7 @@ export function _composed_line_spans(doc: TextDocument): [number, number][] | nu
 }
 
 /** Extract `[R, G, B]` from a COS SimplePaint structure. */
-export function _parse_color(paint: any): number[] | null {
+export function _parse_color(paint: unknown): number[] | null {
   const argb = cos_get(paint, "0", "1");
   if (Array.isArray(argb) && argb.length >= 4) {
     return [float(argb[1]), float(argb[2]), float(argb[3])];
@@ -367,8 +367,8 @@ export function _register_font_at(
   kw: { used_record?: boolean } = {},
 ): number {
   const { used_record = true } = kw;
-  const cos: Dict = (doc as any)._cos_data;
-  const font_array: any[] = setdefault(setdefault(setdefault(cos, "0", new Map()), "1", new Map()), "0", []);
+  const cos: Dict = doc._cos_data;
+  const font_array: unknown[] = setdefault(setdefault(setdefault(cos, "0", new Map()), "1", new Map()), "0", []);
   const entry = _build_font_entry(post_script_name);
   const version = font_version_string(post_script_name);
   if (version != null) (getitem(getitem(entry, "0"), "0") as Dict).set("5", version);
@@ -381,7 +381,7 @@ export function _register_font_at(
     }
   };
 
-  for (const entry_doc of py_or(dict_get(dict_get(cos, "1", new Map()), "1", []), []) as any[]) {
+  for (const entry_doc of py_or(dict_get(dict_get(cos, "1", new Map()), "1", []), []) as Dict[]) {
     const runs = cos_get(entry_doc, "0", "6", "0");
     if (!Array.isArray(runs)) continue;
     for (const run of runs) {
@@ -490,7 +490,7 @@ export function _repoint_used_font_record(
   to_name: string,
 ): void {
   const version = font_version_string(to_name);
-  const sessions = cos_get((doc as any)._cos_data, "1", "5");
+  const sessions = cos_get(doc._cos_data, "1", "5");
   if (!Array.isArray(sessions)) return;
   for (const session of sessions) {
     const records = session instanceof Map ? session.get("4") ?? null : null;
@@ -539,11 +539,11 @@ export function _mark_layout_dirty(doc: TextDocument): void {
  * structural op must end here.
  */
 export function _refresh_style_aliases(doc: TextDocument): void {
-  const cos_doc: Dict = (doc as any)._doc;
+  const cos_doc: Dict = doc._doc;
   const char = cos_get(cos_doc, "0", "6", "0", 0, "0", "0", "6");
-  if (char instanceof Map) (doc as any)._char_style = char;
+  if (char instanceof Map) doc._char_style = char;
   const para = cos_get(cos_doc, "0", "5", "0", 0, "0", "0", "5");
-  if (para instanceof Map) (doc as any)._para_style = para;
+  if (para instanceof Map) doc._para_style = para;
 }
 
 /**
@@ -636,13 +636,13 @@ export function _merge_adjacent_runs(runs: Dict[]): void {
  * at the visible length extends through the raw terminator
  * (`W_MERGE_SAME`); `value=None` clears the key.
  */
-export function _apply_char_key(doc: TextDocument, start: number, end: number, key: string, value: any): void {
+export function _apply_char_key(doc: TextDocument, start: number, end: number, key: string, value: unknown): void {
   const raw = _raw_text(doc);
   [start, end] = _snap_to_pairs(raw, start, end);
   if (start === end) return;
   if (!_NON_LAYOUT_CHAR_KEYS.has(key)) _mark_layout_dirty(doc);
   if (end === _visible_length(doc)) end = u16_len(raw);
-  const runs = cos_get((doc as any)._doc, "0", "6", "0");
+  const runs = cos_get(doc._doc, "0", "6", "0");
   if (!Array.isArray(runs) || !runs.length) return;
   _split_run_array(runs, new Set([start, end]));
   let pos = 0;
@@ -662,9 +662,9 @@ export function _apply_char_key(doc: TextDocument, start: number, end: number, k
 }
 
 /** Per-character manual-kern values decoded from the kern runs. */
-export function _kern_values(doc: TextDocument): any[] {
+export function _kern_values(doc: TextDocument): unknown[] {
   const total = u16_len(_raw_text(doc));
-  const values: any[] = new Array(total).fill(null);
+  const values: unknown[] = new Array(total).fill(null);
   for (const [start, end, payload] of _kern_run_spans(doc)) {
     const value = payload.get("0") ?? null;
     if (value != null) {
@@ -683,8 +683,8 @@ export function _kern_values(doc: TextDocument): any[] {
  * dict is kept in place when it exists so `doc["0"]`'s key order is
  * preserved; a fresh key is appended, like AE's creation order.
  */
-export function _rebuild_kern_runs(doc: TextDocument, values: any[]): void {
-  const inner: Dict = setdefault((doc as any)._doc, "0", new Map());
+export function _rebuild_kern_runs(doc: TextDocument, values: unknown[]): void {
+  const inner: Dict = setdefault(doc._doc, "0", new Map());
   const has_value = values.some((v) => v != null);
   if (!has_value) {
     // AE drops the array entirely once no manual values remain
@@ -733,7 +733,7 @@ export function _splice_text(
   end: number,
   new_text: string,
   insert_runs: Dict[] | null = null,
-  insert_kern: any[] | null = null,
+  insert_kern: unknown[] | null = null,
 ): void {
   const raw = _raw_text(doc);
   const total = u16_len(raw);
@@ -744,7 +744,7 @@ export function _splice_text(
   const new_raw = u16_slice(raw, 0, start) + new_text + u16_slice(raw, end, total);
   let parts = split(new_raw, "\r");
   if (parts[parts.length - 1] === "") parts = parts.slice(0, -1);
-  const inner: Dict = setdefault((doc as any)._doc, "0", new Map());
+  const inner: Dict = setdefault(doc._doc, "0", new Map());
 
   const runs = cos_get(inner, "6", "0");
   if (Array.isArray(runs) && runs.length) {
@@ -844,10 +844,10 @@ export function _splice_text(
  * range (paragraph runs are structural: never split, never merged -
  * `W_PARA_PARTIAL` styles the whole containing paragraph).
  */
-export function _apply_para_key(doc: TextDocument, start: number, end: number, key: string, value: any): void {
+export function _apply_para_key(doc: TextDocument, start: number, end: number, key: string, value: unknown): void {
   if (start === end) return;
   _mark_layout_dirty(doc);
-  const runs = cos_get((doc as any)._doc, "0", "5", "0");
+  const runs = cos_get(doc._doc, "0", "5", "0");
   if (!Array.isArray(runs)) return;
   let pos = 0;
   for (const run of runs) {
@@ -866,6 +866,16 @@ export function _apply_para_key(doc: TextDocument, start: number, end: number, k
 // ---------------------------------------------------------------------------
 // RangeField descriptor
 // ---------------------------------------------------------------------------
+
+/** Constructor options of {@link RangeField | RangeField}. */
+export interface RangeFieldOptions {
+  transform?: ((raw: any) => any) | null;
+  default?: any;
+  gate?: string | null;
+  reverse?: ((value: any) => any) | null;
+  validate?: ((value: any, instance?: any) => void) | null;
+  read_only?: boolean;
+}
 
 /**
  * Read-only descriptor resolving one COS style key over a range.
@@ -909,14 +919,7 @@ export class RangeField {
   constructor(
     kind: string,
     key: string,
-    kw: {
-      transform?: ((raw: any) => any) | null;
-      default?: any;
-      gate?: string | null;
-      reverse?: ((value: any) => any) | null;
-      validate?: ((value: any, instance?: any) => void) | null;
-      read_only?: boolean;
-    } = {},
+    kw: RangeFieldOptions = {},
   ) {
     const {
       transform = null,
@@ -958,13 +961,13 @@ export class RangeField {
   }
 
   /** Create a RangeField for boolean style flags. */
-  static bool(kind: string, key: string, kwargs: Record<string, any> = {}): RangeField {
+  static bool(kind: string, key: string, kwargs: RangeFieldOptions = {}): RangeField {
     return new this(kind, key, { transform: bool, reverse: bool, ...kwargs });
   }
 
   /** Create a RangeField that coerces to float. */
-  static float(kind: string, key: string, kwargs: Record<string, any> = {}): RangeField {
-    const kw: Record<string, any> = { ...kwargs };
+  static float(kind: string, key: string, kwargs: RangeFieldOptions = {}): RangeField {
+    const kw: RangeFieldOptions = { ...kwargs };
     // The stored value is a Python float, so box it to keep `1.0` from serializing as `1`.
     if (!("reverse" in kw)) kw.reverse = (x: any) => pyfloat(float(x));
     return new this(kind, key, { transform: float, ...kw });
@@ -978,15 +981,15 @@ export class RangeField {
    * misread at 16.16 scale (stored `50.0` read back as `3276800`,
    * probed AE 2026).
    */
-  static int(kind: string, key: string, kwargs: Record<string, any> = {}): RangeField {
-    const kw: Record<string, any> = { ...kwargs };
+  static int(kind: string, key: string, kwargs: RangeFieldOptions = {}): RangeField {
+    const kw: RangeFieldOptions = { ...kwargs };
     if (!("reverse" in kw)) kw.reverse = round;
     return new this(kind, key, { transform: int, ...kw });
   }
 
   /** Create a RangeField for IntEnum-backed style keys. */
-  static enum(enum_cls: any, kind: string, key: string, kwargs: Record<string, any> = {}): RangeField {
-    const kw: Record<string, any> = { ...kwargs };
+  static enum(enum_cls: any, kind: string, key: string, kwargs: RangeFieldOptions = {}): RangeField {
+    const kw: RangeFieldOptions = { ...kwargs };
     if (!("transform" in kw)) {
       const from_binary = getattr(enum_cls, "from_binary", null);
       kw.transform =
@@ -1325,7 +1328,7 @@ export class CharacterRange extends _TextRange {
 
     const entries: Dict[] = [];
     let pos = 0;
-    for (const run of py_or(cos_get((src_doc as any)._doc, "0", "6", "0"), [])) {
+    for (const run of py_or(cos_get(src_doc._doc, "0", "6", "0"), [])) {
       const run_end = pos + (dict_get(run, "1", 0) as number);
       const overlap_start = Math.max(pos, src_start);
       const overlap_end = Math.min(run_end, src_end);
@@ -1371,7 +1374,7 @@ export class CharacterRange extends _TextRange {
     const kern_slice = _kern_values(src_doc).slice(src_start, src_end);
     let src_edge: number | null = null;
     if (src_start === 0) {
-      const edge = cos_get((src_doc as any)._doc, "0", "7");
+      const edge = cos_get(src_doc._doc, "0", "7");
       if (typeof edge === "number" && Number.isInteger(edge)) src_edge = edge;
     }
     const raw = _raw_text(doc);
@@ -1384,7 +1387,7 @@ export class CharacterRange extends _TextRange {
       // 0, otherwise it becomes the pair value between the preceding
       // character and the pasted text (probed Y_PASTE_EDGE0/_MID).
       if (start === 0) {
-        setdefault((doc as any)._doc, "0", new Map()).set("7", src_edge);
+        setdefault(doc._doc, "0", new Map()).set("7", src_edge);
       } else {
         const values = _kern_values(doc);
         if (start - 1 < values.length) {
@@ -1445,7 +1448,7 @@ export class CharacterRange extends _TextRange {
       for (let i = start; i < Math.min(end, values.length); i++) values[i] = null;
       _rebuild_kern_runs(doc, values);
       if (start === 0) {
-        const holder = dict_get((doc as any)._doc, "0") as Dict | null;
+        const holder = dict_get(doc._doc, "0") as Dict | null;
         if (holder != null) holder.delete("7");
       }
     }
@@ -1567,7 +1570,7 @@ export class CharacterRange extends _TextRange {
     if (start === 0) {
       // Pair position 0 (before the first character): AE stores the
       // leading-edge value at doc["0"]["7"], created after key "8".
-      setdefault((doc as any)._doc, "0", new Map()).set("7", value);
+      setdefault(doc._doc, "0", new Map()).set("7", value);
     }
     _apply_char_key(doc, kern_start, end, "11", AutoKernType.to_binary(AutoKernType.NO_AUTO_KERN));
     this._propagate();
@@ -1603,7 +1606,7 @@ export class CharacterRange extends _TextRange {
 
   /** The document's composer engine (document-wide). Read-only. */
   get composer_engine(): ComposerEngine | null {
-    return (this._doc_ref as any).composer_engine;
+    return this._doc_ref.composer_engine;
   }
 }
 

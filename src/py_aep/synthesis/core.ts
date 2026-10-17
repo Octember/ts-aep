@@ -30,6 +30,7 @@ import { ThreeDModelLayer } from "../models/layers/three_d_model_layer.ts";
 import { Property } from "../models/properties/property.ts";
 import { PropertyGroup, _apply_bounds, _derive_layer_styles_enabled, _reorder_and_fill } from "../models/properties/property_group.ts";
 import { _PARAMETRIC_MESH_TOP_LEVEL_SPECS, _SKIP_FOR_CAMERA, _SKIP_FOR_LIGHT, _SKIP_FOR_REGULAR_AV, _SKIP_FOR_SHAPE, _SKIP_FOR_TEXT, _TOP_LEVEL_SPECS, _TRANSFORM_FIXED_DEFAULTS, _TRANSFORM_SPECS } from "./property.ts";
+import type { GroupSpec, PropSpec } from "./property.ts";
 import type { Layer } from "../models/layers/layer.ts";
 
 // ---------------------------------------------------------------------------
@@ -63,7 +64,7 @@ export function synthesize_children(group: PropertyGroup, ae_major: number): voi
  * groups and reorders all groups to match the canonical ExtendScript order.
  */
 export function _synthesize_missing_top_level_groups(layer: Layer, ae_major: number): void {
-  let specs: readonly any[] = _TOP_LEVEL_SPECS;
+  let specs: ReadonlyArray<PropSpec | GroupSpec> = _TOP_LEVEL_SPECS;
   let skip_groups: ReadonlySet<string>;
   if (layer instanceof CameraLayer) {
     skip_groups = _SKIP_FOR_CAMERA;
@@ -91,7 +92,7 @@ export function _synthesize_missing_top_level_groups(layer: Layer, ae_major: num
   // Post-processing: Layer Sets elided flag and depth fixup.
   const canonical_mns = new Set<string>(specs.map((s) => s.match_name));
   for (const child of layer.properties) {
-    if (child.match_name === "ADBE Layer Sets") (child as any)._elided = true;
+    if (child.match_name === "ADBE Layer Sets") (child as PropertyGroup)._elided = true;
     if (child instanceof PropertyGroup && canonical_mns.has(child.match_name)) {
       child._property_depth = 1;
     }
@@ -186,7 +187,7 @@ export function _set_transform_defaults(layer: Layer, ae_major: number): void {
       // could not have worked anyway: `property_value_type` is a
       // plain property, so the `__dict__` write was discarded.)
       if (prop.default_value != null) continue; // already set (e.g. by effect param defs)
-      let default_: any = _TRANSFORM_FIXED_DEFAULTS.get(prop.match_name) ?? null;
+      let default_: number | number[] | null = _TRANSFORM_FIXED_DEFAULTS.get(prop.match_name) ?? null;
       if (default_ == null) default_ = spatial_defaults.get(prop.match_name) ?? null;
       if (default_ != null) {
         // When the parser stores a vector property as a scalar
@@ -209,12 +210,12 @@ export function _set_transform_defaults(layer: Layer, ae_major: number): void {
     ["ADBE Position_2", 0.0],
   ]);
 
-  const overrides = new Map<string, [any, any]>();
+  const overrides = new Map<string, [number | number[], number | number[]]>();
   for (const spec of _TRANSFORM_SPECS) {
     const mn = spec.match_name;
-    let default_: any = _TRANSFORM_FIXED_DEFAULTS.get(mn) ?? null;
+    let default_: number | number[] | null = _TRANSFORM_FIXED_DEFAULTS.get(mn) ?? null;
     if (default_ == null) default_ = spatial_defaults.get(mn) ?? null;
-    let value: any = _INACTIVE_FOLLOWER_VALUE.get(mn) ?? null;
+    let value: number | number[] | null = _INACTIVE_FOLLOWER_VALUE.get(mn) ?? null;
     if (value == null) value = default_;
     if (value == null) value = spec.dimensions > 1 ? Array(spec.dimensions).fill(0.0) : 0.0;
     if (default_ == null) default_ = value;

@@ -253,10 +253,18 @@ export type ArgSpec = {
   flag: string | null;
   positional: boolean;
   store_true: boolean;
-  type_: ((s: string) => any) | null;
-  default_: any;
+  type_: ((s: string) => unknown) | null;
+  default_: unknown;
   metavar: string | null;
   help: string;
+};
+
+export type ArgumentOptions = {
+  action?: string;
+  type?: (s: string) => unknown;
+  default?: unknown;
+  metavar?: string;
+  help?: string;
 };
 
 export class ArgumentParser {
@@ -265,13 +273,13 @@ export class ArgumentParser {
   private readonly epilog: string;
   private readonly specs: ArgSpec[] = [];
 
-  constructor(kwargs: Record<string, any> = {}) {
+  constructor(kwargs: { prog?: string; description?: string; epilog?: string; formatter_class?: unknown } = {}) {
     this.prog = kwargs.prog ?? "";
     this.description = kwargs.description ?? "";
     this.epilog = kwargs.epilog ?? "";
   }
 
-  add_argument(name: string, kwargs: Record<string, any> = {}): void {
+  add_argument(name: string, kwargs: ArgumentOptions = {}): void {
     const positional = !name.startsWith("-");
     const store_true = kwargs.action === "store_true";
     this.specs.push({

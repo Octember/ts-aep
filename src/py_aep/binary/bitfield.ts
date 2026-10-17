@@ -28,16 +28,16 @@ export class BitField {
     this.mask = lshift(1, bit);
   }
 
-  __get__(obj: any, objtype: Function | null = null): boolean {
+  __get__(obj: object, objtype: Function | null = null): boolean {
     return py_bool(and(getattr(obj, this.byte_field), this.mask));
   }
 
-  __set__(obj: any, value: boolean): void {
+  __set__(obj: object, value: boolean): void {
     const raw = getattr(obj, this.byte_field);
     if (value) {
-      obj[this.byte_field] = or(raw, this.mask);
+      (obj as Record<string, unknown>)[this.byte_field] = or(raw, this.mask);
     } else {
-      obj[this.byte_field] = and_not(raw, this.mask);
+      (obj as Record<string, unknown>)[this.byte_field] = and_not(raw, this.mask);
     }
   }
 }

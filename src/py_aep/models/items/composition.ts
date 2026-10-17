@@ -455,6 +455,16 @@ export function _rewrite_eg_identity(
   }
 }
 
+export interface LayerTypeCache {
+  av: AVLayer[];
+  text: TextLayer[];
+  shape: ShapeLayer[];
+  camera: CameraLayer[];
+  light: LightLayer[];
+  three_d_model: ThreeDModelLayer[];
+  parametric_mesh: ParametricMeshLayer[];
+}
+
 /**
  * The `CompItem` object represents a composition, and allows you to
  * manipulate and get information about it.
@@ -467,14 +477,15 @@ export function _rewrite_eg_identity(
  *     all of these item types.
  *
  * @example
- * ```python
- * from py_aep import parse
+ * ```ts
+ * import { parse } from "@bevyl-ai/ts-aep";
  *
- * app = parse("project.aep")
- * comp = app.project.compositions[0]
- * print(comp.frame_rate)
- * for layer in comp:
- *     ...
+ * const app = parse("project.aep");
+ * const comp = app.project.compositions[0];
+ * console.log(comp.frame_rate);
+ * for (const layer of comp) {
+ *   // ...
+ * }
  * ```
  * @see https://ae-scripting.docsforadobe.dev/item/compitem/
  */
@@ -1031,14 +1042,14 @@ export class CompItem extends AVItem {
 
   declare _layers: Layer[];
   declare _layers_by_id: Map<number, Layer> | null;
-  declare __type_cache: Record<string, any[]> | null;
+  declare __type_cache: LayerTypeCache | null;
   declare __layer_id_to_index: Map<number, number> | null;
   declare _cdta: CdtaChunk;
   declare _cdrp: U1Chunk | null;
   declare prin_list: ListChunk;
   declare _prin: PrinChunk;
   declare _prda: PrdaChunk;
-  declare _deferred_layers: [ListChunk[], Map<string, any>] | null;
+  declare _deferred_layers: [ListChunk[], Map<string, Map<string, Map<string, any>>>] | null;
   declare _layers_loaded: boolean;
   declare _deferred_child_chunks: Chunk[] | null;
   declare _marker_property: Property | null;
@@ -1056,7 +1067,7 @@ export class CompItem extends AVItem {
     _name_utf8: Utf8Chunk;
     project: Project;
     parent_folder: FolderItem;
-    effect_param_defs: Map<string, any>;
+    effect_param_defs: Map<string, Map<string, Map<string, any>>>;
     proxy_source: FileSource | SolidSource | PlaceholderSource | null;
   }) {
     // Skip AVItem's extra params - they're all descriptor-backed on
@@ -1234,7 +1245,7 @@ export class CompItem extends AVItem {
       for (const source_id of new_comp._source_ids_for_linking()) {
         const source = project.items.get(source_id) ?? null;
         if (source != null && "_used_in" in source) {
-          (source as any)._used_in.add(new_comp);
+          (source as AVItem)._used_in.add(new_comp);
         }
       }
     }
@@ -1301,7 +1312,7 @@ export class CompItem extends AVItem {
     const [layer_chunks, deferred_effect_param_defs] = deferred;
     this._deferred_layers = null;
 
-    let effect_param_defs: Map<string, any>;
+    let effect_param_defs: Map<string, Map<string, Map<string, any>>>;
     if (deferred_effect_param_defs?.size > 0) {
       effect_param_defs = deferred_effect_param_defs;
     } else if (this._project != null) {
@@ -1338,7 +1349,7 @@ export class CompItem extends AVItem {
     }
   }
 
-  _build_type_cache(): Record<string, any[]> {
+  _build_type_cache(): LayerTypeCache {
     const av: AVLayer[] = [];
     const text: TextLayer[] = [];
     const shape: ShapeLayer[] = [];
@@ -1367,7 +1378,7 @@ export class CompItem extends AVItem {
       }
     }
     this._layers_by_id = by_id;
-    const cache: Record<string, any[]> = {
+    const cache: LayerTypeCache = {
       av,
       text,
       shape,
@@ -1766,16 +1777,18 @@ export class CompItem extends AVItem {
    * Read / Write.
    *
    * @example
-   * ```python
-   * comp.renderer_options["Quality"] = 61
-   * comp.renderer_options.quality = 61
+   * ```ts
+   * import { parse } from "@bevyl-ai/ts-aep";
+   *
+   * const comp = parse("project.aep").project.compositions[0];
+   * comp.renderer_options.__setitem__("Quality", 61);
    * ```
    */
   get renderer_options(): RendererOptions {
     return _renderer_options().renderer_options_for(this._prda, this);
   }
 
-  set renderer_options(value: Map<string, any>) {
+  set renderer_options(value: Map<string, unknown>) {
     if (!(value instanceof Map)) {
       throw new ValueError("renderer_options must be a mapping of key-value pairs");
     }
@@ -1797,15 +1810,19 @@ export class CompItem extends AVItem {
   }
 
   /**
-   * A flat list of {@link MarkerValue} objects for this composition.
+   * A flat array of {@link MarkerValue} objects for this composition.
    *
    * Shortcut for accessing marker data without navigating the property
-   * tree.  Returns an empty list when the composition has no markers.
+   * tree.  Returns an empty array when the composition has no markers.
    *
    * @example
-   * ```python
-   * for marker in comp.markers:
-   *     print(marker.comment)
+   * ```ts
+   * import { parse } from "@bevyl-ai/ts-aep";
+   *
+   * const comp = parse("project.aep").project.compositions[0];
+   * for (const marker of comp.markers) {
+   *   console.log(marker.comment);
+   * }
    * ```
    */
   get markers(): MarkerValue[] {
@@ -1882,26 +1899,26 @@ export class CompItem extends AVItem {
   }
 
   /** Cached layer type lists for O(1) access. */
-  get _type_cache(): Record<string, any[]> {
+  get _type_cache(): LayerTypeCache {
     return this.__type_cache != null ? this.__type_cache : this._build_type_cache();
   }
 
-  /** A list of all {@link AVLayer} objects in this composition. */
+  /** An array of all {@link AVLayer} objects in this composition. */
   get av_layers(): AVLayer[] {
     return this._type_cache.av;
   }
 
-  /** A list of the composition layers whose source are compositions. */
+  /** An array of the composition layers whose source are compositions. */
   get composition_layers(): AVLayer[] {
     return this.av_layers.filter((layer) => layer.source instanceof CompItem);
   }
 
-  /** A list of the composition layers whose source are footages. */
+  /** An array of the composition layers whose source are footages. */
   get footage_layers(): AVLayer[] {
     return this.av_layers.filter((layer) => layer.source instanceof FootageItem);
   }
 
-  /** A list of the layers whose source are file footages. */
+  /** An array of the layers whose source are file footages. */
   get file_layers(): AVLayer[] {
     return this.footage_layers.filter(
       (layer) =>
@@ -1910,7 +1927,7 @@ export class CompItem extends AVItem {
     );
   }
 
-  /** A list of the layers whose source are solids. */
+  /** An array of the layers whose source are solids. */
   get solid_layers(): AVLayer[] {
     return this.footage_layers.filter(
       (layer) =>
@@ -1919,7 +1936,7 @@ export class CompItem extends AVItem {
     );
   }
 
-  /** A list of the layers whose source are placeholders. */
+  /** An array of the layers whose source are placeholders. */
   get placeholder_layers(): AVLayer[] {
     return this.footage_layers.filter(
       (layer) =>
@@ -1928,57 +1945,57 @@ export class CompItem extends AVItem {
     );
   }
 
-  /** A list of the text layers in this composition. */
+  /** An array of the text layers in this composition. */
   get text_layers(): TextLayer[] {
     return this._type_cache.text;
   }
 
-  /** A list of the shape layers in this composition. */
+  /** An array of the shape layers in this composition. */
   get shape_layers(): ShapeLayer[] {
     return this._type_cache.shape;
   }
 
-  /** A list of the camera layers in this composition. */
+  /** An array of the camera layers in this composition. */
   get camera_layers(): CameraLayer[] {
     return this._type_cache.camera;
   }
 
-  /** A list of the light layers in this composition. */
+  /** An array of the light layers in this composition. */
   get light_layers(): LightLayer[] {
     return this._type_cache.light;
   }
 
-  /** A list of the 3D model layers in this composition. */
+  /** An array of the 3D model layers in this composition. */
   get three_d_model_layers(): ThreeDModelLayer[] {
     return this._type_cache.three_d_model;
   }
 
-  /** A list of the parametric mesh layers in this composition. */
+  /** An array of the parametric mesh layers in this composition. */
   get parametric_mesh_layers(): ParametricMeshLayer[] {
     return this._type_cache.parametric_mesh;
   }
 
-  /** A list of the null layers in this composition. */
+  /** An array of the null layers in this composition. */
   get null_layers(): Layer[] {
     return this.layers.filter((layer) => layer.null_layer);
   }
 
-  /** A list of the adjustment layers in this composition. */
+  /** An array of the adjustment layers in this composition. */
   get adjustment_layers(): AVLayer[] {
     return this.av_layers.filter((layer) => layer.adjustment_layer);
   }
 
-  /** A list of the 3D layers in this composition. */
+  /** An array of the 3D layers in this composition. */
   get three_d_layers(): AVLayer[] {
     return this.av_layers.filter((layer) => layer.three_d_layer);
   }
 
-  /** A list of the guide layers in this composition. */
+  /** An array of the guide layers in this composition. */
   get guide_layers(): AVLayer[] {
     return this.av_layers.filter((layer) => layer.guide_layer);
   }
 
-  /** A list of the soloed layers in this composition. */
+  /** An array of the soloed layers in this composition. */
   get solo_layers(): Layer[] {
     return this.layers.filter((layer) => layer.solo);
   }
@@ -2655,7 +2672,7 @@ export class CompItem extends AVItem {
      * @param box_size - `[width, height]` for box text; `null` for point text.
      * @param line_orientation - Text {@link LineOrientation}; `null` for the default horizontal
      *   orientation.
-     * @returns A `(LIST:btds, btgu, tdmn)` tuple to inject into the root tdgp.
+     * @returns A `(LIST:btds, btgu, tdmn)` array to inject into the root tdgp.
      */
     const td = new TextDocument(text, box_size, line_orientation);
     // AE applies the character-level "Text Style Sheet" preferences to
@@ -2928,8 +2945,8 @@ descriptor(
   CompItem,
   "drop_frame",
   ChunkField.bool("_cdrp", "value", {
-    transform: (v: any) => py_bool(v),
-    reverse: (v: any) => int(v),
+    transform: (v: unknown) => py_bool(v),
+    reverse: (v: boolean) => int(v),
     default: false,
   }),
 );

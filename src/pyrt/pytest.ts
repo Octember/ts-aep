@@ -19,7 +19,7 @@ import { py_eq } from "./builtins.ts";
 import { warnings } from "./errors.ts";
 import { Path } from "./pathlib.ts";
 
-export function raises<E extends Error>(cls: abstract new (...a: any[]) => E, fn: () => unknown, match?: string | RegExp): E {
+export function raises<E extends Error>(cls: abstract new (...a: never[]) => E, fn: () => unknown, match?: string | RegExp): E {
   try {
     fn();
   } catch (e) {
@@ -44,10 +44,10 @@ export function warns(fn: () => unknown, match?: string | RegExp): string[] {
 }
 
 /** `actual == pytest.approx(expected, rel=1e-6, abs=1e-12)` over numbers or (nested) sequences. */
-export function approx(actual: any, expected: any, opts: { rel?: number; abs?: number } = {}): boolean {
+export function approx(actual: unknown, expected: unknown, opts: { rel?: number; abs?: number } = {}): boolean {
   if (Array.isArray(expected) || ArrayBuffer.isView(expected)) {
-    const a = Array.from(actual as ArrayLike<any>);
-    const e = Array.from(expected as ArrayLike<any>);
+    const a = Array.from(actual as ArrayLike<unknown>);
+    const e = Array.from(expected as ArrayLike<unknown>);
     return a.length === e.length && a.every((x, i) => approx(x, e[i], opts));
   }
   if (typeof expected !== "number" || typeof actual !== "number") return py_eq(actual, expected);

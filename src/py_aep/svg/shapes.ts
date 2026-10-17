@@ -211,7 +211,7 @@ export function _ellipse(
 }
 
 export function _poly(attrs: Map<string, string>, closed: boolean): RawSubpath[] {
-  const nums = pattern_findall(NUMBER_RE, attrs.get("points") ?? "").map((n) => float(n));
+  const nums = pattern_findall(NUMBER_RE, attrs.get("points") ?? "").map((n) => float(n as string));
   const pts = zip(py_slice(nums, 0, null, 2), py_slice(nums, 1, null, 2));
   if (pts.length < 2) {
     return [];

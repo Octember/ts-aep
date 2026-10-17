@@ -55,7 +55,7 @@ import { ParagraphJustification } from "../enums/index.ts";
 import * as tc from "./text_composition.ts";
 import { BoxAccumulator } from "./shape_bounds.ts";
 
-// A glyph's outline bounds in font units, `None` for an empty glyph.
+// A glyph's outline bounds in font units, `null` for an empty glyph.
 // NOTE(port): keyed by glyph id (HarfBuzz codepoint); Python's glyph name is order[gid], a 1:1 map, so the cache is equivalent.
 export type _GlyphBounds = Map<number, [number, number, number, number] | null>;
 
@@ -63,27 +63,27 @@ export type _CharStyle = ReturnType<typeof tc._char_styles>[number];
 
 export const _CFF_INK_SCALE = 1031.25 / 1024;
 
-export const _glyph_cache = new Map<string, [any, boolean, _GlyphBounds]>();
+export const _glyph_cache = new Map<string, [fontkit.Font, boolean, _GlyphBounds]>();
 
 export function _is_os_error(exc: unknown): boolean {
   // Python catches OSError (a missing or unreadable file). Node reports those
   // as errors carrying a string `code`.
-  return exc instanceof Error && typeof (exc as any).code === "string";
+  return exc instanceof Error && typeof (exc as { code?: unknown }).code === "string";
 }
 
-export function _open_face(path: string, face_index: number): any {
+export function _open_face(path: string, face_index: number): fontkit.Font {
   // NOTE(port): fontTools `TTFont(fontNumber=...)` picks a face of a .ttc;
   // fontkit exposes collection faces through `.fonts`; a plain font is its own face.
-  const opened: any = fontkit.create(host.fs.readFileSync(path) as any);
+  const opened = fontkit.create(host.fs.readFileSync(path) as never) as fontkit.Font & { fonts?: fontkit.Font[] };
   return opened.fonts ? opened.fonts[face_index] : opened;
 }
 
 /** `(font, is_cff, outline bounds by glyph id)` for a PostScript name, cached; the bounds fill in as glyphs are measured. */
-export function _font_outlines(ps_name: string): [any, boolean, _GlyphBounds] {
+export function _font_outlines(ps_name: string): [fontkit.Font, boolean, _GlyphBounds] {
   const [path, face_index] = tc._resolve_face(ps_name);
   const key = tkey(str(path), face_index);
   if (!_glyph_cache.has(key)) {
-    let font: any;
+    let font: fontkit.Font;
     try {
       font = _open_face(str(path), face_index);
     } catch (exc) {
@@ -100,7 +100,7 @@ export function _font_outlines(ps_name: string): [any, boolean, _GlyphBounds] {
 }
 
 /** fontTools `BoundsPen` for one glyph: `null` when it draws nothing. */
-export function _pen_bounds(font: any, gid: number): [number, number, number, number] | null {
+export function _pen_bounds(font: fontkit.Font, gid: number): [number, number, number, number] | null {
   // TODO(port): fontkit vs fontTools outline decoding. fontkit's Path.bbox is
   // exact (curve extrema) like BoundsPen, but fontkit builds the path itself
   // (TrueType implied on-curve points, CFF/CFF2 charstring interpretation), so
@@ -131,7 +131,7 @@ export function _check_styles(doc: TextDocument): void {
  * The stroke a character's run draws, 0 when it has none (the width
  * defaults to 1, as `TextDocument.stroke_width` reads it).
  */
-export function _stroke_width(style: any): number {
+export function _stroke_width(style: Map<string, any>): number {
   if (!py_bool(dict_get(style, "57", false))) return 0.0;
   return float(dict_get(style, "63", 1.0));
 }
@@ -169,7 +169,7 @@ export function _line_ink(
     }
     const [font, is_cff, glyph_bounds] = _font_outlines(style.font);
     const ink_scale = scale * (is_cff ? _CFF_INK_SCALE : 1.0);
-    for (const [info, pos] of zip<[any[], any[]]>(buf.glyph_infos, buf.glyph_positions)) {
+    for (const [info, pos] of zip<[{ codepoint: number; cluster: number }[], { x_advance: number; y_advance: number; x_offset: number; y_offset: number }[]]>(buf.glyph_infos, buf.glyph_positions)) {
       // fontkit addresses glyphs by id, which HarfBuzz reports as the codepoint.
       const name = info.codepoint;
       if (!glyph_bounds.has(name)) {
@@ -247,7 +247,7 @@ export function text_ink_rect(doc: TextDocument): Record<string, number> {
   return box.rect();
 }
 
-export function _justification(paragraph_style: any): ParagraphJustification {
+export function _justification(paragraph_style: Map<string, any>): ParagraphJustification {
   return ParagraphJustification.from_binary(
     int(dict_get(paragraph_style, "0", 0)),
   ) as ParagraphJustification;
@@ -257,7 +257,7 @@ export function _point_text_ink(
   raw: string,
   styles: _CharStyle[],
   strokes: number[],
-  paragraph_styles: any[],
+  paragraph_styles: Map<string, any>[],
   box: BoxAccumulator,
 ): void {
   const body = raw.endsWith("\r") ? raw.slice(0, -1) : raw;
@@ -309,7 +309,7 @@ export function _box_text_ink(
   raw: string,
   styles: _CharStyle[],
   strokes: number[],
-  paragraph_styles: any[],
+  paragraph_styles: Map<string, any>[],
   box: BoxAccumulator,
 ): void {
   const composed = tc.compose_lines(doc);

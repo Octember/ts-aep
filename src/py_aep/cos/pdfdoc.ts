@@ -84,8 +84,8 @@ export function decode_pdf_text_string(raw: Uint8Array | string): string {
   if (raw instanceof Uint8Array) {
     return _from_bytes(raw);
   }
-  if ((raw as any) instanceof CosString && (raw as any).cos_raw != null) {
-    return _from_bytes((raw as any).cos_raw);
+  if ((raw as unknown) instanceof CosString && (raw as unknown as CosString).cos_raw != null) {
+    return _from_bytes((raw as unknown as CosString).cos_raw);
   }
   return raw;
 }

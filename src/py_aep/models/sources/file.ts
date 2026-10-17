@@ -60,8 +60,8 @@ import {
  * `NamedTuple._replace(**kw)` for the translated NamedTuples (`MediaInfo`,
  * `FileFormat`) that may not carry a `_replace` method.
  */
-export function _replace<T extends object>(obj: T, kw: Record<string, any>): T {
-  const own = (obj as any)._replace;
+export function _replace<T extends object>(obj: T, kw: Partial<T>): T {
+  const own = (obj as { _replace?: (kw: Partial<T>) => T })._replace;
   if (typeof own === "function") return own.call(obj, kw);
   return Object.assign(Object.create(Object.getPrototypeOf(obj)), obj, kw);
 }
@@ -80,7 +80,7 @@ export function _splitext_ext(name: string): string {
  * the `errno` check matches Python's `except OSError` for fs failures.
  */
 export function _is_os_error(e: unknown): boolean {
-  return e instanceof OSError || typeof (e as any)?.errno === "number";
+  return e instanceof OSError || typeof (e as { errno?: unknown } | null)?.errno === "number";
 }
 
 export function _opti_data(
@@ -599,13 +599,14 @@ export type NewSourceKw = {
  *     attributes of {@link FootageSource} are available when working with `FileSource`.
  *
  * @example
- * ```python
- * from py_aep import FileSource, parse
+ * ```ts
+ * import { FileSource, parse } from "@bevyl-ai/ts-aep";
  *
- * app = parse("project.aep")
- * footage = app.project.footages[0]
- * if isinstance(footage.main_source, FileSource):
- *     print(footage.main_source.file)
+ * const app = parse("project.aep");
+ * const footage = app.project.footages[0];
+ * if (footage.main_source instanceof FileSource) {
+ *   console.log(footage.main_source.file);
+ * }
  * ```
  * @see https://ae-scripting.docsforadobe.dev/sources/filesource/
  */
@@ -1509,7 +1510,7 @@ export class FileSource extends FootageSource {
    *   not implemented.
    */
   reload(): void {
-    let owner: any = null;
+    let owner: unknown = null;
     if (this._project != null) {
       for (const item of this._project.items.values()) {
         if (getattr(item, "_main_source", null) === this) {
@@ -1654,7 +1655,7 @@ export class FileSource extends FootageSource {
     const sspc = this._sspc;
     const fresh_sspc = fresh._sspc;
     for (const name of ["width", "height", "depth", "alpha_mode_raw", ...fields]) {
-      (sspc as any)[name] = getattr(fresh_sspc, name);
+      (sspc as unknown as Record<string, unknown>)[name] = getattr(fresh_sspc, name);
     }
     sspc.data_size = fresh_sspc.data_size;
     sspc._source_stamp = fresh_sspc._source_stamp;

@@ -25,7 +25,7 @@ import type { PropertyGroup } from "../properties/property_group.ts";
  */
 export const NoneType = Symbol("NoneType");
 
-export function _type_of(x: any): any {
+export function _type_of(x: { constructor: Function } | null | undefined): Function | symbol {
   return x == null ? NoneType : x.constructor;
 }
 
@@ -40,13 +40,13 @@ export function _type_of(x: any): any {
  * **Note:** This functionality was added in After Effects 26.0
  *
  * @example
- * ```python
- * from py_aep import parse
+ * ```ts
+ * import { parse } from "@bevyl-ai/ts-aep";
  *
- * app = parse("project.aep")
- * comp = app.project.compositions[0]
- * mesh = comp.parametric_mesh_layers[0]
- * print(mesh.name)
+ * const app = parse("project.aep");
+ * const comp = app.project.compositions[0];
+ * const mesh = comp.parametric_mesh_layers[0];
+ * console.log(mesh.name);
  * ```
  * @see https://ae-scripting.docsforadobe.dev/layer/parametricmeshlayer/
  */
@@ -63,8 +63,8 @@ export class ParametricMeshLayer extends AVLayer {
   /** The ParametricBevelOptions object represents the bevel options for a parametric mesh layer. */
   declare parametric_bevel_options: ParametricBevelOptions;
 
-  constructor(...args: any[]) {
-    super(...(args as [any]));
+  constructor(...args: ConstructorParameters<typeof AVLayer>) {
+    super(...args);
     this._update_options();
   }
 
@@ -76,7 +76,7 @@ export class ParametricMeshLayer extends AVLayer {
     duration: number;
     containing_comp: CompItem;
     mesh_type: ParametricMeshType;
-    effect_param_defs?: Map<string, any> | null;
+    effect_param_defs?: Map<string, unknown> | null;
   }): ParametricMeshLayer;
   static _new(kw: any): ParametricMeshLayer;
   static _new(kw: any): any {
@@ -121,7 +121,7 @@ export class ParametricMeshLayer extends AVLayer {
     const old_options = getattr(this, "parametric_mesh_options", null);
     if (_type_of(old_options) !== options_cls) {
       try {
-        delete (this as any).parametric_mesh_options;
+        delete (this as { parametric_mesh_options?: unknown }).parametric_mesh_options;
       } catch (e) {
         if (!(e instanceof AttributeError)) throw e;
       }
@@ -134,7 +134,7 @@ export class ParametricMeshLayer extends AVLayer {
     const old_bevel = getattr(this, "parametric_bevel_options", null);
     if (_type_of(old_bevel) !== bevel_cls) {
       try {
-        delete (this as any).parametric_bevel_options;
+        delete (this as { parametric_bevel_options?: unknown }).parametric_bevel_options;
       } catch (e) {
         if (!(e instanceof AttributeError)) throw e;
       }
@@ -203,7 +203,7 @@ export class ParaMeshField<T extends number | boolean = number> {
   }
 
   __get__(obj: ParametricMeshOptions | ParametricBevelOptions | null, objtype: Function): T {
-    if (obj == null) return this as any;
+    if (obj == null) return this as unknown as T;
     const value = obj._properties(this._property_name).value;
     return value as T;
   }
@@ -239,7 +239,7 @@ export class ParametricMeshOptions {
   }
 
   __repr__(): string {
-    const result = new Map<string, any>();
+    const result = new Map<string, unknown>();
     // NOTE(port): descriptors_of walks the MRO but vars(cls) is the class's own dict; same result because no base class declares descriptors.
     for (const [name] of descriptors_of(this.constructor)) {
       result.set(name, getattr(this, name));

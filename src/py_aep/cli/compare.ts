@@ -234,8 +234,8 @@ export function _chunk_floats(chunk: any): number[] | null {
   }
   if (ct === "ldat") {
     const items = chunk.items;
-    if (py_bool(items) && items.every((i: any) => hasattr(i, "x") && hasattr(i, "y"))) {
-      return items.flatMap((i: any) => [i.x, i.y]);
+    if (py_bool(items) && items.every((i: { x: number; y: number }) => hasattr(i, "x") && hasattr(i, "y"))) {
+      return items.flatMap((i: { x: number; y: number }) => [i.x, i.y]);
     }
   }
   return null;
@@ -250,7 +250,7 @@ export function _with_floats(chunk: any, floats: number[]): any {
   } else if (ct === "shph") {
     [clone.top_left_x, clone.top_left_y, clone.bottom_right_x, clone.bottom_right_y] = floats;
   } else if (ct === "ldat") {
-    for (const [idx, item] of (clone.items as any[]).entries()) {
+    for (const [idx, item] of (clone.items as { x: number; y: number }[]).entries()) {
       item.x = floats[2 * idx];
       item.y = floats[2 * idx + 1];
     }

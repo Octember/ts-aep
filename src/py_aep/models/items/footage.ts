@@ -35,12 +35,12 @@ import type { FolderItem } from "./folder.ts";
  * The `FootageItem` object represents a footage item imported into a project,
  * which appears in the Project panel.
  *
- * ```python
- * from py_aep import parse
+ * ```ts
+ * import { parse } from "@bevyl-ai/ts-aep";
  *
- * app = parse("project.aep")
- * footage = app.project.footages[0]
- * print(footage.main_source)
+ * const app = parse("project.aep");
+ * const footage = app.project.footages[0];
+ * console.log(footage.main_source);
  * ```
  *
  * Info:
@@ -248,7 +248,7 @@ export class FootageItem extends AVItem {
     } else {
       // TODO(port): Python formats `type(src)` as `<class 'py_aep.<module>.<Name>'>`; JS has no module path, so only the bare class name is printed. Affects only this unreachable-in-practice error message.
       throw new TypeError_(
-        `Unexpected source type for ${this.name}: ${(this._main_source as any)?.constructor?.name}`,
+        `Unexpected source type for ${this.name}: ${(this._main_source as object)?.constructor?.name}`,
       );
     }
   }
@@ -256,7 +256,7 @@ export class FootageItem extends AVItem {
   /** The footage file path if its source is a {@link FileSource}, else `null`. */
   get file(): string | null {
     if (hasattr(this._main_source, "file")) {
-      return (this._main_source as any).file;
+      return (this._main_source as FileSource).file;
     }
     return null;
   }

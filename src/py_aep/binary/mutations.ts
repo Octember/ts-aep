@@ -303,7 +303,7 @@ export function build_rq_settings_list(
  * Speed / influence are seeded to zero (LINEAR defaults). The caller
  * sets the actual value afterwards (e.g. via `Keyframe.value`).
  */
-export function build_kf_data(item_type: LdatItemType, num_value: number): any {
+export function build_kf_data(item_type: LdatItemType, num_value: number): KfColor | KfPosition | KfNoValue | KfMultiDimensional {
   if (item_type === LdatItemType.color) {
     return new KfColor();
   }
@@ -328,7 +328,7 @@ export function build_kf_data(item_type: LdatItemType, num_value: number): any {
 }
 
 /** Wrap a keyframe-data payload in an `LdatItem` with LINEAR defaults. */
-export function build_ldat_item(kf_data: any, kw: { spatial: boolean }): LdatItem {
+export function build_ldat_item(kf_data: KfColor | KfPosition | KfNoValue | KfMultiDimensional | Uint8Array, kw: { spatial: boolean }): LdatItem {
   const { spatial } = kw;
   return new LdatItem({
     time_units: 0,
@@ -363,7 +363,7 @@ export function build_parallel_ldat_item(
   // Orientation shares the valueless 48-byte ease prefix with shape and
   // gradient keys; only the trailing padding (which holds a copy of the
   // angles) differs.
-  let kf_data: any;
+  let kf_data: KfNoValue | Uint8Array;
   let interp: number;
   let flags: number;
   if (([LdatItemType.orientation, LdatItemType.no_value] as number[]).includes(item_type)) {

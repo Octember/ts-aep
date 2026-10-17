@@ -12,7 +12,7 @@ import type { CompItem } from "../items/composition.ts";
 import type { Project } from "../project.ts";
 import { _validate_number, validate_bool, validate_positive_int, validate_positive_number, validate_sequence, validate_string } from "../validators.ts";
 import type { OutputModule } from "./output_module.ts";
-import { SettingsView, settings_to_number, settings_to_string } from "./settings.ts";
+import { SettingsView, type SettingsSpec, settings_to_number, settings_to_string } from "./settings.ts";
 import type { RenderQueue } from "./render_queue.ts";
 import {
   deepcopy,
@@ -72,7 +72,7 @@ export class _RenderSettingsView extends SettingsView {
 // RENDER_SETTINGS: ExtendScript key -> (attribute, optional enum class)
 // ---------------------------------------------------------------------------
 
-export const RENDER_SETTINGS = new Map<string, [string, any]>([
+export const RENDER_SETTINGS: SettingsSpec = new Map([
   ["3:2 Pulldown", ["_pulldown", PulldownSetting]],
   ["Color Depth", ["_color_depth", ColorDepthSetting]],
   ["Disk Cache", ["_disk_cache", DiskCacheSetting]],
@@ -100,14 +100,15 @@ export const RENDER_SETTINGS = new Map<string, [string, any]>([
  * queue. It provides access to the specific settings for an item to be
  * rendered.
  *
- * ```python
- * from py_aep import parse
+ * ```ts
+ * import { parse } from "@bevyl-ai/ts-aep";
  *
- * app = parse("project.aep")
- * rq_item = app.project.render_queue.items[0]
- * print(rq_item.status)
- * for output_module in rq_item:
- *     ...
+ * const app = parse("project.aep");
+ * const rq_item = app.project.render_queue.items[0];
+ * console.log(rq_item.status);
+ * for (const output_module of rq_item) {
+ *   // ...
+ * }
  * ```
  *
  * @example
@@ -398,7 +399,7 @@ export class RenderQueueItem {
         chunk_type: "RCom",
         chunks: [utf8_chunk],
       });
-      const idx = this._litm.chunks.findIndex((c: any) => c === this._list_chunk);
+      const idx = this._litm.chunks.findIndex((c) => c === this._list_chunk);
       if (idx === -1) throw new StopIteration();
       this._litm.chunks.splice(idx, 0, rcom_chunk);
       this._rcom_utf8 = utf8_chunk;
@@ -498,14 +499,16 @@ export class RenderQueueItem {
   }
 
   /**
-   * SettingsView dict
+   * SettingsView map
    * built live from the binary chunk, with ExtendScript-compatible keys
    * matching `get_settings()` output.
    *
    * Supports item assignment:
    *
-   * ```python
-   * rqi.settings["Quality"] = RenderQuality.BEST
+   * ```ts
+   * import { parse, RenderQuality } from "@bevyl-ai/ts-aep";
+   * const rqi = parse("project.aep").project.render_queue.items[0];
+   * rqi.settings.__setitem__("Quality", RenderQuality.BEST);
    * ```
    *
    * @example

@@ -26,6 +26,7 @@ import type { Project } from "../project.ts";
 import { Curves } from "./curves.ts";
 import type { Gradient } from "./gradient.ts";
 import { Keyframe, _check_time_units, _timebase_units } from "./keyframe.ts";
+import type { _ValueType } from "./keyframe.ts";
 import { KeyframeEase } from "./keyframe_ease.ts";
 import type { MarkerValue } from "./marker.ts";
 import { _ALWAYS_MODIFIED, _CANVARY_OVERRIDES, _ISSPATIAL_OVERRIDES, _NAME_OVERRIDES, _PLACEHOLDER_UNBOUNDED, _UNBOUNDED_MATCH_NAMES } from "./overrides.ts";
@@ -73,7 +74,7 @@ export const _SYNTHESIZED_KINDS: Map<string, ParallelKind> = new Map<string, Par
   ["gradientFill/gradient", GRADIENT_KIND],
 ]);
 
-export const _UNSET: any = {}; // sentinel for unset min/max fallback
+export const _UNSET: object = {}; // sentinel for unset min/max fallback
 
 // Match names whose binary values are stored as 0-1 fractions but
 // ExtendScript reports as 0-100 percentages.
@@ -118,7 +119,7 @@ export function _get_dimensions(prop: Property): number {
 export const _validate_scalar = _validate_number({ min: _get_min, max: _get_max });
 export const _validate_list = validate_sequence({ length: _get_dimensions, min: _get_min, max: _get_max });
 
-export function _same_path(a: Shape, b: any): boolean {
+export function _same_path(a: Shape, b: unknown): boolean {
   // Whether two path values draw the same featherless path (vertices,
   // stored handles and closed flag; a path with feather points never
   // matches).
@@ -133,7 +134,7 @@ export function _same_path(a: Shape, b: any): boolean {
   );
 }
 
-export function _validate_value(prop: Property, value: any): void {
+export function _validate_value(prop: Property, value: unknown): void {
   // Validate type, length and bounds of a property value.
   // A mask or shape-layer path only holds a Shape: AE 2026 refuses any other
   // value ("Array is not of the correct type"), and the numeric write path
@@ -159,7 +160,7 @@ export function _validate_value(prop: Property, value: any): void {
   else _validate_scalar(value, prop);
 }
 
-export function _validate_key_value(prop: Property, value: any): void {
+export function _validate_key_value(prop: Property, value: unknown): void {
   // Validate a keyframe value: `_validate_value`, after refusing `None` for
   // a numeric keyframe, which always holds a number (storing `None` only in
   // the model left the file at whatever the slot held, 0).
@@ -200,10 +201,10 @@ export function _vf_tag_from_str(tag: string): number {
   return n;
 }
 
-export function _values_equal(a: any, b: any): boolean {
+export function _values_equal(a: unknown, b: unknown): boolean {
   // Compare two property values with float tolerance.
   //
-  // Handles scalars, lists/tuples, booleans, and None.
+  // Handles scalars, arrays, booleans, and null.
   // Uses [math.isclose][] for numeric comparisons.
   if (a == null || b == null) return a == b;
   if (typeof a === "boolean" || typeof b === "boolean") return py_eq(a, b);
@@ -222,13 +223,13 @@ export function _values_equal(a: any, b: any): boolean {
  * often animatable, of an effect, mask, or transform within an individual
  * layer.
  *
- * ```python
- * from py_aep import parse
+ * ```ts
+ * import { parse } from "@bevyl-ai/ts-aep";
  *
- * app = parse("project.aep")
- * comp = app.project.compositions[0]
- * prop = comp.layers[0].transform.property("ADBE Position")
- * print(prop.value)
+ * const app = parse("project.aep");
+ * const comp = app.project.compositions[0];
+ * const prop = comp.layers[0].transform.property("ADBE Position");
+ * console.log(prop.value);
  * ```
  *
  * Info:
@@ -261,7 +262,7 @@ export class Property extends PropertyBase {
   declare expression_error: string;
 
   /** The last value of the property (before animation). */
-  declare last_value: any;
+  declare last_value: unknown;
 
   /** The number of options in a dropdown property. */
   declare nb_options: number | null;
@@ -370,8 +371,8 @@ export class Property extends PropertyBase {
     property_depth: number,
     kw: {
       parent_property: PropertyGroup;
-      value?: any;
-      default_value?: any;
+      value?: unknown;
+      default_value?: unknown;
       synthetic?: boolean;
       control_type?: PropertyControlType | null;
     },
@@ -532,15 +533,15 @@ export class Property extends PropertyBase {
   declare _expression: string | null;
   declare _property_control_type: PropertyControlType | null;
   declare _property_value_type: PropertyValueType | null;
-  declare _value: any;
+  declare _value: unknown;
   declare _units_text: string | null;
-  declare _default_value_source: (() => any) | null;
-  declare _default_value: any;
+  declare _default_value_source: (() => unknown) | null;
+  declare _default_value: unknown;
   declare _keyframe_positions: Map<Keyframe, number> | null;
-  declare _types_memo: any;
+  declare _types_memo: [unknown[], [PropertyControlType, PropertyValueType]] | null;
   declare _effect_scale_dict: { value: number[] | null } | null;
-  declare _min_value_fallback: any;
-  declare _max_value_fallback: any;
+  declare _min_value_fallback: unknown;
+  declare _max_value_fallback: unknown;
   declare _slider_min: number | null;
   declare _slider_max: number | null;
   declare _scale_z_override: number | null;
@@ -569,7 +570,7 @@ export class Property extends PropertyBase {
     property_depth: number;
     auto_name?: string | null;
     keyframes: Keyframe[];
-    value: any;
+    value: unknown;
     expression_enabled?: boolean | null;
     expression?: string | null;
     property_control_type?: PropertyControlType | null;
@@ -1005,7 +1006,7 @@ export class Property extends PropertyBase {
     for (const chunk of this._tdbs.chunks) {
       chunk.synthetic = value;
       if (hasattr(chunk, "chunks")) {
-        for (const nested of (chunk as any).chunks) nested.synthetic = value;
+        for (const nested of (chunk as ContainerChunk).chunks) nested.synthetic = value;
       }
     }
   }
@@ -1350,7 +1351,7 @@ export class Property extends PropertyBase {
   /**
    * Read the raw value from the cdat chunk body.
    *
-   * Returns a scalar for 1D non-color properties, a list for
+   * Returns a scalar for 1D non-color properties, an array for
    * multi-dimensional or color properties, or `null` when the
    * chunk has no data.
    */
@@ -1368,7 +1369,7 @@ export class Property extends PropertyBase {
    * Applied in order: percent scaling, color conversion, effect point
    * denormalization.
    */
-  _resolve_value(raw: any): any {
+  _resolve_value(raw: unknown): any {
     if (raw == null) return null;
     // 0. Variable-font axis: the binary stores [value, tag4cc] but
     //    ExtendScript exposes only the scalar axis value.
@@ -1411,7 +1412,7 @@ export class Property extends PropertyBase {
    * Applied in reverse order: effect point normalization, color
    * conversion, then percent scaling.
    */
-  _unresolve_value(value: any): any {
+  _unresolve_value(value: unknown): any {
     if (value == null) return null;
     if (!(typeof value === "number" || typeof value === "boolean" || Array.isArray(value))) return value;
     if (Array.isArray(value) && value?.length > 0 && !(typeof value[0] === "number" || typeof value[0] === "boolean")) return value;
@@ -1452,7 +1453,7 @@ export class Property extends PropertyBase {
    * Applies `_unresolve_value` to convert back to raw binary units
    * before writing.
    */
-  _write_cdat(value: any): void {
+  _write_cdat(value: unknown): void {
     if (this._cdat == null) return;
     if (!(typeof value === "number" || typeof value === "boolean" || Array.isArray(value))) return;
     if (Array.isArray(value) && value?.length > 0 && !(typeof value[0] === "number" || typeof value[0] === "boolean")) return;
@@ -1462,7 +1463,7 @@ export class Property extends PropertyBase {
       // `raw[:len(raw_value)] = raw_value` - a slice assignment.
       raw.splice(0, Math.min(raw_value.length, raw.length), ...raw_value);
     } else if (typeof raw_value === "number" || typeof raw_value === "boolean") {
-      raw[0] = raw_value as any;
+      raw[0] = raw_value as number;
     }
     this._cdat.values = raw;
   }
@@ -1596,7 +1597,7 @@ export class Property extends PropertyBase {
     return this._default_value;
   }
 
-  set default_value(value: any) {
+  set default_value(value: unknown) {
     this._default_value = value;
     this._default_value_source = null;
   }
@@ -1609,17 +1610,21 @@ export class Property extends PropertyBase {
    * current time. Otherwise, returns the static value. Read / Write.
    *
    * The type depends on `property_value_type`:
-   * `list[float]`, `float`, `int`, {@link Curves}, {@link Gradient},
+   * `number[]`, `number`, {@link Curves}, {@link Gradient},
    * {@link MarkerValue}, {@link Shape}, {@link TextDocument}, or `null`.
    *
    * Mutations on complex value types (TextDocument, Shape,
    * MarkerValue, Gradient) write through to the backing chunks
    * automatically, so re-assignment is not needed:
    *
-   * ```python
-   * text_doc = prop.value
-   * text_doc.font_size = 72  # persists automatically
-   * # prop.value = text_doc  # unnecessary - same object
+   * ```ts
+   * import { parse, type Property } from "@bevyl-ai/ts-aep";
+   *
+   * const app = parse("project.aep");
+   * const prop = app.project.compositions[0].layers[0].transform.property("ADBE Position") as Property;
+   * const text_doc = prop.value;
+   * text_doc.font_size = 72; // persists automatically
+   * // prop.value = text_doc; // unnecessary - same object
    * ```
    */
   get value(): any {
@@ -1685,7 +1690,7 @@ export class Property extends PropertyBase {
    * untouched Z follower synthetic on a 2D layer (as AE does) and
    * avoids materializing it for nothing.
    */
-  _set_separated_value(value: any, followers: Property[]): void {
+  _set_separated_value(value: unknown, followers: Property[]): void {
     _validate_value(this, value);
     if (!Array.isArray(value)) {
       throw new ValueError(
@@ -1712,7 +1717,7 @@ export class Property extends PropertyBase {
    * leader on its default" writes in `_separate_static` /
    * `_separate_animated`, which target the dead leader on purpose.
    */
-  _set_own_value(value: any): void {
+  _set_own_value(value: unknown): void {
     // Re-assigning the identical complex value object (TextDocument,
     // Shape, MarkerValue, Gradient) is a no-op: those types write through
     // to the backing chunks via their own descriptors. Plain numeric/list
@@ -1785,7 +1790,7 @@ export class Property extends PropertyBase {
    * already hold it. `_write_cdat` keeps the numeric path
    * byte-faithful (a no-op write-back of the values just read).
    */
-  _cache_value(value: any): void {
+  _cache_value(value: unknown): void {
     this._write_cdat(value);
     this._value = value;
   }
@@ -1803,7 +1808,7 @@ export class Property extends PropertyBase {
    * markers (no static value) have no clean from-scratch container
    * build and are rejected.
    */
-  _write_static_complex_value(value: any): any {
+  _write_static_complex_value(value: unknown): unknown {
     const kind = this._parallel_kind();
     if (kind == null || kind.name === "orientation") {
       this._write_cdat(value);
@@ -1848,7 +1853,7 @@ export class Property extends PropertyBase {
    * version-gated attributes can resolve the AE major version. No-op for
    * other value types or when the containing comp is unknown.
    */
-  _wire_text_version(value: any): any {
+  _wire_text_version(value: unknown): unknown {
     if (value instanceof TextDocument && this._composition != null) {
       value._head = this._composition._project._head;
     }
@@ -2006,7 +2011,7 @@ export class Property extends PropertyBase {
       // The project-level EfdG mirror, via the parade's cached
       // definitions lookup. Effect params can parse without a
       // composition ref, leaving the project unreachable.
-      let entry: any;
+      let entry: unknown;
       try {
         entry = parade._installed_effect_def(effect.match_name);
       } catch (e) {
@@ -2505,12 +2510,12 @@ export class Property extends PropertyBase {
    */
   _determine_property_types(): [PropertyControlType, PropertyValueType] {
     const tdb4 = this._tdb4;
-    let key: any[] | null;
+    let key: unknown[] | null;
     if (tdb4 != null) {
       key = [tdb4.dimensions, tdb4._type_flags, tdb4._spatial_static_flags, tdb4._no_value_flags];
       const memo = this._types_memo;
       if (memo != null && py_eq(memo[0], key)) {
-        return memo[1] as [PropertyControlType, PropertyValueType];
+        return memo[1];
       }
     } else {
       key = null;
@@ -2832,7 +2837,7 @@ export class Property extends PropertyBase {
     const new_cdta = deepcopy(host._cdta);
     const chunks = wrapper._item_list.chunks;
     // Python `chunks.index(...)` compares by attrs equality (first equal chunk).
-    const cdta_index = chunks.findIndex((c: any) => py_eq(c, wrapper._cdta));
+    const cdta_index = chunks.findIndex((c: Chunk) => py_eq(c, wrapper._cdta));
     if (cdta_index < 0) throw new ValueError("list.index(x): x not in list");
     chunks[cdta_index] = new_cdta;
     wrapper._cdta = new_cdta;
@@ -2947,7 +2952,7 @@ export class Property extends PropertyBase {
    * speeds (measured on AE 2026: a static [100, 120, 40] and keys at Z
    * 40 / -30 on a 2-D layer read Z = 0 and keep the 40 in the file).
    */
-  _mask_inert_z(value: any): any {
+  _mask_inert_z(value: unknown): any {
     if (
       Array.isArray(value) &&
       value.length === 3 &&
@@ -2984,12 +2989,12 @@ export class Property extends PropertyBase {
    * Mask Expansion, Stroke Width and a Slider all read their bound,
    * never past it).
    */
-  _clamp_to_range(value: any): any {
+  _clamp_to_range(value: unknown): unknown {
     const lo = _get_min(this);
     const hi = _get_max(this);
     if (lo == null && hi == null) return value;
 
-    const clamp = (component: any): any => {
+    const clamp = (component: unknown): unknown => {
       if (typeof component !== "number") return component;
       if (lo != null && component < lo) return float(lo);
       if (hi != null && component > hi) return float(hi);
@@ -3308,13 +3313,13 @@ export class Property extends PropertyBase {
    * When `value` is omitted, the keyframe takes the property's value at
    * `time` (interpolated when animated, the static value otherwise).
    */
-  _add_key(time: number, value: any = _USE_VALUE): number {
+  _add_key(time: number, value: _ValueType | string | typeof _USE_VALUE = _USE_VALUE): number {
     validate_number(time);
     if (!this.can_vary_over_time) {
       throw new ValueError(`property ${repr(this.match_name)} cannot vary over time`);
     }
     const kind = this._parallel_kind();
-    if (kind != null) return this._add_parallel_key(time, kind, value);
+    if (kind != null) return this._add_parallel_key(time, kind, value as _ValueType | typeof _USE_VALUE);
     // A no-value numeric property has no value slot to keyframe; building
     // a numeric keyframe item for it produces a wrong-size ldat item.
     // (Complex kinds above store their value in a sibling container and
@@ -3668,7 +3673,7 @@ export class Property extends PropertyBase {
    * Revert an emptied animated property to a static `value`, after
    * removing `last_key`.
    */
-  _deanimate(value: any, last_key: LdatItem): void {
+  _deanimate(value: unknown, last_key: LdatItem): void {
     const inner = this._keyframe_inner();
     const chunks = this._tdbs.chunks;
     this._static_tdb4(last_key);
@@ -3744,7 +3749,7 @@ export class Property extends PropertyBase {
    * not). A mask path keeps the value's feather points.
    */
   _build_shap_chunk(shape: Shape): Chunk {
-    const points = (shape._points?.length > 0 ? shape._points : []).map((p: any) => new ShapePoint({ x: p.x, y: p.y }));
+    const points = (shape._points?.length > 0 ? shape._points : []).map((p: ShapePoint) => new ShapePoint({ x: p.x, y: p.y }));
     const src = shape._shph;
     let bbox: number[];
     if (src != null) {
@@ -3798,10 +3803,10 @@ export class Property extends PropertyBase {
   }
 
   /**
-   * Wrap a COS doc dict as a {@link TextDocument} sharing `template`'s
+   * Wrap a COS doc Map as a {@link TextDocument} sharing `template`'s
    * COS data / btdk chunk.
    */
-  _build_text_view(doc: any, template: TextDocument): TextDocument {
+  _build_text_view(doc: Map<string, unknown>, template: TextDocument): TextDocument {
     const char = cos_get(doc, "0", "6", "0", 0, "0", "0", "6");
     const para = cos_get(doc, "0", "5", "0", 0, "0", "0", "5");
     const view = TextDocument._from_binary({
@@ -3832,7 +3837,7 @@ export class Property extends PropertyBase {
    * the tdb4 static / animated flags (the COS blob is byte-identical
    * between the static and one-keyframe states in AE 2026 output).
    */
-  _animate_static_text(time: number, value: any = _USE_VALUE): number {
+  _animate_static_text(time: number, value: _ValueType | string | typeof _USE_VALUE = _USE_VALUE): number {
     const template = this._value;
     if (!(template instanceof TextDocument)) {
       throw new NotImplementedError("text property has no TextDocument value to animate");
@@ -3868,7 +3873,7 @@ export class Property extends PropertyBase {
    * recomputes the per-keyframe box-frame / glyph caches on open, so
    * they are left untouched.
    */
-  _add_text_key(time: number, value: any = _USE_VALUE): number {
+  _add_text_key(time: number, value: _ValueType | string | typeof _USE_VALUE = _USE_VALUE): number {
     if (this._keyframe_inner() == null || !this.keyframes?.length) {
       return this._animate_static_text(time, value);
     }
@@ -3992,7 +3997,7 @@ export class Property extends PropertyBase {
    * When `value` is omitted, the value is taken from the kind's
    * `held_value` (interpolated for orientation, held otherwise).
    */
-  _add_parallel_key(time: number, kind: ParallelKind, value: any = _USE_VALUE): number {
+  _add_parallel_key(time: number, kind: ParallelKind, value: _ValueType | typeof _USE_VALUE = _USE_VALUE): number {
     if (kind === TEXT_KIND) return this._add_text_key(time, value);
     // Check the time and a given value before building the container:
     // that build materializes a fresh mask's default path, and a
@@ -4039,7 +4044,7 @@ export class Property extends PropertyBase {
     // different chunk, so edits to it would never reach the serialized
     // keyframe.
     const wrapped = kind.wrap_value_chunk(this, value_chunk);
-    if (wrapped != null) kf._value = wrapped;
+    if (wrapped != null) kf._value = wrapped as _ValueType;
     kind.bind_keyframe(kf._value, kf);
     if (was_static) {
       // Match the parsers: an animated shape keeps `value` aliased to
@@ -4076,7 +4081,7 @@ export class Property extends PropertyBase {
       kf.in_interpolation_type = bezier;
       kf.out_interpolation_type = bezier;
       kf._ldat_item.temporal_continuous = true;
-      const data = kf._ldat_item.kf_data;
+      const data = kf._ldat_item.kf_data as KfPosition;
       const speed = sides.length === 2 ? 1.0 : 0.0;
       data.in_speed = speed;
       data.out_speed = speed;
@@ -4152,7 +4157,7 @@ export class Property extends PropertyBase {
    * time: The composition time, in seconds.
    * new_value: The value to set at that time.
    */
-  set_value_at_time(time: number, new_value: any): void {
+  set_value_at_time(time: number, new_value: _ValueType): void {
     this._reject_curves_write();
     validate_number(time);
     if (this._separation_followers() != null) {
@@ -4184,7 +4189,7 @@ export class Property extends PropertyBase {
    * container, so an existing key's value chunk is rebuilt rather than
    * written through a descriptor.
    */
-  _set_parallel_value_at(time: number, value: any, kind: ParallelKind): void {
+  _set_parallel_value_at(time: number, value: _ValueType, kind: ParallelKind): void {
     const target_units = this._keyframe_units_at(time);
     if (kind === TEXT_KIND) {
       const new_text = value instanceof TextDocument ? value.text : value;
@@ -4202,7 +4207,7 @@ export class Property extends PropertyBase {
       this._add_text_key(time, value);
       return;
     }
-    value = kind.coerce(value);
+    value = kind.coerce(value) as _ValueType;
     for (const kf of this.keyframes) {
       if (kf.time_units === target_units) {
         this._write_parallel_kf_value(kf, value, kind);
@@ -4221,7 +4226,7 @@ export class Property extends PropertyBase {
    * lives in the parallel container, so writing through `kf_data`
    * alone never reaches the serialized form.
    */
-  _write_parallel_kf_value(kf: Keyframe, value: any, kind: ParallelKind): void {
+  _write_parallel_kf_value(kf: Keyframe, value: _ValueType, kind: ParallelKind): void {
     kind.update_header_item(kf._ldat_item, value);
     const container = this._kf_value_container;
     if (container != null) {
@@ -4240,7 +4245,7 @@ export class Property extends PropertyBase {
         // by a different chunk, so editing the keyframe's value
         // afterwards would otherwise reach the caller's chunk -
         // corrupting any other keyframe that shares it.
-        const wrapped = kind.wrap_value_chunk(this, value_chunk);
+        const wrapped = kind.wrap_value_chunk(this, value_chunk) as _ValueType | undefined;
         kf._value = wrapped ?? value;
       } else {
         kf._value = value;
@@ -4262,7 +4267,7 @@ export class Property extends PropertyBase {
    *
    * ValueError: If `times` and `new_values` differ in length.
    */
-  set_values_at_times(times: number[], new_values: any[]): void {
+  set_values_at_times(times: number[], new_values: _ValueType[]): void {
     if (times.length !== new_values.length) {
       throw new ValueError("times and new_values must have the same length");
     }
@@ -4335,7 +4340,7 @@ export class Property extends PropertyBase {
   _owning_comp(): CompItem | null {
     const comp = this._composition;
     if (comp != null) return comp;
-    let node: any = this.parent_property;
+    let node: PropertyBase | null = this.parent_property;
     while (node != null) {
       const found = getattr(node, "_containing_comp", null);
       if (found != null) return found as CompItem;
@@ -4506,8 +4511,8 @@ export function _segment_components(prev_kf: Keyframe, next_kf: Keyframe): [numb
  * accessors - and round-trip serialization - untouched.
  */
 export class _EssentialOverrideProperty extends Property {
-  declare _ov_src: any;
-  declare _ov_ctrl_name: any;
+  declare _ov_src: Property | null;
+  declare _ov_ctrl_name: string | null;
 
   /**
    * The resolved source `Property`, or `null` when it does not resolve
@@ -4682,7 +4687,7 @@ descriptor(Property, "_vector", new ChunkField<boolean>("_tdb4", "vector"));
 descriptor(
   Property,
   "locked_ratio",
-  new ChunkField<boolean>("_tdsb", "ratio_unlinked", { transform: (v: any) => !v, read_only: true }),
+  new ChunkField<boolean>("_tdsb", "ratio_unlinked", { transform: (v: unknown) => !v, read_only: true }),
 );
 
 descriptor(Property, "_is_spatial_raw", new ChunkField<boolean>("_tdb4", "is_spatial"));

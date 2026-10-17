@@ -102,7 +102,7 @@ export function _object_offsets(data: Uint8Array): Map<number, number> {
  *
  * @throws {@link UnsupportedAiLayersError} If the object is malformed or truncated.
  */
-export function _parse_object_at(data: Uint8Array, offset: number): any {
+export function _parse_object_at(data: Uint8Array, offset: number): unknown {
   const parser = new CosParser(new BytesIO(bytes_.slice(data, offset)));
   try {
     parser.lex();
@@ -118,7 +118,7 @@ export function _parse_object_at(data: Uint8Array, offset: number): any {
 }
 
 /** Follow an indirect reference to its object; pass other values through. */
-export function _resolve(value: any, data: Uint8Array, offsets: Map<number, number>): any {
+export function _resolve(value: unknown, data: Uint8Array, offsets: Map<number, number>): unknown {
   if (value instanceof IndirectReference) {
     const offset = offsets.get(value.object_number) ?? null;
     return offset == null ? null : _parse_object_at(data, offset);
@@ -129,7 +129,7 @@ export function _resolve(value: any, data: Uint8Array, offsets: Map<number, numb
 /** Collect the OCG object numbers a `/D` `/Order` (or `/OFF`) tree
  * references, depth first, each once.
  */
-export function _order_object_numbers(value: any, out: number[]): number[] {
+export function _order_object_numbers(value: unknown, out: number[]): number[] {
   if (Array.isArray(value)) {
     for (const entry of value) {
       _order_object_numbers(entry, out);
@@ -194,7 +194,7 @@ export function read_ai_layer_ocgs(
       throw new UnsupportedAiLayersError(`${name}: unreadable /OCProperties.`);
     }
     const config_ref = _resolve(oc_properties.get("D") ?? null, data, offsets);
-    const config = config_ref instanceof Map ? config_ref : new Map<string, any>();
+    const config = config_ref instanceof Map ? config_ref : new Map<string, unknown>();
     const order = _order_object_numbers(
       _resolve(config.get("Order") ?? null, data, offsets),
       [],
@@ -241,7 +241,7 @@ export function read_ai_layer_ocgs(
 /** `isinstance(x, (str, bytes))`. A `CosString` is a `str` subclass in Python,
  * so it is a `String` object here, not a primitive.
  */
-export function is_str_or_bytes(x: any): boolean {
+export function is_str_or_bytes(x: unknown): boolean {
   return typeof x === "string" || x instanceof String || x instanceof Uint8Array;
 }
 

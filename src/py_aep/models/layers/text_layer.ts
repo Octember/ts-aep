@@ -19,13 +19,13 @@ import type { PropertyGroup } from "../properties/property_group.ts";
  *     attributes of {@link AVLayer} are available when working with `TextLayer`.
  *
  * @example
- * ```python
- * from py_aep import parse
+ * ```ts
+ * import { parse } from "@bevyl-ai/ts-aep";
  *
- * app = parse("project.aep")
- * comp = app.project.compositions[0]
- * text_layer = comp.text_layers[0]
- * print(text_layer.text)
+ * const app = parse("project.aep");
+ * const comp = app.project.compositions[0];
+ * const text_layer = comp.text_layers[0];
+ * console.log(text_layer.text);
  * ```
  * @see https://ae-scripting.docsforadobe.dev/layer/textlayer/
  */
@@ -37,7 +37,7 @@ export class TextLayer extends AVLayer {
     match_name: string,
     auto_name: string,
     property_depth: number,
-    kw?: any,
+    kw?: unknown,
   ): PropertyGroup;
   static _new(kw: {
     name: string;
@@ -47,10 +47,10 @@ export class TextLayer extends AVLayer {
     btds: ListChunk;
     btgu: ListChunk;
     tdmn: TdmnChunk;
-    effect_param_defs?: Map<string, Map<string, Map<string, any>>> | null;
+    effect_param_defs?: Map<string, Map<string, Map<string, unknown>>> | null;
   }): TextLayer;
-  static _new(kw: any): AVLayer;
-  static _new(kw: any): any {
+  static _new(kw: unknown): AVLayer;
+  static _new(kw: any): unknown {
     const {
       name,
       layer_id,

@@ -54,7 +54,7 @@ export interface HostPath {
   isAbsolute(path: string): boolean;
 }
 
-const _process: any = (globalThis as any).process;
+const _process = (globalThis as { process?: { platform: string; env: Record<string, string | undefined>; cwd(): string; getBuiltinModule?(name: string): unknown } }).process;
 
 function _builtin(name: string): any {
   try {
@@ -392,8 +392,8 @@ export function fs_backend(): "node" | "memory" {
 /** The active file system: the host's `node:fs`, or the in-memory one. */
 export const fs: HostFs = new Proxy({} as HostFs, {
   get(_t, name: string) {
-    const target: any = _active ?? _node_fs ?? _memory;
-    const v = target[name];
+    const target: HostFs = _active ?? _node_fs ?? _memory;
+    const v = (target as unknown as Record<string, unknown>)[name];
     return typeof v === "function" ? v.bind(target) : v;
   },
 }) as HostFs;

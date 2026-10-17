@@ -17,6 +17,8 @@
 
 import * as host from "../../pyrt/host.ts";
 import { parse, YAMLError, isMap, isSeq, isScalar } from "yaml";
+import type { Document, DocumentOptions, ParseOptions, SchemaOptions, ToJSOptions } from "yaml";
+import type { BigIntStats } from "node:fs";
 import {
   Path,
   lru_cache,
@@ -70,9 +72,9 @@ export class _OcioLoader {
  * (warning silenced by `logLevel: "error"`), which yields the same untagged
  * values as this constructor. `loader` is the yaml `Document`.
  */
-export function _ignore_tag(loader: any, suffix: string, node: any): any {
+export function _ignore_tag(loader: Document, suffix: string, node: unknown): unknown {
   if (isMap(node) || isSeq(node) || isScalar(node)) {
-    return node.toJS(loader, { mapAsMap: true } as any);
+    return node.toJS(loader, { mapAsMap: true } as ToJSOptions);
   }
   return null;
 }
@@ -90,14 +92,14 @@ export function _ignore_tag(loader: any, suffix: string, node: any): any {
  */
 export const _load_config_cached = lru_cache(
   (config_path: string, _mtime_ns: bigint, _size: number): Map<string, any> | null => {
-    let doc: any;
+    let doc: unknown;
     try {
       doc = parse(decode(new Path(config_path).read_bytes(), "utf-8"), {
         ..._OcioLoader.options,
-      } as any);
-    } catch (e: any) {
+      } as ParseOptions & DocumentOptions & SchemaOptions & ToJSOptions);
+    } catch (e: unknown) {
       // `except (OSError, yaml.YAMLError)`; node fs errors carry a `code`.
-      if (!(e instanceof OSError || e instanceof YAMLError || e?.code)) throw e;
+      if (!(e instanceof OSError || e instanceof YAMLError || (e as { code?: unknown } | null)?.code)) throw e;
       return null;
     }
     return doc instanceof Map ? doc : null;
@@ -106,12 +108,12 @@ export const _load_config_cached = lru_cache(
 
 /** `(mtime_ns, size)` cache key for `config_path`, or `null` if unreadable. */
 export function _config_stamp(config_path: Path): [bigint, number] | null {
-  let st: any;
+  let st: BigIntStats;
   try {
     st = host.fs.statSync(config_path.path, { bigint: true });
-  } catch (e: any) {
+  } catch (e: unknown) {
     // `except OSError`: node fs errors carry a `code`.
-    if (!e?.code) throw e;
+    if (!(e as { code?: unknown } | null)?.code) throw e;
     return null;
   }
   return [st.mtimeNs, Number(st.size)];
@@ -126,7 +128,7 @@ export function _config_stamp(config_path: Path): [bigint, number] | null {
  * otherwise re-parse the same unchanged file once per access. The stamp
  * keeps an edited config from going stale.
  *
- * The returned dict is shared with every other caller - treat it as
+ * The returned Map is shared with every other caller - treat it as
  * read-only.
  */
 export function _load_config(config_path: Path): Map<string, any> | null {
@@ -622,7 +624,7 @@ export function ocio_input_envelope(config_path: Path, file_path: string): strin
   const index = _config_index(config_path);
   const rules = doc.get("file_rules") ?? null;
   if (py_bool(rules)) {
-    for (const rule of rules as any[]) {
+    for (const rule of rules as unknown[]) {
       if (!(rule instanceof Map) || !_rule_matches(rule, file_path)) continue;
       const color_space = rule.get("colorspace") ?? null;
       if (typeof color_space !== "string") return null;

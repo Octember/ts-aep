@@ -310,7 +310,7 @@ export function probe_media(file: Path, data: Uint8Array | null = null): MediaIn
     } finally {
       fp.close();
     }
-  } catch (exc: any) {
+  } catch (exc: unknown) {
     if (!(exc instanceof StructError || exc instanceof IndexError)) throw exc;
     throw Object.assign(
       new ValueError(`${file.name}: truncated or malformed ${suffix} file (${exc.message})`),

@@ -5,7 +5,7 @@ import type { Keyframe } from "../properties/keyframe.ts";
 import type { MarkerValue } from "../properties/marker.ts";
 import { AutoOrientType, Label, LayerType } from "../../enums/index.ts";
 import { ae_writes } from "../../ae_version.ts";
-import { ListChunk } from "../../binary/chunk.ts";
+import { Chunk, ListChunk } from "../../binary/chunk.ts";
 import { layer_timebase, rescale_ticks } from "../../binary/composition_chunks.ts";
 import { CmtaChunk } from "../../binary/item_chunks.ts";
 import { build_gide_list, build_ovdg, clone_chunk_tree, remap_layer_ref_tdpi, rewrite_owner_tdpi, rewrite_time_base } from "../../binary/mutations.ts";
@@ -22,6 +22,7 @@ import { PropertyBase } from "../properties/property_base.ts";
 import { PropertyGroup } from "../properties/property_group.ts";
 import { _validate_number, validate_int, validate_number, validate_string } from "../validators.ts";
 import type { CompItem } from "../items/composition.ts";
+import type { AVLayer } from "./av_layer.ts";
 import {
   KeyError,
   ValueError,
@@ -66,8 +67,8 @@ export const _validate_stretch = _validate_number({
 
 // The start time is a signed 32-bit count of the layer's timebase ticks.
 export const _validate_start_time = _validate_number({
-  min: (layer: any) => -0x80000000 / layer._layer_timebase(),
-  max: (layer: any) => 0x7fffffff / layer._layer_timebase(),
+  min: (layer: Layer) => -0x80000000 / layer._layer_timebase(),
+  max: (layer: Layer) => 0x7fffffff / layer._layer_timebase(),
 });
 
 /** Sentinel value indicating an undefined source id in the binary format. */
@@ -89,13 +90,13 @@ export function _parent_world(parent: Layer | null, time: number, child_is_3d: b
 }
 
 /** `list.index(x)` with `==` (identity for layers) and CPython's ValueError. */
-export function _list_index(xs: any[], x: any): number {
+export function _list_index(xs: unknown[], x: unknown): number {
   for (let i = 0; i < xs.length; i++) if (xs[i] === x) return i;
   throw new ValueError(`${repr(x)} is not in list`);
 }
 
 /** `list.remove(x)` with CPython's ValueError. */
-export function _list_remove(xs: any[], x: any): void {
+export function _list_remove(xs: unknown[], x: unknown): void {
   for (let i = 0; i < xs.length; i++) {
     if (xs[i] === x) {
       xs.splice(i, 1);
@@ -296,11 +297,11 @@ export class Layer extends PropertyGroup {
   // which could produce unexpected results or hit circular references.
   // `__hash__ = object.__hash__` is not carried over: instances are hashed by
   // identity already, which is what a Map/Set keyed by a Layer uses.
-  __eq__(other: any): boolean {
+  __eq__(other: unknown): boolean {
     return this === other;
   }
 
-  __setattr__(name: string, value: any): void {
+  __setattr__(name: string, value: unknown): void {
     // Layers set public instance attributes of their own, which
     // `PropertyGroup.__setattr__` would refuse.
     object_setattr(this, name, value);
@@ -371,7 +372,7 @@ export class Layer extends PropertyGroup {
     ldta: LdtaChunk;
     name: string;
     containing_comp: CompItem;
-    root_tdgp_extra?: any[] | null;
+    root_tdgp_extra?: Chunk[] | null;
     effect_param_defs?: Map<string, Map<string, Map<string, any>>> | null;
   }): Layer;
   static _new(kw: any): any {
@@ -382,7 +383,7 @@ export class Layer extends PropertyGroup {
     validate_string(name);
 
     const name_utf8 = new Utf8Chunk({ value: name });
-    const tdgp_chunks: any[] = [new TdsbChunk({}), TdsnChunk.new_()];
+    const tdgp_chunks: Chunk[] = [new TdsbChunk({}), TdsnChunk.new_()];
     if (py_bool(root_tdgp_extra)) tdgp_chunks.push(...root_tdgp_extra);
     // AE terminates every tdgp match-name stream with ADBE Group End
     // and rejects layers whose root tdgp lacks it ("missing data in
@@ -692,7 +693,7 @@ export class Layer extends PropertyGroup {
    * `null` when the layer has no markers.
    */
   get marker(): Property | null {
-    let prop: any;
+    let prop: Property | PropertyGroup;
     try {
       prop = this.__getitem__("ADBE Marker");
     } catch (e) {
@@ -703,15 +704,20 @@ export class Layer extends PropertyGroup {
   }
 
   /**
-   * A flat list of {@link MarkerValue} objects for this layer.
+   * A flat array of {@link MarkerValue} objects for this layer.
    *
    * Shortcut for accessing marker data without navigating the property
-   * tree. Returns an empty list when the layer has no markers.
+   * tree. Returns an empty array when the layer has no markers.
    *
    * @example
-   * ```python
-   * for marker in layer.markers:
-   *     print(marker.comment)
+   * ```ts
+   * import { parse } from "@bevyl-ai/ts-aep";
+   *
+   * const app = parse("project.aep");
+   * const layer = app.project.compositions[0].layers[0];
+   * for (const marker of layer.markers) {
+   *   console.log(marker.comment);
+   * }
    * ```
    */
   get markers(): MarkerValue[] {
@@ -800,7 +806,7 @@ export class Layer extends PropertyGroup {
    * one (AE writes the Effect / Mask Parade only once it has content).
    */
   _optional_group(match_name: string): PropertyGroup | null {
-    let group: any;
+    let group: Property | PropertyGroup;
     try {
       group = this.__getitem__(match_name);
     } catch (e) {
@@ -954,7 +960,7 @@ export class Layer extends PropertyGroup {
 
     const transform = this.transform;
 
-    const current = (match_name: string): any => {
+    const current = (match_name: string): unknown => {
       const prop = transform.__getitem__(match_name) as Property;
       return prop.keyframes?.length > 0 ? prop.value_at_time(time) : prop.value;
     };
@@ -986,7 +992,7 @@ export class Layer extends PropertyGroup {
       new_scale = new_scale.map((component) => -Math.abs(component));
     }
 
-    const write_compensation = (match_name: string, new_value: any): void => {
+    const write_compensation = (match_name: string, new_value: unknown): void => {
       // Only write values that actually changed to avoid materializing
       // synthetic properties unnecessarily. Keyframed scale / rotation
       // values are left untouched, matching ExtendScript (the layer
@@ -1073,7 +1079,7 @@ export class Layer extends PropertyGroup {
         for (const tangent_attr of ["in_spatial_tangent", "out_spatial_tangent"]) {
           const tangent = getattr(kf, tangent_attr);
           if (py_bool(tangent)) {
-            (kf as any)[tangent_attr] = remap
+            (kf as unknown as Record<string, unknown>)[tangent_attr] = remap
               .transform_vector(tangent)
               .slice(0, tangent.length);
           }
@@ -1265,7 +1271,7 @@ export class Layer extends PropertyGroup {
     comp._project._ensure_used_in_linked();
     const source = getattr(this, "source", null);
     if (source != null && "_used_in" in source) {
-      _av_layer()._unregister_source_usage(source, comp, { exclude: this as any });
+      _av_layer()._unregister_source_usage(source, comp, { exclude: this as unknown as AVLayer });
     }
 
     // Remove chunk block from comp's chunk list
@@ -1478,8 +1484,8 @@ export class Layer extends PropertyGroup {
     const dst_transform = copy.transform;
     if (src_transform == null || dst_transform == null) return;
     for (const match_name of (this.constructor as typeof Layer)._COMP_RELATIVE_TRANSFORM) {
-      let src_prop: any;
-      let dst_prop: any;
+      let src_prop: Property | PropertyGroup;
+      let dst_prop: Property | PropertyGroup;
       try {
         src_prop = src_transform.property(match_name);
         dst_prop = dst_transform.property(match_name);

@@ -21,14 +21,15 @@ const _composition = deferred<typeof import("./composition.ts")>("py_aep/models/
  * as other folders.
  *
  * @example
- * ```python
- * from py_aep import parse
+ * ```ts
+ * import { parse } from "@bevyl-ai/ts-aep";
  *
- * app = parse("project.aep")
- * root = app.project.root_folder
- * print(root.name)
- * for item in root:
- *     ...
+ * const app = parse("project.aep");
+ * const root = app.project.root_folder;
+ * console.log(root.name);
+ * for (const item of root) {
+ *   // ...
+ * }
  * ```
  * @see https://ae-scripting.docsforadobe.dev/item/folderitem/
  */
@@ -108,7 +109,7 @@ export class FolderItem extends Item {
    * Create a new empty folder with backing chunks.
    *
    * @param name - The name of the new folder.
-   * @param kw - Keyword arguments:
+   * @param kw - Options:
    * - `project`: The project that owns this folder.
    * - `parent_folder`: The folder that will contain this folder.
    */

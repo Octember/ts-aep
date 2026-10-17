@@ -154,9 +154,9 @@ export class FileReader {
   constructor(readonly path: string) {
     try {
       this.fd = fs.openSync(path, "r");
-    } catch (e: any) {
-      if (e?.code === "ENOENT") throw new FileNotFoundError(`[Errno 2] No such file or directory: '${path}'`);
-      if (typeof e?.code === "string") throw new OSError(`${e.message}`);
+    } catch (e: unknown) {
+      if ((e as NodeJS.ErrnoException | undefined)?.code === "ENOENT") throw new FileNotFoundError(`[Errno 2] No such file or directory: '${path}'`);
+      if (typeof (e as NodeJS.ErrnoException | undefined)?.code === "string") throw new OSError(`${(e as Error).message}`);
       throw e;
     }
     this._size = fs.fstatSync(this.fd).size;

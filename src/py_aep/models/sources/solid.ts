@@ -13,13 +13,14 @@ import type { U1Chunk } from "../../binary/scalar_chunks.ts";
 /**
  * The `SolidSource` object represents a solid-color footage source.
  *
- * ```python
- * from py_aep import SolidSource, parse
+ * ```ts
+ * import { parse, SolidSource } from "@bevyl-ai/ts-aep";
  *
- * app = parse("project.aep")
- * footage = app.project.footages[0]
- * if isinstance(footage.main_source, SolidSource):
- *     print(footage.main_source.color)
+ * const app = parse("project.aep");
+ * const footage = app.project.footages[0];
+ * if (footage.main_source instanceof SolidSource) {
+ *   console.log(footage.main_source.color);
+ * }
  * ```
  *
  * Info:
