@@ -54,10 +54,10 @@ function is_ascii(data: Uint8Array): boolean {
 
 /** Bytes below 0x100 as one char each (callers check the range). */
 function chars(data: Uint8Array): string {
-  if (data.length <= 0x2000) return String.fromCharCode.apply(null, data as unknown as number[]);
+  if (data.length <= 0x2000) return Reflect.apply(String.fromCharCode, null, data);
   let s = "";
   for (let i = 0; i < data.length; i += 0x2000) {
-    s += String.fromCharCode.apply(null, data.subarray(i, i + 0x2000) as unknown as number[]);
+    s += Reflect.apply(String.fromCharCode, null, data.subarray(i, i + 0x2000));
   }
   return s;
 }

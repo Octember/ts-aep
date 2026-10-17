@@ -26,7 +26,6 @@ import {
   struct,
   TypeError_,
   ValueError,
-  zip,
   type Attribute,
   type FieldSpec,
 } from "../../pyrt/index.ts";
@@ -381,13 +380,14 @@ export function _decode_fields(
   // NOTE(port): kwargs dict is a plain object: keys are init-name identifiers
   // passed straight to `cls(**kw)`, never iterated for numeric-looking keys.
   const kw: InitKwargs = {};
-  for (const [i, [fld, raw]] of zip([...data_fields], values).entries()) {
-    let value = raw;
+  const n = Math.min(data_fields.length, values.length);
+  for (let i = 0; i < n; i++) {
+    let value = values[i];
     const enc = encodings.get(i) ?? null;
     if (enc != null && value != null) value = _decode_fixed_str(value, enc);
     const crc = coerces.get(i);
     if (crc != null && value != null) value = crc(value);
-    kw[init_names != null ? init_names[i] : _init_name(fld.name)] = value;
+    kw[init_names != null ? init_names[i] : _init_name(data_fields[i].name)] = value;
   }
   return kw;
 }
@@ -456,7 +456,7 @@ export class FmtItem extends AttrsBase {
     if (simple) {
       // NOTE(port): kwargs keys are Python identifiers (never numeric-looking), so insertion order matches dict order.
       kw = {};
-      for (const [name, v] of zip([...init_names], values)) kw[name] = v;
+      for (let i = 0; i < Math.min(init_names.length, values.length); i++) kw[init_names[i]] = values[i];
       for (const [i, crc] of coerces) {
         const name = init_names[i];
         kw[name] = crc(kw[name]);

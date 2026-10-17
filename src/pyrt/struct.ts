@@ -319,7 +319,7 @@ function compile_pack(codes: Code[], le: boolean): Packer | null {
   }
 }
 
-type Unpacker = (d: Uint8Array, p: number) => any[];
+type Unpacker = (d: Uint8Array, p: number) => PackValue[];
 
 /** Straight-line `unpack_from` for `codes`: one expression per value at a fixed offset. */
 function compile_unpack(codes: Code[], le: boolean): Unpacker | null {

@@ -19,7 +19,6 @@ import {
   float_repr,
   floordiv,
   int,
-  mod,
   round,
   struct,
   type IO,
@@ -196,7 +195,7 @@ export function is_readable(fp: IO, size = 1): boolean {
 
 /** Write a pad byte if `size` is odd. Returns bytes written (0 or 1). */
 export function write_pad(fp: IO, size: number): number {
-  if (mod(size, 2) !== 0) {
+  if (size % 2 !== 0) {
     fp.write(b("\x00"));
     return 1;
   }
@@ -205,7 +204,7 @@ export function write_pad(fp: IO, size: number): number {
 
 /** Consume a pad byte if `size` is odd. */
 export function read_pad(fp: IO, size: number): void {
-  if (mod(size, 2) !== 0) {
+  if (size % 2 !== 0) {
     fp.read(1);
   }
 }
