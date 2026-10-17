@@ -24,9 +24,10 @@ import {
 } from "../../src/pyrt/index.ts";
 import "../../src/py_aep/binary/_register.ts";
 import { get_comp, get_comp_from_json_by_name, get_first_layer, get_layer, load_expected, parse_project } from "../conftest.ts";
+import { as_instance } from "../helpers.ts";
 import { Project, parse as parse_aep } from "../../src/py_aep/index.ts";
 import { KeyframeInterpolationType, MaskFeatherFalloff, MaskMode, MaskMotionBlur, PropertyType, PropertyValueType } from "../../src/py_aep/enums/index.ts";
-import { MaskPropertyGroup, Property, PropertyGroup, Shape } from "../../src/py_aep/models/index.ts";
+import { AVLayer, MaskPropertyGroup, Property, PropertyGroup, Shape } from "../../src/py_aep/models/index.ts";
 import type { Layer } from "../../src/py_aep/models/index.ts";
 
 // `from __future__ import annotations` is dropped: no annotation here is
@@ -560,8 +561,8 @@ describe("TestEffectProperties", () => {
           if (effect.name === "S_BlurDirectional") {
             for (const prop of effect.properties) {
               if (prop.name === "Matte from Layer") {
-                expect(prop.property_value_type).toBe(PropertyValueType.LAYER_INDEX);
-                expect(prop.value).toBe(0);
+                expect(as_instance(prop, Property).property_value_type).toBe(PropertyValueType.LAYER_INDEX);
+                expect(as_instance(prop, Property).value).toBe(0);
                 return;
               }
             }
@@ -593,7 +594,7 @@ describe("TestEffectProperties", () => {
             continue;
           }
           for (const match_name of ["S_BlurDirectional-0063", "S_BlurDirectional-0068"]) {
-            const prop = effect.__getitem__(match_name);
+            const prop = as_instance(effect.__getitem__(match_name), Property);
             expect(py_eq(prop.value, getitem(json_values, match_name))).toBe(true);
             expect(prop.is_modified).toBe(false);
             checked += 1;
@@ -619,7 +620,10 @@ describe("TestEffectProperties", () => {
     expect(py_eq(getitem(_json_values_by_match_name(expected), "ADBE Path Text-0020"), [80, 50])).toBe(true);
     const layer = get_layer(project, "type_null");
     expect(layer.effects).not.toBeNull();
-    const prop = (layer.effects.__getitem__("ADBE Path Text") as PropertyGroup).__getitem__("ADBE Path Text-0020");
+    const prop = as_instance(
+      (layer.effects.__getitem__("ADBE Path Text") as PropertyGroup).__getitem__("ADBE Path Text-0020"),
+      Property,
+    );
     expect(py_eq(prop.value, [80.0, 50.0])).toBe(true);
     expect(prop.is_modified).toBe(false);
   });
@@ -641,8 +645,8 @@ describe("TestEffectProperties", () => {
           if (effect.name === "S_BlurDirectional") {
             for (const prop of effect.properties) {
               if (prop.name === "Matte from Path") {
-                expect(prop.property_value_type).toBe(PropertyValueType.MASK_INDEX);
-                expect(prop.value).toBe(1);
+                expect(as_instance(prop, Property).property_value_type).toBe(PropertyValueType.MASK_INDEX);
+                expect(as_instance(prop, Property).value).toBe(1);
                 return;
               }
             }
@@ -1383,7 +1387,7 @@ describe("TestUnitsText", () => {
     expect(layer.masks).not.toBeNull();
     const mask = layer.masks.properties[0] as MaskPropertyGroup;
     // Mask children: [0]=MaskPath, [1]=Feather, [2]=Opacity, [3]=Expansion
-    const feather = mask.properties[1];
+    const feather = as_instance(mask.properties[1], Property);
     expect(feather.match_name).toBe("ADBE Mask Feather");
     expect(feather.units_text).toBe("pixels");
   });
@@ -1393,7 +1397,7 @@ describe("TestUnitsText", () => {
     const layer = get_first_layer(parse_project(SAMPLES_DIR.div("mask_add.aep")));
     expect(layer.masks).not.toBeNull();
     const mask = layer.masks.properties[0] as MaskPropertyGroup;
-    const opacity = mask.properties[2];
+    const opacity = as_instance(mask.properties[2], Property);
     expect(opacity.match_name).toBe("ADBE Mask Opacity");
     expect(opacity.units_text).toBe("percent");
   });
@@ -1939,13 +1943,13 @@ describe("TestTextAnimatorPool", () => {
   test("test_pool_values_and_units", () => {
     const props = TestTextAnimatorPool._props(parse_aep(TestTextAnimatorPool.AEP));
     const by_mn = new Map(props.properties.map((c) => [c.match_name, c] as const));
-    const opacity = getitem(by_mn, "ADBE Text Opacity");
+    const opacity = as_instance(getitem(by_mn, "ADBE Text Opacity"), Property);
     expect(opacity instanceof Property).toBe(true);
     expect(opacity.value).toBe(100);
     expect(opacity.min_value).toBe(0);
     expect(opacity.max_value).toBe(100);
     expect(opacity.units_text).toBe("percent");
-    const scale = getitem(by_mn, "ADBE Text Scale 3D");
+    const scale = as_instance(getitem(by_mn, "ADBE Text Scale 3D"), Property);
     expect(scale instanceof Property).toBe(true);
     expect(py_eq(scale.value, [100.0, 100.0, 100.0])).toBe(true);
     expect(scale.units_text).toBe("percent");
@@ -1955,7 +1959,7 @@ describe("TestTextAnimatorPool", () => {
     const props = TestTextAnimatorPool._props(parse_aep(TestTextAnimatorPool.AEP));
     for (const c of props.properties) {
       expect(c instanceof Property).toBe(true);
-      expect(c.can_set_expression).toBe(false);
+      expect(as_instance(c, Property).can_set_expression).toBe(false);
     }
   });
 
@@ -2132,7 +2136,7 @@ describe("TestCanSetExpression", () => {
     expect(transform.property("ADBE Position").can_set_expression).toBe(false);
     const options = light.property("ADBE Light Options Group") as PropertyGroup;
     for (const mn of ["ADBE Light Color", "ADBE Light Falloff Type", "ADBE Light Shadow Diffusion"]) {
-      expect(options.property(mn).can_set_expression).toBe(false);
+      expect(as_instance(options.property(mn), Property).can_set_expression).toBe(false);
     }
   });
 
@@ -2145,12 +2149,12 @@ describe("TestCanSetExpression", () => {
     const model = get_comp(project, "crystal").layers[2];
     const materials = model.property("ADBE Material Options Group") as PropertyGroup;
     for (const mn of ["ADBE Light Transmission", "ADBE Metal Coefficient", "ADBE Shadow Color"]) {
-      expect(materials.property(mn).can_set_expression).toBe(false);
+      expect(as_instance(materials.property(mn), Property).can_set_expression).toBe(false);
     }
     const plane = model.property("ADBE Plane Options Group") as PropertyGroup;
-    expect(plane.property("ADBE Plane Curvature").can_set_expression).toBe(true);
+    expect(as_instance(plane.property("ADBE Plane Curvature"), Property).can_set_expression).toBe(true);
     const compositing = model.property("ADBE Compositing Options Group") as PropertyGroup;
-    expect(compositing.property("ADBE Shadow Color").can_set_expression).toBe(true);
+    expect(as_instance(compositing.property("ADBE Shadow Color"), Property).can_set_expression).toBe(true);
   });
 
   /**
@@ -2160,11 +2164,11 @@ describe("TestCanSetExpression", () => {
   test("test_effect_params_follow_their_type", () => {
     const effects = TestCanSetExpression._get_main_comp_layer(1).property("ADBE Effect Parade") as PropertyGroup;
     const drop_shadow = effects.property("ADBE Drop Shadow") as PropertyGroup;
-    expect(drop_shadow.property("Distance").can_set_expression).toBe(true);
-    expect(drop_shadow.property("Softness").can_set_expression).toBe(true);
+    expect(as_instance(drop_shadow.property("Distance"), Property).can_set_expression).toBe(true);
+    expect(as_instance(drop_shadow.property("Softness"), Property).can_set_expression).toBe(true);
     const fill = effects.property("ADBE Fill") as PropertyGroup;
-    expect(fill.property("Color").can_set_expression).toBe(true);
-    expect(fill.property("Fill Mask").can_set_expression).toBe(false);
+    expect(as_instance(fill.property("Color"), Property).can_set_expression).toBe(true);
+    expect(as_instance(fill.property("Fill Mask"), Property).can_set_expression).toBe(false);
   });
 
   /** AE shows a stroke's Miter Limit only while it joins by miter. */
@@ -2186,10 +2190,10 @@ describe("TestCanVaryOverTime", () => {
   test("test_puppet_engine_cannot_vary", () => {
     const layer = get_layer(parse_project(SAMPLES_DIR.div("effects.aep")), "effect_puppet");
     const puppet = (layer.property("ADBE Effect Parade") as PropertyGroup).property("ADBE FreePin3") as PropertyGroup;
-    const engine = puppet.property("ADBE FreePin3 Puppet Engine");
+    const engine = as_instance(puppet.property("ADBE FreePin3 Puppet Engine"), Property);
     expect(engine.can_vary_over_time).toBe(false);
     expect(engine.can_set_expression).toBe(false);
-    const auto_rotate = puppet.property("ADBE FreePin3 Auto Rotate Pins");
+    const auto_rotate = as_instance(puppet.property("ADBE FreePin3 Auto Rotate Pins"), Property);
     expect(auto_rotate.can_vary_over_time).toBe(true);
   });
 });
@@ -2472,14 +2476,17 @@ describe("TestEffectPointNormalization", () => {
   test("test_synthesized_point_uses_layer_not_comp", () => {
     const project = parse_aep(LAYER_SAMPLES_DIR.div("geometry_probe.aep")).project;
     const comp = get_comp(project, "PROBE_MAIN");
-    const layer = comp.layers.find((lay) => lay.name === "solid_default");
+    const layer = as_instance(comp.layers.find((lay) => lay.name === "solid_default"), AVLayer);
     expect(py_eq([comp.width, comp.height], [1920, 1080])).toBe(true);
     expect(py_eq([layer.width, layer.height], [200, 100])).toBe(true);
 
-    const point = layer.effects.properties
-      .filter((effect) => effect.name === "Point Control")
-      .flatMap((effect) => (effect as PropertyGroup).properties)
-      .find((child) => child.name === "Point");
+    const point = as_instance(
+      layer.effects.properties
+        .filter((effect) => effect.name === "Point Control")
+        .flatMap((effect) => (effect as PropertyGroup).properties)
+        .find((child) => child.name === "Point"),
+      Property,
+    );
     expect(point._is_live()).toBe(false);
     // AE's default is the layer centre; the composition centre would be
     // [960, 540] - what py_aep reported before the layer was threaded in.
@@ -2494,10 +2501,13 @@ describe("TestEffectPointNormalization", () => {
     const project = parse_aep(LAYER_SAMPLES_DIR.div("geometry_probe.aep")).project;
     const comp = get_comp(project, "PROBE_MAIN");
     const layer = comp.layers.find((lay) => lay.name === "solid_default");
-    const point = layer.effects.properties
-      .filter((effect) => effect.name === "3D Point Control")
-      .flatMap((effect) => (effect as PropertyGroup).properties)
-      .find((child) => child.name === "3D Point");
+    const point = as_instance(
+      layer.effects.properties
+        .filter((effect) => effect.name === "3D Point Control")
+        .flatMap((effect) => (effect as PropertyGroup).properties)
+        .find((child) => child.name === "3D Point"),
+      Property,
+    );
     expect(py_eq(point.value, [100.0, 50.0, 0.0])).toBe(true);
     // The fixture's Z is 0, which every divisor reproduces, so assert the
     // divisor itself: [width, height, height], not [width, height, 1] or
