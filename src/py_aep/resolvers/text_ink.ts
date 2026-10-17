@@ -218,7 +218,7 @@ export function _justified_origin(
  * @throws NotImplementedError Outside the measured envelope (module
  *   docstring), or when a font is not installed.
  */
-export function text_ink_rect(doc: TextDocument): Record<string, number> {
+export function text_ink_rect(doc: TextDocument): { top: number; left: number; width: number; height: number } {
   const raw = str(py_or(cos_get(doc._doc, "0", "0"), ""));
   _check_styles(doc);
   let styles: _CharStyle[];

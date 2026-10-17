@@ -20,7 +20,7 @@ export const AutoKernType = int_enum(
   },
   {
     /** Convert COS value (0-2) to AutoKernType. */
-    from_binary(value: number): number {
+    from_binary(value: number) {
       return this.of(value + 11412);
     },
     /** Convert AutoKernType to COS value (0-2). */
@@ -52,7 +52,7 @@ export const BaselineDirection = int_enum(
      *
      * COS stores this 1-based (`member value - 11611`).
      */
-    from_binary(value: number): number {
+    from_binary(value: number) {
       return this.of(value + 11611);
     },
     /** Convert BaselineDirection to COS value (1-3). */
@@ -78,7 +78,7 @@ export const BoxAutoFitPolicy = int_enum(
   },
   {
     /** Convert COS value (0-3) to BoxAutoFitPolicy. */
-    from_binary(value: number): number {
+    from_binary(value: number) {
       return this.of_or_null(value + 13412) ?? this.NONE;
     },
     /** Convert BoxAutoFitPolicy to COS value (0-3). */
@@ -109,7 +109,7 @@ export const BoxFirstBaselineAlignment = int_enum(
   },
   {
     /** Convert COS value (0-8) to BoxFirstBaselineAlignment. */
-    from_binary(value: number): number {
+    from_binary(value: number) {
       return this.of_or_null(value + 13012) ?? this.ASCENT;
     },
     /** Convert BoxFirstBaselineAlignment to COS value (0-8). */
@@ -135,7 +135,7 @@ export const BoxVerticalAlignment = int_enum(
   },
   {
     /** Convert COS value (0-3) to BoxVerticalAlignment. */
-    from_binary(value: number): number {
+    from_binary(value: number) {
       return this.of_or_null(value + 12812) ?? this.TOP;
     },
     /** Convert BoxVerticalAlignment to COS value (0-3). */
@@ -173,7 +173,7 @@ export const DigitSet = int_enum(
   },
   {
     /** Convert COS value (0-4) to DigitSet. */
-    from_binary(value: number): number {
+    from_binary(value: number) {
       return this.of(value + 12012);
     },
     /** Convert DigitSet to COS value (0-4). */
@@ -198,7 +198,7 @@ export const FontBaselineOption = int_enum(
   },
   {
     /** Convert COS value (0-2) to FontBaselineOption. */
-    from_binary(value: number): number {
+    from_binary(value: number) {
       return this.of(value + 11212);
     },
     /** Convert FontBaselineOption to COS value (0-2). */
@@ -224,7 +224,7 @@ export const FontCapsOption = int_enum(
   },
   {
     /** Convert COS value (0-3) to FontCapsOption. */
-    from_binary(value: number): number {
+    from_binary(value: number) {
       return this.of(value + 11012);
     },
     /** Convert FontCapsOption to COS value (0-3). */
@@ -248,7 +248,7 @@ export const LeadingType = int_enum(
   },
   {
     /** Convert COS value (0-1) to LeadingType. */
-    from_binary(value: number): number {
+    from_binary(value: number) {
       return this.of(value + 10812);
     },
     /** Convert LeadingType to COS value (0-1). */
@@ -273,7 +273,7 @@ export const LineJoinType = int_enum(
   },
   {
     /** Convert COS value (0-2) to LineJoinType. */
-    from_binary(value: number): number {
+    from_binary(value: number) {
       return this.of(value + 11812);
     },
     /** Convert LineJoinType to COS value (0-2). */
@@ -303,7 +303,7 @@ export const LineOrientation = int_enum(
      * COS 1/2 are swapped relative to the enum's numeric order
      * (1 = left-to-right, 2 = right-to-left).
      */
-    from_binary(value: number): number {
+    from_binary(value: number) {
       return _LINE_ORIENTATION_BINARY_MAP.get(value) ?? this.HORIZONTAL;
     },
     /** Convert LineOrientation to COS value. */
@@ -336,7 +336,7 @@ export const ParagraphDirection = int_enum(
   },
   {
     /** Convert COS value (0-1) to ParagraphDirection. */
-    from_binary(value: number): number {
+    from_binary(value: number) {
       return this.of(value + 10212);
     },
     /** Convert ParagraphDirection to COS value (0-1). */
@@ -371,7 +371,7 @@ export const ParagraphJustification = int_enum(
      * COS 0 is `LEFT_JUSTIFY`; the `MULTIPLE_JUSTIFICATIONS` sentinel
      * is never stored, so the offset is the member value minus 7413.
      */
-    from_binary(value: number): number {
+    from_binary(value: number) {
       return this.of(value + 7413);
     },
     /** Convert ParagraphJustification to COS value (0-6). */

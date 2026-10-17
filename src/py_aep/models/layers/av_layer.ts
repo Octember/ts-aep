@@ -295,7 +295,7 @@ export class AVLayer extends Layer {
     if (mode === BlendingMode.DISSOLVE && this._ldta.dancing_dissolve) {
       return BlendingMode.DANCING_DISSOLVE;
     }
-    return mode as BlendingMode;
+    return mode;
   }
 
   set blending_mode(value: BlendingMode) {
@@ -326,7 +326,7 @@ export class AVLayer extends Layer {
    * Read / Write.
    */
   get track_matte_type(): TrackMatteType {
-    return TrackMatteType.from_binary(this._ldta.track_matte_type) as TrackMatteType;
+    return TrackMatteType.from_binary(this._ldta.track_matte_type);
   }
 
   set track_matte_type(value: TrackMatteType | number) {
@@ -825,7 +825,7 @@ export class AVLayer extends Layer {
       throw new NotImplementedError("source_rect_at_time does not model per-character 3D text");
     }
     const document = text.__getitem__("ADBE Text Document").value_at_time(time);
-    return text_ink_rect(document) as { top: number; left: number; width: number; height: number };
+    return text_ink_rect(document);
   }
 
   /**

@@ -294,7 +294,7 @@ export const AudioBitDepth = int_enum("AudioBitDepth", {
   },
 
   /** Convert binary value to AudioBitDepth. */
-  from_binary(value: number): number {
+  from_binary(value: number) {
     if (this.has(value)) {
       return this.of(value);
     }
@@ -327,7 +327,7 @@ export const AudioChannels = int_enum("AudioChannels", {
   },
 
   /** Convert binary value to AudioChannels (0 or unknown defaults to STEREO). */
-  from_binary(value: number): number {
+  from_binary(value: number) {
     if (value === 1) {
       return this.MONO;
     }
@@ -408,7 +408,7 @@ export const AudioSampleRate = int_enum("AudioSampleRate", {
    * Unknown or negative values (e.g. `-1` when audio is disabled)
    * are mapped to `OFF`.
    */
-  from_binary(value: number): number {
+  from_binary(value: number) {
     const int_value = round(value);
     if (this.has(int_value)) {
       return this.of(int_value);
@@ -460,7 +460,7 @@ export const PostRenderAction = int_enum("PostRenderAction", {
   SET_PROXY: 3615,
 }, {
   /** Convert binary value to PostRenderAction. */
-  from_binary(value: number): number {
+  from_binary(value: number) {
     return this.of_or_null(value + 3612) ?? this.NONE;
   },
 

@@ -4,6 +4,7 @@ import { LayerType, ParametricMeshType } from "../../enums/index.ts";
 import { _PARAMETRIC_MESH_ACTIVE_GROUPS } from "../../synthesis/property.ts";
 import {
   AttributeError,
+  type_name,
   descriptor,
   descriptors_of,
   getattr,
@@ -15,8 +16,8 @@ import { ChunkField, type EffectParamDefs } from "../descriptors.ts";
 import { label_index } from "../preferences.ts";
 import { AVLayer } from "./av_layer.ts";
 import type { CompItem } from "../items/composition.ts";
-import type { Property } from "../properties/property.ts";
-import type { PropertyGroup } from "../properties/property_group.ts";
+import { Property } from "../properties/property.ts";
+import { PropertyGroup } from "../properties/property_group.ts";
 
 /**
  * `type(None)` is NoneType, which is never `null` itself. Keeps the
@@ -235,10 +236,15 @@ export class ParametricMeshOptions {
   }
 
   _properties(name: string): Property {
+    // Python casts both lookups; a wrong kind fails at its next attribute read.
     if (this._group == null) {
-      this._group = this._layer.property(this.constructor._match_name) as PropertyGroup;
+      const group = this._layer.property(this.constructor._match_name);
+      if (!(group instanceof PropertyGroup)) throw new AttributeError(`'${type_name(group)}' object has no attribute 'property'`);
+      this._group = group;
     }
-    return this._group.property(name) as Property;
+    const child = this._group.property(name);
+    if (!(child instanceof Property)) throw new AttributeError(`'${type_name(child)}' object has no attribute 'value'`);
+    return child;
   }
 
   __repr__(): string {

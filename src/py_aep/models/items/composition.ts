@@ -36,6 +36,8 @@ import {
   ValueError,
   zip,
   type ClassAttributes,
+  AttributeError,
+  type_name,
 } from "../../../pyrt/index.ts";
 import { ChunkField, type EffectParamDefs } from "../descriptors.ts";
 import { EssentialGraphicsController, SourcePropertyRef } from "../essential_graphics.ts";
@@ -334,7 +336,8 @@ export function _drop_essential_overrides(layer: Layer): void {
   layer.essential_property_uuids.length = 0;
   for (const child of layer.properties) {
     if (child.match_name === "ADBE Layer Overrides") {
-      (child as PropertyGroup)._properties.length = 0;
+      if (!(child instanceof PropertyGroup)) throw new AttributeError(`'${type_name(child)}' object has no attribute 'properties'`);
+      child._properties.length = 0;
       break;
     }
   }
