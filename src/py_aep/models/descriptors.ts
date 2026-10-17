@@ -18,6 +18,7 @@ import {
   repr,
   instance_dict,
 } from "../../pyrt/index.ts";
+import type { EnumHelpers, EnumValue } from "../../pyrt/enum.ts";
 import { get_ae_version_major } from "../ae_version.ts";
 import { validate_bool, validate_enum } from "./validators.ts";
 
@@ -186,7 +187,7 @@ export class ChunkField<T> {
   declare reverse: ChunkTransform | null;
   declare read_only: boolean;
   declare validate: ((value: T, obj: any) => void) | null;
-  declare default: any;
+  declare default: T | typeof _SENTINEL;
   declare pre_set: string | null;
   declare post_set: ((obj: any) => void) | string | null;
   declare min_version: number | null;
@@ -197,11 +198,11 @@ export class ChunkField<T> {
     chunk_attr: string,
     field: string,
     kw: {
-      transform?: ChunkTransform | null;
-      reverse?: ChunkTransform | null;
+      transform?: ((value: any) => T) | null;
+      reverse?: ((value: NoInfer<T>) => unknown) | null;
       read_only?: boolean;
-      validate?: ((value: T, obj: any) => void) | null;
-      default?: any;
+      validate?: ((value: NoInfer<T>, obj: any) => void) | null;
+      default?: NoInfer<T>;
       pre_set?: string | null;
       post_set?: ((obj: any) => void) | string | null;
       min_version?: number | null;
@@ -345,13 +346,27 @@ export class ChunkField<T> {
    *     the enum class from `_enum_class`, so write-side membership strictness is restored via
    *     `validate=validate_enum(enum_cls)` unless the caller passes its own `validate` (which must
    *     then check membership itself).
+   *   The field then reads as `EnumValue<E> | Raw`, `Raw` being the rest of the
+   *   declared field type (`declare depth: OutputColorDepth | number`).
    */
-  static enum<T = any>(
+  static enum<E extends EnumHelpers<unknown>, Raw = never>(
+    enum_cls: E,
+    chunk_attr: string,
+    field: string,
+    kw: { allow_out_of_enum_values: true; [key: string]: any },
+  ): ChunkField<EnumValue<E> | Raw>;
+  static enum<E extends EnumHelpers<unknown>>(
+    enum_cls: E,
+    chunk_attr: string,
+    field: string,
+    kw?: { allow_out_of_enum_values?: false; [key: string]: any },
+  ): ChunkField<EnumValue<E>>;
+  static enum(
     enum_cls: any,
     chunk_attr: string,
     field: string,
     kw: { allow_out_of_enum_values?: boolean; [key: string]: any } = {},
-  ): ChunkField<T> {
+  ): ChunkField<unknown> {
     const { allow_out_of_enum_values = false, ...kwargs } = kw;
     if (!("transform" in kwargs)) kwargs.transform = bound_enum_method(enum_cls, "from_binary", enum_cls);
     if (!("reverse" in kwargs)) kwargs.reverse = bound_enum_method(enum_cls, "to_binary", int);

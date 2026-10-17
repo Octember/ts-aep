@@ -81,7 +81,7 @@ export class Viewer {
 descriptor(
   Viewer,
   "type",
-  ChunkField.enum<ViewerType>(ViewerType, "_fitt", "value", {
+  ChunkField.enum(ViewerType, "_fitt", "value", {
     transform: (v: string) => ViewerType.from_string(v),
     read_only: true,
   }),

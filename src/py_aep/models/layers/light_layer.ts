@@ -76,7 +76,7 @@ export class LightLayer extends Layer {
   }
 
   /** The type of light. Read / Write. */
-  declare light_type: number;
+  declare light_type: LightType;
 
   /** The ID of the layer used as a light source. `0` if none. */
   declare _light_source_id: number;

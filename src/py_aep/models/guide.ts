@@ -80,7 +80,7 @@ export class Guide {
 descriptor(
   Guide,
   "orientation_type",
-  ChunkField.enum<GuideOrientationType>(
+  ChunkField.enum(
     GuideOrientationType,
     "_guide_item",
     "orientation_type",

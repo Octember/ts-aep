@@ -24,7 +24,22 @@ export interface Descriptor {
 
 const DESCRIPTORS = new WeakMap<Function, Map<string, Descriptor>>();
 
-/** Install `d` as class attribute `name` of `cls` (runs `__set_name__`). */
+/** A descriptor whose instance reads produce a `T` (class reads produce the descriptor). */
+export interface TypedDescriptor<T> extends Descriptor {
+  __get__(obj: unknown, owner: Function): T | Descriptor;
+}
+
+/**
+ * Install `d` as class attribute `name` of `cls` (runs `__set_name__`).
+ * `name` must be declared on the instance type, and `d` must read as the
+ * declared type, which a generic descriptor such as `new ChunkField(...)`
+ * then infers.
+ */
+export function descriptor<P extends object, K extends string & keyof P>(
+  cls: abstract new (...args: never[]) => P,
+  name: K,
+  d: TypedDescriptor<P[K]>,
+): TypedDescriptor<P[K]>;
 export function descriptor<D extends Descriptor>(cls: Function, name: string, d: D): D {
   d.__set_name__?.(cls, name);
   let own = DESCRIPTORS.get(cls);

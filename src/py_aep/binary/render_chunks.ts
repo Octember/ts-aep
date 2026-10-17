@@ -440,6 +440,7 @@ export class RenderSettingsItem extends FmtItem {
   // AE reports "missing data in file" when opening a py_aep-created item.
   declare _reserved_00: Uint8Array;
   declare _flag_byte: number;
+  declare queue_item_notify: boolean;
   /** BitField over `_flag_byte` bit 0. */
   declare render_checked: boolean;
   declare comp_id: number;

@@ -124,7 +124,7 @@ export class ViewOptions {
   }
 }
 
-descriptor(ViewOptions, "channels", ChunkField.enum<ChannelType>(ChannelType, "_fips", "channels"));
+descriptor(ViewOptions, "channels", ChunkField.enum(ChannelType, "_fips", "channels"));
 
 descriptor(ViewOptions, "checkerboards", ChunkField.bool("_fips", "checkerboards"));
 
@@ -225,5 +225,5 @@ descriptor(
 descriptor(
   ViewOptions,
   "fast_preview",
-  ChunkField.enum<FastPreviewType>(FastPreviewType, "_fips", "fast_preview_type", { min_version: 12 }),
+  ChunkField.enum(FastPreviewType, "_fips", "fast_preview_type", { min_version: 12 }),
 );
