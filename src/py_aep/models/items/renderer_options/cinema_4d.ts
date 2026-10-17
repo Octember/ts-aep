@@ -19,5 +19,5 @@ export class Cinema4DRendererOptions extends RendererOptionsBase {
 descriptor(
   Cinema4DRendererOptions,
   "quality",
-  new ChunkField<number>("_body", "quality", { validate: validate_cinema_4d_quality }),
+  new ChunkField("_body", "quality", { validate: validate_cinema_4d_quality }),
 );

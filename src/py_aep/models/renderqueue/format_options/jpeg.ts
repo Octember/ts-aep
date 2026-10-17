@@ -55,7 +55,7 @@ export class JpegFormatOptions extends FormatOptionsBase {
 descriptor(
   JpegFormatOptions,
   "quality",
-  new ChunkField<number>("_body", "quality", {
+  new ChunkField("_body", "quality", {
     validate: _validate_number({ min: 0, max: 10, integer: true }),
   }),
 );
@@ -71,7 +71,7 @@ descriptor(
 descriptor(
   JpegFormatOptions,
   "scans",
-  new ChunkField<number>("_body", "scans", {
+  new ChunkField("_body", "scans", {
     transform: (x: number) => x + 2,
     reverse: (x: number) => x - 2,
     validate: validate_one_of([3, 4, 5]),

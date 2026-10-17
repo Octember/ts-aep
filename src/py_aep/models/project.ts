@@ -2471,7 +2471,7 @@ descriptor(
   Project,
   "xmp_packet",
   new ChunkField("_aep", "_xmp", {
-    transform: (s: any) => (py_bool(s) && strip(s) ? ET_fromstring(s) : null),
+    transform: (s) => (py_bool(s) && strip(s) ? ET_fromstring(s) : null),
     reverse: (el: Element | null) => (el != null ? ET_tostring(el) : ""),
   }),
 );

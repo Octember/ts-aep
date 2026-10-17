@@ -90,11 +90,11 @@ descriptor(
 descriptor(
   Guide,
   "position",
-  new ChunkField<number>("_guide_item", "position", { validate: validate_f8 }),
+  new ChunkField("_guide_item", "position", { validate: validate_f8 }),
 );
 
 descriptor(
   Guide,
   "position_type",
-  new ChunkField<number>("_guide_item", "position_type"),
+  new ChunkField("_guide_item", "position_type"),
 );

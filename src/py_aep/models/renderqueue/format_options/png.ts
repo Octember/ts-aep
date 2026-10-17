@@ -214,12 +214,12 @@ export class PngFormatOptions extends FormatOptionsBase {
   }
 }
 
-descriptor(PngFormatOptions, "width", new ChunkField<number>("_body", "width", { read_only: true }));
-descriptor(PngFormatOptions, "height", new ChunkField<number>("_body", "height", { read_only: true }));
+descriptor(PngFormatOptions, "width", new ChunkField("_body", "width", { read_only: true }));
+descriptor(PngFormatOptions, "height", new ChunkField("_body", "height", { read_only: true }));
 descriptor(
   PngFormatOptions,
   "bit_depth",
-  new ChunkField<number>("_body", "bit_depth", { validate: validate_one_of([8, 16]) }),
+  new ChunkField("_body", "bit_depth", { validate: validate_one_of([8, 16]) }),
 );
 descriptor(
   PngFormatOptions,

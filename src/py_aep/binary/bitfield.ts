@@ -17,22 +17,23 @@ import { and, and_not, getattr, lshift, or } from "../../pyrt/index.ts";
  *
  * The descriptor has no type annotation on the class body, so attrs
  * ignores it (it stays as a class-level data descriptor, not a slot).
- * Unknown bits in the raw byte are preserved implicitly.
+ * Unknown bits in the raw byte are preserved implicitly. `F` is the name of
+ * the owner's raw-byte field.
  */
-export class BitField {
-  byte_field: string;
+export class BitField<F extends string = string> {
+  byte_field: F;
   mask: number;
 
-  constructor(byte_field: string, bit: number) {
+  constructor(byte_field: F, bit: number) {
     this.byte_field = byte_field;
     this.mask = lshift(1, bit);
   }
 
-  __get__(obj: Record<string, number>, objtype: Function | null = null): boolean {
+  __get__(obj: Record<F, number>, objtype: Function | null = null): boolean {
     return and(getattr(obj, this.byte_field), this.mask) !== 0;
   }
 
-  __set__(obj: Record<string, number>, value: boolean): void {
+  __set__(obj: Record<F, number>, value: boolean): void {
     const raw = getattr(obj, this.byte_field);
     if (value) {
       obj[this.byte_field] = or(raw, this.mask);

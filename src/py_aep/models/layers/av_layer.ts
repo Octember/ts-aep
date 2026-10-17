@@ -1241,7 +1241,7 @@ descriptor(
   ChunkField.bool("_ldta", "three_d_layer", { post_set: "_on_three_d_layer_set" }),
 );
 descriptor(AVLayer, "three_d_per_char", ChunkField.bool("_ldta", "three_d_per_char"));
-descriptor(AVLayer, "_source_id", new ChunkField<number>("_ldta", "source_id"));
+descriptor(AVLayer, "_source_id", new ChunkField("_ldta", "source_id"));
 
 // `@requires_version(23)` on the two track-matte methods, applied bottom-up after the class.
 AVLayer.prototype.set_track_matte = requires_version(23)(AVLayer.prototype.set_track_matte);

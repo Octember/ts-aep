@@ -2805,7 +2805,7 @@ export class CompItem extends AVItem {
 descriptor(
   CompItem,
   "bg_color",
-  new ChunkField<number[]>("_cdta", "bg_color", { validate: validate_rgb_color }),
+  new ChunkField("_cdta", "bg_color", { validate: validate_rgb_color }),
 );
 
 /** When `true`, Draft 3D mode is enabled for the composition. Read / Write. */
@@ -2841,7 +2841,7 @@ descriptor(
 descriptor(
   CompItem,
   "width",
-  new ChunkField<number>("_cdta", "width", {
+  new ChunkField("_cdta", "width", {
     validate: validate_footage_dimension,
     pre_set: "_ensure_layers_loaded",
   }),
@@ -2851,7 +2851,7 @@ descriptor(
 descriptor(
   CompItem,
   "height",
-  new ChunkField<number>("_cdta", "height", {
+  new ChunkField("_cdta", "height", {
     validate: validate_footage_dimension,
     pre_set: "_ensure_layers_loaded",
   }),
@@ -2861,7 +2861,7 @@ descriptor(
 descriptor(
   CompItem,
   "shutter_angle",
-  new ChunkField<number>("_cdta", "shutter_angle", {
+  new ChunkField("_cdta", "shutter_angle", {
     validate: _validate_number({ min: 0, max: 720, integer: true }),
   }),
 );
@@ -2870,7 +2870,7 @@ descriptor(
 descriptor(
   CompItem,
   "shutter_phase",
-  new ChunkField<number>("_cdta", "shutter_phase", {
+  new ChunkField("_cdta", "shutter_phase", {
     validate: _validate_number({ min: -360, max: 360, integer: true }),
   }),
 );
@@ -2880,7 +2880,7 @@ descriptor(
 descriptor(
   CompItem,
   "resolution_factor",
-  new ChunkField<number[]>("_cdta", "resolution_factor", {
+  new ChunkField("_cdta", "resolution_factor", {
     validate: validate_sequence({ length: 2, min: 1, max: 99, integer: true }),
   }),
 );
@@ -2892,7 +2892,7 @@ descriptor(
 descriptor(
   CompItem,
   "motion_blur_adaptive_sample_limit",
-  new ChunkField<number>("_cdta", "motion_blur_adaptive_sample_limit", {
+  new ChunkField("_cdta", "motion_blur_adaptive_sample_limit", {
     validate: _validate_number({
       min: (self: CompItem) => self.motion_blur_samples_per_frame,
       max: 256,
@@ -2906,7 +2906,7 @@ descriptor(
 descriptor(
   CompItem,
   "motion_blur_samples_per_frame",
-  new ChunkField<number>("_cdta", "motion_blur_samples_per_frame", {
+  new ChunkField("_cdta", "motion_blur_samples_per_frame", {
     validate: _validate_number({ min: 2, max: 64, integer: true }),
   }),
 );
@@ -2915,7 +2915,7 @@ descriptor(
 descriptor(
   CompItem,
   "pixel_aspect",
-  new ChunkField<number>("_cdta", "pixel_aspect", {
+  new ChunkField("_cdta", "pixel_aspect", {
     validate: validate_pixel_aspect,
     // See `width`.
     pre_set: "_ensure_layers_loaded",
@@ -2926,14 +2926,14 @@ descriptor(
 descriptor(
   CompItem,
   "time_scale",
-  new ChunkField<number>("_cdta", "time_scale", { read_only: true }),
+  new ChunkField("_cdta", "time_scale", { read_only: true }),
 );
 
 /** The time set as the beginning of the composition, in seconds. Read / Write. */
 descriptor(
   CompItem,
   "display_start_time",
-  new ChunkField<number>("_cdta", "display_start_time", {
+  new ChunkField("_cdta", "display_start_time", {
     // AE 2026's own bounds ("out of range -10800 to 86400").
     validate: _validate_number({ min: -10800.0, max: 86400.0 }),
     post_set: "_restore_times_in_timebase",

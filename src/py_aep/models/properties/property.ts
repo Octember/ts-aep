@@ -4673,17 +4673,17 @@ export function _strip_sequence_basename(name: string): string {
 
 // ---- Chunk-backed field descriptors (ChunkField class attributes) ----
 
-descriptor(Property, "dimensions", new ChunkField<number>("_tdb4", "dimensions", { default: 1, read_only: true }));
+descriptor(Property, "dimensions", new ChunkField("_tdb4", "dimensions", { default: 1, read_only: true }));
 
-descriptor(Property, "_animated", new ChunkField<boolean>("_tdb4", "animated"));
+descriptor(Property, "_animated", new ChunkField("_tdb4", "animated"));
 
-descriptor(Property, "_color", new ChunkField<boolean>("_tdb4", "color"));
+descriptor(Property, "_color", new ChunkField("_tdb4", "color"));
 
-descriptor(Property, "_integer", new ChunkField<boolean>("_tdb4", "integer"));
+descriptor(Property, "_integer", new ChunkField("_tdb4", "integer"));
 
-descriptor(Property, "_no_value", new ChunkField<boolean>("_tdb4", "no_value"));
+descriptor(Property, "_no_value", new ChunkField("_tdb4", "no_value"));
 
-descriptor(Property, "_vector", new ChunkField<boolean>("_tdb4", "vector"));
+descriptor(Property, "_vector", new ChunkField("_tdb4", "vector"));
 
 // When `True`, the property's X/Y ratio is locked (the constrain
 // proportions switch of a Scale or Mask Feather; `True` on any property
@@ -4691,7 +4691,7 @@ descriptor(Property, "_vector", new ChunkField<boolean>("_tdb4", "vector"));
 descriptor(
   Property,
   "locked_ratio",
-  new ChunkField<boolean>("_tdsb", "ratio_unlinked", { transform: (v: unknown) => !v, read_only: true }),
+  new ChunkField("_tdsb", "ratio_unlinked", { transform: (v) => !v, read_only: true }),
 );
 
-descriptor(Property, "_is_spatial_raw", new ChunkField<boolean>("_tdb4", "is_spatial"));
+descriptor(Property, "_is_spatial_raw", new ChunkField("_tdb4", "is_spatial"));

@@ -192,7 +192,7 @@ export const OutputFormat = int_enum("OutputFormat", {
    *   `"png!"`).
    * @throws {@link ValueError} If the format identifier is not recognised.
    */
-  from_format_id(format_id: string | Uint8Array): number {
+  from_format_id(format_id: string | Uint8Array): OutputFormat {
     if (format_id instanceof Uint8Array) {
       format_id = decode(format_id, "ascii");
     }
@@ -252,7 +252,7 @@ export const _OUTPUT_FORMAT_KINDS: Map<number, FormatKind> = new Map<number, For
   [OutputFormat.WAV, FormatKind.AUDIO],
 ]);
 
-export const _FORMAT_ID_TO_OUTPUT_FORMAT: Map<string, number> = new Map<string, number>([
+export const _FORMAT_ID_TO_OUTPUT_FORMAT: Map<string, OutputFormat> = new Map<string, OutputFormat>([
   ["AIFF", OutputFormat.AIFF],
   [".AVI", OutputFormat.AVI],
   ["sDPX", OutputFormat.DPX_CINEON_SEQUENCE],
