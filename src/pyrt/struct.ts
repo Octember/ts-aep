@@ -75,7 +75,9 @@ export class Struct {
     if (data.length - offset < this.size) {
       throw new StructError(`unpack_from requires a buffer of at least ${this.size + offset} bytes`);
     }
-    const dv = new DataView(data.buffer, data.byteOffset, data.byteLength);
+    // Integers are assembled from bytes and floats go through a scratch view:
+    // `data.buffer` would make JSC materialize a backing store per call.
+    const d = data;
     const le = this.le;
     const out: any[] = [];
     let p = offset;
@@ -85,25 +87,25 @@ export class Struct {
         continue;
       }
       if (ch === "s" || ch === "p") {
-        out.push(data.slice(p, p + count));
+        out.push(d.slice(p, p + count));
         p += count;
         continue;
       }
       for (let k = 0; k < count; k++) {
         switch (ch) {
-          case "c": out.push(data.slice(p, p + 1)); break;
-          case "b": out.push(dv.getInt8(p)); break;
-          case "B": out.push(dv.getUint8(p)); break;
-          case "?": out.push(dv.getUint8(p) !== 0); break;
-          case "h": out.push(dv.getInt16(p, le)); break;
-          case "H": out.push(dv.getUint16(p, le)); break;
-          case "i": case "l": out.push(dv.getInt32(p, le)); break;
-          case "I": case "L": out.push(dv.getUint32(p, le)); break;
-          case "q": out.push(dv.getBigInt64(p, le)); break;
-          case "Q": out.push(dv.getBigUint64(p, le)); break;
-          case "e": out.push(half_to_float(dv.getUint16(p, le))); break;
-          case "f": out.push(dv.getFloat32(p, le)); break;
-          case "d": out.push(dv.getFloat64(p, le)); break;
+          case "c": out.push(d.slice(p, p + 1)); break;
+          case "b": out.push((d[p] << 24) >> 24); break;
+          case "B": out.push(d[p]); break;
+          case "?": out.push(d[p] !== 0); break;
+          case "h": out.push((u16(d, p, le) << 16) >> 16); break;
+          case "H": out.push(u16(d, p, le)); break;
+          case "i": case "l": out.push(u32(d, p, le) | 0); break;
+          case "I": case "L": out.push(u32(d, p, le)); break;
+          case "q": out.push(scratch(d, p, 8).getBigInt64(0, le)); break;
+          case "Q": out.push(scratch(d, p, 8).getBigUint64(0, le)); break;
+          case "e": out.push(half_to_float(u16(d, p, le))); break;
+          case "f": out.push(scratch(d, p, 4).getFloat32(0, le)); break;
+          case "d": out.push(scratch(d, p, 8).getFloat64(0, le)); break;
         }
         p += SIZES[ch];
       }
@@ -115,8 +117,9 @@ export class Struct {
     if (values.length !== this.n_values) {
       throw new StructError(`pack expected ${this.n_values} items for packing (got ${values.length})`);
     }
-    const out = new Uint8Array(this.size);
-    const dv = new DataView(out.buffer);
+    const ab = new ArrayBuffer(this.size);
+    const out = new Uint8Array(ab);
+    const dv = new DataView(ab);
     const le = this.le;
     let p = 0;
     let vi = 0;
@@ -191,6 +194,26 @@ export class Struct {
     }
     return out;
   }
+}
+
+function u16(d: Uint8Array, p: number, le: boolean): number {
+  return le ? d[p] | (d[p + 1] << 8) : (d[p] << 8) | d[p + 1];
+}
+
+function u32(d: Uint8Array, p: number, le: boolean): number {
+  return (le
+    ? d[p] | (d[p + 1] << 8) | (d[p + 2] << 16) | (d[p + 3] << 24)
+    : (d[p] << 24) | (d[p + 1] << 16) | (d[p + 2] << 8) | d[p + 3]) >>> 0;
+}
+
+const SCRATCH = new ArrayBuffer(8);
+const SCRATCH_U8 = new Uint8Array(SCRATCH);
+const SCRATCH_DV = new DataView(SCRATCH);
+
+/** Copy `n` bytes at `p` into the scratch buffer and return its view (read at offset 0). */
+function scratch(d: Uint8Array, p: number, n: number): DataView {
+  for (let i = 0; i < n; i++) SCRATCH_U8[i] = d[p + i];
+  return SCRATCH_DV;
 }
 
 function to_int(v: any): number {
