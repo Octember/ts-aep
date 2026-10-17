@@ -3,6 +3,7 @@
 
 import { fs } from "./host.ts";
 import { FileNotFoundError, OSError } from "./errors.ts";
+import type { Struct } from "./struct.ts";
 
 export class BytesIO {
   private buf: Uint8Array;
@@ -19,6 +20,17 @@ export class BytesIO {
     const end = n == null || n < 0 ? this.len : Math.min(this.len, this.pos + n);
     const out = this.buf.slice(Math.min(this.pos, end), end);
     this.pos = Math.max(this.pos, end);
+    return out;
+  }
+
+  /**
+   * `s.unpack(fp.read(s.size))` without the intermediate copy. Returns null,
+   * leaving the position alone, when fewer than `s.size` bytes remain.
+   */
+  unpack(s: Struct): any[] | null {
+    if (this.pos + s.size > this.len) return null;
+    const out = s.unpack_from(this.buf, this.pos);
+    this.pos += s.size;
     return out;
   }
 

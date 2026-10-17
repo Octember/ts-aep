@@ -7,6 +7,7 @@
  */
 
 import {
+  BytesIO,
   Fraction,
   OSError,
   ValueError,
@@ -99,6 +100,18 @@ export function _get_struct(full_fmt: string): struct.Struct {
   return s;
 }
 
+const _BE_STRUCTS = new Map<string, struct.Struct>();
+
+/** `_get_struct(">" + fmt)` without building the key string on a hit. */
+function _get_struct_be(fmt: string): struct.Struct {
+  let s = _BE_STRUCTS.get(fmt);
+  if (s === undefined) {
+    s = _get_struct(">" + fmt);
+    _BE_STRUCTS.set(fmt, s);
+  }
+  return s;
+}
+
 /**
  * Read and unpack binary data from `fp`.
  *
@@ -108,7 +121,11 @@ export function _get_struct(full_fmt: string): struct.Struct {
  * @throws {@link IOError} If fewer bytes are available than the format requires.
  */
 export function read_fmt(fmt: string, fp: IO, endian = ">"): any[] {
-  const s = _get_struct(endian + fmt);
+  const s = endian === ">" ? _get_struct_be(fmt) : _get_struct(endian + fmt);
+  if (fp instanceof BytesIO) {
+    const values = fp.unpack(s);
+    if (values !== null) return values;
+  }
   const data = fp.read(s.size);
   if (data.length < s.size) {
     throw new OSError(`Short read: expected ${s.size} bytes, got ${data.length}`);

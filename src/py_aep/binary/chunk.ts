@@ -30,7 +30,6 @@ import {
   py_or,
   repr,
   struct,
-  zip,
   type IO,
 } from "../../pyrt/index.ts";
 import { _HEADER_STRUCT, read_bytes, read_fmt, read_pad, write_bytes, write_fmt, write_pad } from "./bin_utils.ts";
@@ -82,7 +81,9 @@ export class Chunk extends AttrsBase {
       // fields, or items. dict(zip()) replaces the _decode_fields
       // Python loop. Coerces (e.g. bool_field) are handled inline.
       const kw: Record<string, any> = {};
-      for (const [name, v] of zip(init_names, read_fmt(fmt, fp))) kw[name] = v;
+      const values = read_fmt(fmt, fp);
+      const n = Math.min(init_names.length, values.length);
+      for (let i = 0; i < n; i++) kw[init_names[i]] = values[i];
       kw.chunk_type = chunk_type;
       for (const [i, crc] of coerces) {
         const name = init_names[i];
