@@ -59,10 +59,10 @@ export function _run_suppressed<R>(body: () => R): R {
  * `@_suppress_materialization()` becomes `.decorate(fn)`.
  */
 export function _suppress_materialization() {
-  function decorate<F extends (...args: never[]) => unknown>(fn: F): F {
-    return function (this: unknown, ...args: Parameters<F>) {
+  function decorate<T, A extends unknown[], R>(fn: (this: T, ...args: A) => R): (this: T, ...args: A) => R {
+    return function (this: T, ...args: A) {
       return _run_suppressed(() => fn.apply(this, args));
-    } as unknown as F;
+    };
   }
   // Callable (`@_suppress_materialization()` applied as `_suppress_materialization()(fn)`),
   // and also exposes `.decorate(fn)` / `.run(body)`.

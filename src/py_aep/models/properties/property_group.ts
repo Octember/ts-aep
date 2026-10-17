@@ -1376,7 +1376,7 @@ export class PropertyGroup extends PropertyBase {
 // decorator wraps the method once the class body has been evaluated.
 PropertyGroup.prototype.add_variable_font_axis = requires_version(26)(
   PropertyGroup.prototype.add_variable_font_axis,
-) as any;
+);
 
 /** Class-level attributes (TS statics) of `ctor` and its bases, excluding Function built-ins. */
 function hasClassStatic(ctor: Function, name: string): boolean {
