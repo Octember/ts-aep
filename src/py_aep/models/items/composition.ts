@@ -170,8 +170,8 @@ export function _frame_number(cdta: CdtaChunk, dividend: number, divisor: number
    * where the 16.16 rate reads 246.00001.
    */
   const [timebase, units_per_frame] = _grid(cdta);
-  // NOTE(port): exact bigint arithmetic, identical to Python's `Fraction(dividend, divisor) * timebase /
-  // units_per_frame` is kept as an exact bigint numerator / denominator.
+  // NOTE(port): Python's `Fraction(dividend, divisor) * timebase / units_per_frame`,
+  // kept exact as a bigint numerator / denominator.
   let n = BigInt(dividend) * BigInt(timebase);
   let d = BigInt(divisor) * BigInt(units_per_frame);
   if (d < 0n) {
