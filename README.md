@@ -19,7 +19,9 @@ file by file. Python semantics the port depends on (rounding, floor division,
 
 ## Status
 
-Against upstream at the pinned commit (CI runs all of this on every push):
+Against upstream at the pinned commit (CI runs all of this on every push; the
+py-aep differential runs when the head commit message contains `[ci diff]`, or
+on a manual workflow run):
 
 - Test suite: all 15,431 upstream tests translated to `bun:test`; 15,369 pass,
   62 skip on missing system fonts / OCIO configs / AE preferences — identical to
