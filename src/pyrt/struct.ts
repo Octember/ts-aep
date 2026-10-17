@@ -52,17 +52,16 @@ export class Struct {
       size += SIZES[ch] * count;
     }
     this.size = size;
-  }
-
-  /** Number of values `unpack` yields. */
-  get n_values(): number {
     let n = 0;
     for (const c of this.codes) {
       if (c.ch === "x") continue;
       n += c.ch === "s" || c.ch === "p" ? 1 : c.count;
     }
-    return n;
+    this.n_values = n;
   }
+
+  /** Number of values `unpack` yields. */
+  readonly n_values: number;
 
   unpack(data: Uint8Array): any[] {
     if (data.length !== this.size) {
@@ -117,9 +116,7 @@ export class Struct {
     if (values.length !== this.n_values) {
       throw new StructError(`pack expected ${this.n_values} items for packing (got ${values.length})`);
     }
-    const ab = new ArrayBuffer(this.size);
-    const out = new Uint8Array(ab);
-    const dv = new DataView(ab);
+    const out = new Uint8Array(this.size);
     const le = this.le;
     let p = 0;
     let vi = 0;
@@ -152,40 +149,44 @@ export class Struct {
             const big = to_bigint(v);
             if (ch === "Q") {
               if (big < 0n || big > 0xffffffffffffffffn) throw new StructError("argument out of range");
-              dv.setBigUint64(p, big, le);
+              SCRATCH_DV.setBigUint64(0, big, le);
             } else {
               if (big < -0x8000000000000000n || big > 0x7fffffffffffffffn) throw new StructError("argument out of range");
-              dv.setBigInt64(p, big, le);
+              SCRATCH_DV.setBigInt64(0, big, le);
             }
+            out.set(SCRATCH_U8, p);
             break;
           }
           case "e":
-            dv.setUint16(p, float_to_half(to_float(v)), le);
+            put16(out, p, float_to_half(to_float(v)), le);
             break;
           case "f": {
             const x = to_float(v);
             if (Number.isFinite(x) && Math.abs(x) > FLOAT32_MAX && !Number.isFinite(Math.fround(x))) {
               throw new OverflowError("float too large to pack with f format");
             }
-            dv.setFloat32(p, x, le);
+            SCRATCH_DV.setFloat32(0, x, le);
+            out[p] = SCRATCH_U8[0];
+            out[p + 1] = SCRATCH_U8[1];
+            out[p + 2] = SCRATCH_U8[2];
+            out[p + 3] = SCRATCH_U8[3];
             break;
           }
           case "d":
-            dv.setFloat64(p, to_float(v), le);
+            SCRATCH_DV.setFloat64(0, to_float(v), le);
+            out.set(SCRATCH_U8, p);
             break;
           default: {
             const n = to_int(v);
-            const [lo, hi] = INT_RANGE[ch];
-            if (n < lo || n > hi) {
-              throw new StructError(`'${ch}' format requires ${lo} <= number <= ${hi}`);
+            const range = INT_RANGE[ch];
+            if (n < range[0] || n > range[1]) {
+              throw new StructError(`'${ch}' format requires ${range[0]} <= number <= ${range[1]}`);
             }
+            // Uint8Array stores take the low 8 bits, which covers negative values.
             switch (ch) {
-              case "b": dv.setInt8(p, n); break;
-              case "B": dv.setUint8(p, n); break;
-              case "h": dv.setInt16(p, n, le); break;
-              case "H": dv.setUint16(p, n, le); break;
-              case "i": case "l": dv.setInt32(p, n, le); break;
-              case "I": case "L": dv.setUint32(p, n, le); break;
+              case "b": case "B": out[p] = n; break;
+              case "h": case "H": put16(out, p, n, le); break;
+              default: put32(out, p, n, le); break;
             }
           }
         }
@@ -193,6 +194,30 @@ export class Struct {
       }
     }
     return out;
+  }
+}
+
+function put16(out: Uint8Array, p: number, n: number, le: boolean): void {
+  if (le) {
+    out[p] = n;
+    out[p + 1] = n >> 8;
+  } else {
+    out[p] = n >> 8;
+    out[p + 1] = n;
+  }
+}
+
+function put32(out: Uint8Array, p: number, n: number, le: boolean): void {
+  if (le) {
+    out[p] = n;
+    out[p + 1] = n >>> 8;
+    out[p + 2] = n >>> 16;
+    out[p + 3] = n >>> 24;
+  } else {
+    out[p] = n >>> 24;
+    out[p + 1] = n >>> 16;
+    out[p + 2] = n >>> 8;
+    out[p + 3] = n;
   }
 }
 
