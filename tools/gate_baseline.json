@@ -29,9 +29,9 @@
       "casts": 213
     },
     "5 resolvers+svg": {
-      "any": 14,
-      "unknown": 32,
-      "casts": 70
+      "any": 7,
+      "unknown": 23,
+      "casts": 45
     },
     "6 cli+entry": {
       "any": 28,

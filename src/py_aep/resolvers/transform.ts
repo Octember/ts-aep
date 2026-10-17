@@ -22,9 +22,16 @@ import type { CompItem } from "../models/items/composition.ts";
 import type { AVLayer } from "../models/layers/av_layer.ts";
 import type { Layer } from "../models/layers/layer.ts";
 import type { LightLayer } from "../models/layers/light_layer.ts";
+import type { MatchNameTypes } from "../models/properties/match_name_types.ts";
 import type { Property } from "../models/properties/property.ts";
 import type { PropertyGroup } from "../models/properties/property_group.ts";
 import { NotImplementedError, ValueError, degrees, float, float_repr, hasattr, max, min, mod, py_bool, repr, sum, hypot } from "../../pyrt/index.ts";
+
+type _PropertyName = {
+  [K in keyof MatchNameTypes]: MatchNameTypes[K] extends Property<infer _V> ? K : never;
+}[keyof MatchNameTypes];
+
+type _PropertyValueOf<K extends _PropertyName> = MatchNameTypes[K] extends Property<infer V> ? V : never;
 
 export const _DEG2RAD = Math.PI / 180.0;
 export const _RAD2DEG = 180.0 / Math.PI;
@@ -427,8 +434,13 @@ export function square_pixels(matrix: Mat4, comp_aspect: number, space_aspect: n
  * Evaluate `group[match_name]`: static `value` when `time` is `null`,
  * else `value_at_time(time)`.
  */
-export function _prop_value(group: PropertyGroup, match_name: string, time: number | null): any {
-  const prop = group.__getitem__(match_name) as Property;
+export function _prop_value<K extends _PropertyName>(
+  group: PropertyGroup,
+  match_name: K,
+  time: number | null,
+): _PropertyValueOf<K>;
+export function _prop_value(group: PropertyGroup, match_name: _PropertyName, time: number | null) {
+  const prop = group.__getitem__(match_name);
   if (time == null) return prop.value;
   return prop.value_at_time(time);
 }
@@ -454,7 +466,7 @@ export function _layer_local_matrix(
 ): Mat4 {
   const transform = layer.transform;
 
-  const value = (match_name: string): any => _prop_value(transform, match_name, time);
+  const value = <K extends _PropertyName>(match_name: K): _PropertyValueOf<K> => _prop_value(transform, match_name, time);
 
   let position: number[] = value("ADBE Position");
   const anchor: number[] = value("ADBE Anchor Point");
@@ -521,7 +533,7 @@ export function rig_aims_at_poi(layer: Layer): boolean {
 export function _rig_rotation(layer: Layer, time: number | null, space_aspect: number): Mat4 {
   const transform = layer.transform;
 
-  const value = (match_name: string): any => _prop_value(transform, match_name, time);
+  const value = <K extends _PropertyName>(match_name: K): _PropertyValueOf<K> => _prop_value(transform, match_name, time);
 
   let rotation = Mat4.identity();
   if (rig_aims_at_poi(layer)) {

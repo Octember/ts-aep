@@ -14,8 +14,15 @@ import { to_f4 } from "../binary/bin_utils.ts";
 import { Gradient, GradientAlphaStop, GradientColorStop } from "../models/properties/gradient.ts";
 import { Shape } from "../models/properties/shape.ts";
 import { GradientPaint, type SolidPaint, type StrokeStyle, type SvgDrawable } from "./types.ts";
+import type { MatchNameTypes } from "../models/properties/match_name_types.ts";
 import type { Property } from "../models/properties/property.ts";
 import type { PropertyGroup } from "../models/properties/property_group.ts";
+
+type _LeafName = {
+  [K in keyof MatchNameTypes]: MatchNameTypes[K] extends Property<infer _V> ? K : never;
+}[keyof MatchNameTypes];
+
+type _LeafValue<K extends _LeafName> = MatchNameTypes[K] extends Property<infer V> ? V : never;
 
 export const _GRAD_TYPE = new Map<string, number>([
   ["linear", 1.0],
@@ -23,13 +30,13 @@ export const _GRAD_TYPE = new Map<string, number>([
 ]);
 
 /** Return a child leaf property (narrowed from `Property | PropertyGroup`). */
-export function _leaf(group: PropertyGroup, match_name: string): Property {
-  return group.__getitem__(match_name) as Property;
+export function _leaf<K extends _LeafName>(group: PropertyGroup, match_name: K): MatchNameTypes[K] {
+  return group.__getitem__(match_name);
 }
 
 /** Narrow an `add_property` / child result to `PropertyGroup`. */
-export function _grp(prop: object): PropertyGroup {
-  return prop as PropertyGroup;
+export function _grp(prop: PropertyGroup): PropertyGroup {
+  return prop;
 }
 
 /**
@@ -173,7 +180,7 @@ export function _add_stroke(
 export function _apply_paint(
   inner: PropertyGroup,
   paint: SolidPaint | GradientPaint,
-  kind: string,
+  kind: "Fill" | "Stroke",
   cx: number,
   cy: number,
   opacity: number,
@@ -263,9 +270,9 @@ export function _gradient_value(paint: GradientPaint): Gradient {
  * Set a leaf only when it differs from its AE default (keeps the
  * output minimal, matching AE which writes only non-defaults).
  */
-export function _set_optional(
+export function _set_optional<K extends _LeafName>(
   group: PropertyGroup,
-  match_name: string,
+  match_name: K,
   value: number,
   default_: number,
 ): void {
@@ -280,10 +287,10 @@ export function _set_optional(
  * Some leaves (e.g. the AE 2026 Grad Scale / Grad Rotation) are absent
  * when importing into an older project; skip them rather than raise.
  */
-export function _set_if_present(
+export function _set_if_present<K extends _LeafName>(
   group: PropertyGroup,
-  match_name: string,
-  value: number[] | number,
+  match_name: K,
+  value: _LeafValue<K>,
 ): void {
   if (group.properties.some((p) => p.match_name === match_name)) {
     _leaf(group, match_name).value = value;
