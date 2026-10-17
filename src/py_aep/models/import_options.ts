@@ -309,13 +309,13 @@ export class ImportOptions {
    */
   can_import_as(type: number): boolean {
     validate_enum(ImportAsType)(type);
-    type = ImportAsType.of(type);
-    if (type === ImportAsType.PROJECT) return false;
+    const as_type = ImportAsType.of(type);
+    if (as_type === ImportAsType.PROJECT) return false;
     const suffix = this._file.suffix.toLowerCase();
     if (COMP_CONVERSION_EXTENSIONS.has(suffix)) {
       // Comp-conversion formats (e.g. SVG) have no media-format entry;
       // gate on the import-type table alone.
-      return get_import_as_types(suffix).has(type as ImportAsType);
+      return get_import_as_types(suffix).has(as_type);
     }
     let fmt: FileFormat;
     try {
@@ -326,7 +326,7 @@ export class ImportOptions {
     }
     if (fmt.opti === "unsupported") return false;
     if (
-      type === ImportAsType.COMP_CROPPED_LAYERS &&
+      as_type === ImportAsType.COMP_CROPPED_LAYERS &&
       !PSD_COMP_EXTENSIONS.has(suffix) &&
       !AI_COMP_EXTENSIONS.has(suffix)
     ) {
@@ -335,7 +335,7 @@ export class ImportOptions {
       // Photoshop only.
       return false;
     }
-    return get_import_as_types(suffix).has(type as ImportAsType);
+    return get_import_as_types(suffix).has(as_type);
   }
 
   /**

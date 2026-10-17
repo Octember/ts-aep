@@ -96,11 +96,13 @@ export function _validate_number<O>(kw: NumberKw<O | null> = {}): InstanceValida
     if (!(typeof value === "number" || typeof value === "boolean")) {
       throw new TypeError_(`expected ${type_label}, got ${type_name(value)}`);
     }
+    // A bool compares as its int value, as in Python.
+    const num = Number(value);
     if (lo != null) {
-      if (exclusive_min && (value as number) <= lo) throw new ValueError(`must be > ${str(lo)}, got ${str(value)}`);
-      if (!exclusive_min && (value as number) < lo) throw new ValueError(`must be >= ${str(lo)}, got ${str(value)}`);
+      if (exclusive_min && num <= lo) throw new ValueError(`must be > ${str(lo)}, got ${str(value)}`);
+      if (!exclusive_min && num < lo) throw new ValueError(`must be >= ${str(lo)}, got ${str(value)}`);
     }
-    if (hi != null && (value as number) > hi) throw new ValueError(`must be <= ${str(hi)}, got ${str(value)}`);
+    if (hi != null && num > hi) throw new ValueError(`must be <= ${str(hi)}, got ${str(value)}`);
   };
 }
 
