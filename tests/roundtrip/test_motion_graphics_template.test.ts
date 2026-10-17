@@ -20,7 +20,8 @@ import {
   sum,
 } from "../../src/pyrt/index.ts";
 import { make_tmp_path } from "../../src/pyrt/pytest.ts";
-import { get_comp, parse_project_fresh } from "../helpers.ts";
+import { as_instance, get_comp, parse_project_fresh } from "../helpers.ts";
+import { AVLayer } from "../../src/py_aep/models/layers/av_layer.ts";
 
 import { parse as parse_aep } from "../../src/py_aep/index.ts";
 import "../../src/py_aep/binary/_register.ts";
@@ -456,14 +457,14 @@ describe("TestAddLayerMediaReplacement", () => {
   test("test_already_exposed_layer_reports_false", () => {
     const project = parse_project_fresh(TestAddLayerMediaReplacement.MEDIA);
     const comp = get_comp(project, "image_with_alpha");
-    expect(comp.layers[0].can_add_to_motion_graphics_template(comp)).toBe(false);
+    expect(as_instance(comp.layers[0], AVLayer).can_add_to_motion_graphics_template(comp)).toBe(false);
   });
 
   test("test_add_precomp_layer_roundtrips", () => {
     const tmp_path = make_tmp_path();
     const project = parse_project_fresh(TestAddLayerMediaReplacement.MEDIA);
     const comp = get_comp(project, "image_with_alpha 2");
-    const layer = comp.layers[0];
+    const layer = as_instance(comp.layers[0], AVLayer);
     expect(layer.can_add_to_motion_graphics_template(comp)).toBe(true);
     expect(layer.add_to_motion_graphics_template(comp)).toBe(true);
     expect(layer.can_add_to_motion_graphics_template(comp)).toBe(false);

@@ -20,8 +20,10 @@ import {
 } from "../../src/pyrt/index.ts";
 import "../../src/py_aep/binary/_register.ts";
 import { get_comp, get_comp_from_json_by_name, load_expected, parse_project } from "../conftest.ts";
+import { as_instance } from "../helpers.ts";
 import { GuideOrientationType } from "../../src/py_aep/enums/index.ts";
 import { AVLayer, CameraLayer, LightLayer, ShapeLayer, TextLayer } from "../../src/py_aep/models/layers/index.ts";
+import { Property } from "../../src/py_aep/models/properties/property.ts";
 import type { PropertyGroup } from "../../src/py_aep/models/properties/property_group.ts";
 import { FileSource } from "../../src/py_aep/models/sources/file.ts";
 import { SolidSource } from "../../src/py_aep/models/sources/solid.ts";
@@ -687,7 +689,7 @@ describe("TestEssentialGraphics", () => {
     const project = parse_project(EG_SAMPLES_DIR.div("multiple_controllers.aep"));
     const main = next_(project.compositions.find((c) => c.name === "main"));
     const layer = next_(main.layers.find((la) => py_bool(la.essential_property_uuids)));
-    const controllers = layer.essential_property_controllers;
+    const controllers = as_instance(layer, AVLayer).essential_property_controllers;
     expect(py_eq(controllers.map((c) => c.name), ["Brightness", "Layer Opacity", "Background Color"])).toBe(true);
     // Each resolved controller's uuid is the override uuid at that position.
     expect(py_eq(controllers.map((c) => c.uuid), layer.essential_property_uuids)).toBe(true);
@@ -700,7 +702,7 @@ describe("TestEssentialGraphics", () => {
         .flatMap((comp) => comp.layers)
         .find((la) => py_bool(la.essential_property_uuids)),
     );
-    const controllers = layer.essential_property_controllers;
+    const controllers = as_instance(layer, AVLayer).essential_property_controllers;
     expect(len(controllers)).toBe(1);
     expect(controllers[0].name).toBe("Title Text");
   });
@@ -710,7 +712,7 @@ describe("TestEssentialGraphics", () => {
     const project = parse_project(EG_SAMPLES_DIR.div("multiple_controllers.aep"));
     const primary = next_(project.compositions.find((c) => c.name === "primary"));
     const solid = next_(primary.layers.find((layer) => layer.name === "Gray Solid 1"));
-    expect(py_eq(solid.essential_property_controllers, [])).toBe(true);
+    expect(py_eq(as_instance(solid, AVLayer).essential_property_controllers, [])).toBe(true);
   });
 
   test("test_controller_source_property_path", () => {
@@ -758,7 +760,7 @@ describe("TestEssentialGraphics", () => {
     const main = next_(project.compositions.find((c) => c.name === "main"));
     const layer = next_(main.layers.find((la) => py_bool(la.essential_property_uuids)));
     expect(
-      py_eq(layer.essential_property_controllers.map((c) => c.name), ["Group", "Gaussian Blur Blurriness", "Fill Color"]),
+      py_eq(as_instance(layer, AVLayer).essential_property_controllers.map((c) => c.name), ["Group", "Gaussian Blur Blurriness", "Fill Color"]),
     ).toBe(true);
   });
 
@@ -805,8 +807,9 @@ describe("TestEssentialGraphics", () => {
 
     // The Source Options copy is an unset slot (blsi == 0).
     const src_group = next_(layer.properties.find((p) => p.match_name === "ADBE Source Options Group")) as PropertyGroup;
-    const src_alt = next_(
-      src_group.properties.find((c) => c.match_name === "ADBE Layer Source Alternate"),
+    const src_alt = as_instance(
+      next_(src_group.properties.find((c) => c.match_name === "ADBE Layer Source Alternate")),
+      Property,
     );
     expect(src_alt.can_set_alternate_source).toBe(false);
     expect(src_alt.alternate_source == null).toBe(true);
@@ -832,8 +835,9 @@ describe("TestEssentialGraphics", () => {
     const blur = getitem(by_name, "Gaussian Blur Blurriness");
     const src_layer = _resolve_controller_source_layer(project, blur);
     expect(src_layer != null).toBe(true);
-    const leaf = _walk_source_property(src_layer, blur.source_property_path);
-    expect(leaf != null).toBe(true);
+    const leaf_node = _walk_source_property(src_layer, blur.source_property_path);
+    expect(leaf_node != null).toBe(true);
+    const leaf = as_instance(leaf_node, Property);
     expect(leaf.match_name).toBe("ADBE Gaussian Blur 2-0001");
     expect(leaf.enabled).toBe(true);
     expect(leaf.min_value).toBe(0);
@@ -843,11 +847,12 @@ describe("TestEssentialGraphics", () => {
     // The override leaf carries its OWN value; the source Property here is
     // the effect's source value ([1,0,0,1]), distinct from any override.
     const fill = getitem(by_name, "Fill Color");
-    const fill_leaf = _walk_source_property(
+    const fill_leaf_node = _walk_source_property(
       _resolve_controller_source_layer(project, fill),
       fill.source_property_path,
     );
-    expect(fill_leaf != null).toBe(true);
+    expect(fill_leaf_node != null).toBe(true);
+    const fill_leaf = as_instance(fill_leaf_node, Property);
     expect(fill_leaf.match_name).toBe("ADBE Fill-0002");
     expect(py_eq(Array.from(fill_leaf.value), [1.0, 0.0, 0.0, 1.0])).toBe(true);
 

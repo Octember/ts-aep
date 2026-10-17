@@ -9,7 +9,7 @@ import * as py_aep from "../../src/py_aep/index.ts";
 import { StopIteration, getattr, hasattr, len, py_bool, range, str } from "../../src/pyrt/index.ts";
 import type { Path } from "../../src/pyrt/index.ts";
 import { approx, make_tmp_path } from "../../src/pyrt/pytest.ts";
-import { SAMPLES_DIR, parse_app_fresh } from "../helpers.ts";
+import { SAMPLES_DIR, as_instance, parse_app_fresh } from "../helpers.ts";
 
 const PROPERTY_DIR = SAMPLES_DIR.div("models", "property");
 const LAYER_DIR = SAMPLES_DIR.div("models", "layer");
@@ -45,7 +45,7 @@ describe("TestThreeDLayerRefreshesTransform", () => {
 
   test("test_toggling_on_renames_rotation", () => {
     const app = parse_app_fresh(PROPERTY_DIR.div("keyframe_1D.aep"));
-    const layer = app.project.compositions[0].layers[0];
+    const layer = as_instance(app.project.compositions[0].layers[0], py_aep.AVLayer);
     const rotate_z = (layer.property("Transform") as py_aep.PropertyGroup).property("ADBE Rotate Z");
     expect(py_bool(layer.three_d_layer)).toBe(false);
     expect(str(rotate_z.name)).toBe("Rotation");
@@ -57,7 +57,7 @@ describe("TestThreeDLayerRefreshesTransform", () => {
 
   test("test_toggling_off_restores_the_name", () => {
     const app = parse_app_fresh(PROPERTY_DIR.div("keyframe_1D.aep"));
-    const layer = app.project.compositions[0].layers[0];
+    const layer = as_instance(app.project.compositions[0].layers[0], py_aep.AVLayer);
     const rotate_z = (layer.property("Transform") as py_aep.PropertyGroup).property("ADBE Rotate Z");
 
     layer.three_d_layer = true;
@@ -72,7 +72,7 @@ describe("TestThreeDLayerRefreshesTransform", () => {
   test("test_name_matches_a_reparse", () => {
     const tmp_path: Path = make_tmp_path();
     const app = parse_app_fresh(PROPERTY_DIR.div("keyframe_1D.aep"));
-    const layer = app.project.compositions[0].layers[0];
+    const layer = as_instance(app.project.compositions[0].layers[0], py_aep.AVLayer);
     layer.three_d_layer = true;
     const in_memory = str((layer.property("Transform") as py_aep.PropertyGroup).property("ADBE Rotate Z").name);
 
@@ -314,7 +314,7 @@ describe("TestEaseSpeedsAreNotLayerTime", () => {
     const comp = app.project.root_folder.add_comp("C", 320, 240, 1.0, 40.0, 24.0);
     const layer = comp.add_solid([1, 1, 1], "L", 320, 240, 1.0);
     layer.stretch = stretch;
-    const op = (layer.property("Transform") as py_aep.PropertyGroup).property("Opacity");
+    const op = as_instance(as_instance(layer.property("Transform"), py_aep.PropertyGroup).property("Opacity"), py_aep.Property);
     op.set_value_at_time(1.0, 0.0);
     op.set_value_at_time(5.0, 100.0);
     for (const kf of op.keyframes) {

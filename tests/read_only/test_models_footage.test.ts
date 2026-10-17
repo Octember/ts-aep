@@ -11,6 +11,10 @@ import "../../src/py_aep/binary/_register.ts";
 import { find_by_list_type } from "../../src/py_aep/binary/utils.ts";
 import { get_comp, get_first_footage, get_footage, get_footage_from_json_by_name, load_expected, parse_project } from "../conftest.ts";
 import { Path, isclose, py_eq } from "../../src/pyrt/index.ts";
+import { as_instance } from "../helpers.ts";
+import { FootageItem } from "../../src/py_aep/models/items/footage.ts";
+import { AVLayer } from "../../src/py_aep/models/layers/index.ts";
+import { SolidSource } from "../../src/py_aep/models/sources/solid.ts";
 
 // Python `Path(__file__).parent.parent.parent` is the repo root. A TS file's
 // `import.meta.dir` is already its directory, so two `.parent` steps reach it.
@@ -21,7 +25,7 @@ describe("TestFootageSize", () => {
   test("test_size_1920x1080", () => {
     const project = parse_project(SAMPLES_DIR.div("solid_sizes.aep"));
     const comp = get_comp(project, "solid_size_1920x1080");
-    const footage = comp.layers[0].source;
+    const footage = as_instance(comp.layers[0], AVLayer).source;
     expect(footage.width).toBe(1920);
     expect(footage.height).toBe(1080);
   });
@@ -29,7 +33,7 @@ describe("TestFootageSize", () => {
   test("test_size_3840x2160", () => {
     const project = parse_project(SAMPLES_DIR.div("solid_sizes.aep"));
     const comp = get_comp(project, "solid_size_3840x2160");
-    const footage = comp.layers[0].source;
+    const footage = as_instance(comp.layers[0], AVLayer).source;
     expect(footage.width).toBe(3840);
     expect(footage.height).toBe(2160);
   });
@@ -130,7 +134,7 @@ describe("TestIsMediaReplacementCompatible", () => {
 
   test("test_solid_is_not_compatible", () => {
     const project = parse_project(SAMPLES_DIR.div("solid_sizes.aep"));
-    const solid = get_comp(project, "solid_size_1920x1080").layers[0].source;
+    const solid = as_instance(get_comp(project, "solid_size_1920x1080").layers[0], AVLayer).source;
     expect(solid.is_media_replacement_compatible).toBe(false);
   });
 
@@ -162,22 +166,22 @@ describe("TestSolidColors", () => {
   test("test_color_red", () => {
     const project = parse_project(SAMPLES_DIR.div("solid_colors.aep"));
     const comp = get_comp(project, "solid_color_red");
-    const footage = comp.layers[0].source;
-    expect(py_eq(footage.main_source.color.slice(0, 3), [1, 0, 0])).toBe(true);
+    const footage = as_instance(as_instance(comp.layers[0], AVLayer).source, FootageItem);
+    expect(py_eq(as_instance(footage.main_source, SolidSource).color.slice(0, 3), [1, 0, 0])).toBe(true);
   });
 
   test("test_color_green", () => {
     const project = parse_project(SAMPLES_DIR.div("solid_colors.aep"));
     const comp = get_comp(project, "solid_color_green");
-    const footage = comp.layers[0].source;
-    expect(py_eq(footage.main_source.color.slice(0, 3), [0, 1, 0])).toBe(true);
+    const footage = as_instance(as_instance(comp.layers[0], AVLayer).source, FootageItem);
+    expect(py_eq(as_instance(footage.main_source, SolidSource).color.slice(0, 3), [0, 1, 0])).toBe(true);
   });
 
   test("test_color_blue", () => {
     const project = parse_project(SAMPLES_DIR.div("solid_colors.aep"));
     const comp = get_comp(project, "solid_color_blue");
-    const footage = comp.layers[0].source;
-    expect(py_eq(footage.main_source.color.slice(0, 3), [0, 0, 1])).toBe(true);
+    const footage = as_instance(as_instance(comp.layers[0], AVLayer).source, FootageItem);
+    expect(py_eq(as_instance(footage.main_source, SolidSource).color.slice(0, 3), [0, 0, 1])).toBe(true);
   });
 });
 
@@ -352,7 +356,7 @@ describe("TestFootageSettings", () => {
   test("test_pixelAspect_2", () => {
     const project = parse_project(SAMPLES_DIR.div("solid_sizes.aep"));
     const comp = get_comp(project, "solid_pixelAspect_2");
-    const footage = comp.layers[0].source;
+    const footage = as_instance(comp.layers[0], AVLayer).source;
     expect(isclose(footage.pixel_aspect, 2)).toBe(true);
   });
 

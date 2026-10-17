@@ -741,7 +741,7 @@ describe("TestTextStyleSheet", () => {
     const prefs = _text_style_dir(tmp_path, _CUSTOM_TEXT_STYLE);
     const app = py_aep.new(undefined, { ae_preferences_dir: prefs });
     const comp = app.project.root_folder.add_comp("C", 100, 100, 1.0, 5.0, 25.0);
-    const td = comp.add_text("probe").text.source_text.value;
+    const td = comp.add_text("probe").text.__getitem__("ADBE Text Document").value;
     expect(td.font).toBe("ArialMT");
     expect(approx(td.font_size, 48.0)).toBe(true);
     expect(approx(td.fill_color, [0.25, 0.5, 0.75])).toBe(true);
@@ -789,7 +789,7 @@ describe("TestTextStyleSheet", () => {
     const prefs = _text_style_dir(tmp_path, _FACTORY_TEXT_STYLE);
     const app = py_aep.new(undefined, { ae_preferences_dir: prefs });
     const comp = app.project.root_folder.add_comp("C", 100, 100, 1.0, 5.0, 25.0);
-    const td = comp.add_text("probe").text.source_text.value;
+    const td = comp.add_text("probe").text.__getitem__("ADBE Text Document").value;
     expect(td.font).toBe("MyriadPro-Regular");
     expect(approx(td.font_size, 36.0)).toBe(true);
     expect(approx(td.fill_color, [0.921569, 0.921569, 0.921569], { abs: 1e-5 })).toBe(true);
@@ -801,7 +801,7 @@ describe("TestTextStyleSheet", () => {
     const prefs = _text_style_dir(tmp_path, _CUSTOM_TEXT_STYLE);
     const app = py_aep.new(undefined, { ae_preferences_dir: prefs });
     const comp = app.project.root_folder.add_comp("C", 100, 100, 1.0, 5.0, 25.0);
-    const td = comp.add_box_text([80.0, 40.0], "boxed").text.source_text.value;
+    const td = comp.add_box_text([80.0, 40.0], "boxed").text.__getitem__("ADBE Text Document").value;
     expect(td.font).toBe("ArialMT");
     expect(approx(td.font_size, 48.0)).toBe(true);
   });

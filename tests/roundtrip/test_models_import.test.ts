@@ -39,7 +39,8 @@ import { probe_media } from "../../src/py_aep/resolvers/media_probe.ts";
 import { FlattenedPsdError, PsdGroup, PsdLayer, UnsupportedPsdLayersError, _build_layer_tree, _Record, read_psd_layers } from "../../src/py_aep/resolvers/psd_layers.ts";
 import { get_file_format, platform_source_format } from "../../src/py_aep/data/file_formats.ts";
 import { Label } from "../../src/py_aep/enums/index.ts";
-import { ai_layer_opti_boxes, parse_project_fresh } from "../helpers.ts";
+import { ai_layer_opti_boxes, as_instance, parse_project_fresh } from "../helpers.ts";
+import { AVLayer } from "../../src/py_aep/models/layers/av_layer.ts";
 
 /** Tests for media-file probing and file-source creation via import_file. */
 
@@ -1617,7 +1618,7 @@ describe("TestImportAiCroppedComp", () => {
       const anchor = layer.transform.__getitem__("ADBE Anchor Point").value;
       const position = layer.transform.__getitem__("ADBE Position").value;
       out.set(layer.name, [
-        [layer.source.width, layer.source.height],
+        [as_instance(layer, AVLayer).source.width, as_instance(layer, AVLayer).source.height],
         [anchor[0], anchor[1]],
         [position[0], position[1]],
       ]);
