@@ -97,7 +97,7 @@ export function _parse_stops(elem: Element): GradientStop[] {
     // document order; AE 2026 imports `0.6 red, 0.3 blue` as red then a
     // hard switch to blue at 0.6).
     const parsed_offset = parse_ratio(child.get("offset"), 0.0);
-    const offset = stops.length > 0 ? max([parsed_offset, stops.at(-1)!.offset]) : parsed_offset;
+    const offset = stops.length > 0 ? max([parsed_offset, stops[stops.length - 1].offset]) : parsed_offset;
     const style = _stop_style(child);
     const color = parse_color(style.get("stop-color") ?? "#000000") ?? [0.0, 0.0, 0.0, 1.0];
     const opacity = parse_ratio(style.get("stop-opacity") ?? null, 1.0);

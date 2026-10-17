@@ -365,7 +365,7 @@ export class ListChunk extends Chunk {
     }
     const parent_result = kwargs.parent_result ?? null;
     const child_ctx = new ReadContext(list_type, ctx.parent_list_type, parent_result);
-    if (defer_list_types?.size! > 0 && defer_list_types!.has(list_type)) {
+    if (defer_list_types != null && defer_list_types.size > 0 && defer_list_types.has(list_type)) {
       const raw_body = fp.read(size - 4);
       return new DeferredListChunk({
         chunk_type,
