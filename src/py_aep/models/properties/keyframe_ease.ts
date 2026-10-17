@@ -6,9 +6,7 @@ import { _validate_number, validate_f8 } from "../validators.ts";
  * layer's AE property. Keyframe ease is determined by the `speed` and
  * `influence` values.
  *
- * See: https://ae-scripting.docsforadobe.dev/other/keyframeease/
  *
- * Example:
  * ```python
  * from py_aep import parse
  *
@@ -19,6 +17,9 @@ import { _validate_number, validate_f8 } from "../validators.ts";
  * print(keyframe.out_temporal_ease[0].speed)
  * print(keyframe.out_temporal_ease[0].influence)
  * ```
+ *
+ * @see https://ae-scripting.docsforadobe.dev/other/keyframeease/
+ * @example
  */
 export class KeyframeEase {
   declare _kf_data: any;
@@ -44,11 +45,10 @@ export class KeyframeEase {
   /**
    * Wrap binary keyframe data as a `KeyframeEase` view.
    *
-   * Args:
-   *     kf_data: The backing keyframe-data chunk body.
-   *     dimension_index: Index into per-dimension speed/influence arrays.
-   *     direction: Either `"in"` or `"out"`.
-   *     speed_factor: Unit-conversion factor applied to the raw speed.
+   * @param kf_data - The backing keyframe-data chunk body.
+   * @param dimension_index - Index into per-dimension speed/influence arrays.
+   * @param direction - Either `"in"` or `"out"`.
+   * @param speed_factor - Unit-conversion factor applied to the raw speed.
    */
   static _from_binary(
     kf_data: any,

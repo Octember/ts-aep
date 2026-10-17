@@ -107,7 +107,7 @@ export function _tokenize(d: string): string[] {
 /**
  * Parse an SVG path `d` string into cubic-bezier subpaths.
  *
- * @param d The path data string.
+ * @param d - The path data string.
  * @returns Subpaths in document order; each holds cubic segments and a
  *   closed flag.
  * @throws UnsupportedSVGError For malformed data or unknown commands.

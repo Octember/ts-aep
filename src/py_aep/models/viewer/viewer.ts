@@ -8,7 +8,6 @@ import type { View } from "./view.ts";
 /**
  * The `Viewer` object represents a Composition, Layer, or Footage panel.
  *
- * Example:
  * ```python
  * from py_aep import parse
  *
@@ -17,7 +16,8 @@ import type { View } from "./view.ts";
  * print(viewer.type)
  * ```
  *
- * See: https://ae-scripting.docsforadobe.dev/other/viewer/
+ * @example
+ * @see https://ae-scripting.docsforadobe.dev/other/viewer/
  */
 export class Viewer {
   /**
@@ -41,7 +41,7 @@ export class Viewer {
   }
 
   /**
-   * All of the [View][] objects associated with this viewer.
+   * All of the {@link View} objects associated with this viewer.
    * Read-only.
    */
   get views(): View[] {
@@ -52,7 +52,7 @@ export class Viewer {
    * The index of the active view in the viewer's `views` list.
    * Read / Write.
    *
-   * Note: The active locked view index is not persisted in the binary
+   * **Note:** The active locked view index is not persisted in the binary
    * format. It defaults to 0 (first view). Set it manually or call
    * `View.set_active()` to change which view is active.
    */

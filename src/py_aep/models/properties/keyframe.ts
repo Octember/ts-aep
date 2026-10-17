@@ -101,7 +101,6 @@ export function _validate_roving(value: boolean, keyframe: Keyframe): void {
 /**
  * The `Keyframe` object represents a keyframe of a property.
  *
- * Example:
  * ```python
  * from py_aep import parse
  *
@@ -112,16 +111,17 @@ export function _validate_roving(value: boolean, keyframe: Keyframe): void {
  * print(keyframe.time)
  * ```
  *
- * Warning:
- *     `Keyframe` object does not exist in ExtendScript API. It has been added
- *     for convenience.
+ * **Warning:** `Keyframe` object does not exist in ExtendScript API. It has been added
+ * for convenience.
+ *
+ * @example
  */
 export class Keyframe {
   /**
    * The "in" interpolation type for the keyframe. Read / Write.
    *
    * Raises `ValueError` if the type is not valid for the owning property
-   * (see [is_interpolation_type_valid][py_aep.models.properties.property.Property.is_interpolation_type_valid]).
+   * (see {@link py_aep.models.properties.property.Property.is_interpolation_type_valid | is_interpolation_type_valid}).
    */
   declare in_interpolation_type: KeyframeInterpolationType;
 
@@ -136,7 +136,7 @@ export class Keyframe {
    * The "out" interpolation type for the keyframe. Read / Write.
    *
    * Raises `ValueError` if the type is not valid for the owning property
-   * (see [is_interpolation_type_valid][py_aep.models.properties.property.Property.is_interpolation_type_valid]).
+   * (see {@link py_aep.models.properties.property.Property.is_interpolation_type_valid | is_interpolation_type_valid}).
    */
   declare out_interpolation_type: KeyframeInterpolationType;
 
@@ -147,12 +147,11 @@ export class Keyframe {
    * Setting this on a spatial property re-times the run of roving
    * keyframes so the speed the bounding keyframes ask for is held
    * across the whole span.  Editing a spatial keyframe's
-   * [value][Keyframe.value] or [time][Keyframe.time] re-times the
+   * {@link Keyframe.value | value} or {@link Keyframe.time | time} re-times the
    * adjacent runs automatically.
    *
-   * Raises:
-   *     ValueError: When the property is not spatial, or the keyframe
-   *         is the first or last in its property.
+   * @throws {@link ValueError} When the property is not spatial, or the keyframe is the first or
+   *   last in its property.
    */
   declare roving: boolean;
 
@@ -171,7 +170,7 @@ export class Keyframe {
    * `out_interpolation_type`. Read / Write.
    *
    * As in After Effects, setting it to `True` turns
-   * [temporal_auto_bezier][Keyframe.temporal_auto_bezier] off, a temporal
+   * {@link Keyframe.temporal_auto_bezier | temporal_auto_bezier} off, a temporal
    * auto-Bezier keyframe stays continuous, and setting neither interpolation
    * type to `KeyframeInterpolationType.BEZIER` turns it off.
    */
@@ -295,8 +294,7 @@ export class Keyframe {
    *
    * Measured on AE 2026 over five in/out interpolation pairings: setting
    * temporal continuity rewrites BOTH interpolation types to BEZIER and
-   * then ties the speeds, keeping both influences - `(10, 75) /
-   * (90, 25)` becomes `(10, 75) / (10, 25)` whatever the types were
+   * then ties the speeds, keeping both influences - `(10, 75) / (90, 25)` becomes `(10, 75) / (10, 25)` whatever the types were
    * beforehand. Forcing BEZIER is what makes the STORED in speed the
    * right one to copy: under LINEAR the getter reports the segment
    * slope instead, and AE reports 10 here, not the slope.
@@ -376,7 +374,7 @@ export class Keyframe {
    * Create in/out temporal ease objects from the binary chunk data.
    *
    * Returns a `(in_ease, out_ease)` tuple. Each element is a list of
-   * [KeyframeEase][] objects - one per dimension for
+   * {@link KeyframeEase} objects - one per dimension for
    * multi-dimensional properties, or a single element for scalar /
    * spatial types. Returns `([], [])` when the keyframe type
    * carries no ease data (e.g. markers).
@@ -598,9 +596,9 @@ export class Keyframe {
    * The value of the keyframe. For a 1D property (e.g. Opacity, Rotation),
    * this is a single `float`. For a multi-dimensional property (e.g.
    * Position, Scale), this is a `list[float]`. For shape/mask path
-   * properties, this is a [Shape][]. For text properties, this is a
-   * [TextDocument][]. For marker properties, this is a [MarkerValue][].
-   * For the Curves effect's curves, this is a [Curves][]. For properties
+   * properties, this is a {@link Shape}. For text properties, this is a
+   * {@link TextDocument}. For marker properties, this is a {@link MarkerValue}.
+   * For the Curves effect's curves, this is a {@link Curves}. For properties
    * that carry no value, this is `None`.
    */
   get value(): _ValueType {
@@ -748,7 +746,7 @@ export class Keyframe {
   /**
    * The incoming temporal ease for the keyframe.
    *
-   * Array of [KeyframeEase][] objects:
+   * Array of {@link KeyframeEase} objects:
    * - If the property value type is `PropertyValueType.TwoD`, the list
    *   contains 2 objects.
    * - If the property value type is `PropertyValueType.ThreeD`, the list
@@ -769,7 +767,7 @@ export class Keyframe {
   /**
    * The outgoing temporal ease for the keyframe.
    *
-   * Array of [KeyframeEase][] objects:
+   * Array of {@link KeyframeEase} objects:
    * - If the property value type is `PropertyValueType.TwoD`, the list
    *   contains 2 objects.
    * - If the property value type is `PropertyValueType.ThreeD`, the list
@@ -814,7 +812,7 @@ export class Keyframe {
   /**
    * Copy `value`'s speed/influence into the chunk-backed ease objects.
    *
-   * A user-constructed [KeyframeEase][] is detached (it carries its own
+   * A user-constructed {@link KeyframeEase} is detached (it carries its own
    * `speed`/`influence` and no chunk), so assigning the list itself
    * would keep the numbers in Python only and lose them on save. The
    * binary-backed objects live in `_in_temporal_ease` / `_out_temporal_ease`;
@@ -1032,7 +1030,7 @@ export class Keyframe {
 
   /**
    * `True` if the keyframe has spatial auto-Bezier interpolation. This type
-   * of interpolation affects this keyframe only if [spatial_continuous][] is
+   * of interpolation affects this keyframe only if {@link spatial_continuous} is
    * also `True`. If the property value type is neither `TwoD_SPATIAL` nor
    * `ThreeD_SPATIAL`, the value is `False`.
    */
@@ -1094,8 +1092,7 @@ export class Keyframe {
    * Keyframe units per second, in the owning LAYER's own time.
    *
    * A layer stretched past 100 % counts its ticks against a stretched
-   * base (`layer_timebase`: about `cdta.internal_timebase * |stretch| /
-   * 100`, at most 115200), so the comp's own base only applies up to
+   * base (`layer_timebase`: about `cdta.internal_timebase * |stretch| / 100`, at most 115200), so the comp's own base only applies up to
    * 100 %. Falls back to the cached comp rates when the keyframe has no
    * property yet (construction).
    */
@@ -1116,7 +1113,7 @@ export class Keyframe {
    * interpolation runs here rather than in composition time: After
    * Effects evaluates the temporal bezier in layer time, its ease
    * speeds are per layer second, and a negatively stretched layer's
-   * keys only ascend on this axis (see [time][]).
+   * keys only ascend on this axis (see {@link time}).
    */
   get _layer_time(): number {
     return this._ldat_item.time_units / this._timebase;
@@ -1126,7 +1123,7 @@ export class Keyframe {
    * Raw keyframe time, as the binary stores it.
    *
    * An integer count of composition timebase units, relative to the
-   * owning layer's start. Read-only; assign to [time][] instead.
+   * owning layer's start. Read-only; assign to {@link time} instead.
    */
   get time_units(): number {
     return this._ldat_item.time_units;
@@ -1149,8 +1146,8 @@ export class Keyframe {
   /**
    * Time of the keyframe, in whole composition frames.
    *
-   * A rounded view of [time][]. After Effects places keyframes off the
-   * frame grid freely, so this is lossy for those - read [time][] when
+   * A rounded view of {@link time}. After Effects places keyframes off the
+   * frame grid freely, so this is lossy for those - read {@link time} when
    * precision matters.
    */
   get frame_time(): number {
@@ -1178,11 +1175,10 @@ export class Keyframe {
    *
    * A roving keyframe has no time of its own - it is derived from the
    * spatial path - so it cannot be assigned one. Clear
-   * [roving][Keyframe.roving] first.
+   * {@link Keyframe.roving | roving} first.
    *
-   * Raises:
-   *     ValueError: When another keyframe already sits at the target
-   *         time, or when this keyframe is roving.
+   * @throws {@link ValueError} When another keyframe already sits at the target time, or when this
+   *   keyframe is roving.
    */
   get time(): number {
     let seconds = this._layer_time;

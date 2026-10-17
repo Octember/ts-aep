@@ -5,16 +5,15 @@ import type { Viewer } from "./viewer.ts";
 /**
  * The `View` object represents a specific view.
  *
- * Example:
- *     ```python
- *     from py_aep import parse
+ * @example
+ * ```python
+ * from py_aep import parse
  *
- *     app = parse("project.aep")
- *     view = app.active_viewer.views[0]
- *     print(view.options)
- *     ```
- *
- * See: https://ae-scripting.docsforadobe.dev/other/view/
+ * app = parse("project.aep")
+ * view = app.active_viewer.views[0]
+ * print(view.options)
+ * ```
+ * @see https://ae-scripting.docsforadobe.dev/other/view/
  */
 export class View {
   declare _viewer: Viewer;
@@ -30,7 +29,7 @@ export class View {
    * When `True`, indicates if the view is the active view in its
    * viewer. Read-only.
    *
-   * Note: The active locked view index is not persisted in the binary
+   * **Note:** The active locked view index is not persisted in the binary
    * format. It defaults to 0 (first view) and can be changed via
    * `set_active()` or by setting `viewer.active_view_index`.
    */

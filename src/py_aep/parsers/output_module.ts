@@ -27,13 +27,10 @@ import type { OutputModuleSettingsItem } from "../binary/render_chunks.ts";
  * `alas` lives inside the `Als2` LIST), so they are located by position
  * rather than relative to `Als2` - which may be absent.
  *
- * Args:
- *     chunks: List of chunks belonging to this output module.
- *     om_ldat_data: Parsed OutputModuleSettingsItem from LdatItem.
- *     render_queue_item: The parent render queue item.
- *
- * Returns:
- *     OutputModule with parsed attributes.
+ * @param chunks - List of chunks belonging to this output module.
+ * @param om_ldat_data - Parsed OutputModuleSettingsItem from LdatItem.
+ * @param render_queue_item - The parent render queue item.
+ * @returns OutputModule with parsed attributes.
  */
 export const parse_output_module = _suppress_materialization().decorate(
   function parse_output_module(

@@ -1,13 +1,12 @@
 /**
  * Parse COS (Carousel Object Structure) text data into text models.
  *
- * Transforms the dict returned by [CosParser][py_aep.cos.CosParser] for a
- * `btdk` chunk into [TextDocument][py_aep.models.text.TextDocument] and
- * [FontObject][py_aep.models.text.FontObject] instances.
+ * Transforms the dict returned by {@link py_aep.cos.CosParser | CosParser} for a
+ * `btdk` chunk into {@link py_aep.models.text.TextDocument | TextDocument} and
+ * {@link py_aep.models.text.FontObject | FontObject} instances.
  *
  * The COS data layout follows the structure documented in the
- * `lottie-docs AEP reference
- * <https://github.com/nickt/lottie-docs/blob/main/docs/aep.md#list-btdk>`_.
+ * `lottie-docs AEP reference <https://github.com/nickt/lottie-docs/blob/main/docs/aep.md#list-btdk>`_.
  *
  * Fonts
  * -----
@@ -52,12 +51,12 @@ export const logger = {
  * Reads the font array at `cos_data["0"]["1"]["0"]`.  Each font entry
  * is a dict with structure::
  *
- *     entry["0"]["0"]["0"]  -> PostScript name (str)
- *     entry["0"]["0"]["5"]  -> version string (optional)
- *     entry["0"]["99"]      -> "CoolTypeFont" marker
+ *     entry["0"]["0"]["0"]  -\> PostScript name (str)
+ *     entry["0"]["0"]["5"]  -\> version string (optional)
+ *     entry["0"]["99"]      -\> "CoolTypeFont" marker
  *
- * @param cos_data The parsed COS dict from a `btdk` chunk.
- * @returns List of [FontObject][] instances in the same order as the COS
+ * @param cos_data - The parsed COS dict from a `btdk` chunk.
+ * @returns List of {@link FontObject} instances in the same order as the COS
  *   array (the index is referenced by character styles).
  */
 export function parse_fonts(cos_data: Map<string, any>): FontObject[] {
@@ -117,14 +116,14 @@ export function _get_first_para_style(doc: Map<string, any>): Map<string, any> |
  * Parse text documents from COS data.
  *
  * Reads the document array at `cos_data["1"]["1"]`.  Each entry's COS
- * sub-dicts are passed directly to [TextDocument][] which lazily
+ * sub-dicts are passed directly to {@link TextDocument} which lazily
  * extracts values via CosField descriptors.
  *
- * @param cos_data The parsed COS dict from a `btdk` chunk.
- * @param fonts The list of [FontObject][] parsed by
- *   [parse_fonts][] (font indices reference this list).
- * @param btdk_body The btdk chunk body for COS write-back.
- * @returns List of [TextDocument][] instances (one per keyframe).
+ * @param cos_data - The parsed COS dict from a `btdk` chunk.
+ * @param fonts - The list of {@link FontObject} parsed by
+ *   {@link parse_fonts} (font indices reference this list).
+ * @param btdk_body - The btdk chunk body for COS write-back.
+ * @returns List of {@link TextDocument} instances (one per keyframe).
  */
 export function parse_text_documents(
   cos_data: Map<string, any>,
@@ -172,14 +171,14 @@ export function parse_text_documents(
  * Parse a btdk COS dict into text documents and fonts.
  *
  * This is the main entry point called by
- * [parse_text_document][py_aep.parsers.property.parse_text_document].
+ * {@link py_aep.parsers.property.parse_text_document | parse_text_document}.
  *
- * @param cos_data The parsed COS dict from a `btdk` chunk (the return
- *   value of [CosParser.parse][py_aep.cos.CosParser.parse]).
- * @param btdk_body The btdk chunk body for COS write-back.
+ * @param cos_data - The parsed COS dict from a `btdk` chunk (the return
+ *   value of {@link py_aep.cos.CosParser.parse | CosParser.parse}).
+ * @param btdk_body - The btdk chunk body for COS write-back.
  * @returns A tuple `(text_documents, fonts)` where `text_documents` is a
- *   list of [TextDocument][] (one per keyframe) and `fonts` is
- *   the list of [FontObject][] referenced by the documents.
+ *   list of {@link TextDocument} (one per keyframe) and `fonts` is
+ *   the list of {@link FontObject} referenced by the documents.
  */
 export function parse_btdk_cos(
   cos_data: Map<string, any>,

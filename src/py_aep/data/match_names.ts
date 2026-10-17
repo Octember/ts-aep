@@ -5,7 +5,7 @@
  * Match names are stable identifiers that don't change between AE versions,
  * while display names are localized and may vary.
  *
- * See: https://ae-scripting.docsforadobe.dev/matchnames/layer/avlayer/
+ * @see https://ae-scripting.docsforadobe.dev/matchnames/layer/avlayer/
  */
 
 // The 8 fixed variable-font axis slots (AE 26+) share this match-name

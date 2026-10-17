@@ -42,22 +42,21 @@ export const _MASK_COLOR_CYCLE: readonly (readonly [number, number, number])[] =
  *
  * Info:
  *     `MaskPropertyGroup` is a subclass of PropertyGroup object. All methods and
- *     attributes of [PropertyBase][py_aep.models.properties.property_base.PropertyBase]
- *     object and [PropertyGroup][], in addition to those listed below, are available
+ *     attributes of {@link py_aep.models.properties.property_base.PropertyBase | PropertyBase}
+ *     object and {@link PropertyGroup}, in addition to those listed below, are available
  *     when working with `MaskPropertyGroup`.
  *
- * Example:
- *     ```python
- *     from py_aep import parse
+ * @example
+ * ```python
+ * from py_aep import parse
  *
- *     app = parse("project.aep")
- *     comp = app.project.compositions[0]
- *     layer = comp.layers[0]
- *     mask = layer.masks[0]
- *     print(mask.inverted)
- *     ```
- *
- * See: https://ae-scripting.docsforadobe.dev/property/maskpropertygroup/
+ * app = parse("project.aep")
+ * comp = app.project.compositions[0]
+ * layer = comp.layers[0]
+ * mask = layer.masks[0]
+ * print(mask.inverted)
+ * ```
+ * @see https://ae-scripting.docsforadobe.dev/property/maskpropertygroup/
  */
 export class MaskPropertyGroup extends PropertyGroup {
   /**
@@ -104,7 +103,7 @@ export class MaskPropertyGroup extends PropertyGroup {
    * full-frame rectangle), so enabling RotoBezier materializes that
    * default path - mirroring what After Effects writes.
    *
-   * While it is on, the Mask Path's [Shape][] reports the tangents AE
+   * While it is on, the Mask Path's {@link Shape} reports the tangents AE
    * derives from the vertices and their stored tensions
    * (`resolvers.roto_bezier`), not the stored direction handles.
    *
@@ -173,13 +172,13 @@ export class MaskPropertyGroup extends PropertyGroup {
    * and the child properties (Mask Path, Feather, Opacity,
    * Expansion) are synthesized on first access, like a fresh parse.
    *
-   * Args:
-   *     parent_property: The Masks parade group to add the atom to.
-   *     property_depth: The depth of the mask atom in the tree.
-   *     name: The display name, stored in the `tdsn` (AE bakes the
-   *         positional `Mask N` name at creation).
-   *     mask_id: 1-based creation id, stored in the `mkif` and used
-   *         to pick the outline color from the cycle palette.
+   * @param parent_property_ - The Masks parade group to add the atom to.
+   * @param property_depth - The depth of the mask atom in the tree.
+   * @param kw - Keyword arguments:
+   * - `name`: The display name, stored in the `tdsn` (AE bakes the positional `Mask N` name at
+   *     creation).
+   * - `mask_id`: 1-based creation id, stored in the `mkif` and used to pick the outline color from
+   *     the cycle palette.
    */
   static _new(parent_property_: any, property_depth: any, kw: any): any {
     const parent_property = parent_property_ as PropertyGroup;

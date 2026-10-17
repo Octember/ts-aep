@@ -10,8 +10,7 @@ import type { ListChunk } from "../binary/chunk.ts";
 /**
  * Parse a `LIST:Pin` chunk into a footage source.
  *
- * Args:
- *     pin_chunk: A `LIST:Pin` chunk containing sspc + opti sub-chunks.
+ * @param pin_chunk - A `LIST:Pin` chunk containing sspc + opti sub-chunks.
  */
 export function parse_source(
   pin_chunk: ListChunk,

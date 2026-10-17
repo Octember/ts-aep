@@ -9,7 +9,7 @@ import { int_enum, type EnumValue } from "../../pyrt/index.ts";
 /**
  * Font technology type.
  *
- * See: https://ae-scripting.docsforadobe.dev/text/fontobject/#fontobjecttechnology
+ * @see https://ae-scripting.docsforadobe.dev/text/fontobject/#fontobjecttechnology
  */
 export const CTFontTechnology = int_enum("CTFontTechnology", {
   CT_TYPE1_FONT: 0,
@@ -26,7 +26,7 @@ export type CTFontTechnology = EnumValue<typeof CTFontTechnology>;
 /**
  * Font type.
  *
- * See: https://ae-scripting.docsforadobe.dev/text/fontobject/#fontobjecttype
+ * @see https://ae-scripting.docsforadobe.dev/text/fontobject/#fontobjecttype
  */
 export const CTFontType = int_enum("CTFontType", {
   CT_TYPE1_FONTTYPE: 0,
@@ -45,7 +45,7 @@ export type CTFontType = EnumValue<typeof CTFontType>;
 /**
  * Character script/writing system.
  *
- * See: https://ae-scripting.docsforadobe.dev/text/fontobject/#fontobjectwritingscripts
+ * @see https://ae-scripting.docsforadobe.dev/text/fontobject/#fontobjectwritingscripts
  */
 export const CTScript = int_enum("CTScript", {
   CT_ROMAN_SCRIPT: 0,

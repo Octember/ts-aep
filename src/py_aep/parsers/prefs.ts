@@ -4,7 +4,7 @@
  * AE persists its preferences as INI-like text files under the user's
  * AppData directory (e.g.
  * `~/AppData/Roaming/Adobe/After Effects/26.0/`), one file per
- * [PREFType][] category:
+ * {@link PREFType} category:
  *
  * - `Adobe After Effects <ver> Prefs.txt` - machine specific
  * - `... Prefs-indep-general.txt` - machine independent
@@ -136,12 +136,11 @@ export function decode_pref_string(raw: string): string {
 /**
  * Decode a preference value as a number.
  *
- * Quoted values parse as decimal text (`"30.000000"` -> 30.0,
- * `"999"` -> 999); unquoted values are raw hex bytes interpreted as a
- * big-endian unsigned integer (`01` -> 1).
+ * Quoted values parse as decimal text (`"30.000000"` -\> 30.0,
+ * `"999"` -\> 999); unquoted values are raw hex bytes interpreted as a
+ * big-endian unsigned integer (`01` -\> 1).
  *
- * Raises:
- *     ValueError: If a quoted value is not numeric text.
+ * @throws {@link ValueError} If a quoted value is not numeric text.
  */
 export function decode_pref_number(raw: string): number {
   if (raw.includes('"')) return parse_number_text(decode_pref_string(raw));
@@ -200,7 +199,7 @@ export class PrefsFile {
   }
 
   /**
-   * Return a copy of the raw key -> value mapping for a section
+   * Return a copy of the raw key -\> value mapping for a section
    * (empty if the section is absent).
    */
   section(name: string): Map<string, string> {

@@ -33,15 +33,11 @@ export const _LAYER_CLASSES: Map<number, typeof Layer> = new Map<number, typeof 
 /**
  * Extract Essential Properties override UUIDs from LIST:OvG2 chunks.
  *
- * Args:
- *     tdgp_chunks: The children of the layer's root `tdgp` group, where
- *         `LIST:OvG2` is a direct child (beside the "ADBE Layer Overrides"
- *         marker). NOT the layer LIST's own children - `OvG2` sits one
- *         level deeper than that.
- *
- * Returns:
- *     A list of controller UUID strings from the OvG2/CPrp/Utf8 entries;
- *     each matches an `EssentialGraphicsController.uuid` on the source comp.
+ * @param tdgp_chunks - The children of the layer's root `tdgp` group, where `LIST:OvG2` is a direct
+ *   child (beside the "ADBE Layer Overrides" marker). NOT the layer LIST's own children - `OvG2`
+ *   sits one level deeper than that.
+ * @returns A list of controller UUID strings from the OvG2/CPrp/Utf8 entries; each matches an
+ *   `EssentialGraphicsController.uuid` on the source comp.
  */
 export function _parse_ovg2_uuids(tdgp_chunks: Chunk[]): string[] {
   const uuids: string[] = [];
@@ -62,15 +58,12 @@ export function _parse_ovg2_uuids(tdgp_chunks: Chunk[]): string[] {
  * This layer is an instance of an item in a composition. Some information can
  * only be found on the source item. To access it, use `source_item = layer.source`.
  *
- * Args:
- *     layer_chunk: The LIST chunk to parse.
- *     composition: The composition.
- *     effect_param_defs: Project-level effect parameter definitions, used as
- *         fallback when layer-level parT chunks are missing.
- *
- * Returns:
- *     An [AVLayer][] for most layers, a [LightLayer][] for light layers, or a
- *     [ParametricMeshLayer][] for parametric mesh layers.
+ * @param layer_chunk - The LIST chunk to parse.
+ * @param composition - The composition.
+ * @param effect_param_defs - Project-level effect parameter definitions, used as fallback when
+ *   layer-level parT chunks are missing.
+ * @returns An {@link AVLayer} for most layers, a {@link LightLayer} for light layers, or a
+ *   {@link ParametricMeshLayer} for parametric mesh layers.
  */
 export const parse_layer = _suppress_materialization().decorate(function parse_layer(
   layer_chunk: ListChunk,

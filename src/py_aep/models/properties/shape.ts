@@ -146,18 +146,17 @@ descriptor(FeatherPoint, "rel_corner_angle", new ChunkField<number>("_fp", "corn
  *     The feather points on a mask are listed in an array in the order that they were
  *     created.
  *
- * Example:
- *     ```python
- *     from py_aep import parse
+ * @example
+ * ```python
+ * from py_aep import parse
  *
- *     app = parse("project.aep")
- *     comp = app.project.compositions[0]
- *     shape_layer = comp.shape_layers[0]
- *     shape_prop = shape_layer.content.property("ADBE Vector Shape - Group").property("ADBE Vector Shape")
- *     print(shape_prop.value.vertices)
- *     ```
- *
- * See: https://ae-scripting.docsforadobe.dev/other/shape/
+ * app = parse("project.aep")
+ * comp = app.project.compositions[0]
+ * shape_layer = comp.shape_layers[0]
+ * shape_prop = shape_layer.content.property("ADBE Vector Shape - Group").property("ADBE Vector Shape")
+ * print(shape_prop.value.vertices)
+ * ```
+ * @see https://ae-scripting.docsforadobe.dev/other/shape/
  */
 export class Shape {
   declare _shph: ShphChunk | null;
@@ -180,21 +179,17 @@ export class Shape {
    * path. When this shape is later assigned to a mask property, the
    * property normalizes the coordinates to the layer.
    *
-   * Args:
-   *     vertices: Anchor points as `[x, y]` pairs.
-   *     in_tangents: Incoming tangent offsets relative to each vertex,
-   *         same length as `vertices`. Defaults to `[0, 0]` (straight
-   *         line in) for every vertex.
-   *     out_tangents: Outgoing tangent offsets relative to each vertex,
-   *         same length as `vertices`. Defaults to `[0, 0]` (straight
-   *         line out) for every vertex.
-   *     closed: When `True`, the first and last vertices are connected.
-   *     feather_points: Variable-width mask feather points.
-   *
-   * Raises:
-   *     ValueError: If the tangent lists do not match the vertices, or a
-   *         coordinate (or a vertex plus its tangent) is not a finite
-   *         float32: paths are stored as single-precision floats.
+   * @param vertices - Anchor points as `[x, y]` pairs.
+   * @param in_tangents - Incoming tangent offsets relative to each vertex, same length as
+   *   `vertices`. Defaults to `[0, 0]` (straight line in) for every vertex.
+   * @param out_tangents - Outgoing tangent offsets relative to each vertex, same length as
+   *   `vertices`. Defaults to `[0, 0]` (straight line out) for every vertex.
+   * @param kw - Keyword arguments:
+   * - `closed`: When `True`, the first and last vertices are connected.
+   * - `feather_points`: Variable-width mask feather points.
+   * @throws {@link ValueError} If the tangent lists do not match the vertices, or a coordinate (or
+   *   a vertex plus its tangent) is not a finite float32: paths are stored as single-precision
+   *   floats.
    */
   constructor(
     vertices: number[][] | null = null,

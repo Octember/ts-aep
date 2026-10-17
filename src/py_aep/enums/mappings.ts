@@ -12,9 +12,8 @@ import { OutputAudio } from "./output_module.ts";
 /**
  * Derive the Output Audio setting from two binary sources.
  *
- * Args:
- *     audio_enabled: Whether audio is enabled.
- *     audio_auto: Whether audio is set to auto.
+ * @param audio_enabled - Whether audio is enabled.
+ * @param audio_auto - Whether audio is set to auto.
  */
 export function map_output_audio(
   audio_enabled: boolean,
@@ -30,7 +29,7 @@ export function map_output_audio(
 }
 
 /**
- * ICC Profile ID -> human-readable color space name.
+ * ICC Profile ID -\> human-readable color space name.
  * The 16-byte UID is per ISO 15076-1 §7.2.18, computed as
  * `MD5(icc_data)` with bytes 44-47, 64-67 and 84-99 zeroed.
  * Regenerate from ICC files on disk with
@@ -144,7 +143,7 @@ export const _ICC_PROFILE_MAPPING: Map<string, string> = new Map<string, string>
 ]);
 
 /**
- * Inverse of `_ICC_PROFILE_MAPPING`: color-space name -> 32-char hex profile ID.
+ * Inverse of `_ICC_PROFILE_MAPPING`: color-space name -\> 32-char hex profile ID.
  * Used to write a known Adobe profile's 16-byte ID (footage `apid`, output
  * `output_profile_id`) without needing the ICC file on disk.
  */
@@ -170,8 +169,7 @@ export function adobe_color_profile_names(): string[] {
  * not in the table (e.g. an OCIO color space, or a profile py_aep has not
  * catalogued).
  *
- * Args:
- *     name: The color-space name (e.g. `"sRGB IEC61966-2.1"`).
+ * @param name - The color-space name (e.g. `"sRGB IEC61966-2.1"`).
  */
 export function profile_id_for_name(name: string): Uint8Array | null {
   const uid_hex = _NAME_TO_ICC_PROFILE.get(name) ?? null;
@@ -186,15 +184,10 @@ export function profile_id_for_name(name: string): Uint8Array | null {
  * 16-byte `output_profile_id` is looked up in the known profiles
  * table.
  *
- * Args:
- *     output_profile_id: 16-byte binary profile identifier from the
- *         output-module `ldat` chunk.
- *     output_color_space_working: Flag indicating "Working Color
- *         Space".
- *     working_space: The project's working color space name.
- *
- * Returns:
- *     The color space name, or `None` if the profile is unknown.
+ * @param output_profile_id - 16-byte binary profile identifier from the output-module `ldat` chunk.
+ * @param output_color_space_working - Flag indicating "Working Color Space".
+ * @param working_space - The project's working color space name.
+ * @returns The color space name, or `None` if the profile is unknown.
  */
 export function map_output_color_space(
   output_profile_id: Uint8Array,
@@ -211,21 +204,16 @@ export function map_output_color_space(
 /**
  * Map the media color space to a human-readable name.
  *
- * Used by the *Interpret Footage > Color Management* dialog.
+ * Used by the *Interpret Footage \> Color Management* dialog.
  * The `apid` chunk stores the 16-byte ICC Profile ID of the
  * override profile, while the `ipws` chunk indicates whether
  * the project working space is used instead.
  *
- * Args:
- *     ipws_enabled: Whether the "Working Color Space" option
- *         is selected (`ipws` chunk value).
- *     override_profile_id: 16-byte binary profile identifier
- *         from the `apid` chunk inside `LIST:CLRS`.
- *
- * Returns:
- *     `"Working Color Space"` when `ipws_enabled` is True,
- *     `"Embedded"` when the profile ID is all `0xFF`
- *     (no override), or the resolved profile name.
+ * @param ipws_enabled - Whether the "Working Color Space" option is selected (`ipws` chunk value).
+ * @param override_profile_id - 16-byte binary profile identifier from the `apid` chunk inside
+ *   `LIST:CLRS`.
+ * @returns `"Working Color Space"` when `ipws_enabled` is True, `"Embedded"` when the profile ID is
+ *   all `0xFF` (no override), or the resolved profile name.
  */
 export function map_media_color_space(
   ipws_enabled: boolean,

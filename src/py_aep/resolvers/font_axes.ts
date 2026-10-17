@@ -40,8 +40,8 @@ export class FontDesignAxis {
 /**
  * Read the design axes of a variable font file.
  *
- * @param font_file Path to the variable font file (`.ttf` / `.otf` / `.ttc`).
- * @param font_number Face index within a TrueType Collection (0 for
+ * @param font_file - Path to the variable font file (`.ttf` / `.otf` / `.ttc`).
+ * @param font_number - Face index within a TrueType Collection (0 for
  *   single-face files).
  *
  * @throws ValueError If the font has no `fvar` table (not a variable font).

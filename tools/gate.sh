@@ -9,6 +9,11 @@ base() { python3 -c "import json;print(json.load(open('tools/gate_baseline.json'
 echo "== tsc"
 bun run --silent typecheck
 
+echo "== tsdoc"
+tsdoc=$(bun tools/tsdoc_lint.ts)
+echo "$tsdoc"
+python3 -c "import json,sys; sys.exit(0 if json.loads(sys.argv[1])['messages']==0 else 1)" "$tsdoc"
+
 echo "== bun test"
 bun test --timeout 60000 > .gate/test.txt 2>&1 || true
 pass=$(sed -nE 's/^ *([0-9]+) pass$/\1/p' .gate/test.txt | tail -1)

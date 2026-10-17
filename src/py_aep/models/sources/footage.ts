@@ -98,7 +98,7 @@ export function _store_frames_over_rate(sspc: SspcChunk, frames: number, rate: n
  * footage. It is used as the `main_source` of a `FootageItem` object, or the
  * `proxy_source` of a `CompItem` object or `FootageItem`.
  *
- * See: https://ae-scripting.docsforadobe.dev/sources/footagesource/
+ * @see https://ae-scripting.docsforadobe.dev/sources/footagesource/
  */
 export class FootageSource {
   /**
@@ -141,7 +141,7 @@ export class FootageSource {
    * When `True`, an alpha channel in a footage clip or proxy should be
    * inverted. This attribute is valid only if an alpha is present. If
    * `has_alpha` is `False`, or if `alpha_mode` is
-   * [AlphaMode.IGNORE][py_aep.enums.AlphaMode], this attribute is
+   * {@link py_aep.enums.AlphaMode | AlphaMode.IGNORE}, this attribute is
    * ignored. Read / Write.
    */
   declare invert_alpha: boolean;
@@ -155,17 +155,16 @@ export class FootageSource {
   /**
    * The color to be premultiplied. This attribute is valid only if
    * the `alpha_mode` is
-   * [AlphaMode.PREMULTIPLIED][py_aep.enums.AlphaMode].
+   * {@link py_aep.enums.AlphaMode | AlphaMode.PREMULTIPLIED}.
    * Read / Write.
    */
   declare premul_color: number[];
 
   /**
-   * The Interpret As Linear Light setting from the Interpret Footage >
+   * The Interpret As Linear Light setting from the Interpret Footage \>
    * Color Management tab. Read / Write.
    *
-   * Note:
-   *     Not exposed in ExtendScript.
+   * **Note:** Not exposed in ExtendScript.
    */
   declare interpret_as_linear_light: LinearLightMode;
 
@@ -179,16 +178,14 @@ export class FootageSource {
    * always runs at some assumed rate). A placeholder keeps its rate the
    * same way, but its duration stays in seconds. Matches After Effects.
    *
-   * Note:
-   *     Unlike ExtendScript, a proxy reports its own rate. ExtendScript
-   *     reads a proxy's rate as assumed only when the item's main source
-   *     is a sequence or a placeholder: a sequence or placeholder proxy
-   *     of a movie or comp reads 0, even right after setting it, and an
-   *     unconformed movie proxy of a sequence reads its native rate.
+   * **Note:** Unlike ExtendScript, a proxy reports its own rate. ExtendScript
+   * reads a proxy's rate as assumed only when the item's main source
+   * is a sequence or a placeholder: a sequence or placeholder proxy
+   * of a movie or comp reads 0, even right after setting it, and an
+   * unconformed movie proxy of a sequence reads its native rate.
    *
-   * Raises:
-   *     ValueError: If the rate is outside 0-999 or between 0 and 0.0005
-   *         (After Effects cannot open a project holding such a rate).
+   * @throws {@link ValueError} If the rate is outside 0-999 or between 0 and 0.0005 (After Effects
+   *   cannot open a project holding such a rate).
    */
   get conform_frame_rate(): number {
     const sspc = this._sspc;
@@ -235,7 +232,7 @@ export class FootageSource {
 
   /**
    * Controls which pulldown phase to remove from the source footage.
-   * [PulldownPhase.OFF][py_aep.enums.PulldownPhase] by default.
+   * {@link py_aep.enums.PulldownPhase | PulldownPhase.OFF} by default.
    * Read / Write.
    */
   declare remove_pulldown: PulldownPhase;
@@ -516,10 +513,9 @@ export class FootageSource {
 
   /**
    * When `True`, the footage Preserve RGB setting is enabled.
-   * From the Interpret Footage > Color Management tab. Read / Write.
+   * From the Interpret Footage \> Color Management tab. Read / Write.
    *
-   * Note:
-   *     Not exposed in ExtendScript.
+   * **Note:** Not exposed in ExtendScript.
    */
   get preserve_rgb(): boolean {
     if (this._clrs == null) return false;
@@ -537,12 +533,12 @@ export class FootageSource {
   }
 
   /**
-   * The media color space from the Interpret Footage >
+   * The media color space from the Interpret Footage \>
    * Color Management tab. Read / Write.
    *
    * Returns `"Embedded"`, `"Working Color Space"`, the name of an assigned
    * OCIO color space, or the name of an Adobe ICC profile (e.g.
-   * `"Apple RGB"`). As with [working_space][py_aep.models.project.Project.working_space],
+   * `"Apple RGB"`). As with {@link py_aep.models.project.Project.working_space | working_space},
    * an assigned OCIO space reads back as AE's stored `colorProfileName`:
    * `"<family>/<name>"` for a direct color-space pick (e.g.
    * `"ACES/ACES - ACEScg"`), or the target name for a role/alias pick.
@@ -556,18 +552,16 @@ export class FootageSource {
    * ID and its ICC bytes are discovered on disk
    * (`ColorProfileNotFoundError` if not installed).
    *
-   * Note:
-   *     Assigning back what this getter returns is lossy for a ROLE pick.
-   *     AE stores the role's TARGET, not the role, and many roles can
-   *     share one target (ACES 1.2 points `rendering`, `scene_linear` and
-   *     `compositing_linear` all at `ACES - ACEScg`), so which role was
-   *     chosen is not recoverable from the file. Re-assigning the target
-   *     name records a direct color-space pick instead - the same color
-   *     transform, different bytes. Pass the role name (e.g.
-   *     `"matte_paint"`) to write a role pick.
+   * **Note:** Assigning back what this getter returns is lossy for a ROLE pick.
+   * AE stores the role's TARGET, not the role, and many roles can
+   * share one target (ACES 1.2 points `rendering`, `scene_linear` and
+   * `compositing_linear` all at `ACES - ACEScg`), so which role was
+   * chosen is not recoverable from the file. Re-assigning the target
+   * name records a direct color-space pick instead - the same color
+   * transform, different bytes. Pass the role name (e.g.
+   * `"matte_paint"`) to write a role pick.
    *
-   * Note:
-   *     Not exposed in ExtendScript.
+   * **Note:** Not exposed in ExtendScript.
    */
   get media_color_space(): string {
     if (this._clrs == null) return "Embedded";
@@ -627,7 +621,7 @@ export class FootageSource {
     this._write_ocsp(this._ocio_envelope(value));
   }
 
-  /** Build the OCIO envelope AE writes for `name` (see [ocio_color_profile_envelope][py_aep.color.ocio.ocio_color_profile_envelope]). */
+  /** Build the OCIO envelope AE writes for `name` (see {@link py_aep.color.ocio.ocio_color_profile_envelope | ocio_color_profile_envelope}). */
   _ocio_envelope(name: string): string {
     const project = this._project;
     const config = require_ocio_config(

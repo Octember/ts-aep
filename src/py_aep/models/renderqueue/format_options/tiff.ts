@@ -11,15 +11,15 @@ import type { RoptChunk } from "../../../binary/render_chunks.ts";
  * These settings correspond to the TIFF Options dialog in After Effects,
  * accessible when the output format is set to TIFF Sequence.
  *
- * Example:
- *     ```python
- *     from py_aep import TiffFormatOptions, parse
+ * @example
+ * ```python
+ * from py_aep import TiffFormatOptions, parse
  *
- *     app = parse("project.aep")
- *     om = app.project.render_queue.items[0].output_modules[0]
- *     if isinstance(om.format_options, TiffFormatOptions):
- *         print(om.format_options.lzw_compression)
- *     ```
+ * app = parse("project.aep")
+ * om = app.project.render_queue.items[0].output_modules[0]
+ * if isinstance(om.format_options, TiffFormatOptions):
+ *     print(om.format_options.lzw_compression)
+ * ```
  */
 export class TiffFormatOptions extends FormatOptionsBase {
   declare _body: RoptChunk;

@@ -16,11 +16,8 @@ import type { Path } from "../../pyrt/index.ts";
 /**
  * Return a human-readable label for a chunk.
  *
- * Args:
- *     chunk: A parsed chunk object.
- *
- * Returns:
- *     `LIST:<list_type>` for list chunks, otherwise the chunk type string.
+ * @param chunk - A parsed chunk object.
+ * @returns `LIST:<list_type>` for list chunks, otherwise the chunk type string.
  */
 export function chunk_label(chunk: Chunk): string {
   const chunk_type = str(chunk.chunk_type);
@@ -36,13 +33,10 @@ export function chunk_label(chunk: Chunk): string {
  * Tracks how many times each identifier has been seen at a given level
  * and appends `[N]` when a duplicate is encountered.
  *
- * Args:
- *     parent_path: Parent chunk path prefix.
- *     identifier: Chunk identifier (e.g. `ldta`, `LIST:Fold`).
- *     counters: Mutable counter dict tracking duplicates at this level.
- *
- * Returns:
- *     Full chunk path string.
+ * @param parent_path - Parent chunk path prefix.
+ * @param identifier - Chunk identifier (e.g. `ldta`, `LIST:Fold`).
+ * @param counters - Mutable counter dict tracking duplicates at this level.
+ * @returns Full chunk path string.
  */
 export function build_chunk_path(
   parent_path: string,
@@ -68,13 +62,10 @@ export function build_chunk_path(
 /**
  * Walk a chunk tree yielding metadata for each node.
  *
- * Args:
- *     chunks: List of chunk objects.
- *     parent_path: Parent chunk path prefix.
- *     depth: Current nesting depth.
- *
- * Yields:
- *     Tuples of `(full_path, identifier, raw_data_size, depth, is_list)`.
+ * @param chunks - List of chunk objects.
+ * @param parent_path - Parent chunk path prefix.
+ * @param depth - Current nesting depth.
+ * @returns An iterator yielding Tuples of `(full_path, identifier, raw_data_size, depth, is_list)`.
  */
 export function* walk_chunks(
   chunks: Chunk[],
@@ -136,12 +127,9 @@ export function _extract_chunks_recursive(
 /**
  * Parse an AEP file and extract leaf chunk data with paths.
  *
- * Args:
- *     file_path: Path to the `.aep` file.
- *
- * Returns:
- *     Map mapping chunk paths to their raw binary data.
- *     Only leaf chunks (non-LIST) are included.
+ * @param file_path - Path to the `.aep` file.
+ * @returns Map mapping chunk paths to their raw binary data. Only leaf chunks (non-LIST) are
+ *   included.
  */
 export function extract_leaf_chunks(file_path: Path): Map<string, Uint8Array> {
   return extract_leaf_chunks_typed(file_path)[0];
@@ -150,10 +138,8 @@ export function extract_leaf_chunks(file_path: Path): Map<string, Uint8Array> {
 /**
  * Like `extract_leaf_chunks`, but also return the decoded leaf chunks.
  *
- * Returns:
- *     A tuple `(raw_bytes_by_path, typed_chunk_by_path)`. The typed
- *     chunks let callers compare numeric fields (e.g. float coordinates)
- *     with tolerance instead of byte-exactly.
+ * @returns A tuple `(raw_bytes_by_path, typed_chunk_by_path)`. The typed chunks let callers compare
+ *   numeric fields (e.g. float coordinates) with tolerance instead of byte-exactly.
  */
 export function extract_leaf_chunks_typed(
   file_path: Path,
@@ -171,12 +157,9 @@ export function extract_leaf_chunks_typed(
 /**
  * Format binary data as a hex dump with ASCII representation.
  *
- * Args:
- *     data: Raw bytes to format.
- *     bytes_per_line: Number of bytes per output line.
- *
- * Returns:
- *     Multi-line hex dump string.
+ * @param data - Raw bytes to format.
+ * @param bytes_per_line - Number of bytes per output line.
+ * @returns Multi-line hex dump string.
  */
 export function format_hex_dump(data: Uint8Array, bytes_per_line = 16): string {
   const lines: string[] = [];

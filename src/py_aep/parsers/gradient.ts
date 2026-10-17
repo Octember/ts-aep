@@ -23,7 +23,7 @@ export { Element, ParseError, fromstring };
  * The XML uses a `prop.map` / `prop.list` / `prop.pair` structure with
  * nested arrays of floats for color and alpha stops.
  *
- * @param utf8 The Utf8 chunk containing the gradient XML.
+ * @param utf8 - The Utf8 chunk containing the gradient XML.
  * @returns Parsed gradient data, or null if parsing fails.
  */
 export function parse_gradient_xml(utf8: Utf8Chunk): Gradient | null {
@@ -81,7 +81,7 @@ export function _get_pairs(prop_list_elem: Element): Map<string, Element> {
   return pairs;
 }
 
-/** Get text content from a <string> element. */
+/** Get text content from a \<string\> element. */
 export function _get_string_value(elem: Element | null): string | null {
   if (elem == null) return null;
   if (elem.tag === "string") return elem.text;
@@ -141,7 +141,7 @@ export function _parse_alpha_stops(alpha_stops_elem: Element | null): GradientAl
   return stops;
 }
 
-/** Parse an <array> element containing <float> children. */
+/** Parse an \<array\> element containing \<float\> children. */
 export function _parse_float_array(array_elem: Element): number[] {
   const floats: number[] = [];
   for (const child of array_elem) {

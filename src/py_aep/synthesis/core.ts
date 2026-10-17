@@ -14,10 +14,9 @@
  * The single public entry point is `synthesize_layer_properties`, called
  * once per layer at the end of `parse_layer`.
  *
- * Note:
- *     Effect parameter synthesis remains a separate dynamic step inside
- *     `parse_effect()`, because it relies on binary parT/pard data rather
- *     than static spec tables.
+ * **Note:** Effect parameter synthesis remains a separate dynamic step inside
+ * `parse_effect()`, because it relies on binary parT/pard data rather
+ * than static spec tables.
  */
 
 import { get_ae_version_major } from "../ae_version.ts";
@@ -390,7 +389,7 @@ export function apply_dimensionality_naming(layer: Layer, kw: { reset_scale_z?: 
  *
  * Called once per layer at the end of `parse_layer`.
  *
- * @param layer The layer whose property tree should be finalized.
+ * @param layer - The layer whose property tree should be finalized.
  */
 export function synthesize_layer_properties(layer: Layer): void {
   const ae_major: number = get_ae_version_major(layer);

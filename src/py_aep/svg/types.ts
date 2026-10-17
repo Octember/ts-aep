@@ -3,7 +3,7 @@
  *
  * All coordinates are absolute, in the SVG viewBox coordinate system, with
  * every ancestor transform already applied. Tangents are stored relative to
- * their vertex (After Effects' [Shape][py_aep.models.properties.shape.Shape]
+ * their vertex (After Effects' {@link py_aep.models.properties.shape.Shape | Shape}
  * convention).
  */
 

@@ -97,10 +97,10 @@ export function _object_offsets(data: Uint8Array): Map<number, number> {
   return offsets;
 }
 
-/** Parse the single indirect object starting at `offset`, returning its value.
+/**
+ * Parse the single indirect object starting at `offset`, returning its value.
  *
- * Raises:
- *     UnsupportedAiLayersError: If the object is malformed or truncated.
+ * @throws {@link UnsupportedAiLayersError} If the object is malformed or truncated.
  */
 export function _parse_object_at(data: Uint8Array, offset: number): any {
   const parser = new CosParser(new BytesIO(bytes_.slice(data, offset)));
@@ -140,7 +140,8 @@ export function _order_object_numbers(value: any, out: number[]): number[] {
   return out;
 }
 
-/** Return one `AiLayer` per layer, in document order (bottom layer first).
+/**
+ * Return one `AiLayer` per layer, in document order (bottom layer first).
  *
  * The default configuration's `/Order` decides both which groups are layers
  * and their order. Illustrator can leave the optional content groups of
@@ -154,8 +155,8 @@ export function _order_object_numbers(value: any, out: number[]): number[] {
  * neither `/OCGs` nor its reverse). Without an `/Order`, `/OCGs` gives the
  * order.
  *
- * @param file Path to a `.ai` or `.pdf` file.
- * @param data The file's bytes, if the caller already read them.
+ * @param file - Path to a `.ai` or `.pdf` file.
+ * @param data - The file's bytes, if the caller already read them.
  *
  * @throws UnsupportedAiLayersError If the file is not a PDF-compatible document
  *     or has no Optional Content Groups (layers).
@@ -244,10 +245,11 @@ export function is_str_or_bytes(x: any): boolean {
   return typeof x === "string" || x instanceof String || x instanceof Uint8Array;
 }
 
-/** Return the Illustrator/PDF layer names in document order.
+/**
+ * Return the Illustrator/PDF layer names in document order.
  *
- * @param file Path to a `.ai` or `.pdf` file.
- * @param data The file's bytes, if the caller already read them.
+ * @param file - Path to a `.ai` or `.pdf` file.
+ * @param data - The file's bytes, if the caller already read them.
  *
  * @returns Layer names in document (OCG) order, bottom layer first.
  *

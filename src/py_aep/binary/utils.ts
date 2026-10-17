@@ -26,8 +26,7 @@ export const UNDEFINED_FRAME = 0xFFFFFFFF;
 /**
  * Return first chunk matching `chunk_type`.
  *
- * Raises:
- *     ChunkNotFoundError: If no matching chunk is found.
+ * @throws {@link ChunkNotFoundError} If no matching chunk is found.
  */
 export function find_by_type(chunks: Chunk[], chunk_type: string): Chunk {
   for (const c of chunks) {
@@ -39,8 +38,7 @@ export function find_by_type(chunks: Chunk[], chunk_type: string): Chunk {
 /**
  * Return first ListChunk with matching `list_type`.
  *
- * Raises:
- *     ChunkNotFoundError: If no matching LIST chunk is found.
+ * @throws {@link ChunkNotFoundError} If no matching LIST chunk is found.
  */
 export function find_by_list_type(chunks: Chunk[], list_type: string): ListChunk {
   for (const c of chunks) {
@@ -67,8 +65,7 @@ export function filter_by_list_type(chunks: Chunk[], list_type: string): ListChu
  * attrs `@define` chunks compare structurally, so `list.index()` can
  * match a different, byte-equal chunk; identity avoids that.
  *
- * Raises:
- *     ValueError: If `target` is not found in `chunks`.
+ * @throws {@link ValueError} If `target` is not found in `chunks`.
  */
 export function index_by_identity<_T>(chunks: readonly _T[], target: object): number {
   for (const [i, c] of chunks.entries()) {
@@ -84,14 +81,10 @@ export function index_by_identity<_T>(chunks: readonly _T[], target: object): nu
  * in `boundary_list_types`, or the end of the list.  Uses identity
  * comparison (`is`) to locate `target`.
  *
- * Args:
- *     chunks: The chunk list to search.
- *     target: The chunk that starts the block (matched by identity).
- *     boundary_list_types: `list_type` values that mark the beginning of
- *         the next block.
- *
- * Raises:
- *     ValueError: If `target` is not found in `chunks`.
+ * @param chunks - The chunk list to search.
+ * @param target - The chunk that starts the block (matched by identity).
+ * @param boundary_list_types - `list_type` values that mark the beginning of the next block.
+ * @throws {@link ValueError} If `target` is not found in `chunks`.
  */
 export function block_slice(
   chunks: Chunk[],
@@ -114,8 +107,7 @@ export function block_slice(
  * `anchor_type` can be a plain chunk type (e.g. `"opti"`) or a LIST type
  * prefixed with `"LIST:"` (e.g. `"LIST:Als2"`).
  *
- * Raises:
- *     ChunkNotFoundError: If no matching chunk is found.
+ * @throws {@link ChunkNotFoundError} If no matching chunk is found.
  */
 export function _find_anchor_index(chunks: Chunk[], anchor_type: string): number {
   if (anchor_type.startsWith("LIST:")) {
@@ -141,8 +133,7 @@ export function _find_anchor_index(chunks: Chunk[], anchor_type: string): number
  * `before_type` can be a plain chunk type (e.g. `"opti"`) or a LIST type
  * prefixed with `"LIST:"` (e.g. `"LIST:Als2"`).
  *
- * Raises:
- *     ChunkNotFoundError: If no chunk with `before_type` is found.
+ * @throws {@link ChunkNotFoundError} If no chunk with `before_type` is found.
  */
 export function find_chunks_before(
   chunks: Chunk[],
@@ -170,8 +161,7 @@ export function find_chunks_before(
  * `after_type` can be a plain chunk type (e.g. `"opti"`) or a LIST type
  * prefixed with `"LIST:"` (e.g. `"LIST:Als2"`).
  *
- * Raises:
- *     ChunkNotFoundError: If no chunk with `after_type` is found.
+ * @throws {@link ChunkNotFoundError} If no chunk with `after_type` is found.
  */
 export function find_chunks_after(
   chunks: Chunk[],
@@ -240,9 +230,8 @@ export function split_on_type(chunks: Chunk[], chunk_type: string): Chunk[][] {
 /**
  * Parse path information from an Als2/alas chunk structure.
  *
- * Returns:
- *     Dictionary with alas data (fullpath, target_is_folder, etc.),
- *     or empty dict if not found or invalid.
+ * @returns Dictionary with alas data (fullpath, target_is_folder, etc.), or empty dict if not found
+ *   or invalid.
  */
 export function parse_alas_data(parent_chunks: Chunk[]): Map<string, any> {
   let als2_chunk: ListChunk;
@@ -298,10 +287,9 @@ export function dump_alas(data: Map<string, any>): string {
  * (`ascendcount_*`), which are left `PENDING_ASCENDCOUNT` for
  * `Project.save` to compute.
  *
- * Args:
- *     fullpath: Absolute path to the file, or the containing folder for
- *         an image sequence.
- *     target_is_folder: `True` when `fullpath` is a sequence folder.
+ * @param fullpath - Absolute path to the file, or the containing folder for an image sequence.
+ * @param kw - Keyword arguments:
+ * - `target_is_folder`: `True` when `fullpath` is a sequence folder.
  */
 export function build_als2_list(
   fullpath: string,
@@ -339,10 +327,9 @@ export function build_stvc_list(file_names: string[]): ListChunk {
 /**
  * Return a text tree representation of chunks for debugging.
  *
- * Args:
- *     chunks: List of chunks to visualize.
- *     depth: Max depth to recurse (-1 for unlimited).
- *     indent: Current indentation level (used internally).
+ * @param chunks - List of chunks to visualize.
+ * @param depth - Max depth to recurse (-1 for unlimited).
+ * @param indent - Current indentation level (used internally).
  */
 export function chunk_tree(chunks: Chunk[], depth = -1, indent = 0): string {
   const lines: string[] = [];
@@ -409,8 +396,7 @@ export function toggle_flag_chunk(
  * `skip_unparsed` leaves the children of a `DeferredListChunk` never read
  * unsearched (searching parses it and costs the save its raw-bytes write).
  *
- * Returns:
- *     All matching chunks across the entire tree, in DFS order.
+ * @returns All matching chunks across the entire tree, in DFS order.
  */
 export function recursive_find(
   chunks: Chunk[],

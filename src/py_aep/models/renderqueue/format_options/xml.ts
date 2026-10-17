@@ -158,11 +158,8 @@ export class _ScalarParam {
  * a later write can restore its value in place instead of appending a
  * duplicate element.
  *
- * Args:
- *     root: The parsed XML root element.
- *
- * Returns:
- *     Tuple of (params dict, value-elements dict, param-elements dict).
+ * @param root - The parsed XML root element.
+ * @returns Tuple of (params dict, value-elements dict, param-elements dict).
  */
 export function _extract_params(
   root: ETElement,
@@ -293,15 +290,15 @@ export class ParamsDict extends Map<string, string> {
  * Individual parameters are stored in the `params` dictionary, keyed by
  * their Adobe parameter identifier (e.g. `"ADBEVideoCodec"`).
  *
- * Example:
- *     ```python
- *     from py_aep import XmlFormatOptions, parse
+ * @example
+ * ```python
+ * from py_aep import XmlFormatOptions, parse
  *
- *     app = parse("project.aep")
- *     om = app.project.render_queue.items[0].output_modules[0]
- *     if isinstance(om.format_options, XmlFormatOptions):
- *         print(om.format_options.video_codec)
- *     ```
+ * app = parse("project.aep")
+ * om = app.project.render_queue.items[0].output_modules[0]
+ * if isinstance(om.format_options, XmlFormatOptions):
+ *     print(om.format_options.video_codec)
+ * ```
  */
 export class XmlFormatOptions extends FormatOptionsBase {
   /**
@@ -496,13 +493,12 @@ export class XmlFormatOptions extends FormatOptionsBase {
    * The rest matches AE's serializer byte-for-byte so that a no-op sync
    * is the identity - see `tests/roundtrip/test_xml_sync_fidelity.py`.
    *
-   * Note:
-   *     Byte-identity needs Python 3.8+: 3.7's `ET.tostring` sorts each
-   *     element's attributes alphabetically instead of keeping document
-   *     order, so a 3.7 write reorders them. The result is the same
-   *     length and semantically identical XML that AE reads correctly -
-   *     only the bytes differ from AE's. Parsing and saving without a
-   *     write never calls this, so round-trip idempotency is unaffected.
+   * **Note:** Byte-identity needs Python 3.8+: 3.7's `ET.tostring` sorts each
+   * element's attributes alphabetically instead of keeping document
+   * order, so a 3.7 write reorders them. The result is the same
+   * length and semantically identical XML that AE reads correctly -
+   * only the bytes differ from AE's. Parsing and saving without a
+   * write never calls this, so round-trip idempotency is unaffected.
    */
   _sync_xml(): void {
     if (this._xml_root == null || this._xml_header == null) return;
@@ -541,19 +537,19 @@ export class XmlFormatOptions extends FormatOptionsBase {
   }
 
   /**
-   * The video codec as a [VideoCodec][] FourCC integer value extracted
+   * The video codec as a {@link VideoCodec} FourCC integer value extracted
    * from the `ADBEVideoCodec` parameter, or `None` for audio-only
    * formats (MP3, WAV). Falls back to a plain `int` when the codec is
-   * not in the [VideoCodec][] enum.
+   * not in the {@link VideoCodec} enum.
    * Read / Write.
    */
   declare video_codec: any;
 
   /**
-   * The audio codec as an [AudioCodec][] integer value extracted from
+   * The audio codec as an {@link AudioCodec} integer value extracted from
    * the `ADBEAudioCodec` parameter, or `None` when the parameter is
    * absent. Falls back to a plain `int` when the codec is not in the
-   * [AudioCodec][] enum.
+   * {@link AudioCodec} enum.
    * Read / Write.
    */
   declare audio_codec: any;
@@ -588,17 +584,17 @@ export class XmlFormatOptions extends FormatOptionsBase {
 
   /**
    * The dialog's top-level `Audio Format` (AAC / MPEG / PCM) as an
-   * [MPEGAudioFormat][] FourCC integer value extracted from the
+   * {@link MPEGAudioFormat} FourCC integer value extracted from the
    * `ADBEMPEGAudioFormat` parameter, or `None` when the parameter is
    * absent. Despite the parameter's `MPEG` prefix it selects among all
    * three families. Falls back to a plain `int` when the value is not
-   * in the [MPEGAudioFormat][] enum.
+   * in the {@link MPEGAudioFormat} enum.
    * Read / Write.
    */
   declare mpeg_audio_format: any;
 
   /**
-   * The MPEG-1 audio layer as an [MPEGAudioLayer][] value extracted
+   * The MPEG-1 audio layer as an {@link MPEGAudioLayer} value extracted
    * from the `ADBEMPEGAudioLayer` parameter, or `None` when the
    * parameter is absent. Only meaningful when `mpeg_audio_format` is
    * `MPEGAudioFormat.MPEG`. Read / Write.
@@ -606,7 +602,7 @@ export class XmlFormatOptions extends FormatOptionsBase {
   declare mpeg_audio_layer: any;
 
   /**
-   * The AVI audio interleave interval as an [AudioInterleave][] value
+   * The AVI audio interleave interval as an {@link AudioInterleave} value
    * extracted from the `ADBEAudioInterleave` parameter. The dialog's
    * `None` choice stores no parameter, so reads return `None` for it.
    * Read / Write.
@@ -626,7 +622,7 @@ export class XmlFormatOptions extends FormatOptionsBase {
   declare audio_bitrate: any;
 
   /**
-   * The H.264 encoding profile as an [MPEGProfile][] value from the
+   * The H.264 encoding profile as an {@link MPEGProfile} value from the
    * `ADBEVideoMPEGProfile` parameter. Read / Write.
    *
    * After Effects stores NO parameter for `Baseline`, so an absent
@@ -635,7 +631,7 @@ export class XmlFormatOptions extends FormatOptionsBase {
    * an AE-saved Baseline module's parameters exactly). The dropdown's
    * `Auto` is resolved at save time and reads back as `MAIN`. Falls
    * back to a plain `int` when the stored value is not in the
-   * [MPEGProfile][] enum.
+   * {@link MPEGProfile} enum.
    */
   get profile(): any {
     const raw = dict_get(this.params, "ADBEVideoMPEGProfile", "");
@@ -663,12 +659,12 @@ export class XmlFormatOptions extends FormatOptionsBase {
   declare level: any;
 
   /**
-   * The DNxHR/DNxHD resolution preset as a [DnxResolution][] value
+   * The DNxHR/DNxHD resolution preset as a {@link DnxResolution} value
    * extracted from the `ADBEVideoResolution` parameter, or `None` when
    * the parameter is absent. Only meaningful when `video_codec` is
    * `VideoCodec.DNXHR_DNXHD`; the param survives codec changes (stale
    * under other codecs). Falls back to a plain `int` when the value is
-   * not in the [DnxResolution][] enum. Read / Write.
+   * not in the {@link DnxResolution} enum. Read / Write.
    */
   declare resolution: any;
 
@@ -682,20 +678,20 @@ export class XmlFormatOptions extends FormatOptionsBase {
   declare dnx_alpha_type: any;
 
   /**
-   * The MPEG multiplexer as an [MPEGMultiplexer][] FourCC integer
+   * The MPEG multiplexer as an {@link MPEGMultiplexer} FourCC integer
    * value extracted from the `ADBEMPEGMultiplexer` parameter, or
    * `None` when the parameter is absent. Falls back to a plain `int`
-   * when the value is not in the [MPEGMultiplexer][] enum.
+   * when the value is not in the {@link MPEGMultiplexer} enum.
    * Read / Write.
    */
   declare mpeg_multiplexer: any;
 
   /**
    * The MPEG mux stream compatibility as an
-   * [MPEGMuxStreamCompatibility][] FourCC integer value extracted from
+   * {@link MPEGMuxStreamCompatibility} FourCC integer value extracted from
    * the `ADBEMPEGMuxStreamCompatibility` parameter, or `None` when the
    * parameter is absent. Falls back to a plain `int` when the value
-   * is not in the [MPEGMuxStreamCompatibility][] enum.
+   * is not in the {@link MPEGMuxStreamCompatibility} enum.
    * Read / Write.
    */
   declare mpeg_mux_stream_compatibility: any;

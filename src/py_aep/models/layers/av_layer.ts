@@ -84,11 +84,10 @@ export function _unregister_source_usage(
   /**
    * Remove `comp` from `source._used_in` if no other layer still references it.
    *
-   * Args:
-   *     source: The source item to potentially unregister.
-   *     comp: The composition to remove from `source._used_in`.
-   *     exclude: A layer to skip when scanning for other users (the caller
-   *         itself, which is being removed or swapped out).
+   * @param source - The source item to potentially unregister.
+   * @param comp - The composition to remove from `source._used_in`.
+   * @param exclude - A layer to skip when scanning for other users (the caller itself, which is
+   *   being removed or swapped out).
    */
   const { exclude = null } = kw;
   for (const layer of comp.av_layers) {
@@ -108,29 +107,29 @@ export function _validate_collapse_transformation(value: boolean, obj: AVLayer):
 
 /**
  * The `AVLayer` object provides an interface to those layers that contain
- * [AVItem][] objects (composition layers, footage layers, solid layers, text
+ * {@link AVItem} objects (composition layers, footage layers, solid layers, text
  * layers and sound layers).
  *
- * Example:
- *     ```python
- *     from py_aep import parse
- *
- *     app = parse("project.aep")
- *     comp = app.project.compositions[0]
- *     layer = comp.file_layers[0]
- *     print(layer.source)
- *     ```
  *
  * Info:
- *     `AVLayer` is a subclass of [Layer][] object. All methods and attributes
- *     of [Layer][] are available when working with `AVLayer`.
+ *     `AVLayer` is a subclass of {@link Layer} object. All methods and attributes
+ *     of {@link Layer} are available when working with `AVLayer`.
  *
  * Info:
- *     `AVLayer` is a base class for [TextLayer][] object, so `AVLayer`
- *     attributes and methods are available when working with [TextLayer][]
+ *     `AVLayer` is a base class for {@link TextLayer} object, so `AVLayer`
+ *     attributes and methods are available when working with {@link TextLayer}
  *     objects.
  *
- * See: https://ae-scripting.docsforadobe.dev/layer/avlayer/
+ * @example
+ * ```python
+ * from py_aep import parse
+ *
+ * app = parse("project.aep")
+ * comp = app.project.compositions[0]
+ * layer = comp.file_layers[0]
+ * print(layer.source)
+ * ```
+ * @see https://ae-scripting.docsforadobe.dev/layer/avlayer/
  */
 export class AVLayer extends Layer {
   // NOTE(port): accessor stubs typed for TS only; descriptor(AVLayer, ...) below redefines both on the prototype, so these bodies never run.
@@ -144,7 +143,7 @@ export class AVLayer extends Layer {
   /**
    * `True` if this is an environment layer in a Ray-traced 3D
    * composition. Setting this to `True` automatically sets
-   * [three_d_layer][] to `True`. Read / Write.
+   * {@link three_d_layer} to `True`. Read / Write.
    */
   get environment_layer(): boolean {
     return false;
@@ -166,7 +165,7 @@ export class AVLayer extends Layer {
 
   /**
    * `True` if the layer's effects are active, as indicated by the
-   * <f> icon next to it in the user interface. Read / Write.
+   * \<f\> icon next to it in the user interface. Read / Write.
    */
   declare effects_active: boolean;
 
@@ -193,7 +192,7 @@ export class AVLayer extends Layer {
 
   /**
    * `True` if this layer is a 3D layer. Setting this to `True`
-   * automatically sets [environment_layer][] to `False`.
+   * automatically sets {@link environment_layer} to `False`.
    * Read / Write.
    */
   declare three_d_layer: boolean;
@@ -327,12 +326,10 @@ export class AVLayer extends Layer {
    * Setting `TrackMatteType.NO_TRACK_MATTE` removes the track matte
    * for this layer and resets the matte layer reference.
    *
-   * Note:
-   *     This functionality was updated in After Effects 23.0.
+   * **Note:** This functionality was updated in After Effects 23.0.
    *
-   * Warning:
-   *     This is a legacy API. Consider using [set_track_matte][] and
-   *     [remove_track_matte][] instead.
+   * **Warning:** This is a legacy API. Consider using {@link set_track_matte} and
+   * {@link remove_track_matte} instead.
    *
    * Read / Write.
    */
@@ -374,7 +371,7 @@ export class AVLayer extends Layer {
    * The ID of the layer used as a track matte for this layer.
    *
    * `0` when no track matte is applied.
-   * Conditional in the binary (AE >= 23 only).
+   * Conditional in the binary (AE \>= 23 only).
    */
   get _matte_layer_id(): number {
     // matte_layer_id is conditional (only in AE >= 23)
@@ -435,7 +432,7 @@ export class AVLayer extends Layer {
    * non-still footage layers without time remapping. Read / Write.
    *
    * On a time-reversed layer the out point is the earlier end (see
-   * [in_point][]).
+   * {@link in_point}).
    */
   get out_point(): number {
     const raw = super.out_point;
@@ -502,8 +499,7 @@ export class AVLayer extends Layer {
    * that is not a solid), must be in `comp`, and must not already be
    * exposed.
    *
-   * Args:
-   *     comp: The composition whose Essential Graphics panel to test.
+   * @param comp - The composition whose Essential Graphics panel to test.
    */
   can_add_to_motion_graphics_template(comp: CompItem): boolean {
     return can_add_layer(this, comp);
@@ -516,8 +512,7 @@ export class AVLayer extends Layer {
    * Returns `True` on success, or `False` when the layer cannot be
    * added (see `can_add_to_motion_graphics_template`).
    *
-   * Args:
-   *     comp: The composition to add the layer to.
+   * @param comp - The composition to add the layer to.
    */
   add_to_motion_graphics_template(comp: CompItem): boolean {
     return comp._add_layer_controller(this, null);
@@ -530,10 +525,8 @@ export class AVLayer extends Layer {
    * Returns `True` on success, or `False` when the layer cannot be
    * added (see `can_add_to_motion_graphics_template`).
    *
-   * Args:
-   *     comp: The composition to add the layer to.
-   *     name: The controller name to show in the Essential Graphics
-   *         panel.
+   * @param comp - The composition to add the layer to.
+   * @param name - The controller name to show in the Essential Graphics panel.
    */
   add_to_motion_graphics_template_as(comp: CompItem, name: string): boolean {
     validate_name(name);
@@ -542,7 +535,7 @@ export class AVLayer extends Layer {
 
   /**
    * `True` if the layer has a video component. An `AVLayer` has video
-   * when its [source][] has video, or when the layer has no external source
+   * when its {@link source} has video, or when the layer has no external source
    * (text and shape layers always render video). Read-only.
    */
   get has_video(): boolean {
@@ -565,10 +558,10 @@ export class AVLayer extends Layer {
   /**
    * `True` if the layer's audio is active at the current time.
    *
-   * For this to be `True`, [audio_enabled][] must be `True`,
-   * [has_audio][] must be `True`, no other layer with audio may be
+   * For this to be `True`, {@link audio_enabled} must be `True`,
+   * {@link has_audio} must be `True`, no other layer with audio may be
    * soloing unless this layer is also soloed, and the current
-   * [time][] must be between [in_point][] and [out_point][].
+   * {@link time} must be between {@link in_point} and {@link out_point}.
    * Read-only.
    */
   get audio_active(): boolean {
@@ -580,16 +573,15 @@ export class AVLayer extends Layer {
    *
    * For this method to return `True`, four conditions must be met:
    *
-   * 1. [has_audio][] must be `True`.
-   * 2. [audio_enabled][] must be `True`.
+   * 1. {@link has_audio} must be `True`.
+   * 2. {@link audio_enabled} must be `True`.
    * 3. No other layer with audio in the
-   *    [containing_comp][Layer.containing_comp] may be soloed unless
-   *    this layer is also [soloed][Layer.solo].
-   * 4. *time* must fall between [in_point][] (inclusive) and
-   *    [out_point][] (exclusive).
+   *    {@link Layer.containing_comp | containing_comp} may be soloed unless
+   *    this layer is also {@link Layer.solo | soloed}.
+   * 4. *time* must fall between {@link in_point} (inclusive) and
+   *    {@link out_point} (exclusive).
    *
-   * Args:
-   *     time: The time in seconds.
+   * @param time - The time in seconds.
    */
   audio_active_at_time(time: number): boolean {
     validate_number(time);
@@ -638,7 +630,7 @@ export class AVLayer extends Layer {
    * coordinates.
    *
    * The layer's transform chain (parenting included) is evaluated at
-   * the composition's current [time][Layer.time] - like After Effects,
+   * the composition's current {@link Layer.time | time} - like After Effects,
    * which uses the playhead position stored in the file; pass `time`
    * to evaluate at another time (py_aep extension). 3D layers project
    * through AE's DEFAULT comp camera: `sourcePointToComp()` is
@@ -650,19 +642,13 @@ export class AVLayer extends Layer {
    * transform chain is driven by expressions converts with the values
    * the expressions replace, where After Effects uses their results.
    *
-   * Args:
-   *     point: A position array of `[x, y]` layer coordinates.
-   *     time: Composition time in seconds (py_aep extension; defaults
-   *         to the comp's current time).
-   *
-   * Returns:
-   *     A position array of `[x, y]` composition coordinates.
-   *
-   * Raises:
-   *     NotImplementedError: If a layer in the parent chain uses an
-   *         auto-orientation the transform math does not model (see
-   *         `resolvers.transform.build_world_matrix`).
-   *     ValueError: If the result overflows a float.
+   * @param point - A position array of `[x, y]` layer coordinates.
+   * @param time - Composition time in seconds (py_aep extension; defaults to the comp's current
+   *   time).
+   * @returns A position array of `[x, y]` composition coordinates.
+   * @throws {@link NotImplementedError} If a layer in the parent chain uses an auto-orientation the
+   *   transform math does not model (see `resolvers.transform.build_world_matrix`).
+   * @throws {@link ValueError} If the result overflows a float.
    */
   source_point_to_comp(point: number[], time: number | null = null): number[] {
     validate_vector2(point);
@@ -686,7 +672,7 @@ export class AVLayer extends Layer {
    * to layer coordinates.
    *
    * The layer's transform chain (parenting included) is evaluated at
-   * the composition's current [time][Layer.time] - like After Effects,
+   * the composition's current {@link Layer.time | time} - like After Effects,
    * which uses the playhead position stored in the file; pass `time`
    * to evaluate at another time (py_aep extension). For a 3D layer the
    * comp point is cast as a ray from the ACTIVE camera (the front-most
@@ -695,27 +681,19 @@ export class AVLayer extends Layer {
    * `sourcePointToComp()`, this direction IS camera-dependent
    * (verified against AE 2026). The camera is placed by its own parent
    * chain. Transform values are read before expressions, as in
-   * [source_point_to_comp][].
+   * {@link source_point_to_comp}.
    *
-   * Args:
-   *     point: A position array of `[x, y]` composition coordinates.
-   *     time: Composition time in seconds (py_aep extension; defaults
-   *         to the comp's current time).
-   *
-   * Returns:
-   *     A position array of `[x, y]` layer coordinates.
-   *
-   * Raises:
-   *     NotImplementedError: If a layer in the parent chain uses an
-   *         auto-orientation the transform math does not model (see
-   *         `resolvers.transform.build_world_matrix`).
-   *     ValueError: If the camera ray does not reach the layer plane
-   *         going forward - it is parallel to the plane, or the layer
-   *         is at or behind the camera. After Effects returns a literal
-   *         `[0, 0]` for these; py_aep raises instead, because that
-   *         sentinel cannot be told apart from a real result. Also when
-   *         the layer plane is degenerate (an X or Y scale of 0) or the
-   *         result overflows a float.
+   * @param point - A position array of `[x, y]` composition coordinates.
+   * @param time - Composition time in seconds (py_aep extension; defaults to the comp's current
+   *   time).
+   * @returns A position array of `[x, y]` layer coordinates.
+   * @throws {@link NotImplementedError} If a layer in the parent chain uses an auto-orientation the
+   *   transform math does not model (see `resolvers.transform.build_world_matrix`).
+   * @throws {@link ValueError} If the camera ray does not reach the layer plane going forward - it
+   *   is parallel to the plane, or the layer is at or behind the camera. After Effects returns a
+   *   literal `[0, 0]` for these; py_aep raises instead, because that sentinel cannot be told apart
+   *   from a real result. Also when the layer plane is degenerate (an X or Y scale of 0) or the
+   *   result overflows a float.
    */
   comp_point_to_source(point: number[], time: number | null = null): number[] {
     validate_vector2(point);
@@ -753,26 +731,17 @@ export class AVLayer extends Layer {
    * `scale[2] = 100 * sin(angle)`, and mirrored point sets come out as
    * 180-degree rotation combinations rather than negative scale.
    *
-   * Note:
-   *     The AE Scripting Guide names the third parameter
-   *     `pointBottomRight`, but After Effects treats it as the
-   *     BOTTOM-LEFT corner (the guide's own example passes `bl`);
-   *     py_aep names it accordingly.
+   * **Note:** The AE Scripting Guide names the third parameter
+   * `pointBottomRight`, but After Effects treats it as the
+   * BOTTOM-LEFT corner (the guide's own example passes `bl`);
+   * py_aep names it accordingly.
    *
-   * Args:
-   *     point_top_left: `[x, y, z]` comp-space position of the
-   *         source's top-left corner.
-   *     point_top_right: `[x, y, z]` position of the top-right corner.
-   *     point_bottom_left: `[x, y, z]` position of the bottom-left
-   *         corner.
-   *
-   * Returns:
-   *     A dict of transform property values (`anchor_point`,
-   *     `position`, `x_rotation`, `y_rotation`, `z_rotation`,
-   *     `scale`), assignable to the matching transform properties.
-   *
-   * Raises:
-   *     ValueError: If the points are coincident or collinear.
+   * @param point_top_left - `[x, y, z]` comp-space position of the source's top-left corner.
+   * @param point_top_right - `[x, y, z]` position of the top-right corner.
+   * @param point_bottom_left - `[x, y, z]` position of the bottom-left corner.
+   * @returns A dict of transform property values (`anchor_point`, `position`, `x_rotation`,
+   *   `y_rotation`, `z_rotation`, `scale`), assignable to the matching transform properties.
+   * @throws {@link ValueError} If the points are coincident or collinear.
    */
   calculate_transform_from_points(
     point_top_left: number[],
@@ -809,20 +778,13 @@ export class AVLayer extends Layer {
    * its stretch (measured on AE 2026 - a layer starting at 0.5 s and
    * stretched to 200 % reports its layer-second-1 content at `time=1`).
    *
-   * Args:
-   *     time: The time index, in seconds of layer time.
-   *     extents: `True` to include the extents. Only relevant for
-   *         shape layers.
-   *
-   * Returns:
-   *     A dict with `top`, `left`, `width` and `height` keys.
-   *
-   * Raises:
-   *     NotImplementedError: For a shape layer using a path operation
-   *         other than Trim Paths and Repeater, a text layer using a
-   *         feature outside the measured envelope (text animators, text
-   *         on a path, faux styles, a font that is not installed, ...),
-   *         or a 3D model layer (whose box is the model's bounds).
+   * @param time - The time index, in seconds of layer time.
+   * @param extents - `True` to include the extents. Only relevant for shape layers.
+   * @returns A dict with `top`, `left`, `width` and `height` keys.
+   * @throws {@link NotImplementedError} For a shape layer using a path operation other than Trim
+   *   Paths and Repeater, a text layer using a feature outside the measured envelope (text
+   *   animators, text on a path, faux styles, a font that is not installed, ...), or a 3D model
+   *   layer (whose box is the model's bounds).
    */
   source_rect_at_time(
     time: number,
@@ -872,7 +834,7 @@ export class AVLayer extends Layer {
 
   /**
    * `True` if it is possible to set the
-   * [collapse_transformation][AVLayer.collapse_transformation] value.
+   * {@link AVLayer.collapse_transformation | collapse_transformation} value.
    *
    * Returns `True` for pre-composition layers and solid layers.
    * Read-only.
@@ -1083,20 +1045,14 @@ export class AVLayer extends Layer {
    * the track matte. See [remove_track_matte] for another way
    * of removing track matte.
    *
-   * Note:
-   *     Requires AE 23.0+ file format.
+   * **Note:** Requires AE 23.0+ file format.
    *
-   * Args:
-   *     track_matte_layer: The layer to use as a track matte,
-   *         or `None` to remove the track matte.
-   *     track_matte_type: The [TrackMatteType][] to apply.
-   *         Passing `NO_TRACK_MATTE` with a non-`None` layer
-   *         is a no-op.
-   *
-   * Raises:
-   *     AttributeError: If the file predates AE 23.0.
-   *     ValueError: If `track_matte_layer` belongs to a
-   *         different composition.
+   * @param track_matte_layer - The layer to use as a track matte, or `None` to remove the track
+   *   matte.
+   * @param track_matte_type - The {@link TrackMatteType} to apply. Passing `NO_TRACK_MATTE` with a
+   *   non-`None` layer is a no-op.
+   * @throws {@link AttributeError} If the file predates AE 23.0.
+   * @throws {@link ValueError} If `track_matte_layer` belongs to a different composition.
    */
   set_track_matte(
     track_matte_layer: AVLayer | null,
@@ -1134,14 +1090,12 @@ export class AVLayer extends Layer {
   /**
    * Remove the track matte layer reference.
    *
-   * The [track_matte_type][] value is preserved. To also reset
+   * The {@link track_matte_type} value is preserved. To also reset
    * it, assign `TrackMatteType.NO_TRACK_MATTE` separately.
    *
-   * Note:
-   *     Requires AE 23.0+ file format.
+   * **Note:** Requires AE 23.0+ file format.
    *
-   * Raises:
-   *     AttributeError: If the file predates AE 23.0.
+   * @throws {@link AttributeError} If the file predates AE 23.0.
    */
   remove_track_matte(): void {
     const old_matte = this.track_matte_layer;
@@ -1195,23 +1149,18 @@ export class AVLayer extends Layer {
   /**
    * Replace the source item for this layer.
    *
-   * Warning:
-   *     Contrary to ExtendScript, if this method is performed
-   *     on a null layer, the layer's `null_layer` attribute
-   *     changes to `False`, making the layer visible
-   *     in comp viewer and renders.
+   * **Warning:** Contrary to ExtendScript, if this method is performed
+   * on a null layer, the layer's `null_layer` attribute
+   * changes to `False`, making the layer visible
+   * in comp viewer and renders.
    *
-   * Args:
-   *     new_source: The new source [AVItem][].
-   *     fix_expressions: Update expressions that reference the
-   *         old source name. Not yet implemented.
-   *
-   * Raises:
-   *     NotImplementedError: If `fix_expressions` is `True`.
-   *     ValueError: If the layer has no source (e.g. shape or
-   *         text layers), if `new_source` is not in the project,
-   *         if `new_source` would create a composition cycle, or
-   *         if the layer is a 3D model layer.
+   * @param new_source - The new source {@link AVItem}.
+   * @param fix_expressions - Update expressions that reference the old source name. Not yet
+   *   implemented.
+   * @throws {@link NotImplementedError} If `fix_expressions` is `True`.
+   * @throws {@link ValueError} If the layer has no source (e.g. shape or text layers), if
+   *   `new_source` is not in the project, if `new_source` would create a composition cycle, or if
+   *   the layer is a 3D model layer.
    */
   replace_source(new_source: AVItem, fix_expressions = false): void {
     if (fix_expressions) {

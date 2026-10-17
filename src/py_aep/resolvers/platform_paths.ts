@@ -18,7 +18,8 @@ export function _is_posix(path: string): boolean {
   return path.startsWith("/") && !path.startsWith("//");
 }
 
-/** `path` in the style of After Effects on the target platform.
+/**
+ * `path` in the style of After Effects on the target platform.
  *
  * After Effects on Windows opens a macOS path `/Users/x/a.png` as
  * `C:\Users\x\a.png` (and `/Volumes/v/a.png` as
@@ -29,9 +30,9 @@ export function _is_posix(path: string): boolean {
  * usual macOS mount of a share, not measured). A path already in the target
  * style, or a relative one, is returned unchanged.
  *
- * Args:
- *     path: An absolute path in either style.
- *     windows: `true` for After Effects on Windows, `false` for macOS.
+ * @param path - An absolute path in either style.
+ * @param kw - Keyword arguments:
+ * - `windows`: `true` for After Effects on Windows, `false` for macOS.
  */
 export function platform_path(path: string, kw: { windows: boolean }): string {
   const { windows } = kw;
@@ -82,7 +83,8 @@ export function _volume_parts(path: PurePath): number {
   return 1;
 }
 
-/** The `(ascendcount_base, ascendcount_target)` pair After Effects stores.
+/**
+ * The `(ascendcount_base, ascendcount_target)` pair After Effects stores.
  *
  * Each count is the number of path components below the deepest folder
  * the project file and the target share. A folder target (an image
@@ -96,11 +98,11 @@ export function _volume_parts(path: PurePath): number {
  * `/Volumes/<name>` mount is taken as its own volume, like a drive or share
  * (not measured).
  *
- * Args:
- *     project_file: Absolute path of the saved `.aep` file, in the same
- *         style as `target` (see `platform_path`).
- *     target: The record's absolute `fullpath`.
- *     target_is_folder: The record's `target_is_folder`.
+ * @param project_file - Absolute path of the saved `.aep` file, in the same style as `target` (see
+ *   `platform_path`).
+ * @param target - The record's absolute `fullpath`.
+ * @param kw - Keyword arguments:
+ * - `target_is_folder`: The record's `target_is_folder`.
  */
 export function relative_path_counts(
   project_file: string,

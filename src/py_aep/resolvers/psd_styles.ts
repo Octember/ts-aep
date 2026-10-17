@@ -750,15 +750,11 @@ export function parse_layer_styles(
   /**
    * Resolve a layer's styles to AE Layer Styles values.
    *
-   * Args:
-   *     leaf: A `PsdLayer` from `read_psd_layers` (carries the raw blocks).
-   *     global_light: The document global light from `read_global_light`.
-   *
-   * Returns:
-   *     The resolved styles, or `None` when the layer has no style-related
-   *     blocks at all or its descriptor cannot be decoded (the layer then
-   *     keeps the plain disabled skeleton; a warning is emitted so the
-   *     style loss is visible).
+   * @param leaf - A `PsdLayer` from `read_psd_layers` (carries the raw blocks).
+   * @param global_light - The document global light from `read_global_light`.
+   * @returns The resolved styles, or `None` when the layer has no style-related blocks at all or
+   *   its descriptor cannot be decoded (the layer then keeps the plain disabled skeleton; a warning
+   *   is emitted so the style loss is visible).
    */
   const blocks = leaf.style_blocks;
   if (blocks == null) return null;
@@ -992,19 +988,13 @@ export function merged_styles_bounds(node: PsdLayer, global_angle: number): _Box
   /**
    * The layer's content box once its enabled styles are merged into it.
    *
-   * Args:
-   *     node: A `PsdLayer` from `read_psd_layers`, its `bounds` the content
-   *         the styles grow from (`psd_bounds.psd_layer_box` passes the
-   *         masked content: AE grows merged styles from it).
-   *     global_angle: The document's global light angle (`read_global_light`).
-   *
-   * Returns:
-   *     `(left, top, right, bottom)` in canvas pixels; `node.bounds` when the
-   *     layer has no enabled style.
-   *
-   * Raises:
-   *     NotImplementedError: If the layer has a Stroke Emboss bevel, whose
-   *         merged bounds are not known, or its styles cannot be decoded.
+   * @param node - A `PsdLayer` from `read_psd_layers`, its `bounds` the content the styles grow
+   *   from (`psd_bounds.psd_layer_box` passes the masked content: AE grows merged styles from it).
+   * @param global_angle - The document's global light angle (`read_global_light`).
+   * @returns `(left, top, right, bottom)` in canvas pixels; `node.bounds` when the layer has no
+   *   enabled style.
+   * @throws {@link NotImplementedError} If the layer has a Stroke Emboss bevel, whose merged bounds
+   *   are not known, or its styles cannot be decoded.
    */
   const bounds = node.bounds;
   const blocks = node.style_blocks;

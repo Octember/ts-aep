@@ -39,7 +39,7 @@ export type PropertyControlType = EnumValue<typeof PropertyControlType>;
  * structure.  For example, a 3-D spatial property (such as a layer's
  * position) is stored as an array of three floating-point values.
  *
- * See: https://ae-scripting.docsforadobe.dev/property/property/#propertypropertyvaluetype
+ * @see https://ae-scripting.docsforadobe.dev/property/property/#propertypropertyvaluetype
  */
 export const PropertyValueType = int_enum("PropertyValueType", {
   UNKNOWN: 0,
@@ -67,7 +67,7 @@ export type PropertyValueType = EnumValue<typeof PropertyValueType>;
 /**
  * Interpolation type for keyframes.
  *
- * See: https://ae-scripting.docsforadobe.dev/property/property/#propertysetinterpolationtypeatkey
+ * @see https://ae-scripting.docsforadobe.dev/property/property/#propertysetinterpolationtypeatkey
  */
 export const KeyframeInterpolationType = int_enum("KeyframeInterpolationType", {
   LINEAR: 6612,

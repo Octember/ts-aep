@@ -23,13 +23,13 @@ export const _PRESET_SIZE = 16;
 /**
  * A New Composition preset from the AE preferences.
  *
- * Attributes:
- *     name: Display name (e.g. `HD . 1920x1080 . 25 fps`, with
- *         bullet separators).
- *     width: Width in pixels.
- *     height: Height in pixels.
- *     pixel_aspect: Pixel aspect ratio.
- *     frame_rate: Frame rate in frames per second.
+ * **Attributes:**
+ * name: Display name (e.g. `HD . 1920x1080 . 25 fps`, with
+ * bullet separators).
+ * width: Width in pixels.
+ * height: Height in pixels.
+ * pixel_aspect: Pixel aspect ratio.
+ * frame_rate: Frame rate in frames per second.
  */
 export class CompPreset {
   name: string;

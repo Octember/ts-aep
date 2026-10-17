@@ -12,15 +12,15 @@ import type { RoptChunk } from "../../../binary/render_chunks.ts";
  * These settings correspond to the Targa Options dialog in After Effects,
  * accessible when the output format is set to Targa Sequence.
  *
- * Example:
- *     ```python
- *     from py_aep import TargaFormatOptions, parse
+ * @example
+ * ```python
+ * from py_aep import TargaFormatOptions, parse
  *
- *     app = parse("project.aep")
- *     om = app.project.render_queue.items[0].output_modules[0]
- *     if isinstance(om.format_options, TargaFormatOptions):
- *         print(om.format_options.bits_per_pixel)
- *     ```
+ * app = parse("project.aep")
+ * om = app.project.render_queue.items[0].output_modules[0]
+ * if isinstance(om.format_options, TargaFormatOptions):
+ *     print(om.format_options.bits_per_pixel)
+ * ```
  */
 export class TargaFormatOptions extends FormatOptionsBase {
   declare _body: RoptChunk;

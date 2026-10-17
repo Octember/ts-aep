@@ -19,10 +19,8 @@
  *   box. Dashes do not change it; the widest stroke wins.
  * - Parametric shapes are the paths After Effects draws: an ellipse is four
  *   cubic arcs with the circle constant `4/3 * (sqrt(2) - 1)`, a polystar
- *   vertex's roundness handle is `radius * roundness% * kappa * sin(pi /
- *   points)` long. A rectangle's rounded corners stay inside it.
- * - A group maps its content to its parent by `translate(position) *
- *   rotate * skew * scale * translate(-anchor)`, the skew shearing by
+ *   vertex's roundness handle is `radius * roundness% * kappa * sin(pi / points)` long. A rectangle's rounded corners stay inside it.
+ * - A group maps its content to its parent by `translate(position) * rotate * skew * scale * translate(-anchor)`, the skew shearing by
  *   `-tan(skew)` along the skew axis.
  * - Trim Paths and Repeater leave the box unchanged; Offset Paths grows it
  *   (and the other path operations were not measured), so those raise
@@ -440,9 +438,9 @@ export function _walk(
 /**
  * `sourceRectAtTime` of a shape layer's `ADBE Root Vectors Group`.
  *
- * @param root The layer's contents group.
- * @param time Composition time in seconds.
- * @param extents `true` to include the stroke extents.
+ * @param root - The layer's contents group.
+ * @param time - Composition time in seconds.
+ * @param extents - `true` to include the stroke extents.
  * @returns An object with `top`, `left`, `width` and `height` keys.
  * @throws NotImplementedError For a path operation other than Trim Paths
  *   and Repeater, or a polystar with a fractional number of points.

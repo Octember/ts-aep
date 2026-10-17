@@ -20,18 +20,17 @@ const _composition = deferred<typeof import("./composition.ts")>("py_aep/models/
  * can contain various types of items (footage, compositions, solids) as well
  * as other folders.
  *
- * Example:
- *     ```python
- *     from py_aep import parse
+ * @example
+ * ```python
+ * from py_aep import parse
  *
- *     app = parse("project.aep")
- *     root = app.project.root_folder
- *     print(root.name)
- *     for item in root:
- *         ...
- *     ```
- *
- * See: https://ae-scripting.docsforadobe.dev/item/folderitem/
+ * app = parse("project.aep")
+ * root = app.project.root_folder
+ * print(root.name)
+ * for item in root:
+ *     ...
+ * ```
+ * @see https://ae-scripting.docsforadobe.dev/item/folderitem/
  */
 export class FolderItem extends Item {
   static _auto_name: string = "Untitled";
@@ -108,10 +107,10 @@ export class FolderItem extends Item {
   /**
    * Create a new empty folder with backing chunks.
    *
-   * Args:
-   *     name: The name of the new folder.
-   *     project: The project that owns this folder.
-   *     parent_folder: The folder that will contain this folder.
+   * @param name - The name of the new folder.
+   * @param kw - Keyword arguments:
+   * - `project`: The project that owns this folder.
+   * - `parent_folder`: The folder that will contain this folder.
    */
   static _new(
     name: string,
@@ -159,8 +158,7 @@ export class FolderItem extends Item {
   /**
    * Return the number of items in the folder.
    *
-   * Note:
-   *     Equivalent to `len(folder.items)`
+   * **Note:** Equivalent to `len(folder.items)`
    */
   get num_items(): number {
     return this.items.length;
@@ -169,13 +167,9 @@ export class FolderItem extends Item {
   /**
    * Create a new folder inside this folder.
    *
-   * Args:
-   *     name: The name of the new folder. Pass `null` to auto-generate
-   *         a name (`Untitled 1`, `Untitled 2`, ...).
-   *         An empty string is allowed.
-   *
-   * Returns:
-   *     The newly created {@link FolderItem}.
+   * @param name - The name of the new folder. Pass `null` to auto-generate a name (`Untitled 1`,
+   *   `Untitled 2`, ...). An empty string is allowed.
+   * @returns The newly created {@link FolderItem}.
    */
   add_folder(name: string | null = null): FolderItem {
     if (name == null) {
@@ -200,18 +194,14 @@ export class FolderItem extends Item {
   /**
    * Create a new composition inside this folder.
    *
-   * Args:
-   *     name: The name of the new composition. Pass `null` to
-   *         auto-generate a name (`Comp 1`, `Comp 2`, ...).
-   *         An empty string is allowed.
-   *     width: The width of the composition in pixels.
-   *     height: The height of the composition in pixels.
-   *     pixel_aspect: The pixel aspect ratio (1.0 for square pixels).
-   *     duration: The duration in seconds.
-   *     frame_rate: The frame rate in frames per second.
-   *
-   * Returns:
-   *     The newly created {@link CompItem}.
+   * @param name - The name of the new composition. Pass `null` to auto-generate a name (`Comp 1`,
+   *   `Comp 2`, ...). An empty string is allowed.
+   * @param width - The width of the composition in pixels.
+   * @param height - The height of the composition in pixels.
+   * @param pixel_aspect - The pixel aspect ratio (1.0 for square pixels).
+   * @param duration - The duration in seconds.
+   * @param frame_rate - The frame rate in frames per second.
+   * @returns The newly created {@link CompItem}.
    */
   add_comp(
     name: string | null,
@@ -282,21 +272,15 @@ export class FolderItem extends Item {
    * {@link py_aep.models.preferences.Preferences.composition_presets});
    * presets carry no duration, so it must be given.
    *
-   * Args:
-   *     name: The name of the new composition. Pass `null` to
-   *         auto-generate a name (`Comp 1`, `Comp 2`, ...).
-   *     preset: Preset name; matched exactly first, then as a unique
-   *         case-insensitive substring (full names contain bullet
-   *         separators, e.g. `HD . 1920x1080 . 25 fps`, so a
-   *         fragment like `"1920x1080 . 25"` works).
-   *     duration: The duration in seconds.
-   *
-   * Returns:
-   *     The newly created {@link CompItem}.
-   *
-   * Raises:
-   *     ValueError: If no preferences directory was provided, or the
-   *         preset name does not resolve to exactly one preset.
+   * @param name - The name of the new composition. Pass `null` to auto-generate a name (`Comp 1`,
+   *   `Comp 2`, ...).
+   * @param preset - Preset name; matched exactly first, then as a unique case-insensitive substring
+   *   (full names contain bullet separators, e.g. `HD . 1920x1080 . 25 fps`, so a fragment like
+   *   `"1920x1080 . 25"` works).
+   * @param duration - The duration in seconds.
+   * @returns The newly created {@link CompItem}.
+   * @throws {@link ValueError} If no preferences directory was provided, or the preset name does
+   *   not resolve to exactly one preset.
    */
   add_comp_from_preset(
     name: string | null,

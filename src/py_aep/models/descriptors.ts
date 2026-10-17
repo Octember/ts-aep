@@ -160,28 +160,21 @@ export function _validate_enum_member(enum_cls: any, value: any, public_name: st
 /**
  * Descriptor that proxies a single field on a chunk body.
  *
- * Args:
- *   chunk_attr: Name of the model attribute holding the chunk body
- *     reference (e.g. `"_cdta"`).
- *   field: Name of the field on the chunk body (e.g. `"width"`).
- *   transform: Optional callable applied when *getting* (binary ->
- *     user-facing value).
- *   reverse: 1-arg callable applied when *setting*
- *     (user-facing -> binary value). Returns a scalar written
- *     to `field`.
- *   read_only: When `True`, the field cannot be set. Defaults to
- *     `False`.
- *   validate: Optional callable called with the user-facing value
- *     before any reverse transform. Must raise `ValueError`
- *     or `TypeError` if the value is invalid.
- *   default: Optional default value returned when the chunk body is
- *     `None`. If not given, accessing the field when the body is
- *     `None` raises `AttributeError`.
- *   pre_set: Optional method name on the model instance, invoked
- *     after validation and before the value is written.
- *   post_set: Optional method name on the model instance, or a
- *     callable receiving the model instance, invoked after the
- *     value has been written.
+ * @param chunk_attr - Name of the model attribute holding the chunk body reference (e.g.
+ *   `"_cdta"`).
+ * @param field - Name of the field on the chunk body (e.g. `"width"`).
+ * @param transform - Optional callable applied when *getting* (binary -\> user-facing value).
+ * @param reverse - 1-arg callable applied when *setting* (user-facing -\> binary value). Returns a
+ *   scalar written to `field`.
+ * @param read_only - When `True`, the field cannot be set. Defaults to `False`.
+ * @param validate - Optional callable called with the user-facing value before any reverse
+ *   transform. Must raise `ValueError` or `TypeError` if the value is invalid.
+ * @param default - Optional default value returned when the chunk body is `None`. If not given,
+ *   accessing the field when the body is `None` raises `AttributeError`.
+ * @param pre_set - Optional method name on the model instance, invoked after validation and before
+ *   the value is written.
+ * @param post_set - Optional method name on the model instance, or a callable receiving the model
+ *   instance, invoked after the value has been written.
  */
 export class ChunkField<T> {
   declare chunk_attr: string;
@@ -342,16 +335,13 @@ export class ChunkField<T> {
    * has a `to_binary` method it is used as `reverse`; otherwise
    * `int` is used.
    *
-   * Args:
-   *   allow_out_of_enum_values: When `True`, a stored value outside
-   *     the enum reads back raw instead of raising - real `.aep`
-   *     files hold them (an unlabelled output depth, a format id from a
-   *     third-party output plugin) and the binary is trusted.
-   *     Wrapping the transform hides the enum class from
-   *     `_enum_class`, so write-side membership strictness is
-   *     restored via `validate=validate_enum(enum_cls)` unless the
-   *     caller passes its own `validate` (which must then check
-   *     membership itself).
+   * @param kw - Keyword arguments:
+   * - `allow_out_of_enum_values`: When `True`, a stored value outside the enum reads back raw
+   *     instead of raising - real `.aep` files hold them (an unlabelled output depth, a format id
+   *     from a third-party output plugin) and the binary is trusted. Wrapping the transform hides
+   *     the enum class from `_enum_class`, so write-side membership strictness is restored via
+   *     `validate=validate_enum(enum_cls)` unless the caller passes its own `validate` (which must
+   *     then check membership itself).
    */
   static enum<T = any>(
     enum_cls: any,

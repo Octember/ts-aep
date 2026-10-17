@@ -30,7 +30,6 @@ export function _validate_light_type(value: any, obj: LightLayer): void {
 /**
  * The `LightLayer` object represents a light layer within a composition.
  *
- * Example:
  * ```python
  * from py_aep import parse
  *
@@ -41,10 +40,11 @@ export function _validate_light_type(value: any, obj: LightLayer): void {
  * ```
  *
  * Info:
- * `LightLayer` is a subclass of [Layer][] object. All methods and
- * attributes of [Layer][] are available when working with `LightLayer`.
+ * `LightLayer` is a subclass of {@link Layer} object. All methods and
+ * attributes of {@link Layer} are available when working with `LightLayer`.
  *
- * See: https://ae-scripting.docsforadobe.dev/layer/lightlayer/
+ * @example
+ * @see https://ae-scripting.docsforadobe.dev/layer/lightlayer/
  */
 export class LightLayer extends Layer {
   static _auto_name: string = "Light";
@@ -142,7 +142,7 @@ export class LightLayer extends Layer {
    * layer of another composition, or a source on a spot or point light
    * raises `ValueError`.
    *
-   * Warning:
+   * **Warning:** 
    * Added in After Effects 24.3.
    */
   get light_source(): Layer | null {

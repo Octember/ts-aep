@@ -223,18 +223,17 @@ export const _set_ocio_configuration_file = requires_version(24)(function ocio_c
  * files or footage and compositions, and also to project settings such as the
  * timecode base.
  *
- * Example:
- *     ```python
- *     from py_aep import parse
+ * @example
+ * ```python
+ * from py_aep import parse
  *
- *     app = parse("project.aep")
- *     project = app.project
- *     print(project.file)
- *     for item in project:
- *         ...
- *     ```
- *
- * See: https://ae-scripting.docsforadobe.dev/general/project/
+ * app = parse("project.aep")
+ * project = app.project
+ * print(project.file)
+ * for item in project:
+ *     ...
+ * ```
+ * @see https://ae-scripting.docsforadobe.dev/general/project/
  */
 export class Project {
   /**
@@ -303,8 +302,7 @@ export class Project {
    * The current revision of the project. Every user action increases the
    * revision number by one. A new project starts at revision 1. Read / Write.
    *
-   * Note:
-   *     This attribute is read-only in ExtendScript.
+   * **Note:** This attribute is read-only in ExtendScript.
    */
   declare revision: number;
 
@@ -319,8 +317,7 @@ export class Project {
    *
    * Allowed values: 22050, 32000, 44100, 48000, 96000.
    *
-   * Note:
-   *     Not exposed in ExtendScript
+   * **Note:** Not exposed in ExtendScript
    */
   declare audio_sample_rate: number;
 
@@ -486,7 +483,7 @@ export class Project {
    *
    * AE persists the Project Settings dialog into the machine-specific
    * "Project Pref Section" (color depth plus a 16-byte time-display
-   * blob mirroring the `nnhd` settings cluster) and File > New
+   * blob mirroring the `nnhd` settings cluster) and File \> New
    * inherits them. Missing or malformed values leave the AE-factory
    * chunk defaults untouched.
    */
@@ -522,7 +519,7 @@ export class Project {
   }
 
   /**
-   * Build a new, empty project (mirrors AE's File > New Project).
+   * Build a new, empty project (mirrors AE's File \> New Project).
    *
    * Constructs the minimal root chunk skeleton AE accepts - the large
    * workspace blobs AE regenerates on open (`LSIf/AFsi`, `PTRE/ftwd`)
@@ -530,7 +527,7 @@ export class Project {
    * model the same way `parse_project` does. `ae_preferences_dir` is
    * stored for render-queue template lookup. `platform` (default: the
    * running operating system) selects the header stamps AE writes on
-   * that platform. See [Application][] and `py_aep.new`.
+   * that platform. See {@link Application} and `py_aep.new`.
    */
   static _new(
     version: string,
@@ -854,14 +851,14 @@ export class Project {
    * "ACEScg", "None"). Read / Write.
    *
    * In OCIO mode, assigning any color space, role, alias, or
-   * `display/view` pair of [ocio_configuration_file][] rewrites the
+   * `display/view` pair of {@link ocio_configuration_file} rewrites the
    * embedded profile JSON (AE identifies it by name, no ICC data). The
    * config must be resolvable, because the envelope AE writes depends on
    * which of those kinds the name is; `ValueError` is raised if it cannot
    * be located or the name is not in it.
    *
    * In Adobe CMS mode, the matching ICC profile is discovered on disk (see
-   * [icc_profile_dirs][]) and embedded; `ColorProfileNotFoundError` is
+   * {@link icc_profile_dirs}) and embedded; `ColorProfileNotFoundError` is
    * raised if it is not installed. Assigning `"None"` removes the working
    * space.
    */
@@ -972,10 +969,9 @@ export class Project {
    * Adobe CMS mode the display uses the operating system's monitor profile,
    * which is not stored in the project (the `pdvc` chunk is an empty `{}`,
    * unlike `PwCs`/`working_space` which embeds the full ICC), so assigning
-   * raises [NotImplementedError][].
+   * raises {@link NotImplementedError}.
    *
-   * Note:
-   *     Not exposed in ExtendScript
+   * **Note:** Not exposed in ExtendScript
    */
   get display_color_space(): string {
     if (this._dcs_utf8 != null) return envelope_profile_name(this._dcs_utf8.value);
@@ -1026,10 +1022,9 @@ export class Project {
    * pair exists in every project AE saved in OCIO mode (the `Utf8` is `{}`
    * when unset), so this rewrites in place.
    *
-   * Raises:
-   *     ValueError: If the marker chunk is absent - color management is not
-   *         initialized in this project (a brand-new project, or one from a
-   *         pre-2022 After Effects, has no color-profile chunk to rewrite).
+   * @throws {@link ValueError} If the marker chunk is absent - color management is not initialized
+   *   in this project (a brand-new project, or one from a pre-2022 After Effects, has no
+   *   color-profile chunk to rewrite).
    */
   _rewrite_color_profile(marker: string, envelope: string): Utf8Chunk {
     const root = this._root_chunks;
@@ -1093,13 +1088,13 @@ export class Project {
   /**
    * Return the color-space names assignable in the current CMS mode.
    *
-   * These are the names valid for [working_space][] (and, in Adobe mode,
+   * These are the names valid for {@link working_space} (and, in Adobe mode,
    * [media_color_space][
    * py_aep.models.sources.footage.FootageSource.media_color_space] and the
    * output color space).
    *
    * - Adobe CMS: the catalogued Adobe ICC profile names.
-   * - OCIO: the active color spaces of [ocio_configuration_file][] (a `.ocio`
+   * - OCIO: the active color spaces of {@link ocio_configuration_file} (a `.ocio`
    *   path or a built-in name like `"ACES 1.2"`). Returns `[]` if the config
    *   cannot be located or read.
    */
@@ -1120,8 +1115,7 @@ export class Project {
   /**
    * Return the number of items in the project.
    *
-   * Note:
-   *     Equivalent to `len(project.items)`
+   * **Note:** Equivalent to `len(project.items)`
    */
   get num_items(): number {
     return this.items.size;
@@ -1158,16 +1152,13 @@ export class Project {
   /**
    * Import a placeholder footage item into the project root folder.
    *
-   * Args:
-   *     name: The placeholder name. Pass `None` to use
-   *         `Missing Name`. An empty string becomes `Placeholder`.
-   *     width: Width in pixels (4-30000).
-   *     height: Height in pixels (4-30000).
-   *     frame_rate: Frame rate in fps (1.0-99.0).
-   *     duration: Duration in seconds (> 0, <= 10800).
-   *
-   * Returns:
-   *     The newly created [FootageItem][].
+   * @param name - The placeholder name. Pass `None` to use `Missing Name`. An empty string becomes
+   *   `Placeholder`.
+   * @param width - Width in pixels (4-30000).
+   * @param height - Height in pixels (4-30000).
+   * @param frame_rate - Frame rate in fps (1.0-99.0).
+   * @param duration - Duration in seconds (\> 0, \<= 10800).
+   * @returns The newly created {@link FootageItem}.
    */
   import_placeholder(
     name: string | null,
@@ -1196,52 +1187,40 @@ export class Project {
 
   /**
    * Imports the file specified in the specified ImportOptions object, using the
-   * specified options. Same as the File > Import File command.
+   * specified options. Same as the File \> Import File command.
    *
    * For `ImportAsType.FOOTAGE`, creates and returns a new FootageItem.
    * For `ImportAsType.COMP` on a layered Illustrator/PDF (`.ai`, `.pdf`) or
    * Photoshop (`.psd`, `.psb`) file, creates a composition with one footage
    * layer per source layer (each referencing the same file) and returns
-   * that [CompItem][]. `ImportAsType.COMP_CROPPED_LAYERS` on those files
+   * that {@link CompItem}. `ImportAsType.COMP_CROPPED_LAYERS` on those files
    * crops each layer's footage to its content and places the layer where
    * that content sits. On an SVG, it converts the vector artwork into a
    * new composition holding a single shape layer and returns that
-   * [CompItem][] (unlike ExtendScript, where `importFile` returns `null`
+   * {@link CompItem} (unlike ExtendScript, where `importFile` returns `null`
    * for an SVG).
    *
-   * Args:
-   *     options: The import settings. `ImportAsType.FOOTAGE`, `COMP`
-   *         (layered `.ai`/`.pdf`/`.psd`/`.psb`), and
-   *         `COMP_CROPPED_LAYERS` (the same files, and SVG) are
-   *         supported. With
-   *         `ImportOptions.layer_index` set (py_aep extension mirroring
-   *         the "Choose Layer" option of AE's import dialog), a FOOTAGE
-   *         import of a layered file references that single layer
-   *         instead of the merged/whole document; see also
-   *         `ImportOptions.layer_dimensions` and `py_aep.list_layers`.
-   *
-   * Returns:
-   *     The newly created [FootageItem][] or [CompItem][].
-   *
-   * Raises:
-   *     ValueError: If `import_as` is unsupported for the file, if the
-   *         file extension is not a supported format, if `sequence` is
-   *         set for a format AE does not import as a sequence (movies,
-   *         audio, HEIC, FBX, data files), or if the file has no track
-   *         After Effects can decode (e.g. an AV1-only `.mp4`, which AE
-   *         itself refuses to import).
-   *     NotImplementedError: If media-header probing is not implemented
-   *         for the file's format, or if merged PSD layer styles include
-   *         a Stroke Emboss bevel, whose rasterized bounds are not known.
-   *     UnsupportedSVGError: If the SVG uses features py_aep cannot
-   *         import.
-   *     UnsupportedAiLayersError: If a layered `.ai`/`.pdf` import is
-   *         requested but the file exposes no PDF Optional Content Groups
-   *         (e.g. saved without PDF compatibility), or if
-   *         `layer_dimensions="layer"` is requested for one whose page
-   *         content py_aep cannot read (see `resolvers.ai_bounds`).
-   *     UnsupportedPsdLayersError: If a `.psd`/`.psb` COMP import is
-   *         requested but the file is not a valid Photoshop document.
+   * @param options - The import settings. `ImportAsType.FOOTAGE`, `COMP` (layered
+   *   `.ai`/`.pdf`/`.psd`/`.psb`), and `COMP_CROPPED_LAYERS` (the same files, and SVG) are
+   *   supported. With `ImportOptions.layer_index` set (py_aep extension mirroring the "Choose
+   *   Layer" option of AE's import dialog), a FOOTAGE import of a layered file references that
+   *   single layer instead of the merged/whole document; see also `ImportOptions.layer_dimensions`
+   *   and `py_aep.list_layers`.
+   * @returns The newly created {@link FootageItem} or {@link CompItem}.
+   * @throws {@link ValueError} If `import_as` is unsupported for the file, if the file extension is
+   *   not a supported format, if `sequence` is set for a format AE does not import as a sequence
+   *   (movies, audio, HEIC, FBX, data files), or if the file has no track After Effects can decode
+   *   (e.g. an AV1-only `.mp4`, which AE itself refuses to import).
+   * @throws {@link NotImplementedError} If media-header probing is not implemented for the file's
+   *   format, or if merged PSD layer styles include a Stroke Emboss bevel, whose rasterized bounds
+   *   are not known.
+   * @throws {@link UnsupportedSVGError} If the SVG uses features py_aep cannot import.
+   * @throws {@link UnsupportedAiLayersError} If a layered `.ai`/`.pdf` import is requested but the
+   *   file exposes no PDF Optional Content Groups (e.g. saved without PDF compatibility), or if
+   *   `layer_dimensions="layer"` is requested for one whose page content py_aep cannot read (see
+   *   `resolvers.ai_bounds`).
+   * @throws {@link UnsupportedPsdLayersError} If a `.psd`/`.psb` COMP import is requested but the
+   *   file is not a valid Photoshop document.
    */
   import_file(options: ImportOptions): FootageItem | CompItem {
     if (!(options instanceof ImportOptions)) {
@@ -1452,19 +1431,18 @@ export class Project {
   /**
    * Build the composition shared by every layered-file import.
    *
-   * Mirrors AE's File > Import as Composition: a `<stem> Layers` folder
+   * Mirrors AE's File \> Import as Composition: a `<stem> Layers` folder
    * holding one footage item per leaf layer (each referencing the same file
    * with its layer selected in the opti) and one nested composition per
    * layer group, plus a composition with one layer per top-level spec,
    * stacked in document order (the last layer on top, matching AE).
    *
-   * Args:
-   *     file: The source file every per-layer footage item references.
-   *     source_format: The `sspc` source-format code (`TEXT`, `8BPS`, ...).
-   *     layer_specs: Top-level [LayerSpec][]/[LayerGroupSpec][] nodes, in
-   *         document order (bottom layer first).
-   *     info: The probed media info for `file` (canvas size, alpha, ...).
-   *     embedded_profile_name: Optional ICC profile name for the sources.
+   * @param file - The source file every per-layer footage item references.
+   * @param source_format - The `sspc` source-format code (`TEXT`, `8BPS`, ...).
+   * @param layer_specs - Top-level {@link LayerSpec}/{@link LayerGroupSpec} nodes, in document
+   *   order (bottom layer first).
+   * @param info - The probed media info for `file` (canvas size, alpha, ...).
+   * @param embedded_profile_name - Optional ICC profile name for the sources.
    */
   _import_layered_comp(
     file: Path,
@@ -1904,10 +1882,9 @@ export class Project {
    * with several fonts contributes one record per distinct font.
    * Entries are sorted by PostScript name, matching After Effects.
    *
-   * Note:
-   *     `layer_time` is in LAYER time, not composition time - After
-   *     Effects names it `layerTimeD` because `Source Text`'s
-   *     `value_at_time` expects layer time, unlike other properties.
+   * **Note:** `layer_time` is in LAYER time, not composition time - After
+   * Effects names it `layerTimeD` because `Source Text`'s
+   * `value_at_time` expects layer time, unlike other properties.
    */
   get used_fonts(): { font: FontObject; used_at: { layer_id: number; layer_time: number }[] }[] {
     const records = new Map<
@@ -1948,21 +1925,16 @@ export class Project {
    * preserved, and every source-text keyframe of every text layer is
    * covered. This operation is not undoable.
    *
-   * Each font may be given as a [FontObject][] (e.g. from
-   * [used_fonts][Project.used_fonts]) or as a PostScript name.
+   * Each font may be given as a {@link FontObject} (e.g. from
+   * {@link Project.used_fonts | used_fonts}) or as a PostScript name.
    *
-   * Args:
-   *     from_font: Font to be replaced.
-   *     to_font: Font to replace it with.
-   *     no_font_locking: Accepted for ExtendScript parity and ignored.
-   *         After Effects uses it to suppress the fallback font it
-   *         picks when `to_font` lacks glyphs for the text; that
-   *         fallback is a runtime font-engine decision py_aep does not
-   *         make, so py_aep always performs the direct replacement
-   *         (i.e. it behaves as if this were `True`).
-   *
-   * Returns:
-   *     `True` if at least one layer was changed.
+   * @param from_font - Font to be replaced.
+   * @param to_font - Font to replace it with.
+   * @param no_font_locking - Accepted for ExtendScript parity and ignored. After Effects uses it to
+   *   suppress the fallback font it picks when `to_font` lacks glyphs for the text; that fallback
+   *   is a runtime font-engine decision py_aep does not make, so py_aep always performs the direct
+   *   replacement (i.e. it behaves as if this were `True`).
+   * @returns `True` if at least one layer was changed.
    */
   replace_font(from_font: FontObject | string, to_font: FontObject | string, no_font_locking = false): boolean {
     validate_bool(no_font_locking);
@@ -1996,9 +1968,8 @@ export class Project {
    * styles are fixed, and quoted occurrences inside comments of a
    * rewritten expression are replaced too.
    *
-   * Args:
-   *     old_text: The text to replace.
-   *     new_text: The new text.
+   * @param old_text - The text to replace.
+   * @param new_text - The new text.
    */
   auto_fix_expressions(old_text: string, new_text: string): void {
     validate_string(old_text);
@@ -2026,10 +1997,9 @@ export class Project {
   /**
    * Remove footage items that are not used in any composition.
    *
-   * Same as the File > Remove Unused Footage command.
+   * Same as the File \> Remove Unused Footage command.
    *
-   * Returns:
-   *     The total number of footage items removed.
+   * @returns The total number of footage items removed.
    */
   remove_unused_footage(): number {
     let removed = 0;
@@ -2045,15 +2015,12 @@ export class Project {
   /**
    * Remove all items except those specified and the items they use.
    *
-   * Same as the File > Reduce Project command. For each kept composition,
+   * Same as the File \> Reduce Project command. For each kept composition,
    * the items it uses (and their dependencies, recursively) are also kept.
    * The folders containing kept items are kept as well.
    *
-   * Args:
-   *     items_to_keep: The items to keep in the project.
-   *
-   * Returns:
-   *     The total number of items removed.
+   * @param items_to_keep - The items to keep in the project.
+   * @returns The total number of items removed.
    */
   reduce_project(items_to_keep: Item[]): number {
     if (!items_to_keep.every((item) => item instanceof Item)) {
@@ -2089,13 +2056,12 @@ export class Project {
   /**
    * Merge duplicate footage items that share the same source.
    *
-   * Same as the File > Consolidate All Footage command. Footage items
+   * Same as the File \> Consolidate All Footage command. Footage items
    * whose sources are identical (same file and interpretation, or same
    * solid characteristics) are merged: layers referencing a duplicate are
    * retargeted to the kept item, and the duplicate is removed.
    *
-   * Returns:
-   *     The total number of footage items removed.
+   * @returns The total number of footage items removed.
    */
   consolidate_footage(): number {
     const groups = new Map<string, FootageItem[]>();
@@ -2131,12 +2097,10 @@ export class Project {
   /**
    * Save the project to a new .aep file at the given path.
    *
-   * Warning:
-   *     This is highly experimental for now.
+   * **Warning:** This is highly experimental for now.
    *
-   * Raises:
-   *     FileExistsError: If `path` already exists; overwriting is not
-   *         allowed while saving is experimental.
+   * @throws {@link FileExistsError} If `path` already exists; overwriting is not allowed while
+   *   saving is experimental.
    */
   save(path: PathLike): void {
     validate_path_does_not_exist(path);
@@ -2226,10 +2190,8 @@ export class Project {
   /**
    * Lazily parse render settings templates from AE preferences.
    *
-   * Raises:
-   *     ValueError: If no preferences directory was provided to
-   *         `parse()`. Render settings templates are required for
-   *         adding items to the render queue.
+   * @throws {@link ValueError} If no preferences directory was provided to `parse()`. Render
+   *   settings templates are required for adding items to the render queue.
    */
   _get_render_templates(): RenderSettingsItem[] {
     if (this._render_templates_cache != null) return this._render_templates_cache;
@@ -2245,12 +2207,10 @@ export class Project {
   /**
    * Lazily parse output module templates from AE preferences.
    *
-   * Returns a list of [OutputModuleTemplate][] objects.
+   * Returns a list of {@link OutputModuleTemplate} objects.
    *
-   * Raises:
-   *     ValueError: If no preferences directory was provided to
-   *         `parse()`. Output module templates are required for
-   *         adding items to the render queue.
+   * @throws {@link ValueError} If no preferences directory was provided to `parse()`. Output module
+   *   templates are required for adding items to the render queue.
    */
   _get_output_templates(): OutputModuleTemplate[] {
     if (this._output_templates_cache != null) return this._output_templates_cache;
@@ -2522,8 +2482,7 @@ descriptor(
  * layer of a 22-rule probe PDF and a real `.ai`): the anchor is half the
  * artwork box rounded to float32, and the position is the box centre with
  * the PDF's y axis flipped against the page, counted in the opti's 16.16
- * units with the centre floored. An empty layer's `(0, 0, 1/65536,
- * 1/65536)` box therefore sits at x = 0, not half a unit right of it.
+ * units with the centre floored. An empty layer's `(0, 0, 1/65536, 1/65536)` box therefore sits at x = 0, not half a unit right of it.
  * AE sums the two 16.16 edges in 32 bits, so artwork near the 32768 pt
  * limit wraps to the far side of the page; py keeps the true centre.
  */
@@ -2626,7 +2585,7 @@ for (const spec of [..._BLEND_OPTIONS_SPECS, ..._ADV_BLEND_SPECS]) {
   if (spec instanceof PropSpec && spec.value != null) _STYLE_SPEC_DEFAULTS.set(spec.match_name, spec.value);
 }
 
-/** Map of match name -> leaf under `group`, first-in-tree-order. */
+/** Map of match name -\> leaf under `group`, first-in-tree-order. */
 export function _style_leaf_map(group: PropertyGroup): Map<string, Property> {
   const leaves = new Map<string, Property>();
   for (const child of group.properties) {

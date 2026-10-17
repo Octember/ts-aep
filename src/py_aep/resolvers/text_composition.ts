@@ -24,7 +24,7 @@
  *   baselines adding the line leading (auto leading = 1.2 x size).
  *
  * Anything outside the verified envelope raises
- * [CompositionUnsupported][] - the resolver refuses rather than guesses.
+ * {@link CompositionUnsupported} - the resolver refuses rather than guesses.
  * Besides the module-header features, that covers non-default box
  * vertical alignment / auto-fit / first-baseline alignment, paragraph
  * space before/after, disabled auto kerning, and case maps that change
@@ -317,7 +317,7 @@ export class _CharStyle {
 }
 
 export function _check_envelope(doc: TextDocument, raw: string): void {
-  /** Raise [CompositionUnsupported][] outside the verified envelope. */
+  /** Raise {@link CompositionUnsupported} outside the verified envelope. */
   if (hb == null) {
     throw new CompositionUnsupported(
       "composition requires uharfbuzz, which is unavailable on Python 3.7",

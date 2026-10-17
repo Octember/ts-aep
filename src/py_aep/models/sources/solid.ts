@@ -13,7 +13,6 @@ import type { U1Chunk } from "../../binary/scalar_chunks.ts";
 /**
  * The `SolidSource` object represents a solid-color footage source.
  *
- * Example:
  * ```python
  * from py_aep import SolidSource, parse
  *
@@ -24,10 +23,11 @@ import type { U1Chunk } from "../../binary/scalar_chunks.ts";
  * ```
  *
  * Info:
- * `SolidSource` is a subclass of [FootageSource][] object. All methods and
- * attributes of [FootageSource][] are available when working with `SolidSource`.
+ * `SolidSource` is a subclass of {@link FootageSource} object. All methods and
+ * attributes of {@link FootageSource} are available when working with `SolidSource`.
  *
- * See: https://ae-scripting.docsforadobe.dev/sources/solidsource/
+ * @example
+ * @see https://ae-scripting.docsforadobe.dev/sources/solidsource/
  */
 export class SolidSource extends FootageSource {
   declare _opti: OptiChunk;
@@ -58,10 +58,9 @@ export class SolidSource extends FootageSource {
    * Returns the base name (e.g. `"Red Solid"`) without a trailing
    * number suffix; the caller is responsible for disambiguation.
    *
-   * Args:
-   *     r: Red channel in `[0.0, 1.0]`.
-   *     g: Green channel in `[0.0, 1.0]`.
-   *     b: Blue channel in `[0.0, 1.0]`.
+   * @param r - Red channel in `[0.0, 1.0]`.
+   * @param g - Green channel in `[0.0, 1.0]`.
+   * @param b - Blue channel in `[0.0, 1.0]`.
    */
   static _color_name(r: number, g: number, b: number): string {
     return solid_color_name(r, g, b);
@@ -70,12 +69,11 @@ export class SolidSource extends FootageSource {
   /**
    * Create a new solid source with backing chunks.
    *
-   * Args:
-   *     color: Solid color as [R, G, B] in 0.0-1.0 range.
-   *     name: The solid name.
-   *     width: Width in pixels (1-30000).
-   *     height: Height in pixels (1-30000).
-   *     pixel_aspect: Pixel aspect ratio (0.01-100.0).
+   * @param color - Solid color as [R, G, B] in 0.0-1.0 range.
+   * @param name - The solid name.
+   * @param width - Width in pixels (1-30000).
+   * @param height - Height in pixels (1-30000).
+   * @param pixel_aspect - Pixel aspect ratio (0.01-100.0).
    */
   static _new(
     name: string,

@@ -9,7 +9,7 @@
  *
  * Usage:
  *     aep-visualize project.aep
- *     aep-visualize project.aep --format dot > project.dot
+ *     aep-visualize project.aep --format dot \> project.dot
  *     aep-visualize project.aep --format mermaid
  *     aep-visualize project.aep --depth 2
  *     aep-visualize project.aep --no-properties

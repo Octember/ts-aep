@@ -5,7 +5,7 @@
  * space, footage media color space) as a compact JSON envelope inside a `Utf8`
  * chunk's `.value`:
  *
- *     {"baseColorProfile":{"colorProfileData":"<base64>","colorProfileName":"<name>"},"baseProfileType":<1|2|3>}
+ *     \{"baseColorProfile":\{"colorProfileData":"\<base64\>","colorProfileName":"\<name\>"\},"baseProfileType":\<1|2|3\>\}
  *
  * `baseProfileType`:
  *
@@ -78,12 +78,12 @@ export function _envelope(color_profile_data_b64: string, name: string, profile_
  *
  * The pair depends on the selection KIND and so needs the `.ocio` config to
  * resolve; see
- * [ocio_color_profile_envelope][py_aep.color.ocio.ocio_color_profile_envelope],
+ * {@link py_aep.color.ocio.ocio_color_profile_envelope | ocio_color_profile_envelope},
  * which is what callers should use. This function is the pure byte-format
  * half, kept here with the rest of the envelope spec.
  *
- * @param profile_name The `colorProfileName` (e.g. `"ACES/ACEScg yo"`).
- * @param profile_data The `colorProfileData` JSON (e.g. `{"colorSpace1":"ACEScg yo"}`).
+ * @param profile_name - The `colorProfileName` (e.g. `"ACES/ACEScg yo"`).
+ * @param profile_data - The `colorProfileData` JSON (e.g. `{"colorSpace1":"ACEScg yo"}`).
  */
 export function build_ocio_envelope(profile_name: string, profile_data: string): string {
   return _envelope(_b64(profile_data), profile_name, PROFILE_TYPE_OCIO);
@@ -95,15 +95,14 @@ export function build_ocio_envelope(profile_name: string, profile_data: string):
  * `colorProfileName` is the role's target (or the alias) itself, and the
  * data carries `ocioColorSpaceType: 2`.
  *
- * Warning:
- *     This is only one of the four selection kinds. A DIRECT colorspace
- *     pick uses `colorProfileName = "<family>/<name>"` and omits
- *     `ocioColorSpaceType` - passing a direct colorspace name here
- *     produces an envelope AE would not write. Prefer
- *     [ocio_color_profile_envelope][py_aep.color.ocio.ocio_color_profile_envelope],
- *     which resolves the kind against the config.
+ * **Warning:** This is only one of the four selection kinds. A DIRECT colorspace
+ * pick uses `colorProfileName = "<family>/<name>"` and omits
+ * `ocioColorSpaceType` - passing a direct colorspace name here
+ * produces an envelope AE would not write. Prefer
+ * {@link py_aep.color.ocio.ocio_color_profile_envelope | ocio_color_profile_envelope},
+ * which resolves the kind against the config.
  *
- * @param colorspace The OCIO role target or alias name.
+ * @param colorspace - The OCIO role target or alias name.
  */
 export function build_ocio_colorspace_envelope(colorspace: string): string {
   const inner = _compact({ colorSpace1: colorspace, ocioColorSpaceType: OCIO_TYPE_COLORSPACE });
@@ -115,8 +114,8 @@ export function build_ocio_colorspace_envelope(colorspace: string): string {
  *
  * `colorProfileName` is `"<display>/<view>"`.
  *
- * @param display The OCIO display name (e.g. `"sRGB - Display"`).
- * @param view The OCIO view name (e.g. `"ACES 1.0 - SDR Video"`).
+ * @param display - The OCIO display name (e.g. `"sRGB - Display"`).
+ * @param view - The OCIO view name (e.g. `"ACES 1.0 - SDR Video"`).
  */
 export function build_ocio_display_envelope(display: string, view: string): string {
   const inner = _compact({
@@ -133,8 +132,8 @@ export function build_ocio_display_envelope(display: string, view: string): stri
  * Used for the project working/display space and footage media color space in
  * Adobe CMS mode.
  *
- * @param name The profile description (e.g. `"ProPhoto RGB"`).
- * @param icc_bytes The raw ICC profile bytes to embed.
+ * @param name - The profile description (e.g. `"ProPhoto RGB"`).
+ * @param icc_bytes - The raw ICC profile bytes to embed.
  */
 export function build_icc_envelope(name: string, icc_bytes: Uint8Array): string {
   return _envelope(b64encode(icc_bytes), name, PROFILE_TYPE_ICC);
@@ -186,7 +185,7 @@ export class ColorProfile {
 /**
  * Decode a color-profile envelope `Utf8` value into a `ColorProfile`.
  *
- * @param envelope_json The raw `Utf8` chunk value (the outer JSON string).
+ * @param envelope_json - The raw `Utf8` chunk value (the outer JSON string).
  */
 export function parse_envelope(envelope_json: string): ColorProfile {
   const outer: Map<string, any> = json_loads(envelope_json);

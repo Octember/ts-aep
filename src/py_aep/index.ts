@@ -19,27 +19,17 @@ const _project = deferred<typeof import("./parsers/project.ts")>("py_aep/parsers
 export const __version__ = "0.0.0";
 
 /**
- * Parse an After Effects (.aep) project file and return an [Application][] instance.
+ * Parse an After Effects (.aep) project file and return an {@link Application} instance.
  *
  * This is the main entry point for the library. It parses the binary
- * RIFX data and returns an [Application][] object whose
- * [project][py_aep.models.application.Application.project] attribute
+ * RIFX data and returns an {@link Application} object whose
+ * {@link py_aep.models.application.Application.project | project} attribute
  * holds the full project tree.
  *
- * @param aep_file_path Path to the `.aep` file.
- * @param kw.ae_preferences_dir Optional path to the AE preferences directory
- *   (e.g. `C:/Users/<user>/AppData/Roaming/Adobe/After Effects/25.6`).
- *   When provided, render settings and output module templates are
- *   parsed lazily when needed.
- * @param kw.platform The After Effects platform the project is for: `"windows"`
- *   or `"macos"`. Footage and render output paths py_aep writes are
- *   stored in that platform's style (`C:\\x` <-> `/x`, see
- *   [platform_path][py_aep.resolvers.platform_paths.platform_path]),
- *   and imported footage is recorded the way After Effects on that
- *   platform records it: BMP and GIF files take the platform's
- *   importer code (After Effects on the other platform refuses an
- *   image sequence tagged for it), and on Windows a HEIC file has no
- *   alpha channel. Defaults to the running operating system.
+ * @param aep_file_path - Path to the `.aep` file.
+ * @param kw - Keyword arguments:
+ * - `ae_preferences_dir`: Optional path to the AE preferences directory (e.g. `C:/Users/<user>/AppData/Roaming/Adobe/After Effects/25.6`). When provided, render settings and output module templates are parsed lazily when needed.
+ * - `platform`: The After Effects platform the project is for: `"windows"` or `"macos"`. Footage and render output paths py_aep writes are stored in that platform's style (`C:\\x` \<-\> `/x`, see {@link py_aep.resolvers.platform_paths.platform_path | platform_path}), and imported footage is recorded the way After Effects on that platform records it: BMP and GIF files take the platform's importer code (After Effects on the other platform refuses an image sequence tagged for it), and on Windows a HEIC file has no alpha channel. Defaults to the running operating system.
  *
  * @example
  * ```python
@@ -77,27 +67,22 @@ export function parse(
 export const _DEFAULT_NEW_VERSION = "26.0x67";
 
 /**
- * Creates a new project in After Effects, replicating the File > New > New Project
+ * Creates a new project in After Effects, replicating the File \> New \> New Project
  * menu command.
  *
- * Returns an [Application][] wrapping an empty [Project][] (containing
+ * Returns an {@link Application} wrapping an empty {@link Project} (containing
  * only the root folder and an empty render queue).
  *
- * @param version The After Effects version to stamp into the file,
+ * @param version - The After Effects version to stamp into the file,
  *   formatted as `"{major}.{minor}x{build}"` (e.g. `"26.0x67"`).
  *   A file stamped at version N opens in After Effects N and later.
  *   The major must be an After Effects release: 15 (CC 2018) to 18,
  *   or 22 and later. A release newer than 26 gets the After Effects
  *   2026 project and file-format stamp, so the file also opens in
  *   After Effects 2026.
- * @param kw.ae_preferences_dir Optional path to the AE preferences directory
- *   (e.g. `C:/Users/<user>/AppData/Roaming/Adobe/After Effects/26.0`),
- *   required only for adding items to the render queue.
- * @param kw.platform The After Effects platform the project is for, as in
- *   [parse][py_aep.parse]. It also selects the header stamps and the
- *   GPU renderer (Metal on macOS, CUDA on Windows) a project created
- *   on that platform carries. Defaults to the running operating
- *   system.
+ * @param kw - Keyword arguments:
+ * - `ae_preferences_dir`: Optional path to the AE preferences directory (e.g. `C:/Users/<user>/AppData/Roaming/Adobe/After Effects/26.0`), required only for adding items to the render queue.
+ * - `platform`: The After Effects platform the project is for, as in {@link py_aep.parse | parse}. It also selects the header stamps and the GPU renderer (Metal on macOS, CUDA on Windows) a project created on that platform carries. Defaults to the running operating system.
  *
  * @throws ValueError If `version` is malformed, names a major before 26 that
  *   py_aep has no file-format stamp for (before 15, or 19 to 21), or

@@ -4,23 +4,23 @@
  * These enums match the values used in After Effects ExtendScript.
  *
  * Submodules:
- * - [general][py_aep.enums.general]: Core layer, footage, project, viewer
+ * - {@link py_aep.enums.general | general}: Core layer, footage, project, viewer
  *   and mask enums.
- * - [property][py_aep.enums.property]: Property system enums
+ * - {@link py_aep.enums.property | property}: Property system enums
  *   (control type, value type, keyframe interpolation).
- * - [renderer_options][py_aep.enums.renderer_options]: 3D renderer option enums
+ * - {@link py_aep.enums.renderer_options | renderer_options}: 3D renderer option enums
  *   (shadow map resolution, environment light shadow resolution).
- * - [render_settings][py_aep.enums.render_settings]: Render settings enums
+ * - {@link py_aep.enums.render_settings | render_settings}: Render settings enums
  *   (quality, field render, motion blur, effects, etc.).
- * - [render_queue][py_aep.enums.render_queue]: Render queue item enums
+ * - {@link py_aep.enums.render_queue | render_queue}: Render queue item enums
  *   (status, log type, settings format).
- * - [output_module][py_aep.enums.output_module]: Output module enums
+ * - {@link py_aep.enums.output_module | output_module}: Output module enums
  *   (channels, depth, color mode, format, audio settings, post-render action).
- * - [format_options][py_aep.enums.format_options]: Format-specific option
+ * - {@link py_aep.enums.format_options | format_options}: Format-specific option
  *   enums (Cineon, JPEG, PNG, OpenEXR, audio/video codecs).
- * - [text_document][py_aep.enums.text_document]: Text document enums
+ * - {@link py_aep.enums.text_document | text_document}: Text document enums
  *   (justification, baseline, kerning, font caps, etc.).
- * - [font_object][py_aep.enums.font_object]: Font object enums
+ * - {@link py_aep.enums.font_object | font_object}: Font object enums
  *   (technology, type, script).
  */
 

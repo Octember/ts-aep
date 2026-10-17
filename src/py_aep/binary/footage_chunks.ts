@@ -141,7 +141,7 @@ export class SspcChunk extends Chunk {
   /**
    * Loop count (1 = no loop, 2+ = loop count). Stored as a 4-byte
    * big-endian field (AE writes e.g. 1000 as 00 00 03 e8); a u1 here read
-   * only the low byte and overflowed on save for counts > 255.
+   * only the low byte and overflowed on save for counts \> 255.
    */
   declare loop: number;
 
@@ -504,17 +504,17 @@ register("sspc")(SspcChunk);
  * located file), but requires this header to recognize non-TIFF/PSD
  * image sequences and audio/video. The layout is the format 4-char code,
  * a version word, the chunk length, then a 16-byte importer block: the
- * reversed code, an ``0xFFFFFFFF`` marker, and codec bytes AE re-derives
+ * reversed code, an `0xFFFFFFFF` marker, and codec bytes AE re-derives
  * on open. AE zeroes the block for a BMP/GIF sequence through its generic
- * still importer (``IMIO`` on macOS, ``STIL`` on Windows; imio_sequence.aep
+ * still importer (`IMIO` on macOS, `STIL` on Windows; imio_sequence.aep
  * and media_replacement.aep are byte-exact).
  *
- * Note: TIFF sequences use `build_tiff_opti_data` instead (AE 2026
+ * **Note:** TIFF sequences use `build_tiff_opti_data` instead (AE 2026
  * measured); PSD sequences use an empty opti via `PsdOptiChunk`.
  *
- * Args:
- *   source_format: 4-char `sspc` source-format code.
- *   sequence: `True` for an image sequence.
+ * @param source_format - 4-char `sspc` source-format code.
+ * @param kw - Keyword arguments:
+ * - `sequence`: `True` for an image sequence.
  */
 export function build_generic_opti_data(source_format: string, kw: { sequence?: boolean } = {}): Uint8Array {
   const { sequence = false } = kw;
@@ -545,16 +545,13 @@ export function build_generic_opti_data(source_format: string, kw: { sequence?: 
  * `PsdOptiChunk` header under the `TIF ` code, describing the image the
  * way AE reads it (AE 2026, footage_depth.aep).
  *
- * Args:
- *   width: Image width in pixels.
- *   height: Image height in pixels.
- *   bit_depth: Bits per sample (1 for a bilevel image).
- *   channels: Colour channels, plus one for an alpha sample or
- *       Photoshop layer data (`MediaInfo.pixel_channels`).
- *   color_mode: The Photoshop colour mode the image reads as
- *       (`MediaInfo.color_mode`).
- *   layer_count: The layer count AE records (see `FileSource`'s
- *       `_opti_data`).
+ * @param width - Image width in pixels.
+ * @param height - Image height in pixels.
+ * @param bit_depth - Bits per sample (1 for a bilevel image).
+ * @param channels - Colour channels, plus one for an alpha sample or Photoshop layer data
+ *   (`MediaInfo.pixel_channels`).
+ * @param color_mode - The Photoshop colour mode the image reads as (`MediaInfo.color_mode`).
+ * @param layer_count - The layer count AE records (see `FileSource`'s `_opti_data`).
  */
 export function build_tiff_opti_data(
   width: number,
@@ -586,14 +583,13 @@ export function build_tiff_opti_data(
  * colour mode and layer count, the `0xFFFFFFFF` layer-index sentinel and
  * an empty trailing name. The layout lives on `PsdOptiChunk`.
  *
- * Args:
- *   width: Full PSD canvas width in pixels.
- *   height: Full PSD canvas height in pixels.
- *   bit_depth: Bits per channel (1, 8, 16, or 32).
- *   channels: The document's colour channels, plus one when it has
- *       alpha (`MediaInfo.pixel_channels`).
- *   color_mode: The document's Photoshop colour mode.
- *   layer_count: Number of layers in the PSD (0 for a flattened one).
+ * @param width - Full PSD canvas width in pixels.
+ * @param height - Full PSD canvas height in pixels.
+ * @param bit_depth - Bits per channel (1, 8, 16, or 32).
+ * @param channels - The document's colour channels, plus one when it has alpha
+ *   (`MediaInfo.pixel_channels`).
+ * @param color_mode - The document's Photoshop colour mode.
+ * @param layer_count - Number of layers in the PSD (0 for a flattened one).
  */
 export function build_psd_opti_data(
   width: number,
@@ -624,12 +620,12 @@ export function build_psd_opti_data(
  * for a layer with a vector mask (AE 2026 byte-verified against a real
  * flattened RGB PSD, flattened_rgb_comp.aep).
  *
- * Args:
- *   width: Canvas width in pixels.
- *   height: Canvas height in pixels.
- *   bit_depth: Bits per channel.
- *   channels: The document's channel count (3 for RGB).
- *   color_mode: The document's Photoshop colour mode (3 = RGB).
+ * @param width - Canvas width in pixels.
+ * @param height - Canvas height in pixels.
+ * @param bit_depth - Bits per channel.
+ * @param channels - The document's channel count (3 for RGB).
+ * @param kw - Keyword arguments:
+ * - `color_mode`: The document's Photoshop colour mode (3 = RGB).
  */
 export function build_psd_flattened_opti_data(
   width: number,
@@ -684,23 +680,22 @@ export function build_psd_flattened_opti_data(
  * `COMP`/`COMP_CROPPED_LAYERS` import of `8bits.psd`/`.psb` and a margined
  * 3-layer PSD.
  *
- * Args:
- *   canvas_width: Full document width in pixels.
- *   canvas_height: Full document height in pixels.
- *   bit_depth: Bits per channel.
- *   layer_count: Total layers in the document.
- *   layer_index: 0-based document index of this layer (bottom first).
- *   layer_id: Photoshop layer id (`lyid`).
- *   layer_name: Layer name.
- *   bounds: The layer's content box as `(left, top, right, bottom)`.
- *   is_adjustment: Whether the layer is an adjustment layer.
- *   has_vector_mask: Whether the layer has a vector mask.
- *   channels: The document's colour channels, plus one when it has
- *       alpha (`MediaInfo.pixel_channels`); 4 for an RGB document with
- *       transparency.
- *   color_mode: The document's Photoshop colour mode (3 = RGB).
- *   layer_channels: The layer's channels when it is a raster layer;
- *       4 for an RGB layer with transparency.
+ * @param canvas_width - Full document width in pixels.
+ * @param canvas_height - Full document height in pixels.
+ * @param bit_depth - Bits per channel.
+ * @param layer_count - Total layers in the document.
+ * @param layer_index - 0-based document index of this layer (bottom first).
+ * @param layer_id - Photoshop layer id (`lyid`).
+ * @param layer_name - Layer name.
+ * @param bounds - The layer's content box as `(left, top, right, bottom)`.
+ * @param is_adjustment - Whether the layer is an adjustment layer.
+ * @param has_vector_mask - Whether the layer has a vector mask.
+ * @param kw - Keyword arguments:
+ * - `channels`: The document's colour channels, plus one when it has alpha
+ *     (`MediaInfo.pixel_channels`); 4 for an RGB document with transparency.
+ * - `color_mode`: The document's Photoshop colour mode (3 = RGB).
+ * - `layer_channels`: The layer's channels when it is a raster layer; 4 for an RGB layer with
+ *     transparency.
  */
 export function build_psd_layer_opti_data(
   canvas_width: number,
@@ -836,12 +831,10 @@ export function build_text_opti_data(width: number, height: number): Uint8Array 
  * import of ai.ai, complex.ai, pdf.pdf, ai_no_pdf.ai and two more PDFs
  * (footage_depth.aep).
  *
- * Args:
- *   width: Page width in points.
- *   height: Page height in points.
- *   layer_count: How many layers the document has (0 when it has none
- *       py_aep can read, as AE writes for a file without Optional
- *       Content Groups).
+ * @param width - Page width in points.
+ * @param height - Page height in points.
+ * @param layer_count - How many layers the document has (0 when it has none py_aep can read, as AE
+ *   writes for a file without Optional Content Groups).
  */
 export function build_ai_document_opti_data(width: number, height: number, layer_count: number): Uint8Array {
   return build_ai_layer_opti_data(width, height, "", layer_count, undefined, false);
@@ -875,18 +868,16 @@ export function build_ai_document_opti_data(width: number, height: number, layer
  * Byte-verified against AE 2026's import of ai.ai ("Calque 1"/"Calque 2",
  * 612x792) and its Choose Layer footage imports at both Footage
  * Dimensions settings (`ai_choose_layer*.aep`: Calque 1 artwork box
- * 112.748, 239.507, 593.931, 675.999 -> 482x437 footage).
+ * 112.748, 239.507, 593.931, 675.999 -\> 482x437 footage).
  *
- * Args:
- *   width: Document width in points.
- *   height: Document height in points.
- *   layer_name: The referenced layer's name.
- *   layer_count: How many layers the source document has.
- *   artwork_bounds: The layer's artwork box `(x0, y0, x1, y1)` in page
- *       points for a Layer Size import; `None` keeps the full-page box
- *       (Document Size and comp imports).
- *   visible: The layer's visibility in the source document
- *       (`resolvers.ai_layers.AiLayer.visible`).
+ * @param width - Document width in points.
+ * @param height - Document height in points.
+ * @param layer_name - The referenced layer's name.
+ * @param layer_count - How many layers the source document has.
+ * @param artwork_bounds - The layer's artwork box `(x0, y0, x1, y1)` in page points for a Layer
+ *   Size import; `None` keeps the full-page box (Document Size and comp imports).
+ * @param visible - The layer's visibility in the source document
+ *   (`resolvers.ai_layers.AiLayer.visible`).
  */
 export function build_ai_layer_opti_data(
   width: number,
@@ -963,7 +954,7 @@ register("opti")(OptiChunk);
 /**
  * Solid footage asset (asset_type='Soli').
  *
- * All fields are big-endian and fixed-layout -> fmt_field.
+ * All fields are big-endian and fixed-layout -\> fmt_field.
  */
 export class SoliOptiChunk extends OptiChunk {
   declare asset_type: string;

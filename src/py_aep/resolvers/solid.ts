@@ -67,9 +67,9 @@ export function _rgb_to_hsv(r: number, g: number, b: number): [number, number, n
  * Returns the base name (e.g. `"Red Solid"`) without a trailing
  * number suffix; the caller is responsible for disambiguation.
  *
- * @param r Red channel in `[0.0, 1.0]`.
- * @param g Green channel in `[0.0, 1.0]`.
- * @param b Blue channel in `[0.0, 1.0]`.
+ * @param r - Red channel in `[0.0, 1.0]`.
+ * @param g - Green channel in `[0.0, 1.0]`.
+ * @param b - Blue channel in `[0.0, 1.0]`.
  */
 export function solid_color_name(r: number, g: number, b: number): string {
   const [h_raw, s_raw, v_raw] = _rgb_to_hsv(r, g, b);

@@ -237,20 +237,19 @@ export const OM_SETTINGS = new Map<string, [string, any]>([
 ]);
 
 /**
- * An `OutputModule` object of a [RenderQueueItem][] generates a single file or
+ * An `OutputModule` object of a {@link RenderQueueItem} generates a single file or
  * sequence via a render operation, and contains attributes and methods
  * relating to the file to be rendered.
  *
- * Example:
- *     ```python
- *     from py_aep import parse
+ * @example
+ * ```python
+ * from py_aep import parse
  *
- *     app = parse("project.aep")
- *     om = app.project.render_queue.items[0].output_modules[0]
- *     print(om.file)
- *     ```
- *
- * See: https://ae-scripting.docsforadobe.dev/renderqueue/outputmodule/
+ * app = parse("project.aep")
+ * om = app.project.render_queue.items[0].output_modules[0]
+ * print(om.file)
+ * ```
+ * @see https://ae-scripting.docsforadobe.dev/renderqueue/outputmodule/
  */
 export class OutputModule {
   /**
@@ -367,9 +366,11 @@ export class OutputModule {
     ],
   ]);
 
-  /** Current-value getters for whole-state validation. Enum-backed OM
+  /**
+   * Current-value getters for whole-state validation. Enum-backed OM
    * reads can raise on out-of-enum stored bytes; `validate_state`
-   * treats that (and raw fallbacks) as "unclean context -> skip". */
+   * treats that (and raw fallbacks) as "unclean context -\> skip". 
+   */
   static _STATE_GETTERS = new Map<string, (om: OutputModule) => any>([
     ["Video Output", (om) => om._video_output],
     ["Output Audio", (om) => om._output_audio],
@@ -442,13 +443,11 @@ export class OutputModule {
    * no preferences. Codec-based formats (H.264/AVI) are not reproduced
    * because their format options are not available without an open AE.
    *
-   * Args:
-   *     render_settings_ldat: The render settings item for the parent
-   *         render queue item (used for dimension resolution).
-   *     parent: The parent RenderQueueItem.
-   *
-   * Returns:
-   *     A tuple of (OutputModule model, list of chunks for LIST:LOm).
+   * @param kw - Keyword arguments:
+   * - `render_settings_ldat`: The render settings item for the parent render queue item (used for
+   *     dimension resolution).
+   * - `parent`: The parent RenderQueueItem.
+   * @returns A tuple of (OutputModule model, list of chunks for LIST:LOm).
    */
   static _new(kw: { render_settings_ldat: RenderSettingsItem; parent: RenderQueueItem }): [OutputModule, Chunk[]] {
     const { render_settings_ldat, parent } = kw;
@@ -485,13 +484,13 @@ export class OutputModule {
    * Format-specific render options for this output module. The concrete
    * type depends on the output format:
    *
-   * - [CineonFormatOptions][] for Cineon/DPX sequences
-   * - [JpegFormatOptions][] for JPEG sequences
-   * - [OpenExrFormatOptions][] for OpenEXR sequences
-   * - [PngFormatOptions][] for PNG sequences
-   * - [TargaFormatOptions][] for Targa sequences
-   * - [TiffFormatOptions][] for TIFF sequences
-   * - [XmlFormatOptions][] for XML-based formats (AVI, H.264, MP3,
+   * - {@link CineonFormatOptions} for Cineon/DPX sequences
+   * - {@link JpegFormatOptions} for JPEG sequences
+   * - {@link OpenExrFormatOptions} for OpenEXR sequences
+   * - {@link PngFormatOptions} for PNG sequences
+   * - {@link TargaFormatOptions} for Targa sequences
+   * - {@link TiffFormatOptions} for TIFF sequences
+   * - {@link XmlFormatOptions} for XML-based formats (AVI, H.264, MP3,
    *   QuickTime, WAV)
    * - `None` for formats without parsed format options
    *
@@ -521,7 +520,7 @@ export class OutputModule {
   }
 
   /**
-   * The [CompItem][] to use for post-render actions that require a comp.
+   * The {@link CompItem} to use for post-render actions that require a comp.
    * Only used when `post_render_action` is `IMPORT_AND_REPLACE` or
    * `SET_PROXY`. Read-only.
    */
@@ -544,7 +543,7 @@ export class OutputModule {
   }
 
   /**
-   * [SettingsView][] dict with
+   * {@link SettingsView} dict with
    * ExtendScript-compatible keys. Includes `"Video Output"`,
    * `"Audio Bit Depth"`, `"Preserve RGB"`, `"Convert to Linear Light"`,
    * etc. Matches the format from
@@ -894,13 +893,13 @@ export class OutputModule {
    * `format_options` across a failed batch are stale - re-fetch.
    * Nested batches are reentrant; the outermost one validates.
    *
-   * Example:
-   *     ```python
-   *     with om.batch_edit():
-   *         om.format_options.audio_codec = AudioCodec.GSM_6_10
-   *         om.settings["Audio Channels"] = AudioChannels.MONO
-   *         om.settings["Audio Sample Rate"] = 22050
-   *     ```
+   * @example
+   * ```python
+   * with om.batch_edit():
+   *     om.format_options.audio_codec = AudioCodec.GSM_6_10
+   *     om.settings["Audio Channels"] = AudioChannels.MONO
+   *     om.settings["Audio Sample Rate"] = 22050
+   * ```
    */
   // NOTE(port): Python's `@contextmanager` + `with` has no TS equivalent; the block is passed
   // as `body`, which runs inside the same transaction as the `with` body would.
@@ -952,7 +951,7 @@ export class OutputModule {
     return this;
   }
 
-  /** Re-pair the depth to the alpha choice (RGBA <-> `+` depths). */
+  /** Re-pair the depth to the alpha choice (RGBA \<-\> `+` depths). */
   _pair_depth_to_channels(): void {
     const depth_val = int(this._depth);
     const is_rgba = this._om_ldat.channels === int(OutputChannels.RGBA);
@@ -965,7 +964,7 @@ export class OutputModule {
   /**
    * Re-resolve depth and color after a `_channels` write.
    *
-   * Depth keeps its alpha pairing (RGBA <-> `+` depth variants); the
+   * Depth keeps its alpha pairing (RGBA \<-\> `+` depth variants); the
    * Color mode is clamped when the new channels leave a single legal
    * value (EXR forces premultiplied, PNG forces straight - only
    * meaningful when alpha is included). Inside a batch the whole
@@ -1019,7 +1018,7 @@ export class OutputModule {
    * count; setting one fills an unset sample rate (48 kHz) and sample
    * size (16 Bit), and the encoding then follows the size (float for
    * 32 Bit, signed PCM otherwise). Without a channel count, writing a
-   * bit depth stores its encoding alone (8 Bit -> unsigned PCM).
+   * bit depth stores its encoding alone (8 Bit -\> unsigned PCM).
    */
   _sync_audio_format(): void {
     const roou = this._roou;
@@ -1045,7 +1044,7 @@ export class OutputModule {
   /**
    * Effective render dimensions after resolution, resize, crop/ROI.
    *
-   * AE order: resolution -> resize -> crop/ROI.
+   * AE order: resolution -\> resize -\> crop/ROI.
    */
   get _effective_dimensions(): [number, number] {
     const comp = this._parent_rqi.comp;
@@ -1139,11 +1138,10 @@ export class OutputModule {
   }
 
   /**
-   * The output color space (Output Module Settings > Color Management).
+   * The output color space (Output Module Settings \> Color Management).
    * Read / Write.
    *
-   * Reading returns the name of an Adobe ICC profile (e.g. `"ARRI LogC3
-   * Wide Color Gamut - EI 800"`), the OCIO color-space name (reverse-mapped
+   * Reading returns the name of an Adobe ICC profile (e.g. `"ARRI LogC3 Wide Color Gamut - EI 800"`), the OCIO color-space name (reverse-mapped
    * from the id via the project's OCIO configuration), or - when set to the
    * working color space - the project's working-space name (mirroring AE).
    *
@@ -1153,8 +1151,7 @@ export class OutputModule {
    * of the project's OCIO configuration (the 16-byte id is computed from the
    * config; see `py_aep.color.ocio.ocio_output_profile_id`).
    *
-   * Note:
-   *     Not exposed in ExtendScript.
+   * **Note:** Not exposed in ExtendScript.
    */
   get output_color_space(): string {
     const project = this._project;
@@ -1256,14 +1253,10 @@ export class OutputModule {
    * Combines the output folder path and file name template into a single
    * path string, using the path separator found in the folder path.
    *
-   * Args:
-   *     folder_path: The output folder path from alas data.
-   *     file_name_template: The file name template
-   *         (e.g., `[compName].[fileExtension]`).
-   *     is_folder: Whether the alas path points to a folder.
-   *
-   * Returns:
-   *     The complete file template path.
+   * @param folder_path - The output folder path from alas data.
+   * @param file_name_template - The file name template (e.g., `[compName].[fileExtension]`).
+   * @param is_folder - Whether the alas path points to a folder.
+   * @returns The complete file template path.
    */
   static _build_file_template(folder_path: string, file_name_template: string, is_folder: boolean): string {
     if (!folder_path) {
@@ -1337,7 +1330,7 @@ export class OutputModule {
    * `[fileExtension]` variables. Read / Write.
    *
    * py_aep extension: a folder path set here is stored in the style of
-   * the project's platform (see [parse][py_aep.parse]).
+   * the project's platform (see {@link py_aep.parse | parse}).
    */
   get file_template(): string {
     return (this.constructor as typeof OutputModule)._build_file_template(this._folder_path, this._file_name_template, this._is_folder);
@@ -1470,10 +1463,8 @@ export class OutputModule {
   /**
    * Return output module settings in the specified format.
    *
-   * Args:
-   *     format: The output format.
-   *         `GetSettingsFormat.NUMBER` returns numeric values (enums unwrapped to ints).
-   *         `GetSettingsFormat.STRING` returns all values as strings
+   * @param format - The output format. `GetSettingsFormat.NUMBER` returns numeric values (enums
+   *   unwrapped to ints). `GetSettingsFormat.STRING` returns all values as strings
    */
   get_settings(format: GetSettingsFormat = GetSettingsFormat.STRING): Map<string, any> {
     if (format === GetSettingsFormat.STRING) {
@@ -1488,9 +1479,8 @@ export class OutputModule {
   /**
    * Return a single output module setting in the specified format.
    *
-   * Args:
-   *     key: The setting key (e.g. `"Video Output"`, `"Audio Bit Depth"`).
-   *     format: The output format.
+   * @param key - The setting key (e.g. `"Video Output"`, `"Audio Bit Depth"`).
+   * @param format - The output format.
    */
   get_setting(key: string, format: GetSettingsFormat = GetSettingsFormat.STRING): any {
     return getitem(this.get_settings(format), key);
@@ -1524,11 +1514,8 @@ export class OutputModule {
    *
    * Requires `ae_preferences_dir` to have been passed to `parse()`.
    *
-   * Args:
-   *     name: Template name (e.g. `"Lossless"`, `"H.264 - Match Render Settings - 15 Mbps"`).
-   *
-   * Raises:
-   *     ValueError: If the template name is not found.
+   * @param name - Template name (e.g. `"Lossless"`, `"H.264 - Match Render Settings - 15 Mbps"`).
+   * @throws {@link ValueError} If the template name is not found.
    */
   apply_template(name: string): void {
     const templates = this._project._get_output_templates();
@@ -1569,11 +1556,10 @@ export class OutputModule {
    * options (`Ropt`, from the prefs "Output File Options" section), and
    * the module name.
    *
-   * Note:
-   *     The `Ropt` and name match After Effects byte-for-byte, but the
-   *     `Rouu` header and the settings come from the on-disk preferences
-   *     representation, which AE transforms when it applies a template -
-   *     so those two are not yet byte-identical to AE's runtime output.
+   * **Note:** The `Ropt` and name match After Effects byte-for-byte, but the
+   * `Rouu` header and the settings come from the on-disk preferences
+   * representation, which AE transforms when it applies a template -
+   * so those two are not yet byte-identical to AE's runtime output.
    */
   _apply_output_template(template: OutputModuleTemplate): void {
     const lom_chunks = this._parent_rqi._lom.chunks;
@@ -1628,9 +1614,7 @@ export class OutputModule {
   /**
    * Remove this output module from the render queue item.
    *
-   * Raises:
-   *     ValueError: If this is the last output module (AE requires
-   *         at least one).
+   * @throws {@link ValueError} If this is the last output module (AE requires at least one).
    */
   remove(): void {
     if (this._parent_rqi._output_modules.length <= 1) {

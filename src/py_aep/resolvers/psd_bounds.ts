@@ -39,17 +39,14 @@ export const _SUBPIXEL = 64;
  * The `(left, top, right, bottom)` content box AE gives `layer`'s
  * footage, in canvas pixels (see the module rules).
  *
- * Args:
- *   layer: The Photoshop layer.
- *   canvas_w: Document width in pixels.
- *   canvas_h: Document height in pixels.
- *   layer_styles: The Layer Options choice: `"merge"`, `"editable"` or
- *     `"ignore"`. Only merging bakes vector masks and styles.
- *   global_angle: The document's global light angle, for merged styles.
- *
- * Raises:
- *   NotImplementedError: For merged styles whose rasterized bounds are
- *     not known (see `psd_styles.merged_styles_bounds`).
+ * @param layer - The Photoshop layer.
+ * @param canvas_w - Document width in pixels.
+ * @param canvas_h - Document height in pixels.
+ * @param layer_styles - The Layer Options choice: `"merge"`, `"editable"` or `"ignore"`. Only
+ *   merging bakes vector masks and styles.
+ * @param global_angle - The document's global light angle, for merged styles.
+ * @throws {@link NotImplementedError} For merged styles whose rasterized bounds are not known (see
+ *   `psd_styles.merged_styles_bounds`).
  */
 export function psd_layer_box(
   layer: PsdLayer,

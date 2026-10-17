@@ -1,9 +1,8 @@
 /**
  * Build a shape layer's Contents from parsed SVG drawables.
  *
- * Translates [SvgDrawable][py_aep.svg.types.SvgDrawable]s into After Effects
- * shape groups through the public `add_property` API - one `ADBE Vector
- * Group` per drawable, in reverse document order (AE Contents index 0
+ * Translates {@link py_aep.svg.types.SvgDrawable | SvgDrawable}s into After Effects
+ * shape groups through the public `add_property` API - one `ADBE Vector Group` per drawable, in reverse document order (AE Contents index 0
  * renders on top, matching SVG's last-painted-on-top), each holding the
  * path(s), stroke, and fill. Solid paints become Fill/Stroke; gradient
  * paints become Gradient Fill/Stroke (G-Fill/G-Stroke) with the start/end
@@ -36,8 +35,8 @@ export function _grp(prop: object): PropertyGroup {
 /**
  * Populate a shape layer's Root Vectors Group from SVG drawables.
  *
- * @param contents The layer's `ADBE Root Vectors Group` property group.
- * @param drawables Drawables in SVG document order; added in reverse so
+ * @param contents - The layer's `ADBE Root Vectors Group` property group.
+ * @param drawables - Drawables in SVG document order; added in reverse so
  *     the document's last-painted shape ends up on top.
  */
 export function build_shape_layer_contents(
@@ -112,9 +111,9 @@ export function _bbox_center(drawable: SvgDrawable): [number, number] {
  * AE's 8-bit-quantized Fill/Stroke Opacity percentage for a 0-1 alpha.
  *
  * AE stores opacity as an 8-bit value, so `0.3` becomes
- * `round(0.3*255)=77` -> `77/255*100` = 30.196% (as float32), not 30.0%
- * (verified against AE 2026's SVG import: group opacity 0.3 -> 30.196,
- * 0.5 -> 50.196). Returns `null` when fully opaque, since AE omits the
+ * `round(0.3*255)=77` -\> `77/255*100` = 30.196% (as float32), not 30.0%
+ * (verified against AE 2026's SVG import: group opacity 0.3 -\> 30.196,
+ * 0.5 -\> 50.196). Returns `null` when fully opaque, since AE omits the
  * default 100%.
  */
 export function _opacity_pct(alpha: number): number | null {

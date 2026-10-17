@@ -12,7 +12,7 @@ import { KeyError, TypeError_, ValueError, getitem, int, int_enum, repr, type En
  * Colors are represented by their number (0 for None, or 1 to 16 for one
  * of the preset colors in the Labels preferences).
  *
- * See: https://ae-scripting.docsforadobe.dev/item/item/#itemlabel
+ * @see https://ae-scripting.docsforadobe.dev/item/item/#itemlabel
  */
 export const Label = int_enum("Label", {
   NONE: 0,
@@ -91,7 +91,7 @@ export type ParametricMeshType = EnumValue<typeof ParametricMeshType>;
 /**
  * Defines how alpha information in footage is interpreted.
  *
- * See: https://ae-scripting.docsforadobe.dev/sources/footagesource/#footagesourcealphamode
+ * @see https://ae-scripting.docsforadobe.dev/sources/footagesource/#footagesourcealphamode
  */
 export const AlphaMode = int_enum("AlphaMode", {
   STRAIGHT: 5412,
@@ -121,7 +121,7 @@ export const _ALPHA_MODE_TO_BINARY: Map<number, number> = new Map<number, number
 /**
  * The color depth of the project.
  *
- * See: https://ae-scripting.docsforadobe.dev/general/project/#projectbitsperchannel
+ * @see https://ae-scripting.docsforadobe.dev/general/project/#projectbitsperchannel
  */
 export const BitsPerChannel = int_enum("BitsPerChannel", {
   EIGHT: 8,
@@ -151,7 +151,7 @@ export const _BITS_PER_CHANNEL_TO_BINARY: Map<number, number> = new Map<number, 
 /**
  * Auto-orientation mode for a layer.
  *
- * See: https://ae-scripting.docsforadobe.dev/layer/layer/#layerautoorient
+ * @see https://ae-scripting.docsforadobe.dev/layer/layer/#layerautoorient
  */
 export const AutoOrientType = int_enum("AutoOrientType", {
   NO_AUTO_ORIENT: 4212,
@@ -173,7 +173,7 @@ export type AutoOrientType = EnumValue<typeof AutoOrientType>;
 /**
  * Blending mode for a layer.
  *
- * See: https://ae-scripting.docsforadobe.dev/layer/avlayer/#avlayerblendingmode
+ * @see https://ae-scripting.docsforadobe.dev/layer/avlayer/#avlayerblendingmode
  */
 export const BlendingMode = int_enum("BlendingMode", {
   NORMAL: 5212,
@@ -289,7 +289,7 @@ _BLENDING_MODE_TO_BINARY.set(BlendingMode.DANCING_DISSOLVE, 3);
 /**
  * Channel display type for a viewer.
  *
- * See: https://ae-scripting.docsforadobe.dev/other/viewoptions/#attributes
+ * @see https://ae-scripting.docsforadobe.dev/other/viewoptions/#attributes
  */
 export const ChannelType = int_enum("ChannelType", {
   CHANNEL_RGB: 7812,
@@ -337,7 +337,7 @@ export type LutInterpolationMethod = EnumValue<typeof LutInterpolationMethod>;
 /**
  * Options for closing a project.
  *
- * See: https://ae-scripting.docsforadobe.dev/general/project/#projectclose
+ * @see https://ae-scripting.docsforadobe.dev/general/project/#projectclose
  */
 export const CloseOptions = int_enum("CloseOptions", {
   DO_NOT_SAVE_CHANGES: 1212,
@@ -349,7 +349,7 @@ export type CloseOptions = EnumValue<typeof CloseOptions>;
 /**
  * Fast preview mode for a composition.
  *
- * See: https://ae-scripting.docsforadobe.dev/other/viewoptions/#viewoptionsfastpreview
+ * @see https://ae-scripting.docsforadobe.dev/other/viewoptions/#viewoptionsfastpreview
  */
 export const FastPreviewType = int_enum("FastPreviewType", {
   FP_OFF: 8012,
@@ -377,7 +377,7 @@ export type FastPreviewType = EnumValue<typeof FastPreviewType>;
 /**
  * Film type for feet+frames timecode display.
  *
- * See: https://ae-scripting.docsforadobe.dev/general/project/#projectfeetframesfilmtype
+ * @see https://ae-scripting.docsforadobe.dev/general/project/#projectfeetframesfilmtype
  */
 export const FeetFramesFilmType = int_enum("FeetFramesFilmType", {
   MM16: 2412,
@@ -398,7 +398,7 @@ export type FeetFramesFilmType = EnumValue<typeof FeetFramesFilmType>;
 /**
  * How fields are separated in interlaced footage.
  *
- * See: https://ae-scripting.docsforadobe.dev/sources/footagesource/#footagesourcefieldseparationtype
+ * @see https://ae-scripting.docsforadobe.dev/sources/footagesource/#footagesourcefieldseparationtype
  */
 export const FieldSeparationType = int_enum("FieldSeparationType", {
   UPPER_FIELD_FIRST: 5612,
@@ -428,7 +428,7 @@ export const _FIELD_SEP_TO_BINARY: Map<number, number> = new Map<number, number>
 /**
  * How timecode is displayed for footage.
  *
- * See: https://ae-scripting.docsforadobe.dev/general/project/#projectfootagetimecodedisplaystarttype
+ * @see https://ae-scripting.docsforadobe.dev/general/project/#projectfootagetimecodedisplaystarttype
  */
 export const FootageTimecodeDisplayStartType = int_enum("FootageTimecodeDisplayStartType", {
   FTCS_USE_SOURCE_MEDIA: 2212,
@@ -456,7 +456,7 @@ export const _FOOTAGE_TIMECODE_TO_BINARY: Map<number, number> = new Map<number, 
 /**
  * Frame blending mode for a layer.
  *
- * See: https://ae-scripting.docsforadobe.dev/layer/avlayer/#avlayerframeblendingtype
+ * @see https://ae-scripting.docsforadobe.dev/layer/avlayer/#avlayerframeblendingtype
  */
 export const FrameBlendingType = int_enum("FrameBlendingType", {
   NO_FRAME_BLEND: 4012,
@@ -477,7 +477,7 @@ export type FrameBlendingType = EnumValue<typeof FrameBlendingType>;
 /**
  * How frames are counted in the project.
  *
- * See: https://ae-scripting.docsforadobe.dev/general/project/#projectframescounttype
+ * @see https://ae-scripting.docsforadobe.dev/general/project/#projectframescounttype
  */
 export const FramesCountType = int_enum("FramesCountType", {
   FC_START_0: 2612,
@@ -503,7 +503,7 @@ export type FramesCountType = EnumValue<typeof FramesCountType>;
 /**
  * GPU acceleration type.
  *
- * See: https://ae-scripting.docsforadobe.dev/general/project/#projectgpuacceltype
+ * @see https://ae-scripting.docsforadobe.dev/general/project/#projectgpuacceltype
  */
 export const GpuAccelType = int_enum("GpuAccelType", {
   OPENCL: 1812,
@@ -528,9 +528,8 @@ export const GpuAccelType = int_enum("GpuAccelType", {
    * If value is already a UUID string, validates its format and
    * returns it as-is.
    *
-   * Raises:
-   *     ValueError: If the enum member has no known UUID mapping,
-   *         or if a string value is not a valid UUID.
+   * @throws {@link ValueError} If the enum member has no known UUID mapping, or if a string value
+   *   is not a valid UUID.
    */
   to_binary(value: number | string): string {
     if (this.has(value)) {
@@ -578,8 +577,7 @@ export const _GPU_ENUM_TO_UUID: Map<number, string> = new Map<number, string>(
 /**
  * Orientation type for a composition guide.
  *
- * Note:
- *     There is no ExtendScript equivalent for this enum.
+ * **Note:** There is no ExtendScript equivalent for this enum.
  */
 export const GuideOrientationType = int_enum("GuideOrientationType", {
   HORIZONTAL: 0,
@@ -607,7 +605,7 @@ export const _GUIDE_ORIENTATION_TO_BINARY: Map<number, number> = new Map<number,
 /**
  * How to import a file.
  *
- * See: https://ae-scripting.docsforadobe.dev/other/importoptions/#importoptionsimportas
+ * @see https://ae-scripting.docsforadobe.dev/other/importoptions/#importoptionsimportas
  */
 export const ImportAsType = int_enum("ImportAsType", {
   COMP_CROPPED_LAYERS: 3812,
@@ -620,7 +618,7 @@ export type ImportAsType = EnumValue<typeof ImportAsType>;
 /**
  * Application language.
  *
- * See: https://ae-scripting.docsforadobe.dev/general/application/#appisolanguage
+ * @see https://ae-scripting.docsforadobe.dev/general/application/#appisolanguage
  */
 export const Language = int_enum("Language", {
   ENGLISH: 1612,
@@ -639,7 +637,7 @@ export type Language = EnumValue<typeof Language>;
 /**
  * Render quality for a layer.
  *
- * See: https://ae-scripting.docsforadobe.dev/layer/avlayer/#avlayerquality
+ * @see https://ae-scripting.docsforadobe.dev/layer/avlayer/#avlayerquality
  */
 export const LayerQuality = int_enum("LayerQuality", {
   WIREFRAME: 4612,
@@ -665,7 +663,7 @@ export type LayerQuality = EnumValue<typeof LayerQuality>;
 /**
  * Sampling quality for a layer.
  *
- * See: https://ae-scripting.docsforadobe.dev/layer/avlayer/#avlayersamplingquality
+ * @see https://ae-scripting.docsforadobe.dev/layer/avlayer/#avlayersamplingquality
  */
 export const LayerSamplingQuality = int_enum("LayerSamplingQuality", {
   BILINEAR: 4812,
@@ -690,7 +688,7 @@ export type LayerSamplingQuality = EnumValue<typeof LayerSamplingQuality>;
 /**
  * Type of light layer.
  *
- * See: https://ae-scripting.docsforadobe.dev/layer/lightlayer/#lightlayerlighttype
+ * @see https://ae-scripting.docsforadobe.dev/layer/lightlayer/#lightlayerlighttype
  */
 export const LightType = int_enum("LightType", {
   PARALLEL: 4412,
@@ -719,10 +717,9 @@ export type LightType = EnumValue<typeof LightType>;
  * Interpret As Linear Light setting for footage color management.
  *
  * Controls whether footage is treated as having linear gamma in the
- * Interpret Footage > Color Management tab.
+ * Interpret Footage \> Color Management tab.
  *
- * Note:
- *     Not exposed in ExtendScript.
+ * **Note:** Not exposed in ExtendScript.
  */
 export const LinearLightMode = int_enum("LinearLightMode", {
   OFF: 0,
@@ -756,7 +753,7 @@ export type LoopMode = EnumValue<typeof LoopMode>;
 /**
  * Feather falloff type for masks.
  *
- * See: https://ae-scripting.docsforadobe.dev/property/maskpropertygroup/#maskpropertygroupmaskfeatherfalloff
+ * @see https://ae-scripting.docsforadobe.dev/property/maskpropertygroup/#maskpropertygroupmaskfeatherfalloff
  */
 export const MaskFeatherFalloff = int_enum("MaskFeatherFalloff", {
   FFO_SMOOTH: 7212,
@@ -781,7 +778,7 @@ export type MaskFeatherFalloff = EnumValue<typeof MaskFeatherFalloff>;
 /**
  * Blending mode for masks.
  *
- * See: https://ae-scripting.docsforadobe.dev/property/maskpropertygroup/#maskpropertygroupmaskmode
+ * @see https://ae-scripting.docsforadobe.dev/property/maskpropertygroup/#maskpropertygroupmaskmode
  */
 export const MaskMode = int_enum("MaskMode", {
   NONE: 6812,
@@ -811,7 +808,7 @@ export type MaskMode = EnumValue<typeof MaskMode>;
 /**
  * Motion blur setting for masks.
  *
- * See: https://ae-scripting.docsforadobe.dev/property/maskpropertygroup/#maskpropertygroupmaskmotionblur
+ * @see https://ae-scripting.docsforadobe.dev/property/maskpropertygroup/#maskpropertygroupmaskmotionblur
  */
 export const MaskMotionBlur = int_enum("MaskMotionBlur", {
   SAME_AS_LAYER: 7012,
@@ -821,8 +818,8 @@ export const MaskMotionBlur = int_enum("MaskMotionBlur", {
   /**
    * Convert binary value to MaskMotionBlur.
    *
-   * Note: binary 1 = Off and binary 2 = On (swapped relative
-   * to enum integer order where ON = 7013 < OFF = 7014).
+   * **Note:** binary 1 = Off and binary 2 = On (swapped relative
+   * to enum integer order where ON = 7013 \< OFF = 7014).
    */
   from_binary(value: number): number {
     return _MASK_MOTION_BLUR_BINARY_MAP.get(value) ?? this.SAME_AS_LAYER;
@@ -857,7 +854,7 @@ export type PlayMode = EnumValue<typeof PlayMode>;
 /**
  * Preference file types.
  *
- * See: https://ae-scripting.docsforadobe.dev/other/preferences/#preferences-object
+ * @see https://ae-scripting.docsforadobe.dev/other/preferences/#preferences-object
  */
 export const PREFType = int_enum("PREFType", {
   PREF_Type_MACHINE_SPECIFIC: 8812,
@@ -873,7 +870,7 @@ export type PREFType = EnumValue<typeof PREFType>;
 /**
  * Type of a property.
  *
- * See: https://ae-scripting.docsforadobe.dev/property/propertybase/#propertybasepropertytype
+ * @see https://ae-scripting.docsforadobe.dev/property/propertybase/#propertybasepropertytype
  */
 export const PropertyType = int_enum("PropertyType", {
   PROPERTY: 6212,
@@ -885,7 +882,7 @@ export type PropertyType = EnumValue<typeof PropertyType>;
 /**
  * Pulldown method for footage.
  *
- * See: https://ae-scripting.docsforadobe.dev/sources/footagesource/#footagesourceguesspulldown
+ * @see https://ae-scripting.docsforadobe.dev/sources/footagesource/#footagesourceguesspulldown
  */
 export const PulldownMethod = int_enum("PulldownMethod", {
   PULLDOWN_3_2: 6012,
@@ -896,7 +893,7 @@ export type PulldownMethod = EnumValue<typeof PulldownMethod>;
 /**
  * Pulldown phase for footage.
  *
- * See: https://ae-scripting.docsforadobe.dev/sources/footagesource/#footagesourceremovepulldown
+ * @see https://ae-scripting.docsforadobe.dev/sources/footagesource/#footagesourceremovepulldown
  */
 export const PulldownPhase = int_enum("PulldownPhase", {
   WSSWW: 5812,
@@ -942,7 +939,7 @@ export const _PULLDOWN_TO_BINARY: Map<number, number> = new Map<number, number>(
 /**
  * Target for purging caches.
  *
- * See: https://ae-scripting.docsforadobe.dev/general/application/#apppurge
+ * @see https://ae-scripting.docsforadobe.dev/general/application/#apppurge
  */
 export const PurgeTarget = int_enum("PurgeTarget", {
   ALL_CACHES: 1412,
@@ -955,7 +952,7 @@ export type PurgeTarget = EnumValue<typeof PurgeTarget>;
 /**
  * Conflict resolution type for team projects.
  *
- * See: https://ae-scripting.docsforadobe.dev/general/project/#projectresolveconflict
+ * @see https://ae-scripting.docsforadobe.dev/general/project/#projectresolveconflict
  */
 export const ResolveType = int_enum("ResolveType", {
   ACCEPT_THEIRS: 8612,
@@ -967,7 +964,7 @@ export type ResolveType = EnumValue<typeof ResolveType>;
 /**
  * How time is displayed in the project.
  *
- * See: https://ae-scripting.docsforadobe.dev/general/project/#projecttimedisplaytype
+ * @see https://ae-scripting.docsforadobe.dev/general/project/#projecttimedisplaytype
  */
 export const TimeDisplayType = int_enum("TimeDisplayType", {
   TIMECODE: 2012,
@@ -992,7 +989,7 @@ export type TimeDisplayType = EnumValue<typeof TimeDisplayType>;
 /**
  * Tool type in the application.
  *
- * See: https://ae-scripting.docsforadobe.dev/general/project/#projecttooltype
+ * @see https://ae-scripting.docsforadobe.dev/general/project/#projecttooltype
  */
 export const ToolType = int_enum("ToolType", {
   Tool_Arrow: 9012,
@@ -1040,7 +1037,7 @@ export type ToolType = EnumValue<typeof ToolType>;
 /**
  * Track matte type for a layer.
  *
- * See: https://ae-scripting.docsforadobe.dev/layer/avlayer/#avlayertrackmattetype
+ * @see https://ae-scripting.docsforadobe.dev/layer/avlayer/#avlayertrackmattetype
  */
 export const TrackMatteType = int_enum("TrackMatteType", {
   NO_TRACK_MATTE: 5012,
@@ -1068,7 +1065,7 @@ export type TrackMatteType = EnumValue<typeof TrackMatteType>;
 /**
  * Type of viewer panel.
  *
- * See: https://ae-scripting.docsforadobe.dev/other/viewer/#viewertype
+ * @see https://ae-scripting.docsforadobe.dev/other/viewer/#viewertype
  */
 export const ViewerType = int_enum("ViewerType", {
   VIEWER_COMPOSITION: 7612,
@@ -1083,8 +1080,7 @@ export const ViewerType = int_enum("ViewerType", {
    * corresponding ViewerType value. Handles null-terminated strings
    * and empty input.
    *
-   * Raises:
-   *     ValueError: If the label is not recognized.
+   * @throws {@link ValueError} If the label is not recognized.
    */
   from_string(label: string | null): number {
     if (!label) label = "";

@@ -56,7 +56,7 @@ export class LengthContext {
 }
 
 /**
- * Strip an XML namespace, e.g. `{http://...}rect` -> `rect`.
+ * Strip an XML namespace, e.g. `{http://...}rect` -\> `rect`.
  */
 export function local_name(tag: string): string {
   return tag.split("}").at(-1)!;
@@ -71,7 +71,7 @@ export function clamp01(value: number): number {
 
 /**
  * Leading numeric value of `text`, ignoring a unit suffix (e.g.
- * `"40px"` -> `40.0`); `default` when absent or non-numeric.
+ * `"40px"` -\> `40.0`); `default` when absent or non-numeric.
  */
 export function parse_number(text: string | null, default_: number = 0.0): number {
   if (!text) return default_;

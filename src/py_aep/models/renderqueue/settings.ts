@@ -287,11 +287,11 @@ export const _RESIZE_TO_STRINGS: Map<string, string> = new Map<string, string>([
 ]);
 
 /**
- * Build the "Resize to" resolution -> preset-name map from prefs.
+ * Build the "Resize to" resolution -\> preset-name map from prefs.
  *
  * Mirrors AE's Resize dropdown: one label per resolution, choosing the
  * lowest-frame-rate New Composition preset at that resolution (ties
- * broken by the later preset). Falls back to [_RESIZE_TO_STRINGS][] (AE's
+ * broken by the later preset). Falls back to {@link _RESIZE_TO_STRINGS} (AE's
  * factory-preset labels) when no preferences directory was provided.
  */
 export function build_resize_to_strings(preferences: Preferences): Map<string, string> {
@@ -320,11 +320,10 @@ export function _to_number_value(value: any): any {
 /**
  * Convert a settings value to STRING format.
  *
- * Args:
- *     key: The settings key name.
- *     value: The settings value.
- *     resize_map: Resolution -> label map for the "Resize to" key
- *         (the AE-preference-derived map, or the factory fallback).
+ * @param key - The settings key name.
+ * @param value - The settings value.
+ * @param resize_map - Resolution -\> label map for the "Resize to" key (the AE-preference-derived
+ *   map, or the factory fallback).
  */
 export function _to_string_value(
   key: string,
@@ -350,8 +349,7 @@ export function _to_string_value(
  * IntEnum values are unwrapped to plain integers. Other values
  * (bool, float, int, list) pass through unchanged.
  *
- * Args:
- *     settings: The typed settings dict.
+ * @param settings - The typed settings dict.
  */
 export function settings_to_number(settings: Map<string, any> | SettingsView): Map<string, any> {
   return new Map<string, any>(
@@ -364,11 +362,9 @@ export function settings_to_number(settings: Map<string, any> | SettingsView): M
  *
  * All values are converted to their ExtendScript STRING representation.
  *
- * Args:
- *     settings: The typed settings dict.
- *     resize_map: Resolution -> label map for the "Resize to" key
- *         (from [build_resize_to_strings][]); defaults to the factory
- *         fallback table.
+ * @param settings - The typed settings dict.
+ * @param resize_map - Resolution -\> label map for the "Resize to" key (from
+ *   {@link build_resize_to_strings}); defaults to the factory fallback table.
  */
 export function settings_to_string(
   settings: Map<string, any> | SettingsView,

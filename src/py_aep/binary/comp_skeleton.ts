@@ -202,10 +202,11 @@ export function _build_cif(list_type: string): ListChunk {
   });
 }
 
-/** A comp time in timebase units, snapped to the nearest whole frame of
+/**
+ * A comp time in timebase units, snapped to the nearest whole frame of
  * the comp's frame grid (`frame_grid`).
  *
- * AE rounds half a frame up (52.5 frames -> 53, where `round` gives 52),
+ * AE rounds half a frame up (52.5 frames -\> 53, where `round` gives 52),
  * measured on AE 2026 for `addComp`, the `duration` setter and a frame-rate
  * change. Snapping in whole timebase units keeps a value built as
  * `frames / 23.976` on its frame even though the stored rate is only

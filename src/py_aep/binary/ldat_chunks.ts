@@ -135,8 +135,7 @@ export const LHD3_BLOCK_SINGLE = 1;
 /**
  * Set `lhd3.count` and recompute the capacity counters from it.
  *
- * AE keeps `_count_b = ceil(count / block)` (minimum 1), `_counter_b =
- * _count_b * block`, and `_counter_a = _count_b` for single-item blocks
+ * AE keeps `_count_b = ceil(count / block)` (minimum 1), `_counter_b = _count_b * block`, and `_counter_a = _count_b` for single-item blocks
  * (render queue / output modules) else 1. Count and counters are set in
  * one step because AE validates them together on load; a count written
  * without the derived counters makes AE reject the file.

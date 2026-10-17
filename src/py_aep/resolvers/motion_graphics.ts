@@ -21,8 +21,8 @@
  * - an effect PARAM leaf is the exception: its index is the position in the
  *   effect's flat `parT` parameter list, where the hidden parameter-group
  *   header pard occupies slot 0, so visible params start at 1
- *   (`ADBE Fill-0002` -> 3 after `-0001`/`-0007`; `ADBE Fractal Noise-0010`
- *   -> 10). Effect TOPIC groups (e.g. Fractal Noise's "Transform") are pure
+ *   (`ADBE Fill-0002` -\> 3 after `-0001`/`-0007`; `ADBE Fractal Noise-0010`
+ *   -\> 10). Effect TOPIC groups (e.g. Fractal Noise's "Transform") are pure
  *   UI: both AE's DOM and py_aep keep the params flat, and the stored path
  *   never contains a topic-group node;
  * - every other node resolves by name.
@@ -98,8 +98,8 @@ export class PathNode {
  *
  * The project-level param defs preserve parT order and exclude the hidden
  * parameter-group header pard (slot 0), so the AE index is `1 + position`
- * (verified across the essential_graphics fixtures: `ADBE Fill-0002` -> 3,
- * every `* Control-0001` -> 1).
+ * (verified across the essential_graphics fixtures: `ADBE Fill-0002` -\> 3,
+ * every `* Control-0001` -\> 1).
  */
 export function _effect_param_index(layer: Layer, effect_mn: string, param_mn: string): number | null {
   const defs: any = dict_get((layer as any).containing_comp._project._effect_param_defs, effect_mn);

@@ -36,8 +36,7 @@ export function _parse_source_property_path(raw: string): SourcePropertyRef[] {
 /**
  * Parse a single LIST:CCtl chunk into a controller.
  *
- * Args:
- *     cctl_chunk: A LIST:CCtl chunk.
+ * @param cctl_chunk - A LIST:CCtl chunk.
  */
 export function _parse_controller(cctl_chunk: ListChunk): EssentialGraphicsController {
   const cps2 = find_by_list_type(cctl_chunk.chunks, "CpS2");
@@ -100,12 +99,9 @@ export function _parse_controller(cctl_chunk: ListChunk): EssentialGraphicsContr
  * pre-CIF3 file still yields its template name and controllers rather than
  * silently parsing as no Essential Graphics.
  *
- * Args:
- *     child_chunks: The child chunks of a composition LIST:Item chunk.
- *
- * Returns:
- *     A tuple of (template_name_utf8_chunk, controllers) if an Essential
- *     Graphics container is found, otherwise `None`.
+ * @param child_chunks - The child chunks of a composition LIST:Item chunk.
+ * @returns A tuple of (template_name_utf8_chunk, controllers) if an Essential Graphics container is
+ *   found, otherwise `None`.
  */
 export const parse_essential_graphics = _suppress_materialization().decorate(
   function parse_essential_graphics(

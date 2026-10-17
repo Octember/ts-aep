@@ -13,7 +13,7 @@ import { CosName, IndirectObject, IndirectReference, Stream } from "./cos.ts";
 /**
  * Serialize a parsed COS value tree back to binary.
  *
- * @param data The Python object tree to serialize. May be a dict, list,
+ * @param data - The Python object tree to serialize. May be a dict, list,
  *   str, int, float, bool, `None`, `bytes`,
  *   `IndirectObject`, `IndirectReference`, or `Stream`.
  * @returns The COS binary representation.

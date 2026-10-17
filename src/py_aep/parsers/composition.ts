@@ -12,17 +12,16 @@ import { parse_source } from "./source.ts";
 /**
  * Parse a composition item.
  *
- * Args:
- *     child_chunks: child chunks of the composition LIST chunk.
- *     _idta: The idta chunk.
- *     _name_utf8: The Utf8 chunk containing the composition name.
- *     _cmta: The cmta chunk (null if no comment).
- *     _item_list: The LIST chunk for creating new chunks.
- *     _gide: The LIST chunk for guides (null if no guides).
- *     project: The project.
- *     parent_folder: The composition's parent folder.
- *     effect_param_defs: Project-level effect parameter definitions, used as
- *         fallback when layer-level parT chunks are missing.
+ * @param child_chunks - child chunks of the composition LIST chunk.
+ * @param _idta - The idta chunk.
+ * @param _name_utf8 - The Utf8 chunk containing the composition name.
+ * @param _cmta - The cmta chunk (null if no comment).
+ * @param _item_list - The LIST chunk for creating new chunks.
+ * @param _gide - The LIST chunk for guides (null if no guides).
+ * @param project - The project.
+ * @param parent_folder - The composition's parent folder.
+ * @param effect_param_defs - Project-level effect parameter definitions, used as fallback when
+ *   layer-level parT chunks are missing.
  */
 export function parse_composition(
   child_chunks: Chunk[],
@@ -59,9 +58,8 @@ export function parse_composition(
  * Marker keyframe times in the binary format are stored in absolute
  * composition time (not relative to the SecL layer's start time).
  *
- * Args:
- *     child_chunks: child chunks of the composition LIST chunk.
- *     composition: The parent composition.
+ * @param child_chunks - child chunks of the composition LIST chunk.
+ * @param composition - The parent composition.
  */
 export function _get_markers(child_chunks: Chunk[], composition: CompItem): Property | null {
   const markers_layer_chunk = find_by_list_type(child_chunks, "SecL");

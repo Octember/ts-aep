@@ -56,16 +56,16 @@ export function frac_floor(a: Fraction): number {
  * AE reads the rate to the thousandth (half up) as a reduced fraction
  * p/q, and gives a frame q * 2**k timebase units with the largest k (at
  * least 0) keeping the timebase under 40000. Measured on AE 2026 over 90
- * rates and matching every AE-saved composition in the samples: 24 fps ->
- * (24576, 1024), 29.97 -> (23976, 800), 23.98 -> (38368, 1600), 7.3 ->
- * (37376, 5120), 12.3456 -> (24692, 2000), 99.123 -> (99123, 1000), 999 ->
+ * rates and matching every AE-saved composition in the samples: 24 fps -\>
+ * (24576, 1024), 29.97 -\> (23976, 800), 23.98 -\> (38368, 1600), 7.3 -\>
+ * (37376, 5120), 12.3456 -\> (24692, 2000), 99.123 -\> (99123, 1000), 999 -\>
  * (31968, 32). AE derives it again on open, so it also gives the frame grid
  * of a file whose stored timebase disagrees with its rate.
  *
  * When even k = 0 lands past 115200, AE halves the units per frame until
  * the timebase fits, rounds the timebase down and keeps the whole units
- * per frame, so the grid runs a hair off the rate: 120.001 fps -> (60000,
- * 500), a 120 fps grid; 333.333 -> (83333, 250); 998.999 -> (62437, 62),
+ * per frame, so the grid runs a hair off the rate: 120.001 fps -\> (60000,
+ * 500), a 120 fps grid; 333.333 -\> (83333, 250); 998.999 -\> (62437, 62),
  * from 62.5 units a frame (measured on AE 2026 over 12 such rates).
  */
 export function frame_grid(fps: number): [number, number] {

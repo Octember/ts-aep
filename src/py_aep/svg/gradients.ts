@@ -6,7 +6,7 @@
  * `resolve_gradient` maps a referenced gradient into absolute viewBox
  * coordinates given the referencing element's bounding box and transform.
  *
- * Note: the mapping of a `GradientPaint` onto After Effects' gradient-fill
+ * **Note:** the mapping of a `GradientPaint` onto After Effects' gradient-fill
  * chunks is the import builder's concern and is not yet AE-validated; this
  * module only produces the geometric/stop representation.
  */
@@ -138,13 +138,13 @@ export function _coord(text: string, span: number): number {
 /**
  * Resolve a gradient to absolute viewBox geometry.
  *
- * @param gd The gradient definition.
- * @param bbox The referencing element's absolute bounding box
+ * @param gd - The gradient definition.
+ * @param bbox - The referencing element's absolute bounding box
  *   `(min_x, min_y, max_x, max_y)`.
- * @param ctm The element's current transform (applied for
+ * @param ctm - The element's current transform (applied for
  *   `userSpaceOnUse`; for `objectBoundingBox` the bbox is already
  *   absolute so only `gradientTransform` is applied).
- * @param viewport The viewBox `(width, height)` - the reference for
+ * @param viewport - The viewBox `(width, height)` - the reference for
  *   percentage coordinates under `userSpaceOnUse`.
  * @returns A `GradientPaint` with absolute `start`/`end` points and stops.
  */

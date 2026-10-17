@@ -2,7 +2,7 @@
  * Resolve a precomp layer's Essential Properties overrides to the source
  * composition's Essential Graphics controllers.
  *
- * The override<->controller link is a shared UUID: a precomp layer's
+ * The override\<-\>controller link is a shared UUID: a precomp layer's
  * `LIST:OvG2` carries one UUID per override (`Layer.essential_property_uuids`),
  * each equal to an `EssentialGraphicsController.uuid` on the source composition.
  */

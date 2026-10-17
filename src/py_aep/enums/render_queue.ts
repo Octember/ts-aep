@@ -9,7 +9,7 @@ import { int, int_enum, ValueError, type EnumValue } from "../../pyrt/index.ts";
 /**
  * Format for getting render settings.
  *
- * See: https://ae-scripting.docsforadobe.dev/renderqueue/outputmodule/#outputmodulegetsettings
+ * @see https://ae-scripting.docsforadobe.dev/renderqueue/outputmodule/#outputmodulegetsettings
  */
 export const GetSettingsFormat = int_enum("GetSettingsFormat", {
   SPEC: 3412,
@@ -23,7 +23,7 @@ export type GetSettingsFormat = EnumValue<typeof GetSettingsFormat>;
 /**
  * Logging level for rendering.
  *
- * See: https://ae-scripting.docsforadobe.dev/renderqueue/renderqueueitem/#renderqueueitemlogtype
+ * @see https://ae-scripting.docsforadobe.dev/renderqueue/renderqueueitem/#renderqueueitemlogtype
  */
 export const LogType = int_enum("LogType", {
   ERRORS_ONLY: 3212,
@@ -50,7 +50,7 @@ export type LogType = EnumValue<typeof LogType>;
 /**
  * Status of a render queue item.
  *
- * See: https://ae-scripting.docsforadobe.dev/renderqueue/renderqueueitem/#renderqueueitemstatus
+ * @see https://ae-scripting.docsforadobe.dev/renderqueue/renderqueueitem/#renderqueueitemstatus
  */
 export const RQItemStatus = int_enum("RQItemStatus", {
   WILL_CONTINUE: 3012,

@@ -37,7 +37,6 @@ export const CURRENT_VALUE = new _CurrentValue();
  * Unlike most py_aep classes, `ImportOptions` has no chunk backing -
  * import settings are not stored in the `.aep` binary format.
  *
- * Example:
  * ```python
  * from pathlib import Path
  * from py_aep import ImportOptions, ImportAsType
@@ -47,7 +46,8 @@ export const CURRENT_VALUE = new _CurrentValue();
  * opts.import_as = ImportAsType.FOOTAGE
  * ```
  *
- * See: https://ae-scripting.docsforadobe.dev/other/importoptions/
+ * @example
+ * @see https://ae-scripting.docsforadobe.dev/other/importoptions/
  */
 export class ImportOptions {
   _file: Path;
@@ -86,9 +86,8 @@ export class ImportOptions {
    * contain several layers with the same name; AE's own dialog
    * disambiguates duplicates by dropdown position.
    *
-   * Raises:
-   *     ValueError: On import, if the index is out of range for the
-   *         file's selectable layers (see `list_layers`).
+   * @throws {@link ValueError} On import, if the index is out of range for the file's selectable
+   *   layers (see `list_layers`).
    */
   get layer_index(): number | null {
     return this._layer_index;
@@ -116,14 +115,13 @@ export class ImportOptions {
    *
    * py_aep extension: ExtendScript exposes no layer-selection API.
    *
-   * Note:
-   *     For `.ai`/`.pdf`, `"layer"` measures the layer's artwork box from
-   *     the page content stream (see
-   *     [read_ai_layer_bounds][py_aep.resolvers.ai_bounds.read_ai_layer_bounds]).
-   *     On a document with more than one artboard the stored box will
-   *     differ from After Effects', which measures the second artboard and
-   *     treats first-artboard layers as empty; py_aep measures the first
-   *     and emits a `UserWarning`.
+   * **Note:** For `.ai`/`.pdf`, `"layer"` measures the layer's artwork box from
+   * the page content stream (see
+   * {@link py_aep.resolvers.ai_bounds.read_ai_layer_bounds | read_ai_layer_bounds}).
+   * On a document with more than one artboard the stored box will
+   * differ from After Effects', which measures the second artboard and
+   * treats first-artboard layers as empty; py_aep measures the first
+   * and emits a `UserWarning`.
    */
   get layer_dimensions(): string | null {
     return this._layer_dimensions;
@@ -152,7 +150,7 @@ export class ImportOptions {
    *
    * Valid combinations (checked at import time): a FOOTAGE import
    * accepts `"merge"`/`"ignore"` and requires
-   * [layer_index][ImportOptions.layer_index] (AE's "Merged Layers"
+   * {@link ImportOptions.layer_index | layer_index} (AE's "Merged Layers"
    * whole-document import - `layer_index=None` - always flattens the
    * styles into the composite and offers no choice); a COMP import
    * accepts `"editable"`/`"merge"`. Note the naming collision in AE's
@@ -160,10 +158,8 @@ export class ImportOptions {
    * `layer_index=None`) is unrelated to `"merge"` (bake the styles into
    * one layer's raster).
    *
-   * Raises:
-   *     ValueError: On import, if the value is not offered for the
-   *         import context (see above), or if the file is not
-   *         `.psd`/`.psb`.
+   * @throws {@link ValueError} On import, if the value is not offered for the import context (see
+   *   above), or if the file is not `.psd`/`.psb`.
    */
   get layer_styles(): string | null {
     return this._layer_styles;
@@ -224,8 +220,8 @@ export class ImportOptions {
    * imported file's type in its folder, numbered or not, in
    * case-insensitive name order, and is named after the folder.
    *
-   * Setting `True` resets [range_start][ImportOptions.range_start] and
-   * [range_end][ImportOptions.range_end] to 0 (matching After Effects:
+   * Setting `True` resets {@link ImportOptions.range_start | range_start} and
+   * {@link ImportOptions.range_end | range_end} to 0 (matching After Effects:
    * an alphabetical sequence cannot carry a frame range).
    */
   get force_alphabetical(): boolean {
@@ -247,16 +243,14 @@ export class ImportOptions {
    * every frame. Read / Write.
    *
    * Frame numbers refer to the digits in the filenames, not ordinal
-   * positions. Has no effect unless [sequence][ImportOptions.sequence]
+   * positions. Has no effect unless {@link ImportOptions.sequence | sequence}
    * is `True`. A `range_end` of 0 with a non-zero `range_start` is
    * rejected at import time, as is `range_end < range_start` (both
    * matching After Effects).
    *
-   * Raises:
-   *     ValueError: If set while `force_alphabetical` is `True`
-   *         (After Effects: "You cannot set sequence range start for
-   *         an alphabetical sequence"), or if the value does not fit
-   *         the `sspc` `start_frame` field (a `u4`: 0..4294967295).
+   * @throws {@link ValueError} If set while `force_alphabetical` is `True` (After Effects: "You
+   *   cannot set sequence range start for an alphabetical sequence"), or if the value does not fit
+   *   the `sspc` `start_frame` field (a `u4`: 0..4294967295).
    */
   get range_start(): number {
     return this._range_start;
@@ -282,10 +276,8 @@ export class ImportOptions {
    * not clamped to After Effects' 3-hour ceiling - AE 2026 opens a
    * longer ranged sequence without complaint.
    *
-   * Raises:
-   *     ValueError: If set while `force_alphabetical` is `True`, or if
-   *         the value does not fit the `sspc` `end_frame` field (a
-   *         `u4`: 0..4294967295).
+   * @throws {@link ValueError} If set while `force_alphabetical` is `True`, or if the value does
+   *   not fit the `sspc` `end_frame` field (a `u4`: 0..4294967295).
    */
   get range_end(): number {
     return this._range_end;
@@ -313,11 +305,8 @@ export class ImportOptions {
    * for SVG, `.ai`/`.pdf` and `.psd`/`.psb`, the formats py_aep crops
    * (AE also crops `.eps` and multi-layer `.exr`).
    *
-   * Args:
-   *     type: The import type to check.
-   *
-   * Returns:
-   *     `True` if the file can be imported as `type`.
+   * @param type - The import type to check.
+   * @returns `True` if the file can be imported as `type`.
    */
   can_import_as(type: number): boolean {
     validate_enum(ImportAsType)(type);
@@ -353,11 +342,9 @@ export class ImportOptions {
   /**
    * Check whether the filename ends with a number.
    *
-   * Returns:
-   *     A tuple of `(is_numbered, first_number)` where
-   *     `is_numbered` is `True` when the filename stem ends with
-   *     digits and `first_number` is the parsed integer value (or
-   *     `0` when not numbered).
+   * @returns A tuple of `(is_numbered, first_number)` where `is_numbered` is `True` when the
+   *   filename stem ends with digits and `first_number` is the parsed integer value (or `0` when
+   *   not numbered).
    */
   is_file_name_numbered(): [boolean, number] {
     const stem = this._file.stem;
