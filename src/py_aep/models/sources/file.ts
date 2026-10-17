@@ -1,12 +1,13 @@
 // Port of py_aep/models/sources/file.py.
 
+import type { Dynamic } from "../descriptors.ts";
 import * as host from "../../../pyrt/host.ts";
 
 import { OptiChunk, SspcChunk, TextOptiChunk, build_ai_document_opti_data, build_ai_layer_opti_data, build_craw_opti_data, build_dpx_opti_data, build_exr_opti_data, build_generic_opti_data, build_psd_layer_opti_data, build_psd_opti_data, build_rhdr_opti_data, build_text_opti_data, build_tiff_opti_data } from "../../binary/footage_chunks.ts";
 import { EmpdChunk } from "../../binary/misc_chunks.ts";
 import { ColorProfileRecord, build_pin_list } from "../../binary/mutations.ts";
 import { Utf8Chunk, type U1Chunk } from "../../binary/scalar_chunks.ts";
-import { build_als2_list, build_stvc_list, ChunkNotFoundError, filter_by_type, find_by_list_type, find_by_list_type_or_null, find_by_type, find_chunks_before, index_by_identity, parse_alas_data, UNDEFINED_FRAME } from "../../binary/utils.ts";
+import { build_als2_list, build_stvc_list, ChunkNotFoundError, filter_by_type, find_by_list_type, find_by_list_type_or_null, find_by_type, find_chunks_before, alas_fullpath, alas_target_is_folder, index_by_identity, parse_alas_data, UNDEFINED_FRAME } from "../../binary/utils.ts";
 import type { Chunk, ListChunk } from "../../binary/chunk.ts";
 import { build_icc_envelope } from "../../color/envelope.ts";
 import { ColorProfileNotFoundError, default_icc_library, icc_profile_description, icc_profile_id } from "../../color/icc.ts";
@@ -37,7 +38,6 @@ import {
   bytes_,
   bytes_eq,
   concat,
-  dict_get,
   floordiv,
   format,
   getattr,
@@ -80,8 +80,8 @@ export function _splitext_ext(name: string): string {
  * `Path` lets raw Node errors through, which are not `OSError` instances, so
  * the `errno` check matches Python's `except OSError` for fs failures.
  */
-export function _is_os_error(e: unknown): boolean {
-  return e instanceof OSError || typeof (e as { errno?: unknown } | null)?.errno === "number";
+export function _is_os_error(e: Dynamic): boolean {
+  return e instanceof OSError || typeof e?.errno === "number";
 }
 
 export function _opti_data(
@@ -778,14 +778,11 @@ export class FileSource extends FootageSource {
 
     // Derive file path and target_is_folder from Als2/alas JSON
     const alas_data = parse_alas_data(pin_chunks);
-    this._target_is_folder = dict_get(alas_data, "target_is_folder", false);
+    this._target_is_folder = alas_target_is_folder(alas_data);
     if (this._file_names?.length > 0) {
-      this._file = _join_sequence_frame(
-        dict_get(alas_data, "fullpath", ""),
-        this._file_names[0],
-      );
+      this._file = _join_sequence_frame(alas_fullpath(alas_data), this._file_names[0]);
     } else {
-      this._file = dict_get(alas_data, "fullpath", "");
+      this._file = alas_fullpath(alas_data);
     }
 
     // Old-format AE files lack the StVc LIST that stores per-frame

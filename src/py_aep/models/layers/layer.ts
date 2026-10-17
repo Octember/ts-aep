@@ -15,7 +15,7 @@ import { find_by_type, index_by_identity, list_type_of } from "../../binary/util
 import { parse_properties } from "../../parsers/property.ts";
 import { get_match_name_runs } from "../../parsers/utils.ts";
 import { Mat4, aspect_scale, build_world_matrix, compose_orientation, decompose_transform, layer_source_aspect, position_space_aspect, rig_aims_at_poi, rotation_part, square_pixels, strip_orientation } from "../../resolvers/transform.ts";
-import { ChunkField } from "../descriptors.ts";
+import { ChunkField, type EffectParamDefs, type Dynamic } from "../descriptors.ts";
 import { auto_name } from "../naming.ts";
 import { Property } from "../properties/property.ts";
 import { PropertyBase } from "../properties/property_base.ts";
@@ -304,11 +304,11 @@ export class Layer extends PropertyGroup {
   // which could produce unexpected results or hit circular references.
   // `__hash__ = object.__hash__` is not carried over: instances are hashed by
   // identity already, which is what a Map/Set keyed by a Layer uses.
-  __eq__(other: unknown): boolean {
+  __eq__(other: Dynamic): boolean {
     return this === other;
   }
 
-  __setattr__(name: string, value: unknown): void {
+  __setattr__(name: string, value: Dynamic): void {
     // Layers set public instance attributes of their own, which
     // `PropertyGroup.__setattr__` would refuse.
     object_setattr(this, name, value);
@@ -369,16 +369,16 @@ export class Layer extends PropertyGroup {
     match_name: string,
     auto_name: string,
     property_depth: number,
-    kw?: any,
+    kw?: Dynamic,
   ): PropertyGroup;
   static _new(kw: {
     ldta: LdtaChunk;
     name: string;
     containing_comp: CompItem;
     root_tdgp_extra?: Chunk[] | null;
-    effect_param_defs?: Map<string, Map<string, Map<string, any>>> | null;
+    effect_param_defs?: EffectParamDefs | null;
   }): Layer;
-  static _new(kw: any): any {
+  static _new(kw: Dynamic): Dynamic {
     const { ldta, name, containing_comp } = kw;
     const root_tdgp_extra = kw.root_tdgp_extra ?? null;
     const effect_param_defs = kw.effect_param_defs ?? null;

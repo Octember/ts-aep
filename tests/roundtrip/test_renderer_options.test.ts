@@ -28,6 +28,17 @@ describe("TestRoundtripRendererOptions", () => {
     expect((comp.renderer_options as any).shadow_map_resolution).toBe(ShadowMapResolution.RES_4000);
   });
 
+  test("test_assign_from_another_options_view", () => {
+    // Port-only: py_aep's setter takes any Mapping, including another comp's view.
+    const tmp_path = make_tmp_path();
+    const app = parse_aep(COMPOSITION_DIR.div("renderer_cinema_4d.aep"));
+    const source = parse_aep(COMPOSITION_DIR.div("renderer_cinema_4d.aep")).project.compositions.at(0)!;
+    (source.renderer_options as any).quality = 42;
+    app.project.compositions.at(0)!.renderer_options = source.renderer_options;
+
+    expect((_reparse(app, tmp_path).renderer_options as any).quality).toBe(42);
+  });
+
   test("test_cinema_4d_quality", () => {
     const tmp_path = make_tmp_path();
     const app = parse_aep(COMPOSITION_DIR.div("renderer_cinema_4d.aep"));

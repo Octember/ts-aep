@@ -48,17 +48,33 @@ import { ae_guid } from "./murmur3.ts";
  * booleans, merge keys), no duplicate-key error and no alias-count cap.
  */
 export class _OcioLoader {
-  static readonly options = {
+  static readonly options: ParseOptions & DocumentOptions & SchemaOptions & ToJSOptions = {
     version: "1.1",
     mapAsMap: true,
     logLevel: "error",
     uniqueKeys: false,
     maxAliasCount: -1,
-  } as const;
+  };
 }
 
-/** A parsed OCIO yaml mapping (`mapAsMap`): values are yaml-dynamic. */
-export type OcioNode = Map<string, any>;
+/**
+ * A value `yaml` `parse` yields for an OCIO config (`mapAsMap: true`):
+ * scalars, a list, or a mapping.
+ */
+export type OcioValue = string | number | boolean | null | OcioValue[] | OcioNode;
+
+/**
+ * An OCIO mapping. Keys the readers use are named so a missing entry is
+ * `undefined` and a present one has the shape that reader expects.
+ */
+export interface OcioNode {
+  get(key: "colorspaces" | "display_colorspaces" | "inactive_colorspaces" | "aliases"): OcioValue[] | undefined;
+  get(key: "file_rules"): OcioValue[];
+  get(key: "roles"): Map<string, OcioValue> | undefined;
+  get(key: "displays"): Map<string, OcioValue[]> | undefined;
+  get(key: "name" | "family" | "regex" | "pattern" | "extension" | "colorspace"): string | undefined;
+  get(key: string): OcioValue | undefined;
+}
 
 /**
  * `_ignore_tag(loader, suffix, node)`: the empty-prefix multi-constructor.
@@ -73,9 +89,9 @@ export type OcioNode = Map<string, any>;
  * (warning silenced by `logLevel: "error"`), which yields the same untagged
  * values as this constructor. `loader` is the yaml `Document`.
  */
-export function _ignore_tag(loader: Document, suffix: string, node: Node): unknown {
+export function _ignore_tag(loader: Document, suffix: string, node: Node): OcioValue | null {
   if (isMap(node) || isSeq(node) || isScalar(node)) {
-    return node.toJS(loader, { mapAsMap: true } as ToJSOptions);
+    return node.toJS(loader, { mapAsMap: true });
   }
   return null;
 }
@@ -93,14 +109,14 @@ export function _ignore_tag(loader: Document, suffix: string, node: Node): unkno
  */
 export const _load_config_cached = lru_cache(
   (config_path: string, _mtime_ns: bigint, _size: number): OcioNode | null => {
-    let doc: unknown;
+    let doc: OcioNode;
     try {
       doc = parse(decode(new Path(config_path).read_bytes(), "utf-8"), {
         ..._OcioLoader.options,
-      } as ParseOptions & DocumentOptions & SchemaOptions & ToJSOptions);
+      });
     } catch (e: unknown) {
       // `except (OSError, yaml.YAMLError)`; node fs errors carry a `code`.
-      if (!(e instanceof OSError || e instanceof YAMLError || (e as { code?: unknown } | null)?.code)) throw e;
+      if (!(e instanceof OSError || e instanceof YAMLError || (e as { code?: unknown })?.code)) throw e;
       return null;
     }
     return doc instanceof Map ? doc : null;
@@ -114,7 +130,7 @@ export function _config_stamp(config_path: Path): [bigint, number] | null {
     st = host.fs.statSync(config_path.path, { bigint: true });
   } catch (e: unknown) {
     // `except OSError`: node fs errors carry a `code`.
-    if (!(e as { code?: unknown } | null)?.code) throw e;
+    if (!(e as { code?: unknown })?.code) throw e;
     return null;
   }
   return [st.mtimeNs, Number(st.size)];
@@ -151,7 +167,7 @@ export function list_config_color_spaces(config_path: Path): string[] {
   const doc = _load_config(config_path);
   if (doc == null) return [];
   const names: string[] = [];
-  for (const key of ["colorspaces", "display_colorspaces"]) {
+  for (const key of ["colorspaces", "display_colorspaces"] as const) {
     for (const entry of py_or(doc.get(key), [])) {
       if (entry instanceof Map) {
         const name = entry.get("name") ?? null;
@@ -318,7 +334,7 @@ export const _config_index_cached = lru_cache(
     if (doc == null) return new _ConfigIndex(new Map(), new Map(), new Map(), new Map());
     const families = new Map<string, string>();
     const aliases = new Map<string, string>();
-    for (const key of ["colorspaces", "display_colorspaces"]) {
+    for (const key of ["colorspaces", "display_colorspaces"] as const) {
       for (const cs of py_or(doc.get(key), [])) {
         if (cs instanceof Map && typeof cs.get("name") === "string") {
           const family = py_or(cs.get("family"), "");
@@ -625,7 +641,7 @@ export function ocio_input_envelope(config_path: Path, file_path: string): strin
   const index = _config_index(config_path);
   const rules = doc.get("file_rules") ?? null;
   if (py_bool(rules)) {
-    for (const rule of rules as unknown[]) {
+    for (const rule of rules) {
       if (!(rule instanceof Map) || !_rule_matches(rule, file_path)) continue;
       const color_space = rule.get("colorspace") ?? null;
       if (typeof color_space !== "string") return null;

@@ -10,6 +10,7 @@ import {
   getitem,
   Path,
   py_eq,
+  type JsonValue,
 } from "../../src/pyrt/index.ts";
 import { make_tmp_path, skip } from "../../src/pyrt/pytest.ts";
 import { FileSource, FootageItem, ImportOptions, parse as parse_aep } from "../../src/py_aep/index.ts";
@@ -31,7 +32,7 @@ function copy2(src: Path, dst: Path): void {
   fs.utimesSync(fspath(dst), st.atime, st.mtime);
 }
 
-function _counts(source: FileSource): [number, number] {
+function _counts(source: FileSource): [JsonValue, JsonValue] {
   const data = parse_alas_data(source._pin.chunks);
   return [getitem(data, "ascendcount_base"), getitem(data, "ascendcount_target")];
 }
@@ -97,11 +98,11 @@ describe("TestSaveFillsCounts", () => {
     // Records parsed from a file keep AE's counts wherever py_aep saves it,
     // so parse then save stays byte-identical.
     const sample = SAMPLES.div("models", "essential_graphics", "media_replacement.aep");
-    const before = new Map<string, [number, number]>();
+    const before = new Map<string, [JsonValue, JsonValue]>();
     for (const [k, s] of _sources(parse_aep(sample).project).entries()) before.set(k, _counts(s));
     const out = tmp_path.div("x.aep");
     parse_aep(sample).project.save(out);
-    const after = new Map<string, [number, number]>();
+    const after = new Map<string, [JsonValue, JsonValue]>();
     for (const [k, s] of _sources(parse_project_fresh(out)).entries()) after.set(k, _counts(s));
     expect(py_eq(after, before)).toBe(true);
     expect(py_eq(out.read_bytes(), sample.read_bytes())).toBe(true);

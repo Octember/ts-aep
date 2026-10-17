@@ -9,6 +9,9 @@ import {
   json_dumps,
   json_loads,
   len,
+  type_name,
+  TypeError_,
+  type JsonValue,
 } from "../../pyrt/index.ts";
 import { Chunk } from "./chunk.ts";
 import type { ChunkOf } from "./chunk_types.ts";
@@ -243,8 +246,13 @@ export function split_on_type(chunks: Chunk[], chunk_type: string): Chunk[][] {
   return groups;
 }
 
-/** Parsed `alas` JSON record (fullpath, target_is_folder, ...); shape set by After Effects. */
-export type AlasData = Map<string, any>;
+/**
+ * Parsed `alas` JSON record. After Effects writes `ascendcount_base`,
+ * `ascendcount_target`, `fullpath`, `platform`, `server_name`,
+ * `server_volume_name` and `target_is_folder`; a record is re-dumped whole,
+ * so keys py_aep does not read survive an edit.
+ */
+export type AlasData = Map<string, JsonValue>;
 
 /**
  * Parse path information from an Als2/alas chunk structure.
@@ -262,6 +270,27 @@ export function parse_alas_data(parent_chunks: Chunk[]): AlasData {
   if (alas_text == null || String(alas_text).length === 0) return new Map();
   const result = json_loads(String(alas_text));
   return result instanceof Map ? result : new Map();
+}
+
+/**
+ * `data.get("fullpath", "")`. After Effects always writes the path as a
+ * string; anything else is a corrupt record and fails here.
+ */
+export function alas_fullpath(data: AlasData): string {
+  const stored = data.get("fullpath");
+  const fullpath = stored === undefined ? "" : stored;
+  if (typeof fullpath !== "string") throw new TypeError_(`alas fullpath must be a str, not '${type_name(fullpath)}'`);
+  return fullpath;
+}
+
+/** `data.get("target_is_folder", False)`, which After Effects writes as a boolean. */
+export function alas_target_is_folder(data: AlasData): boolean {
+  const stored = data.get("target_is_folder");
+  const target_is_folder = stored === undefined ? false : stored;
+  if (typeof target_is_folder !== "boolean") {
+    throw new TypeError_(`alas target_is_folder must be a bool, not '${type_name(target_is_folder)}'`);
+  }
+  return target_is_folder;
 }
 
 /**

@@ -25,7 +25,6 @@ import {
   bytes_eq,
   concat,
   decode,
-  dict_get,
   float,
   floordiv,
   getitem,
@@ -44,7 +43,9 @@ import {
   struct,
   tkey,
   type FileReader,
+  json_get,
   json_loads,
+  type JsonValue,
   open_rb,
   type_name,
 } from "../../pyrt/index.ts";
@@ -532,13 +533,10 @@ export function _probe_exr(fp: ProbeStream): MediaInfo {
     parts.push(_read_exr_header(fp));
   }
   const first = parts[0];
-  const first_list: string[] = dict_get(first, "channels", []);
+  const first_list = first.channels ?? [];
   const has_alpha = first_list.some((c) => c === "A" || c === "a");
   const channel_names = parts.flatMap((part) =>
-    dict_get(part, "channels", []).map((c: string) => {
-      const part_name = part.get("name") ?? null;
-      return py_bool(part_name) ? `${part_name}.${c}` : c;
-    }),
+    (part.channels ?? []).map((c) => (part.name ? `${part.name}.${c}` : c)),
   );
   // AE reads OpenEXR as 32-bit float, half-float channels included. Its
   // footage size and alpha come from the first part. A luminance-only part
@@ -547,23 +545,31 @@ export function _probe_exr(fp: ProbeStream): MediaInfo {
   const first_channels = new Set(first_list);
   const luminance_only = !has_alpha && first_channels.has("Y") && !(first_channels.has("R") || first_channels.has("G") || first_channels.has("B"));
   return new MediaInfo({
-    width: dict_get(first, "width", 0),
-    height: dict_get(first, "height", 0),
+    width: first.width ?? 0,
+    height: first.height ?? 0,
     has_alpha,
-    pixel_aspect: dict_get(first, "pixel_aspect", 1.0),
-    frame_rate: dict_get(first, "frame_rate", 0.0),
+    pixel_aspect: first.pixel_aspect ?? 1.0,
+    frame_rate: first.frame_rate ?? 0.0,
     depth: luminance_only ? getitem(_GRAY_DEPTHS, 32) : _color_depth(has_alpha, 32),
-    compression: dict_get(first, "compression", 0),
+    compression: first.compression ?? 0,
     channel_names,
   });
 }
 
-/** Attributes of one EXR part header keyed by name: width/height/compression (number), channels (string[]), name (string). */
-export type ExrHeader = Map<string, any>;
+/** The attributes `_probe_exr` uses from one EXR part header; each is absent when the header lacks it. */
+export interface ExrHeader {
+  width?: number;
+  height?: number;
+  compression?: number;
+  channels?: string[];
+  name?: string;
+  pixel_aspect?: number;
+  frame_rate?: number;
+}
 
 /** The attributes `_probe_exr` uses from one EXR part header. */
 export function _read_exr_header(fp: ProbeStream): ExrHeader {
-  const out: ExrHeader = new Map();
+  const out: ExrHeader = {};
   for (;;) {
     const name = _read_cstr(fp);
     if (name.length === 0) return out; // empty name terminates the header
@@ -574,19 +580,19 @@ export function _read_exr_header(fp: ProbeStream): ExrHeader {
     // dataWindow (actual pixel-data extent, which may be cropped/oversized).
     if (bytes_eq(name, b("displayWindow"))) {
       const [x_min, y_min, x_max, y_max] = struct.unpack("<iiii", value);
-      out.set("width", x_max - x_min + 1);
-      out.set("height", y_max - y_min + 1);
+      out.width = x_max - x_min + 1;
+      out.height = y_max - y_min + 1;
     } else if (bytes_eq(name, b("channels"))) {
-      out.set("channels", _exr_channel_names(value));
+      out.channels = _exr_channel_names(value);
     } else if (bytes_eq(name, b("compression"))) {
-      out.set("compression", _byte_at(value, 0));
+      out.compression = _byte_at(value, 0);
     } else if (bytes_eq(name, b("name"))) {
-      out.set("name", decode(bytes_.rstrip(value, b("\x00")), "utf-8", "replace"));
+      out.name = decode(bytes_.rstrip(value, b("\x00")), "utf-8", "replace");
     } else if (bytes_eq(name, b("pixelAspectRatio"))) {
-      out.set("pixel_aspect", struct.unpack("<f", value)[0]);
+      out.pixel_aspect = struct.unpack("<f", value)[0];
     } else if (bytes_eq(name, b("framesPerSecond"))) {
       const [num, den] = struct.unpack("<ii", value);
-      out.set("frame_rate", den ? num / den : 0.0);
+      out.frame_rate = den ? num / den : 0.0;
     }
   }
 }
@@ -1829,14 +1835,6 @@ export function _parse_mgjson_time(t: JsonValue): number | null {
   return null;
 }
 
-/** A parsed JSON value: Map for objects, arrays, strings, numbers, booleans, null. */
-export type JsonValue = null | boolean | number | string | JsonValue[] | Map<string, JsonValue>;
-
-export function _json_get(d: JsonValue, key: string, default_: JsonValue = null): JsonValue {
-  if (!(d instanceof Map)) throw new AttributeError(`'${type_name(d)}' object has no attribute 'get'`);
-  return dict_get(d, key, default_);
-}
-
 /** `iter(x)` on a parsed JSON value: list items, str characters, dict keys. */
 export function _json_iter(x: JsonValue): JsonValue[] {
   if (Array.isArray(x)) return x;
@@ -1848,9 +1846,9 @@ export function _json_iter(x: JsonValue): JsonValue[] {
 export function _probe_mgjson(fp: ProbeStream): MediaInfo {
   const doc = json_loads(fp.read());
   const times: number[] = [];
-  for (const stream of _json_iter(_json_get(doc, "dataDynamicSamples", []))) {
-    for (const sample of _json_iter(_json_get(stream, "samples", []))) {
-      const t = _json_get(sample, "time");
+  for (const stream of _json_iter(json_get(doc, "dataDynamicSamples", []))) {
+    for (const sample of _json_iter(json_get(stream, "samples", []))) {
+      const t = json_get(sample, "time", null);
       if (py_bool(t)) {
         const parsed = _parse_mgjson_time(t);
         if (parsed !== null) times.push(parsed);

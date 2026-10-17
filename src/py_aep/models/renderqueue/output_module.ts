@@ -11,7 +11,7 @@ import { allowed_values, constrained_keys, type RuleValue } from "../../data/out
 import { parse_format_options } from "../../parsers/format_options.ts";
 import { FORMAT_ID_EXTENSIONS, VIDEO_CODEC_NAMES, resolve_output_filename, resolve_time_span } from "../../resolvers/output.ts";
 import { platform_path } from "../../resolvers/platform_paths.ts";
-import { ChunkField } from "../descriptors.ts";
+import { ChunkField, type Dynamic } from "../descriptors.ts";
 import { CompItem } from "../items/composition.ts";
 import { _validate_number, validate_bool, validate_enum, validate_sequence, validate_string } from "../validators.ts";
 import { CineonFormatOptions, PngFormatOptions, XmlFormatOptions, type JpegFormatOptions, type OpenExrFormatOptions, type TargaFormatOptions, type TiffFormatOptions } from "./format_options/index.ts";
@@ -20,7 +20,7 @@ import { LHD3_BLOCK_SINGLE, set_lhd3_count, type LdatChunk, type Lhd3Chunk } fro
 import { HdrmChunk } from "../../binary/misc_chunks.ts";
 import { OutputModuleSettingsItem, RoptChunk, RouuChunk, TiffRoptChunk, type RenderSettingsItem } from "../../binary/render_chunks.ts";
 import { Utf8Chunk } from "../../binary/scalar_chunks.ts";
-import { PENDING_ASCENDCOUNT, alas_platform, build_als2_list, dump_alas, find_by_type, index_by_identity } from "../../binary/utils.ts";
+import { PENDING_ASCENDCOUNT, alas_platform, type AlasData, build_als2_list, dump_alas, find_by_type, index_by_identity } from "../../binary/utils.ts";
 import type { Chunk } from "../../binary/chunk.ts";
 import type { EnumHelpers } from "../../../pyrt/enum.ts";
 import type { OutputModuleTemplate } from "../../parsers/templates.ts";
@@ -54,7 +54,7 @@ import {
 
 // NOTE(port): Python's `isinstance(x, bool) or isinstance(x, int)` accepts bools as ints.
 // `is_int` keeps that so raw bool fields still count as ints in the checks below.
-export function is_int(v: unknown): boolean {
+export function is_int(v: unknown): v is number | boolean {
   return (typeof v === "number" && Number.isInteger(v)) || typeof v === "boolean";
 }
 
@@ -82,7 +82,7 @@ export const _KEY_ENUM = new Map<string, KeyEnum>([
   ["Audio Bit Depth", AudioBitDepth],
 ]);
 
-export function _is_enum_member(key: string, value: unknown): boolean {
+export function _is_enum_member(key: string, value: unknown): value is RuleValue {
   return getitem(_KEY_ENUM, key).has(value);
 }
 
@@ -210,7 +210,7 @@ export function _set_xml_param_raw(om: OutputModule, param_key: string, value: n
 // OM_SETTINGS: ExtendScript key -> (attribute, optional enum class)
 // ---------------------------------------------------------------------------
 
-export const OM_SETTINGS = new Map<string, [string, any]>([
+export const OM_SETTINGS = new Map<string, [string, Dynamic]>([
   ["Audio Bit Depth", ["_audio_bit_depth", AudioBitDepth]],
   ["Audio Channels", ["_audio_channels", AudioChannels]],
   ["Audio Sample Rate", ["_audio_sample_rate", AudioSampleRate]],
@@ -558,7 +558,7 @@ export class OutputModule {
     return new SettingsView(this, OM_SETTINGS);
   }
 
-  set settings(value: any) {
+  set settings(value: Dynamic) {
     // NOTE(port): Python accepts any `Mapping`; a `Map` and a `SettingsView` are accepted here.
     if (!(value instanceof Map || value instanceof SettingsView)) {
       throw new ValueError("Settings must be a dictionary of key-value pairs");
@@ -637,8 +637,8 @@ export class OutputModule {
    * its key absent, so the rules that condition on it simply do not
    * apply (permissive degradation).
    */
-  _rules_context(): Map<string, any> {
-    const context = new Map<string, any>();
+  _rules_context(): Map<string, RuleValue> {
+    const context = new Map<string, RuleValue>();
     for (const key of ["Channels", "Audio Channels", "Audio Sample Rate"]) {
       let value: unknown;
       try {
@@ -1285,7 +1285,7 @@ export class OutputModule {
   }
 
   /** Parsed JSON from the alas chunk. */
-  get _alas_data(): Map<string, any> {
+  get _alas_data(): AlasData {
     if (this._alas_utf8 == null) {
       return new Map();
     }
@@ -1428,13 +1428,7 @@ export class OutputModule {
 
     const [effective_width, effective_height] = this._effective_dimensions;
     const effective_frame_rate = this._effective_frame_rate;
-    // NOTE(port): Python passes the live SettingsView (read lazily by key); this adapter gives
-    // resolve_time_span the `has`/`get` pair `getitem` uses.
-    const rq_settings_map = {
-      has: (k: string) => rq_settings.__contains__(k),
-      get: (k: string): number | string => rq_settings.__getitem__(k),
-    };
-    const time_span = resolve_time_span(comp, rq_settings_map, effective_frame_rate);
+    const time_span = resolve_time_span(comp, rq_settings, effective_frame_rate);
 
     const project = this._project;
     const project_name = project.file ? new Path(project.file).stem : "Untitled Project";
@@ -1474,7 +1468,7 @@ export class OutputModule {
    * @param format - The output format. `GetSettingsFormat.NUMBER` returns numeric values (enums
    *   unwrapped to ints). `GetSettingsFormat.STRING` returns all values as strings
    */
-  get_settings(format: GetSettingsFormat = GetSettingsFormat.STRING): Map<string, any> {
+  get_settings(format: GetSettingsFormat = GetSettingsFormat.STRING): Map<string, Dynamic> {
     if (format === GetSettingsFormat.STRING) {
       return settings_to_string(this.settings, build_resize_to_strings(this._project._preferences));
     }
@@ -1490,7 +1484,7 @@ export class OutputModule {
    * @param key - The setting key (e.g. `"Video Output"`, `"Audio Bit Depth"`).
    * @param format - The output format.
    */
-  get_setting(key: string, format: GetSettingsFormat = GetSettingsFormat.STRING): any {
+  get_setting(key: string, format: GetSettingsFormat = GetSettingsFormat.STRING): Dynamic {
     return getitem(this.get_settings(format), key);
   }
 

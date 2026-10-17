@@ -24,7 +24,7 @@ import { can_add_layer } from "../../resolvers/motion_graphics.ts";
 import { shape_layer_rect } from "../../resolvers/shape_bounds.ts";
 import { text_ink_rect } from "../../resolvers/text_ink.ts";
 import { type Mat4, build_world_matrix, camera_ray, intersect_layer_plane, project_to_comp, transform_from_points } from "../../resolvers/transform.ts";
-import { ChunkField } from "../descriptors.ts";
+import { ChunkField, type EffectParamDefs, type Dynamic } from "../descriptors.ts";
 import type { Chunk } from "../../binary/chunk.ts";
 import type { CompItem } from "../items/composition.ts";
 import { Property } from "../properties/property.ts";
@@ -239,7 +239,7 @@ export class AVLayer extends Layer {
     match_name: string,
     auto_name: string,
     property_depth: number,
-    kw?: any,
+    kw?: Dynamic,
   ): PropertyGroup;
   static _new(kw: {
     name: string;
@@ -251,10 +251,10 @@ export class AVLayer extends Layer {
     three_d_layer?: boolean;
     label?: number;
     root_tdgp_extra?: Chunk[] | null;
-    effect_param_defs?: Map<string, Map<string, Map<string, any>>> | null;
+    effect_param_defs?: EffectParamDefs | null;
   }): AVLayer;
-  static _new(kw: any): AVLayer;
-  static _new(kw: any): any {
+  static _new(kw: Dynamic): AVLayer;
+  static _new(kw: Dynamic): Dynamic {
     const {
       name,
       layer_id,

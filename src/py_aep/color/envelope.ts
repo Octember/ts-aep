@@ -23,7 +23,7 @@
  * order; reproducing it exactly is required for byte-identical output.
  */
 
-import { encode, getitem, json_dumps, json_loads } from "../../pyrt/index.ts";
+import { encode, json_dumps, json_get, json_getitem, json_loads, str, type_name, TypeError_, type JsonValue } from "../../pyrt/index.ts";
 import { b64decode, b64encode } from "../../pyrt/base64.ts";
 
 // baseProfileType values.
@@ -175,11 +175,21 @@ export class ColorProfile {
   /** The OCIO `(colorSpace1[, colorSpace2])` names, or an empty array if not OCIO. */
   get ocio_color_spaces(): readonly string[] {
     if (!this.is_ocio) return [];
-    const inner: Map<string, string> = json_loads(this.data);
-    const names = [getitem(inner, "colorSpace1")];
-    if (inner.has("colorSpace2")) names.push(getitem(inner, "colorSpace2"));
-    return names;
+    const inner = json_loads(this.data);
+    const names = [json_getitem(inner, "colorSpace1")];
+    if (inner instanceof Map && inner.has("colorSpace2")) names.push(json_getitem(inner, "colorSpace2"));
+    return names.map((name) => _envelope_string(name, "OCIO color space"));
   }
+}
+
+/**
+ * An envelope field `ColorProfile` holds as text. py_aep stores whatever the
+ * JSON holds; a non-string here only comes from a corrupt envelope, and fails
+ * at the read instead of later.
+ */
+function _envelope_string(value: JsonValue, field: string): string {
+  if (typeof value !== "string") throw new TypeError_(`${field} must be a str, not '${type_name(value)}'`);
+  return value;
 }
 
 /**
@@ -188,13 +198,13 @@ export class ColorProfile {
  * @param envelope_json - The raw `Utf8` chunk value (the outer JSON string).
  */
 export function parse_envelope(envelope_json: string): ColorProfile {
-  const outer: Map<string, any> = json_loads(envelope_json);
-  const base: Map<string, string> = getitem(outer, "baseColorProfile");
-  return new ColorProfile(
-    getitem(base, "colorProfileName"),
-    getitem(outer, "baseProfileType"),
-    b64decode(getitem(base, "colorProfileData")),
-  );
+  const outer = json_loads(envelope_json);
+  const base = json_getitem(outer, "baseColorProfile");
+  const name = json_getitem(base, "colorProfileName");
+  const profile_type = json_getitem(outer, "baseProfileType");
+  const data = json_getitem(base, "colorProfileData");
+  if (typeof profile_type !== "number") throw new TypeError_(`baseProfileType must be an int, not '${type_name(profile_type)}'`);
+  return new ColorProfile(_envelope_string(name, "colorProfileName"), profile_type, b64decode(_envelope_string(data, "colorProfileData")));
 }
 
 
@@ -205,6 +215,6 @@ export function parse_envelope(envelope_json: string): ColorProfile {
  * Unlike `parse_envelope`, this does not require `colorProfileData`.
  */
 export function envelope_profile_name(envelope_json: string): string {
-  const outer: Map<string, Map<string, string>> = json_loads(envelope_json);
-  return (outer.get("baseColorProfile") ?? new Map<string, string>()).get("colorProfileName") ?? "None";
+  const outer = json_loads(envelope_json);
+  return str(json_get(json_get(outer, "baseColorProfile", new Map<string, JsonValue>()), "colorProfileName", "None"));
 }

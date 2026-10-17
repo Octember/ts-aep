@@ -1,5 +1,7 @@
 import { RuntimeError, object_setattr, py_object } from "../../../../pyrt/index.ts";
 import type { OutputModule } from "../output_module.ts";
+import type { Dynamic } from "../../descriptors.ts";
+
 
 /**
  * Shared plumbing for the format-specific render-option wrappers.
@@ -42,7 +44,7 @@ export class FormatOptionsBase {
     }
   }
 
-  __setattr__(name: string, value: any): void {
+  __setattr__(name: string, value: Dynamic): void {
     // Public fields only: `__init__` assigns `_body` (and friends), and
     // the detach itself writes `_detached`, both before/while there is
     // anything to guard.

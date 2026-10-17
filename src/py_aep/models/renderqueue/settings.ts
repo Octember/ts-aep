@@ -24,6 +24,8 @@ import {
 import type { EnumHelpers } from "../../../pyrt/enum.ts";
 import type { CompPreset } from "../../parsers/comp_presets.ts";
 import type { Preferences } from "../preferences.ts";
+import type { Dynamic } from "../descriptors.ts";
+
 
 // NOTE(port): py_enum members are plain numbers with no owning class, so
 // `isinstance(value, IntEnum)` is unanswerable. NUMBER output is unaffected
@@ -68,7 +70,7 @@ export class SettingsView {
 
   // -- reads -------------------------------------------------------------
 
-  __getitem__(key: string): any {
+  __getitem__(key: string): Dynamic {
     const spec = this._specs.get(key) ?? null;
     if (spec == null) throw new KeyError(repr(key));
     const [attr_name] = spec;
@@ -77,7 +79,7 @@ export class SettingsView {
 
   // -- writes ------------------------------------------------------------
 
-  __setitem__(key: string, value: any): void {
+  __setitem__(key: string, value: Dynamic): void {
     const spec = this._specs.get(key) ?? null;
     if (spec == null) {
       const valid = sorted(this._specs.keys());
@@ -113,8 +115,8 @@ export class SettingsView {
     return this._specs.size;
   }
 
-  __contains__(key: unknown): boolean {
-    return this._specs.has(key as string);
+  __contains__(key: Dynamic): boolean {
+    return this._specs.has(key);
   }
 
   // -- MutableMapping mixin methods (inherited in Python) -----------------
@@ -123,15 +125,15 @@ export class SettingsView {
     return [...this._specs.keys()];
   }
 
-  items(): Array<[string, any]> {
-    return [...this._specs.keys()].map((key): [string, any] => [key, this.__getitem__(key)]);
+  items(): Array<[string, Dynamic]> {
+    return [...this._specs.keys()].map((key): [string, Dynamic] => [key, this.__getitem__(key)]);
   }
 
-  values(): any[] {
+  values(): Dynamic[] {
     return this.items().map(([, v]) => v);
   }
 
-  get(key: string, default_: any = null): any {
+  get(key: string, default_: Dynamic = null): Dynamic {
     try {
       return this.__getitem__(key);
     } catch (e) {
@@ -140,7 +142,7 @@ export class SettingsView {
     }
   }
 
-  update(other: Map<string, any> | SettingsView | Iterable<[string, any]> = [], kwargs: Record<string, unknown> = {}): void {
+  update(other: Map<string, Dynamic> | SettingsView | Iterable<[string, Dynamic]> = [], kwargs: Record<string, unknown> = {}): void {
     if (other instanceof Map || other instanceof SettingsView) {
       for (const [k, v] of mapping_items(other)) this.__setitem__(k, v);
     } else {
@@ -149,7 +151,7 @@ export class SettingsView {
     for (const [k, v] of Object.entries(kwargs)) this.__setitem__(k, v);
   }
 
-  setdefault(key: string, default_: any = null): any {
+  setdefault(key: string, default_: Dynamic = null): Dynamic {
     try {
       return this.__getitem__(key);
     } catch (e) {
@@ -159,8 +161,8 @@ export class SettingsView {
     }
   }
 
-  pop(key: string, ...default_: [any?]): any {
-    let value: any;
+  pop(key: string, ...default_: [Dynamic?]): Dynamic {
+    let value: Dynamic;
     try {
       value = this.__getitem__(key);
     } catch (e) {
@@ -172,7 +174,7 @@ export class SettingsView {
     return value;
   }
 
-  popitem(): [string, any] {
+  popitem(): [string, Dynamic] {
     const it = this._specs.keys().next();
     if (it.done) throw new KeyError("");
     const key = it.value;
@@ -197,7 +199,7 @@ export class SettingsView {
     return `SettingsView(${repr(new Map(this.items()))})`;
   }
 
-  __eq__(other: unknown): boolean {
+  __eq__(other: Dynamic): boolean {
     if (other instanceof Map || other instanceof SettingsView) {
       return py_eq(new Map(this.items()), new Map(mapping_items(other)));
     }
@@ -214,7 +216,7 @@ export class SettingsView {
  *     - An int matching an enum member's value
  *     - A string matching an enum member's label
  */
-export function _coerce_enum(enum_class: LabeledEnum, value: unknown): number {
+export function _coerce_enum(enum_class: LabeledEnum, value: Dynamic): number {
   if (enum_class.has(value)) return value;
   if (typeof value === "boolean") {
     // bool is int: settings["Output Audio"] = True would silently
@@ -306,7 +308,7 @@ export function build_resize_to_strings(preferences: Preferences): Map<string, s
     const current = best.get(key);
     if (current == null || preset.frame_rate <= current.frame_rate) best.set(key, preset);
   }
-  return new Map<string, string>([...best.entries()].map(([key, preset]) => [key, preset.name] as [string, string]));
+  return new Map<string, string>([...best.entries()].map(([key, preset]) => [key, preset.name]));
 }
 
 /**
@@ -315,7 +317,7 @@ export function build_resize_to_strings(preferences: Preferences): Map<string, s
  * IntEnum values are unwrapped to their integer value.
  * All other types pass through unchanged.
  */
-export function _to_number_value(value: any): any {
+export function _to_number_value(value: Dynamic): Dynamic {
   if (IntEnum.has(value)) return int(value);
   return value;
 }
@@ -330,10 +332,10 @@ export function _to_number_value(value: any): any {
  */
 export function _to_string_value(
   key: string,
-  value: any,
+  value: Dynamic,
   resize_map: Map<string, string> = _RESIZE_TO_STRINGS,
   enum_class: LabeledEnum | null = null,
-): any {
+): Dynamic {
   if (value instanceof Map) {
     return new Map([...value.entries()].map(([k, v]) => [k, _to_string_value(k, v, resize_map)]));
   }
@@ -354,9 +356,9 @@ export function _to_string_value(
  *
  * @param settings - The typed settings map.
  */
-export function settings_to_number(settings: Map<string, any> | SettingsView): Map<string, any> {
-  return new Map<string, any>(
-    mapping_items(settings).map(([k, v]): [string, any] => [k, _to_number_value(v)]),
+export function settings_to_number(settings: Map<string, Dynamic> | SettingsView): Map<string, Dynamic> {
+  return new Map<string, Dynamic>(
+    mapping_items(settings).map(([k, v]): [string, Dynamic] => [k, _to_number_value(v)]),
   );
 }
 
@@ -370,7 +372,7 @@ export function settings_to_number(settings: Map<string, any> | SettingsView): M
  *   {@link build_resize_to_strings}); defaults to the factory fallback table.
  */
 export function settings_to_string(
-  settings: Map<string, any> | SettingsView,
+  settings: Map<string, Dynamic> | SettingsView,
   resize_map: Map<string, string> = _RESIZE_TO_STRINGS,
 ): Map<string, string> {
   return new Map<string, string>(

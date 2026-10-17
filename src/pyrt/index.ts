@@ -19,5 +19,5 @@ export * from "./pytest.ts";
 export { deferred } from "./deferred.ts";
 export * as etree from "./etree.ts";
 export { hypot } from "./math.ts";
-export { json_loads, json_dumps, JSONDecodeError, encode_basestring, encode_basestring_ascii, type LoadsOptions, type DumpsOptions } from "./json.ts";
+export { json_loads, json_dumps, json_float, json_get, json_getitem, json_int, JSONDecodeError, type JsonValue, encode_basestring, encode_basestring_ascii, type LoadsOptions, type DumpsOptions } from "./json.ts";
 export { py_re, re_search, re_match, re_fullmatch, re_escape, re_flags, pattern_match, pattern_search, pattern_findall, PyReError } from "./re.ts";

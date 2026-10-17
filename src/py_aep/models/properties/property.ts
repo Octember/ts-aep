@@ -16,7 +16,7 @@ import { VF_AXIS_PREFIX } from "../../data/match_names.ts";
 import { UNITS_TEXT_MAP } from "../../data/units.ts";
 import { can_add_property } from "../../resolvers/motion_graphics.ts";
 import { _USE_VALUE, PropSpec } from "../../synthesis/property.ts";
-import { ChunkField } from "../descriptors.ts";
+import { ChunkField, type Dynamic } from "../descriptors.ts";
 import { TextDocument } from "../text/text_document.ts";
 import { _validate_number, validate_bool, validate_enum, validate_f8, validate_name, validate_number, validate_sequence, validate_text } from "../validators.ts";
 import type { FolderItem } from "../items/folder.ts";
@@ -134,7 +134,7 @@ export function _same_path(a: Shape, b: unknown): boolean {
   );
 }
 
-export function _validate_value(prop: Property, value: unknown): void {
+export function _validate_value(prop: Property, value: Dynamic): void {
   // Validate type, length and bounds of a property value.
   // A mask or shape-layer path only holds a Shape: AE 2026 refuses any other
   // value ("Array is not of the correct type"), and the numeric write path
@@ -160,7 +160,7 @@ export function _validate_value(prop: Property, value: unknown): void {
   else _validate_scalar(value, prop);
 }
 
-export function _validate_key_value(prop: Property, value: unknown): void {
+export function _validate_key_value(prop: Property, value: Dynamic): void {
   // Validate a keyframe value: `_validate_value`, after refusing `None` for
   // a numeric keyframe, which always holds a number (storing `None` only in
   // the model left the file at whatever the slot held, 0).
@@ -201,7 +201,7 @@ export function _vf_tag_from_str(tag: string): number {
   return n;
 }
 
-export function _values_equal(a: unknown, b: unknown): boolean {
+export function _values_equal(a: Dynamic, b: Dynamic): boolean {
   // Compare two property values with float tolerance.
   //
   // Handles scalars, arrays, booleans, and null.
@@ -1384,7 +1384,7 @@ export class Property<V extends PropertyValue = any> extends PropertyBase {
     // 1. Percent scaling (0-1 fraction -> 0-100 percentage)
     if (_PERCENT_MATCH_NAMES.has(this.match_name)) {
       if (typeof raw === "number" || typeof raw === "boolean") {
-        raw = (raw as number) * 100.0;
+        raw = raw * 100.0;
       } else if (Array.isArray(raw)) {
         raw = raw.map((v) => v * 100.0);
       }
@@ -1635,7 +1635,7 @@ export class Property<V extends PropertyValue = any> extends PropertyBase {
     return this._mask_inert_z(this._stored_static_value());
   }
 
-  set value(value: any) {
+  set value(value: Dynamic) {
     this._reject_curves_write();
     if (this._separation_followers() != null) {
       throw new ValueError(
@@ -1657,7 +1657,7 @@ export class Property<V extends PropertyValue = any> extends PropertyBase {
     const separated = this._separated_value();
     if (separated != null) return separated;
     if (this._arbs != null && !this.keyframes?.length) return this._static_curves();
-    if (this._value != null) return this._wire_text_version(this._value as _ValueType);
+    if (this._value != null) return this._wire_text_version(this._value);
     if (this.keyframes?.length > 0) return this._stored_value_at(0);
     if (this._cdat != null) return this._resolve_value(this._read_cdat_raw());
     if (this.match_name === "ADBE Mask Shape") {
@@ -1868,7 +1868,7 @@ export class Property<V extends PropertyValue = any> extends PropertyBase {
    * The minimum permitted value of the named property. Only valid if
    * `has_min` is `true`. Read-only.
    */
-  get min_value(): any {
+  get min_value(): Dynamic {
     if (_UNBOUNDED_MATCH_NAMES.has(this.match_name)) return null;
     if (this._min_value_fallback !== _UNSET) return this._min_value_fallback;
     if (this._tdum != null) {
@@ -1882,7 +1882,7 @@ export class Property<V extends PropertyValue = any> extends PropertyBase {
    * The maximum permitted value of the named property. Only valid if
    * `has_max` is `true`. Read-only.
    */
-  get max_value(): any {
+  get max_value(): Dynamic {
     if (_UNBOUNDED_MATCH_NAMES.has(this.match_name)) return null;
     if (this._max_value_fallback !== _UNSET) return this._max_value_fallback;
     if (this._tduM != null) {
@@ -2066,11 +2066,11 @@ export class Property<V extends PropertyValue = any> extends PropertyBase {
       }
     }
     if (comp != null) {
-      const param_def = (comp._project._effect_param_defs.get(effect.match_name) ?? new Map()).get(this.match_name);
+      const param_def = comp._project._effect_param_defs.get(effect.match_name)?.get(this.match_name);
       if (param_def != null) {
-        param_def.set("property_parameters", [...items]);
-        param_def.set("nb_options", items.length);
-        param_def.set("max_value", items.length);
+        param_def.property_parameters = [...items];
+        param_def.nb_options = items.length;
+        param_def.max_value = items.length;
       }
     }
   }
@@ -2912,7 +2912,7 @@ export class Property<V extends PropertyValue = any> extends PropertyBase {
    * AE stores in a key added at `time` (measured on AE 2026: `addKey`
    * between keys at Z 40 and -30 stores Z 5.0005).
    */
-  _stored_value_at(time: number): any {
+  _stored_value_at(time: number): Dynamic {
     if (!this.keyframes?.length) {
       const separated = this._separated_value(time);
       if (separated != null) return separated;
@@ -2943,7 +2943,7 @@ export class Property<V extends PropertyValue = any> extends PropertyBase {
    * speeds (measured on AE 2026: a static [100, 120, 40] and keys at Z
    * 40 / -30 on a 2-D layer read Z = 0 and keep the 40 in the file).
    */
-  _mask_inert_z(value: unknown): any {
+  _mask_inert_z(value: Dynamic): Dynamic {
     if (
       Array.isArray(value) &&
       value.length === 3 &&
@@ -2980,12 +2980,12 @@ export class Property<V extends PropertyValue = any> extends PropertyBase {
    * Mask Expansion, Stroke Width and a Slider all read their bound,
    * never past it).
    */
-  _clamp_to_range(value: unknown): unknown {
+  _clamp_to_range(value: Dynamic): Dynamic {
     const lo = _get_min(this);
     const hi = _get_max(this);
     if (lo == null && hi == null) return value;
 
-    const clamp = (component: unknown): unknown => {
+    const clamp = (component: Dynamic): Dynamic => {
       if (typeof component !== "number") return component;
       if (lo != null && component < lo) return lo;
       if (hi != null && component > hi) return hi;
@@ -4030,7 +4030,7 @@ export class Property<V extends PropertyValue = any> extends PropertyBase {
     // different chunk, so edits to it would never reach the serialized
     // keyframe.
     const wrapped = kind.wrap_value_chunk(this, value_chunk);
-    if (wrapped != null) kf._value = wrapped as _ValueType;
+    if (wrapped != null) kf._value = wrapped;
     kind.bind_keyframe(kf._value, kf);
     if (was_static) {
       // Match the parsers: an animated shape keeps `value` aliased to
@@ -4232,7 +4232,7 @@ export class Property<V extends PropertyValue = any> extends PropertyBase {
         // by a different chunk, so editing the keyframe's value
         // afterwards would otherwise reach the caller's chunk -
         // corrupting any other keyframe that shares it.
-        const wrapped = kind.wrap_value_chunk(this, value_chunk) as _ValueType | undefined;
+        const wrapped = kind.wrap_value_chunk(this, value_chunk);
         kf._value = wrapped ?? value;
       } else {
         kf._value = value;
@@ -4331,7 +4331,7 @@ export class Property<V extends PropertyValue = any> extends PropertyBase {
     let node: PropertyBase | null = this.parent_property;
     while (node != null) {
       const found = getattr(node, "_containing_comp", null);
-      if (found != null) return found as CompItem;
+      if (found != null) return found;
       node = node.parent_property;
     }
     return null;
@@ -4539,12 +4539,12 @@ export class _EssentialOverrideProperty extends Property {
   }
 
 
-  get min_value(): any {
+  get min_value(): Dynamic {
     const src = this._override_source();
     return src != null ? src.min_value : super.min_value;
   }
 
-  get max_value(): any {
+  get max_value(): Dynamic {
     const src = this._override_source();
     return src != null ? src.max_value : super.max_value;
   }

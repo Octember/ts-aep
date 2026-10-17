@@ -6,9 +6,9 @@
 // float), an integer beyond 2**53 is a `bigint`. NaN / Infinity / -Infinity
 // are accepted, as Python does.
 
-import { ValueError, TypeError_ } from "./errors.ts";
-import { float_repr, PyFloat, pyfloat } from "./num.ts";
-import { py_cmp, type_name } from "./builtins.ts";
+import { AttributeError, KeyError, ValueError, TypeError_ } from "./errors.ts";
+import { float, float_repr, int, PyFloat, pyfloat } from "./num.ts";
+import { py_cmp, repr, type_name } from "./builtins.ts";
 import { decode } from "./codecs.ts";
 
 /** `json.JSONDecodeError` (a `ValueError`) with CPython's message and position fields. */
@@ -38,13 +38,13 @@ function count_nl(s: string, end: number): number {
 
 export type LoadsOptions = {
   /** `parse_float`: called with the number's text; default boxes it as `PyFloat`. */
-  parse_float?: (text: string) => unknown;
+  parse_float?: (text: string) => JsonValue;
   /** `parse_int`: called with the number's text; default `number`, or `bigint` past 2**53. */
-  parse_int?: (text: string) => unknown;
+  parse_int?: (text: string) => JsonValue;
   /** `parse_constant`: called with "NaN", "Infinity" or "-Infinity". */
-  parse_constant?: (text: string) => unknown;
+  parse_constant?: (text: string) => JsonValue;
   /** `object_pairs_hook`: builds an object from its `[key, value]` pairs (default: `Map`). */
-  object_pairs_hook?: (pairs: [string, unknown][]) => unknown;
+  object_pairs_hook?: (pairs: [string, JsonValue][]) => JsonValue;
 };
 
 function default_int(text: string): number | bigint {
@@ -79,7 +79,50 @@ const ESC: Record<string, string> = { '"': '"', "\\": "\\", "/": "/", b: "\b", f
  * `json.loads(s)`; `s` may be `str` or `bytes` (encoding sniffed like CPython).
  * NOTE: bytes decode strictly; CPython's `surrogatepass` (encoded surrogates) is not modelled.
  */
-export function json_loads(s: string | Uint8Array, opts: LoadsOptions = {}): any {
+/**
+ * A value `json_loads` produces with its default hooks: objects are `Map`s
+ * (insertion-ordered, like a Python dict), fractional and exponent numbers
+ * are boxed `PyFloat`s, integers past 2**53 are `bigint`s.
+ */
+export type JsonValue = null | boolean | number | bigint | PyFloat | string | JsonValue[] | Map<string, JsonValue>;
+
+/** Python `x[key]` on a decoded JSON value: `KeyError` when absent, `TypeError` when `x` is no object. */
+export function json_getitem(x: JsonValue, key: string): JsonValue {
+  if (x instanceof Map) {
+    const value = x.get(key);
+    if (value === undefined) throw new KeyError(repr(key));
+    return value;
+  }
+  if (Array.isArray(x)) throw new TypeError_("list indices must be integers or slices, not str");
+  if (typeof x === "string") throw new TypeError_("string indices must be integers, not 'str'");
+  throw new TypeError_(`'${type_name(x)}' object is not subscriptable`);
+}
+
+/** Python `x.get(key, default)` on a decoded JSON value: `AttributeError` when `x` is no object. */
+export function json_get<D>(x: JsonValue, key: string, default_: D): JsonValue | D {
+  if (!(x instanceof Map)) throw new AttributeError(`'${type_name(x)}' object has no attribute 'get'`);
+  const value = x.get(key);
+  return value === undefined ? default_ : value;
+}
+
+/** Python `int(x)` on a decoded JSON value: `TypeError` for null, lists and objects. */
+export function json_int(x: JsonValue): number {
+  if (x === null || Array.isArray(x) || x instanceof Map) {
+    throw new TypeError_(`int() argument must be a string, a bytes-like object or a real number, not '${type_name(x)}'`);
+  }
+  return int(x);
+}
+
+/** Python `float(x)` on a decoded JSON value: `TypeError` for null, lists and objects. */
+export function json_float(x: JsonValue): number {
+  if (x === null || Array.isArray(x) || x instanceof Map) {
+    throw new TypeError_(`float() argument must be a string or a real number, not '${type_name(x)}'`);
+  }
+  return float(typeof x === "bigint" ? Number(x) : x);
+}
+
+/** `json.loads(s)`. */
+export function json_loads(s: string | Uint8Array, opts: LoadsOptions = {}): JsonValue {
   let text: string;
   if (s instanceof Uint8Array) {
     const enc = detect_encoding(s);
@@ -91,7 +134,7 @@ export function json_loads(s: string | Uint8Array, opts: LoadsOptions = {}): any
   const parse_float = opts.parse_float ?? default_float;
   const parse_int = opts.parse_int ?? default_int;
   const parse_constant = opts.parse_constant ?? ((c: string) => CONSTANTS[c]);
-  const pairs_hook = opts.object_pairs_hook ?? ((pairs: [string, unknown][]) => new Map(pairs));
+  const pairs_hook = opts.object_pairs_hook ?? ((pairs: [string, JsonValue][]) => new Map(pairs));
   const n = text.length;
   const fail = (msg: string, pos: number): never => {
     throw new JSONDecodeError(msg, text, pos);
@@ -150,7 +193,7 @@ export function json_loads(s: string | Uint8Array, opts: LoadsOptions = {}): any
   const NUM = /-?(?:0|[1-9][0-9]*)(\.[0-9]+)?([eE][-+]?[0-9]+)?/y;
 
   // scan_once: returns [value, end] or null (StopIteration) at `i`.
-  const scan_once = (i: number): [unknown, number] | null => {
+  const scan_once = (i: number): [JsonValue, number] | null => {
     if (i >= n) return null;
     const c = text[i];
     if (c === '"') return scanstring(i + 1);
@@ -169,8 +212,8 @@ export function json_loads(s: string | Uint8Array, opts: LoadsOptions = {}): any
     return [m[1] !== undefined || m[2] !== undefined ? parse_float(m[0]) : parse_int(m[0]), end];
   };
 
-  const parse_object = (i: number): [unknown, number] => {
-    const pairs: [string, unknown][] = [];
+  const parse_object = (i: number): [JsonValue, number] => {
+    const pairs: [string, JsonValue][] = [];
     i = skip(i);
     if (text[i] === "}") return [pairs_hook(pairs), i + 1];
     for (;;) {
@@ -189,8 +232,8 @@ export function json_loads(s: string | Uint8Array, opts: LoadsOptions = {}): any
     }
   };
 
-  const parse_array = (i: number): [unknown[], number] => {
-    const out: unknown[] = [];
+  const parse_array = (i: number): [JsonValue[], number] => {
+    const out: JsonValue[] = [];
     i = skip(i);
     if (text[i] === "]") return [out, i + 1];
     for (;;) {

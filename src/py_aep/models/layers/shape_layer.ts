@@ -6,6 +6,8 @@ import { label_index } from "../preferences.ts";
 import { AVLayer } from "./av_layer.ts";
 import type { CompItem } from "../items/composition.ts";
 import type { PropertyGroup } from "../properties/property_group.ts";
+import type { EffectParamDefs, Dynamic } from "../descriptors.ts";
+
 
 /**
  * The `ShapeLayer` object represents a shape layer within a composition.
@@ -33,17 +35,17 @@ export class ShapeLayer extends AVLayer {
     match_name: string,
     auto_name: string,
     property_depth: number,
-    kw?: any,
+    kw?: Dynamic,
   ): PropertyGroup;
   static _new(kw: {
     name: string;
     layer_id: number;
     duration: number;
     containing_comp: CompItem;
-    effect_param_defs?: Map<string, Map<string, Map<string, any>>> | null;
+    effect_param_defs?: EffectParamDefs | null;
   }): ShapeLayer;
   static _new(kw: Record<string, unknown>): ShapeLayer;
-  static _new(kw: any): any {
+  static _new(kw: Dynamic): Dynamic {
     const {
       name,
       layer_id,
