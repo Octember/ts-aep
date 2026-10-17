@@ -1,6 +1,6 @@
 /** Parser for Essential Graphics panel data (LIST:CIF3 chunks). */
 
-import { ChunkNotFoundError, filter_by_type, filter_by_list_type, find_by_type, find_by_list_type } from "../binary/utils.ts";
+import { ChunkNotFoundError, filter_by_list_type, filter_by_type, find_by_list_type, find_by_list_type_or_null, find_by_type } from "../binary/utils.ts";
 import type { Utf8Chunk } from "../binary/scalar_chunks.ts";
 import type { Chunk, ListChunk } from "../binary/chunk.ts";
 import { _suppress_materialization } from "../models/descriptors.ts";
@@ -55,13 +55,7 @@ export function _parse_controller(cctl_chunk: ListChunk): EssentialGraphicsContr
   let source_property_path: SourcePropertyRef[] = [];
   let source_comp_id: number | null = null;
   let source_layer_id: number | null = null;
-  let cprp: ListChunk | null;
-  try {
-    cprp = find_by_list_type(cctl_chunk.chunks, "CPrp");
-  } catch (e) {
-    if (!(e instanceof ChunkNotFoundError)) throw e;
-    cprp = null;
-  }
+  const cprp = find_by_list_type_or_null(cctl_chunk.chunks, "CPrp");
   if (cprp != null) {
     const path_utf8 = filter_by_type(cprp.chunks, "Utf8");
     if (path_utf8?.length > 0) {

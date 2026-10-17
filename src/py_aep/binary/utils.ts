@@ -21,16 +21,31 @@ export class ChunkNotFoundError extends PyException {
 /** Sentinel value indicating an undefined frame number in the binary format. */
 export const UNDEFINED_FRAME = 0xFFFFFFFF;
 
+/** Return first chunk matching `chunk_type`, or null if there is none. */
+export function find_by_type_or_null<K extends string>(chunks: Chunk[], chunk_type: K): ChunkOf<K> | null {
+  for (const c of chunks) {
+    if (c.chunk_type === chunk_type) return c as ChunkOf<K>;
+  }
+  return null;
+}
+
 /**
  * Return first chunk matching `chunk_type`.
  *
  * @throws {@link ChunkNotFoundError} If no matching chunk is found.
  */
 export function find_by_type<K extends string>(chunks: Chunk[], chunk_type: K): ChunkOf<K> {
+  const c = find_by_type_or_null(chunks, chunk_type);
+  if (c === null) throw new ChunkNotFoundError(`Missing ${chunk_type} chunk`);
+  return c;
+}
+
+/** Return first ListChunk with matching `list_type`, or null if there is none. */
+export function find_by_list_type_or_null(chunks: Chunk[], list_type: string): ListChunk | null {
   for (const c of chunks) {
-    if (c.chunk_type === chunk_type) return c as ChunkOf<K>;
+    if (c instanceof ListChunk && c.list_type === list_type) return c;
   }
-  throw new ChunkNotFoundError(`Missing ${chunk_type} chunk`);
+  return null;
 }
 
 /**
@@ -39,10 +54,9 @@ export function find_by_type<K extends string>(chunks: Chunk[], chunk_type: K): 
  * @throws {@link ChunkNotFoundError} If no matching LIST chunk is found.
  */
 export function find_by_list_type(chunks: Chunk[], list_type: string): ListChunk {
-  for (const c of chunks) {
-    if (c instanceof ListChunk && c.list_type === list_type) return c;
-  }
-  throw new ChunkNotFoundError(`Missing LIST/${list_type} chunk`);
+  const c = find_by_list_type_or_null(chunks, list_type);
+  if (c === null) throw new ChunkNotFoundError(`Missing LIST/${list_type} chunk`);
+  return c;
 }
 
 /** Return all chunks matching `chunk_type`. */
@@ -235,20 +249,10 @@ export type AlasData = Map<string, any>;
  *   or invalid.
  */
 export function parse_alas_data(parent_chunks: Chunk[]): AlasData {
-  let als2_chunk: ListChunk;
-  try {
-    als2_chunk = find_by_list_type(parent_chunks, "Als2");
-  } catch (e) {
-    if (!(e instanceof ChunkNotFoundError)) throw e;
-    return new Map();
-  }
-  let alas_chunk: Utf8Chunk;
-  try {
-    alas_chunk = find_by_type(als2_chunk.chunks, "alas");
-  } catch (e) {
-    if (!(e instanceof ChunkNotFoundError)) throw e;
-    return new Map();
-  }
+  const als2_chunk = find_by_list_type_or_null(parent_chunks, "Als2");
+  if (als2_chunk === null) return new Map();
+  const alas_chunk = find_by_type_or_null(als2_chunk.chunks, "alas");
+  if (alas_chunk === null) return new Map();
   const alas_text = alas_chunk.value;
   // `value` may be a `_NulTailStr` (String object), which py_bool would call truthy.
   if (alas_text == null || String(alas_text).length === 0) return new Map();

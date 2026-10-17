@@ -2,10 +2,9 @@
 
 import { warn } from "../../pyrt/index.ts";
 import type { Chunk, ListChunk } from "../binary/chunk.ts";
-import type { LdatChunk } from "../binary/ldat_chunks.ts";
-import type { CdatChunk, TdmnChunk, TdumChunk } from "../binary/property_chunks.ts";
-import type { S4Chunk, Utf8Chunk } from "../binary/scalar_chunks.ts";
-import { ChunkNotFoundError, find_by_list_type, find_by_type } from "../binary/utils.ts";
+import type { TdmnChunk } from "../binary/property_chunks.ts";
+import type { S4Chunk } from "../binary/scalar_chunks.ts";
+import { ChunkNotFoundError, find_by_list_type_or_null, find_by_type, find_by_type_or_null } from "../binary/utils.ts";
 import { _suppress_materialization } from "../models/descriptors.ts";
 import { Keyframe } from "../models/properties/keyframe.ts";
 import { Property } from "../models/properties/property.ts";
@@ -42,13 +41,7 @@ export const parse_property = _suppress_materialization().decorate(function pars
 
   const tdb4_chunk = find_by_type(tdbs_child_chunks, "tdb4");
 
-  let cdat: CdatChunk | null;
-  try {
-    cdat = find_by_type(tdbs_child_chunks, "cdat");
-  } catch (e) {
-    if (!(e instanceof ChunkNotFoundError)) throw e;
-    cdat = null;
-  }
+  const cdat = find_by_type_or_null(tdbs_child_chunks, "cdat");
 
   // Static value is read lazily by Property.value from _cdat via
   // _resolve_value.  Only extract here for non-cdat overrides.
@@ -69,28 +62,10 @@ export const parse_property = _suppress_materialization().decorate(function pars
     if (!(e instanceof ChunkNotFoundError)) throw e;
   }
 
-  let expression_utf8: Utf8Chunk | null;
-  try {
-    expression_utf8 = find_by_type(tdbs_child_chunks, "Utf8");
-  } catch (e) {
-    if (!(e instanceof ChunkNotFoundError)) throw e;
-    expression_utf8 = null;
-  }
+  const expression_utf8 = find_by_type_or_null(tdbs_child_chunks, "Utf8");
 
-  let tdum: TdumChunk | null;
-  try {
-    tdum = find_by_type(tdbs_child_chunks, "tdum");
-  } catch (e) {
-    if (!(e instanceof ChunkNotFoundError)) throw e;
-    tdum = null;
-  }
-  let tduM: TdumChunk | null;
-  try {
-    tduM = find_by_type(tdbs_child_chunks, "tduM");
-  } catch (e) {
-    if (!(e instanceof ChunkNotFoundError)) throw e;
-    tduM = null;
-  }
+  const tdum = find_by_type_or_null(tdbs_child_chunks, "tdum");
+  const tduM = find_by_type_or_null(tdbs_child_chunks, "tduM");
 
   const keyframes = _parse_keyframes(tdbs_child_chunks, composition.frame_rate);
 
@@ -126,21 +101,12 @@ export const parse_property = _suppress_materialization().decorate(function pars
  * @param frame_rate - The frame rate of the parent composition.
  */
 export function _parse_keyframes(tdbs_child_chunks: Chunk[], frame_rate: number): Keyframe[] {
-  let list_chunk: ListChunk;
-  try {
-    list_chunk = find_by_list_type(tdbs_child_chunks, "list");
-  } catch (e) {
-    if (!(e instanceof ChunkNotFoundError)) throw e;
-    return [];
-  }
+  const list_chunk = find_by_list_type_or_null(tdbs_child_chunks, "list");
+  if (list_chunk === null) return [];
 
-  let ldat: LdatChunk;
-  try {
-    ldat = find_by_type(list_chunk.chunks, "ldat");
-  } catch (e) {
-    if (!(e instanceof ChunkNotFoundError)) throw e;
-    return [];
-  }
+  const ldat = find_by_type_or_null(list_chunk.chunks, "ldat");
+
+  if (ldat === null) return [];
 
   const kf_items = ldat.items;
 

@@ -5,7 +5,7 @@ import type { Chunk } from "../binary/chunk.ts";
 import type { MkifChunk } from "../binary/misc_chunks.ts";
 import type { TdmnChunk, TdsbChunk } from "../binary/property_chunks.ts";
 import type { Utf8Chunk } from "../binary/scalar_chunks.ts";
-import { ChunkNotFoundError, filter_by_list_type, filter_by_type, find_by_list_type, find_by_type } from "../binary/utils.ts";
+import { ChunkNotFoundError, filter_by_list_type, filter_by_type, find_by_list_type, find_by_type, find_by_type_or_null } from "../binary/utils.ts";
 import { VF_AXIS_PREFIX } from "../data/match_names.ts";
 import { _suppress_materialization } from "../models/descriptors.ts";
 import { MaskPropertyGroup } from "../models/properties/mask_property_group.ts";
@@ -422,13 +422,7 @@ export const parse_property_group = _suppress_materialization().decorate(functio
 
   // Try to read the group-level tdsb chunk.
   // Leaf properties always have a tdsb; groups may or may not.
-  let group_tdsb: TdsbChunk | null;
-  try {
-    group_tdsb = find_by_type(tdgp_chunk.chunks, "tdsb");
-  } catch (e) {
-    if (!(e instanceof ChunkNotFoundError)) throw e;
-    group_tdsb = null;
-  }
+  const group_tdsb = find_by_type_or_null(tdgp_chunk.chunks, "tdsb");
 
   // Resolve _name_utf8 from the tdgp's tdsn child
   let name_utf8: Utf8Chunk | null;

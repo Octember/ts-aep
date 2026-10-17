@@ -10,7 +10,7 @@ import { _PRDA_VARIANTS, PguiChunk, type PrdaChunk, type PrinChunk } from "../..
 import { build_checkbox_cctl, build_color_cctl, build_media_cctl, build_ovg2, build_slider_cctl, build_source_alternate_extras, build_text_cctl, clone_chunk_tree, collect_layer_ref_tdpi_ids, remap_layer_ref_tdpi, rewrite_owner_tdpi, strip_synthetic } from "../../binary/mutations.ts";
 import { TDSN_SENTINEL, CdatChunk, Tdb4Chunk, TdmnChunk, TdsbChunk, TdsnChunk } from "../../binary/property_chunks.ts";
 import { F8Chunk, S4Chunk, type U1Chunk, type U4Chunk, type U4LeChunk, type Utf8Chunk } from "../../binary/scalar_chunks.ts";
-import { ChunkNotFoundError, block_slice, filter_by_list_type, filter_by_type, find_by_list_type, find_by_type, index_by_identity, recursive_find } from "../../binary/utils.ts";
+import { block_slice, ChunkNotFoundError, filter_by_list_type, filter_by_type, find_by_list_type, find_by_type, find_by_type_or_null, index_by_identity, recursive_find } from "../../binary/utils.ts";
 import { Label, LayerType, LineOrientation, ParametricMeshType, PREFType } from "../../enums/index.ts";
 import { parse_essential_graphics } from "../../parsers/essential_graphics.ts";
 import { CONTROLLER_CHECKBOX, CONTROLLER_COLOR, CONTROLLER_SLIDER, can_add_layer, font_caps_json, media_controller_path, property_controller_plan, type PathNode, type PropertyControllerPlan } from "../../resolvers/motion_graphics.ts";
@@ -1092,12 +1092,7 @@ export class CompItem extends AVItem {
     this.__layer_id_to_index = null;
 
     this._cdta = find_by_type(kw._child_chunks, "cdta");
-    try {
-      this._cdrp = find_by_type(kw._child_chunks, "cdrp");
-    } catch (e) {
-      if (!(e instanceof ChunkNotFoundError)) throw e;
-      this._cdrp = null;
-    }
+    this._cdrp = find_by_type_or_null(kw._child_chunks, "cdrp");
     this.prin_list = find_by_list_type(kw._child_chunks, "PRin");
     this._prin = find_by_type(this.prin_list.chunks, "prin");
     this._prda = find_by_type(this.prin_list.chunks, "prda");

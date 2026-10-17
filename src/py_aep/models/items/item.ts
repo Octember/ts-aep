@@ -4,7 +4,7 @@ import { CmtaChunk, type IdtaChunk } from "../../binary/item_chunks.ts";
 import { LHD3_BLOCK_GUIDES, LdatChunk, LdatItemType, type Lhd3Chunk, set_lhd3_count } from "../../binary/ldat_chunks.ts";
 import { build_gide_list } from "../../binary/mutations.ts";
 import type { Utf8Chunk } from "../../binary/scalar_chunks.ts";
-import { ChunkNotFoundError, block_slice, find_by_list_type, find_by_type, index_by_identity } from "../../binary/utils.ts";
+import { block_slice, find_by_list_type, find_by_type, find_by_type_or_null, index_by_identity } from "../../binary/utils.ts";
 import { Label } from "../../enums/index.ts";
 import {
   IndexError,
@@ -108,12 +108,7 @@ export class Item {
     } else {
       this._inner = find_by_list_type(this._gide.chunks, "list");
       this._lhd3 = find_by_type(this._inner.chunks, "lhd3");
-      try {
-        this._ldat = find_by_type(this._inner.chunks, "ldat");
-      } catch (e) {
-        if (!(e instanceof ChunkNotFoundError)) throw e;
-        this._ldat = null;
-      }
+      this._ldat = find_by_type_or_null(this._inner.chunks, "ldat");
     }
   }
 

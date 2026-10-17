@@ -98,11 +98,12 @@ export function _get_struct(full_fmt: string): struct.Struct {
   return s;
 }
 
-const _STRUCTS_BY_ENDIAN = new Map<string, Map<string, struct.Struct>>();
+const _BIG_ENDIAN_STRUCTS = new Map<string, struct.Struct>();
+const _STRUCTS_BY_ENDIAN = new Map<string, Map<string, struct.Struct>>([[">", _BIG_ENDIAN_STRUCTS]]);
 
 /** `_get_struct(endian + fmt)` without building the key string on a hit. */
 export function _struct_for(fmt: string, endian = ">"): struct.Struct {
-  let by_fmt = _STRUCTS_BY_ENDIAN.get(endian);
+  let by_fmt = endian === ">" ? _BIG_ENDIAN_STRUCTS : _STRUCTS_BY_ENDIAN.get(endian);
   if (by_fmt === undefined) _STRUCTS_BY_ENDIAN.set(endian, (by_fmt = new Map()));
   let s = by_fmt.get(fmt);
   if (s === undefined) {

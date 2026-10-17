@@ -2,7 +2,7 @@ import { ValueError } from "../../pyrt/index.ts";
 import type { ListChunk } from "../binary/chunk.ts";
 import type { CmtaChunk, IdtaChunk } from "../binary/item_chunks.ts";
 import type { Utf8Chunk } from "../binary/scalar_chunks.ts";
-import { ChunkNotFoundError, filter_by_list_type, find_by_list_type, find_by_type } from "../binary/utils.ts";
+import { filter_by_list_type, find_by_list_type, find_by_list_type_or_null, find_by_type, find_by_type_or_null } from "../binary/utils.ts";
 import { ItemType } from "../enums/index.ts";
 import { Guide } from "../models/guide.ts";
 import { FolderItem } from "../models/items/folder.ts";
@@ -30,21 +30,9 @@ export function parse_item(
 
   const idta = find_by_type(child_chunks, "idta");
   const name_utf8 = find_by_type(child_chunks, "Utf8");
-  let cmta: CmtaChunk | null;
-  try {
-    cmta = find_by_type(child_chunks, "cmta");
-  } catch (e) {
-    if (!(e instanceof ChunkNotFoundError)) throw e;
-    cmta = null;
-  }
+  const cmta = find_by_type_or_null(child_chunks, "cmta");
 
-  let gide: ListChunk | null;
-  try {
-    gide = find_by_list_type(item_chunk.chunks, "Gide");
-  } catch (e) {
-    if (!(e instanceof ChunkNotFoundError)) throw e;
-    gide = null;
-  }
+  const gide = find_by_list_type_or_null(item_chunk.chunks, "Gide");
 
   const item_type = idta.item_type;
 
@@ -168,13 +156,8 @@ export function parse_folder(
  * @returns List of Guide objects, empty if no guides are defined.
  */
 export function _parse_guides(child_chunks: Chunk[]): Guide[] {
-  let gide_list: ListChunk;
-  try {
-    gide_list = find_by_list_type(child_chunks, "Gide");
-  } catch (e) {
-    if (!(e instanceof ChunkNotFoundError)) throw e;
-    return [];
-  }
+  const gide_list = find_by_list_type_or_null(child_chunks, "Gide");
+  if (gide_list === null) return [];
 
   const list_chunk = find_by_list_type(gide_list.chunks, "list");
   const lhd3 = find_by_type(list_chunk.chunks, "lhd3");
