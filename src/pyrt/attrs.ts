@@ -123,8 +123,57 @@ function default_of(a: Attribute): any {
   return d;
 }
 
-/** The generated `__init__`. */
+/** `fields(cls)` flattened into parallel arrays, built on a class's first construction. */
+type Plan = { names: string[]; aliases: string[]; init: boolean[]; defs: any[]; factory: boolean[] };
+const PLANS = new WeakMap<Function, Plan>();
+
+function plan_of(cls: Function): Plan {
+  let p = PLANS.get(cls);
+  if (p) return p;
+  const attrs = fields(cls);
+  const is_factory = (d: any) => !!d && typeof d === "object" && "__factory__" in d;
+  p = {
+    names: attrs.map((a) => a.name),
+    aliases: attrs.map((a) => a.alias),
+    init: attrs.map((a) => a.init),
+    defs: attrs.map((a) => (is_factory(a.default) ? a.default.__factory__ : a.default)),
+    factory: attrs.map((a) => is_factory(a.default)),
+  };
+  PLANS.set(cls, p);
+  return p;
+}
+
+/**
+ * The generated `__init__`. Keyword names are only counted here; when the
+ * count shows an unexpected one, `attrs_init_slow` reruns to raise attrs' error.
+ */
 export function attrs_init(self: any, cls: Function, kw: Record<string, any>): void {
+  const { names, aliases, init, defs, factory } = plan_of(cls);
+  let matched = 0;
+  for (let i = 0; i < names.length; i++) {
+    let v: any;
+    if (init[i]) {
+      const alias = aliases[i];
+      if (alias in kw) {
+        matched++;
+        v = kw[alias];
+      }
+    }
+    if (v === undefined) {
+      v = factory[i] ? defs[i]() : defs[i];
+      if (v === NOTHING) {
+        if (!init[i]) continue;
+        throw new TypeError_(`${cls.name}.__init__() missing 1 required argument: '${aliases[i]}'`);
+      }
+    }
+    self[names[i]] = v;
+  }
+  let n = 0;
+  for (const _ in kw) n++;
+  if (n !== matched) attrs_init_slow(self, cls, kw);
+}
+
+function attrs_init_slow(self: any, cls: Function, kw: Record<string, any>): void {
   const attrs = fields(cls);
   const seen = new Set<string>();
   for (const a of attrs) {
