@@ -8,7 +8,8 @@
  */
 
 import {
-  AttrsBase,
+  init_generic_fields,
+  check_init_kwargs,
   Factory,
   b,
   bytes_,
@@ -410,7 +411,12 @@ export function _encode_value(
 }
 
 /** Base for item types whose fields are declared with `fmt_field`. */
-export class FmtItem extends AttrsBase {
+export class FmtItem {
+  constructor(kw: Record<string, any> = {}) {
+    check_init_kwargs(new.target, kw);
+    init_generic_fields(this, new.target, kw);
+  }
+
   /** Construct an item from bytes using its `_struct_info` metadata. */
   static frombytes(data: Uint8Array): FmtItem {
     const info = _struct_info(this);

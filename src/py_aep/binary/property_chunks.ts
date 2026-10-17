@@ -80,6 +80,22 @@ export class TdsbChunk extends Chunk {
    * it never changes what renders.
    */
   declare hidden: boolean;
+
+  constructor(kw: Record<string, any> = {}) {
+    super(kw);
+    const {
+      chunk_type = "tdsb",
+      roto_bezier = false,
+      pad1 = 0,
+      lock_flags = 0,
+      enable_flags = 1,
+    } = kw;
+    this.chunk_type = chunk_type;
+    this.roto_bezier = roto_bezier;
+    this._pad1 = pad1;
+    this._lock_flags = lock_flags;
+    this._enable_flags = enable_flags;
+  }
 }
 define(TdsbChunk, {
   chunk_type: field({ default: "tdsb" }),
@@ -87,7 +103,7 @@ define(TdsbChunk, {
   _pad1: u1_field({ repr: false }),
   _lock_flags: u1_field({ repr: false }),
   _enable_flags: u1_field({ default: 1, repr: false }),
-});
+}, { init: false });
 descriptor(TdsbChunk, "ratio_unlinked", new BitField("_lock_flags", 5));
 descriptor(TdsbChunk, "dimensions_separated", new BitField("_lock_flags", 3));
 descriptor(TdsbChunk, "enabled", new BitField("_enable_flags", 0));
@@ -222,6 +238,90 @@ export class Tdb4Chunk extends Chunk {
   // as "missing data in file".
   declare has_expression: boolean;
 
+  constructor(kw: Record<string, any> = {}) {
+    super(kw);
+    const {
+      chunk_type = "tdb4",
+      magic = 0xdb99,
+      dimensions = 1,
+      pad1 = 0,
+      spatial_static_flags = 1,
+      pad2a = 0,
+      value_hint_type = 0,
+      value_hint_flag = 0,
+      cvot_flags = 0,
+      time_base = 0,
+      arc_accuracy = 0.0001,
+      pixel_aspect = 1.0,
+      arc_multiplier_y = 1.0,
+      arc_multiplier_z = 1.0,
+      arc_multiplier_w = 1.0,
+      pad4 = 0,
+      no_value_flags = 0,
+      pad5 = 0,
+      type_flags = 0,
+      property_category = 0,
+      pad6a = 0,
+      pad6b = 0,
+      pad6c = 0,
+      animated = false,
+      pad_45 = new Uint8Array(3),
+      reserved_48 = 0,
+      reserved_4c = 0,
+      reserved_4d = 0,
+      pad_4e = 0,
+      spatial_marker = 0,
+      pad_50 = 0,
+      reserved_54 = 0,
+      reserved_5c = 0,
+      reserved_64 = 0,
+      reserved_6c = 0,
+      pad9a = 0,
+      pad9b = 0,
+      expr_flags = 0,
+      pad10 = 0,
+    } = kw;
+    this.chunk_type = chunk_type;
+    this._magic = magic;
+    this.dimensions = dimensions;
+    this._pad1 = pad1;
+    this._spatial_static_flags = spatial_static_flags;
+    this._pad2a = pad2a;
+    this._value_hint_type = value_hint_type;
+    this._value_hint_flag = value_hint_flag;
+    this._cvot_flags = cvot_flags;
+    this._time_base = time_base;
+    this._arc_accuracy = arc_accuracy;
+    this.pixel_aspect = pixel_aspect;
+    this._arc_multiplier_y = arc_multiplier_y;
+    this._arc_multiplier_z = arc_multiplier_z;
+    this._arc_multiplier_w = arc_multiplier_w;
+    this._pad4 = pad4;
+    this._no_value_flags = no_value_flags;
+    this._pad5 = pad5;
+    this._type_flags = type_flags;
+    this._property_category = property_category;
+    this._pad6a = pad6a;
+    this._pad6b = pad6b;
+    this._pad6c = pad6c;
+    this.animated = animated;
+    this._pad_45 = pad_45;
+    this._reserved_48 = reserved_48;
+    this._reserved_4c = reserved_4c;
+    this._reserved_4d = reserved_4d;
+    this._pad_4e = pad_4e;
+    this._spatial_marker = spatial_marker;
+    this._pad_50 = pad_50;
+    this._reserved_54 = reserved_54;
+    this._reserved_5c = reserved_5c;
+    this._reserved_64 = reserved_64;
+    this._reserved_6c = reserved_6c;
+    this._pad9a = pad9a;
+    this._pad9b = pad9b;
+    this._expr_flags = expr_flags;
+    this._pad10 = pad10;
+  }
+
   get has_time_base(): boolean {
     return this._time_base !== 0;
   }
@@ -266,7 +366,7 @@ define(Tdb4Chunk, {
   _pad9b: u1_field({ repr: false }),
   _expr_flags: u1_field({ repr: false }),
   _pad10: u4_field({ repr: false }),
-});
+}, { init: false });
 descriptor(Tdb4Chunk, "is_spatial", new BitField("_spatial_static_flags", 3));
 descriptor(Tdb4Chunk, "static", new BitField("_spatial_static_flags", 0));
 descriptor(Tdb4Chunk, "can_vary_over_time", new BitField("_cvot_flags", 1));
@@ -417,6 +517,15 @@ export class CdatChunk extends Chunk {
    */
   declare pad: Uint8Array;
 
+  constructor(kw: Record<string, any> = {}) {
+    super(kw);
+    const { chunk_type = "cdat", values = [], is_le = false, pad = b("") } = kw;
+    this.chunk_type = chunk_type;
+    this.values = values;
+    this.is_le = is_le;
+    this.pad = pad;
+  }
+
   static read(
     fp: IO,
     size: number,
@@ -455,7 +564,7 @@ define(CdatChunk, {
   values: field({ default: Factory(() => []) }),
   is_le: field({ default: false }),
   pad: field({ default: b("") }),
-});
+}, { init: false });
 register("cdat")(CdatChunk);
 
 // ---------------------------------------------------------------------------
@@ -477,6 +586,14 @@ export class TdumChunk extends Chunk {
   declare values: number[];
   declare is_color: boolean;
   declare is_integer: boolean;
+
+  constructor(kw: Record<string, any> = {}) {
+    super(kw);
+    const { values = [], is_color = false, is_integer = false } = kw;
+    this.values = values;
+    this.is_color = is_color;
+    this.is_integer = is_integer;
+  }
 
   static read(
     fp: IO,
@@ -534,7 +651,7 @@ define(TdumChunk, {
   values: field({ default: Factory(() => []) }),
   is_color: field({ default: false }),
   is_integer: field({ default: false }),
-});
+}, { init: false });
 register("tdum", "tduM")(TdumChunk);
 
 // ---------------------------------------------------------------------------
@@ -545,6 +662,13 @@ register("tdum", "tduM")(TdumChunk);
 export class OtdaChunk extends Chunk {
   declare chunk_type: string;
   declare values: number[];
+
+  constructor(kw: Record<string, any> = {}) {
+    super(kw);
+    const { chunk_type = "otda", values = [] } = kw;
+    this.chunk_type = chunk_type;
+    this.values = values;
+  }
 
   static read(fp: IO, size: number, kw: { chunk_type?: string } & Record<string, any> = {}): OtdaChunk {
     const { chunk_type = "" } = kw;
@@ -571,7 +695,7 @@ export class OtdaChunk extends Chunk {
 define(OtdaChunk, {
   chunk_type: field({ default: "otda" }),
   values: field({ default: Factory(() => []) }),
-});
+}, { init: false });
 register("otda")(OtdaChunk);
 
 // ---------------------------------------------------------------------------
@@ -582,6 +706,12 @@ register("otda")(OtdaChunk);
 export class TdmnChunk extends _StringChunkBase {
   declare chunk_type: string;
   static _ENCODING = "UTF-8";
+
+  constructor(kw: Record<string, any> = {}) {
+    super(kw);
+    const { chunk_type = "tdmn" } = kw;
+    this.chunk_type = chunk_type;
+  }
 
   static read(fp: IO, size: number, kw: { chunk_type?: string } & Record<string, any> = {}): TdmnChunk {
     const { chunk_type = "" } = kw;
@@ -597,7 +727,7 @@ export class TdmnChunk extends _StringChunkBase {
 }
 define(TdmnChunk, {
   chunk_type: field({ default: "tdmn" }),
-});
+}, { init: false });
 register("tdmn")(TdmnChunk);
 
 // Sentinel AE writes as the tdsn display name for unnamed properties;
@@ -612,6 +742,12 @@ export const TDSN_SENTINEL = "-_0_/-";
  */
 export class TdsnChunk extends ContainerChunk {
   declare chunk_type: string;
+
+  constructor(kw: Record<string, any> = {}) {
+    super(kw);
+    const { chunk_type = "tdsn" } = kw;
+    this.chunk_type = chunk_type;
+  }
 
   /** Build a tdsn wrapping `name`. */
   static new_(name = "", kw: { synthetic?: boolean } = {}): TdsnChunk {
@@ -647,7 +783,7 @@ export class TdsnChunk extends ContainerChunk {
 }
 define(TdsnChunk, {
   chunk_type: field({ default: "tdsn" }),
-});
+}, { init: false });
 register("tdsn")(TdsnChunk);
 
 /**
@@ -661,10 +797,16 @@ register("tdsn")(TdsnChunk);
  */
 export class VfdnChunk extends TdsnChunk {
   declare chunk_type: string;
+
+  constructor(kw: Record<string, any> = {}) {
+    super(kw);
+    const { chunk_type = "vfdn" } = kw;
+    this.chunk_type = chunk_type;
+  }
 }
 define(VfdnChunk, {
   chunk_type: field({ default: "vfdn" }),
-});
+}, { init: false });
 register("vfdn")(VfdnChunk);
 
 // ---------------------------------------------------------------------------
@@ -688,6 +830,14 @@ export class CurvesRecordItem extends FmtItem {
   declare count: number;
   declare selected: number;
 
+  constructor(kw: Record<string, any> = {}) {
+    super(kw);
+    const { point_slots = new Uint8Array(64), count = 0, selected = 0 } = kw;
+    this._point_slots = point_slots;
+    this.count = count;
+    this.selected = selected;
+  }
+
   /** The live `(input, output)` points. */
   get points(): [number, number][] {
     const values = struct.unpack(`>${2 * _CURVES_SLOTS}h`, this._point_slots);
@@ -699,7 +849,7 @@ define(CurvesRecordItem, {
   _point_slots: bytes_field(4 * _CURVES_SLOTS, { repr: false }),
   count: u4_field(),
   selected: s4_field(),
-});
+}, { init: false });
 
 /**
  * The Curves effect's arbitrary data: an aRbp of 1644 big-endian bytes
@@ -724,6 +874,22 @@ export class CurvesArbpChunk extends Chunk {
   declare maps: Uint8Array;
   declare records: CurvesRecordItem[];
 
+  constructor(kw: Record<string, any> = {}) {
+    super(kw);
+    const {
+      chunk_type = "aRbp",
+      version = 0,
+      mode = 0,
+      maps = new Uint8Array(1280),
+      records = [],
+    } = kw;
+    this.chunk_type = chunk_type;
+    this.version = version;
+    this.mode = mode;
+    this.maps = maps;
+    this.records = records;
+  }
+
   /**
    * Read a raw aRbp chunk's data as the Curves layout.
    *
@@ -744,4 +910,4 @@ define(CurvesArbpChunk, {
   mode: u2_field(),
   maps: bytes_field(5 * 256, { repr: false }),
   records: items_field(CurvesRecordItem, _CURVES_RECORD_SIZE),
-});
+}, { init: false });

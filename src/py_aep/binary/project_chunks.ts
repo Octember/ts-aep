@@ -28,12 +28,20 @@ export class SvapChunk extends Chunk {
   declare chunk_type: string;
   declare _prefix: Uint8Array;
   declare build_number: number;
+
+  constructor(kw: Record<string, any> = {}) {
+    super(kw);
+    const { chunk_type = "svap", prefix = b("\x0f\x10\x06"), build_number = 0x43 } = kw;
+    this.chunk_type = chunk_type;
+    this._prefix = prefix;
+    this.build_number = build_number;
+  }
 }
 define(SvapChunk, {
   chunk_type: field({ default: "svap" }),
   _prefix: bytes_field(3, { default: b("\x0f\x10\x06"), repr: false }),
   build_number: u1_field({ default: 0x43 }),
-});
+}, { init: false });
 register("svap")(SvapChunk);
 
 // ---------------------------------------------------------------------------
@@ -50,11 +58,18 @@ register("svap")(SvapChunk);
 export class CpidChunk extends Chunk {
   declare chunk_type: string;
   declare data: Uint8Array;
+
+  constructor(kw: Record<string, any> = {}) {
+    super(kw);
+    const { chunk_type = "cpid", data = bytes_.repeat(b("\xff"), 16) } = kw;
+    this.chunk_type = chunk_type;
+    this.data = data;
+  }
 }
 define(CpidChunk, {
   chunk_type: field({ default: "cpid" }),
   data: field({ default: bytes_.repeat(b("\xff"), 16) }),
-});
+}, { init: false });
 register("cpid")(CpidChunk);
 
 // ---------------------------------------------------------------------------
@@ -71,12 +86,24 @@ export class FdtaChunk extends Chunk {
   declare chunk_type: string;
   declare _reserved_00: Uint8Array;
   declare _tail: Uint8Array;
+
+  constructor(kw: Record<string, any> = {}) {
+    super(kw);
+    const {
+      chunk_type = "fdta",
+      reserved_00 = new Uint8Array(10),
+      tail = b("\x1f\x44\x84\x00"),
+    } = kw;
+    this.chunk_type = chunk_type;
+    this._reserved_00 = reserved_00;
+    this._tail = tail;
+  }
 }
 define(FdtaChunk, {
   chunk_type: field({ default: "fdta" }),
   _reserved_00: bytes_field(10, { repr: false }),
   _tail: bytes_field(4, { default: b("\x1f\x44\x84\x00"), repr: false }),
-});
+}, { init: false });
 register("fdta")(FdtaChunk);
 
 // ---------------------------------------------------------------------------
@@ -92,6 +119,18 @@ export class RhedChunk extends Chunk {
   declare _d: number;
   declare _uid: number;
   declare _e: number;
+
+  constructor(kw: Record<string, any> = {}) {
+    super(kw);
+    const { chunk_type = "Rhed", a = 1, b = 2, c = 0, d = 0, uid = 0x03e2076c, e = 1 } = kw;
+    this.chunk_type = chunk_type;
+    this._a = a;
+    this._b = b;
+    this._c = c;
+    this._d = d;
+    this._uid = uid;
+    this._e = e;
+  }
 }
 define(RhedChunk, {
   chunk_type: field({ default: "Rhed" }),
@@ -105,7 +144,7 @@ define(RhedChunk, {
   // this value is inert (it is not a cross-file item/project id).
   _uid: u4_field({ default: 0x03e2076c, repr: false }),
   _e: u4_field({ default: 1, repr: false }),
-});
+}, { init: false });
 register("Rhed")(RhedChunk);
 
 // ---------------------------------------------------------------------------
@@ -121,20 +160,34 @@ register("Rhed")(RhedChunk);
 export class WsnsChunk extends Chunk {
   declare chunk_type: string;
   declare value: number;
+
+  constructor(kw: Record<string, any> = {}) {
+    super(kw);
+    const { chunk_type = "wsns", value = 14 } = kw;
+    this.chunk_type = chunk_type;
+    this.value = value;
+  }
 }
 define(WsnsChunk, {
   chunk_type: field({ default: "wsns" }),
   value: s2_field({ default: 14 }),
-});
+}, { init: false });
 register("wsns")(WsnsChunk);
 
 /** Workspace name (variable length, UTF-16-LE). Fresh projects use `"Default"`. */
 export class WsnmChunk extends Chunk {
   declare chunk_type: string;
   declare data: Uint8Array;
+
+  constructor(kw: Record<string, any> = {}) {
+    super(kw);
+    const { chunk_type = "wsnm", data = encode("Default", "utf-16-le") } = kw;
+    this.chunk_type = chunk_type;
+    this.data = data;
+  }
 }
 define(WsnmChunk, {
   chunk_type: field({ default: "wsnm" }),
   data: field({ default: encode("Default", "utf-16-le") }),
-});
+}, { init: false });
 register("wsnm")(WsnmChunk);

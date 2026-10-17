@@ -32,6 +32,9 @@ jobs:
       - name: Typecheck
         run: bun run typecheck
 
+      - name: Attrs constructors match their field specs
+        run: bun tools/check_attrs_defaults.ts
+
       - name: Upstream test suite
         run: bun test --timeout 60000
 

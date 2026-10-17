@@ -9,6 +9,9 @@ base() { python3 -c "import json;print(json.load(open('tools/gate_baseline.json'
 echo "== tsc"
 bun run --silent typecheck
 
+echo "== attrs constructor defaults"
+bun tools/check_attrs_defaults.ts
+
 echo "== tsdoc"
 tsdoc=$(bun tools/tsdoc_lint.ts)
 echo "$tsdoc"

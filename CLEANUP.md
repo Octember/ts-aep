@@ -191,12 +191,41 @@ after):
 The prose still speaks Python (`None`, `True`, Python examples, `py_aep.x`
 paths); pass 3 rewrites it in TypeScript terms.
 
+## attrs classes: explicit constructors
+
+`define(Cls, spec)` stays: the spec is the binary layout schema
+(`_struct_info` reads `fmt`, `encoding`, `optional`, … from field metadata) and
+drives `repr`/`__eq__`. Construction no longer goes through it.
+`tools/codemods/attrs_constructors.ts` writes each class an explicit
+constructor:
+
+- `super(kw)`, then `const { alias = default, … } = kw` and `this.name = alias`
+  for the class's own fields (redefinitions included, so a subclass's
+  `chunk_type` default wins). Destructuring defaults apply only to
+  `undefined`, which is attrs' "not passed"; an explicit `null` is kept.
+- Defaults are the spec's `default:` source (a `Factory(() => x)` becomes `x`,
+  evaluated per construction) or the literal `fmt_field` computed (zero
+  bytes, coerced `0`). Byte defaults are fresh per instance rather than
+  shared; nothing mutates them in place.
+- Roots (`Chunk`, `FmtItem`, the ldat items) call `check_init_kwargs` first
+  (attrs' unexpected-keyword error) and `init_generic_fields` last.
+- The spec is passed `{ init: false }` (attrs' `@define(init=False)`). A class
+  defined without it, e.g. in a test, keeps attrs behavior: the root assigns
+  its fields after its own.
+- Field converters still run on assignment (prototype setters). A field that
+  shadows a base getter-only accessor is assigned through `(this as any)`,
+  since TS forbids redeclaring an accessor as a field.
+
+`tools/check_attrs_defaults.ts` (gate and CI) builds every class with no
+arguments and checks each field against its spec default, and checks that
+each init name reaches its field and that unknown keywords throw.
+
 ## Later passes
 
 Each of these changes structure and needs its own guide section first:
 
-- attrs `define(...)` / `field(...)` and `descriptor(Cls, name, ...)` →
-  class fields and accessors (decorators or explicit getters/setters).
+- `descriptor(Cls, name, ...)` → explicit accessors; dropping spec defaults
+  that only the constructors use.
 - `int_enum` / `py_enum` → TS `enum` or `as const` objects (touches public
   API through `E.of`, `E.name_of`).
 - The remaining `deferred(...)` cycle breakers (real cycles) → restructured

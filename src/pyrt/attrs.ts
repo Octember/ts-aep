@@ -5,11 +5,19 @@
 //
 //   export class U1Chunk extends Chunk {
 //     declare value: number;            // `declare`: no JS initializer
+//
+//     constructor(kw: Record<string, any> = {}) {
+//       super(kw);                      // the root calls `check_init_kwargs`
+//       const { value = 0 } = kw;       // `undefined` means "not passed"
+//       this.value = value;
+//     }
 //   }
 //   define(U1Chunk, { value: u1_field() });
 //   register("efdc")(U1Chunk);          // decorators apply bottom-up
 //
 // Construction is keyword-only: `new U1Chunk({ chunk_type: "efdc", value: 1 })`.
+// The constructor's defaults must match the spec's; `tools/check_attrs_defaults.ts`
+// enforces that.
 
 import { TypeError_ } from "./errors.ts";
 
@@ -54,14 +62,29 @@ export function init_name(name: string): string {
   return name.startsWith("_") ? name.replace(/^_+/, "") : name;
 }
 
+/** For classes defined without `init: false`: the fields no constructor assigns, filled in by `init_generic_fields`. */
+const GENERIC = new WeakMap<Function, readonly Attribute[]>();
+
+function nearest_defined(cls: Function): Function | null {
+  for (let c: any = cls; c && c !== Function.prototype; c = Object.getPrototypeOf(c)) {
+    if (FIELDS.has(c)) return c;
+  }
+  return null;
+}
+
 /**
  * `@define`: record `cls`'s own fields after its base's. A field redefined
  * here replaces the inherited one and moves to its new position, as attrs
  * orders them.
+ *
+ * `init: false` (attrs' `@define(init=False)`) says `cls` has a constructor
+ * that assigns its own fields. Without it, the root class's constructor
+ * assigns them via `init_generic_fields`, after its own.
  */
-export function define<C extends Function>(cls: C, own: Record<string, FieldSpec> = {}): C {
+export function define<C extends Function>(cls: C, own: Record<string, FieldSpec> = {}, opts: { init?: boolean } = {}): C {
   const base = Object.getPrototypeOf(cls);
-  const inherited = (base && FIELDS.get(base)) || [];
+  const base_defined = base && FIELDS.has(base) ? base : null;
+  const inherited = (base_defined && FIELDS.get(base_defined)) || [];
   const own_attrs: Attribute[] = Object.entries(own).map(([name, spec]) => ({
     name,
     default: "default" in spec ? spec.default : NOTHING,
@@ -75,6 +98,17 @@ export function define<C extends Function>(cls: C, own: Record<string, FieldSpec
   const own_names = new Set(own_attrs.map((a) => a.name));
   const all = [...inherited.filter((a) => !own_names.has(a.name)), ...own_attrs];
   FIELDS.set(cls, Object.freeze(all));
+  if (opts.init !== false) {
+    const parent_pending = (base_defined && GENERIC.get(base_defined)) || [];
+    // A constructor between `cls` and the root would run after the root and
+    // overwrite a redefined field's default.
+    const owner = base_defined && !GENERIC.has(base_defined) ? base_defined : null;
+    const owner_is_root = owner == null || nearest_defined(Object.getPrototypeOf(owner)) == null;
+    if (!owner_is_root && inherited.some((a) => own_names.has(a.name) && !parent_pending.includes(a))) {
+      throw new TypeError_(`${cls.name} redefines a field of ${owner!.name}; give it a constructor and define it with init: false`);
+    }
+    GENERIC.set(cls, Object.freeze([...parent_pending.filter((a) => !own_names.has(a.name)), ...own_attrs]));
+  }
   for (const a of own_attrs) {
     if (!a.converter) continue;
     const slot = `__attrs_${a.name}`;
@@ -113,9 +147,6 @@ export function has(cls: Function): boolean {
   }
 }
 
-/** Pass as the constructor argument to skip attrs' `__init__` (a hand-written `__init__` sets fields itself). */
-export const NO_INIT: unique symbol = Symbol("NO_INIT");
-
 function default_of(a: Attribute): any {
   const d = a.default;
   if (d === NOTHING) return NOTHING;
@@ -123,38 +154,45 @@ function default_of(a: Attribute): any {
   return d;
 }
 
-/** The generated `__init__`. */
-export function attrs_init(self: any, cls: Function, kw: Record<string, any>): void {
-  const attrs = fields(cls);
-  const seen = new Set<string>();
-  for (const a of attrs) {
+/**
+ * Assign the fields of `cls` that no constructor handles (classes defined
+ * without `init: false`), as attrs' generated `__init__` would. Root
+ * constructors call this last.
+ */
+export function init_generic_fields(self: any, cls: Function, kw: Record<string, any>): void {
+  const defined = nearest_defined(cls);
+  const pending = defined && GENERIC.get(defined);
+  if (!pending) return;
+  for (const a of pending) {
     if (!a.init) {
       const d = default_of(a);
       if (d !== NOTHING) self[a.name] = d;
       continue;
     }
-    let v: any;
-    if (Object.prototype.hasOwnProperty.call(kw, a.alias) && kw[a.alias] !== undefined) {
-      v = kw[a.alias];
-      seen.add(a.alias);
-    } else {
+    let v = kw[a.alias];
+    if (v === undefined) {
       v = default_of(a);
-      if (Object.prototype.hasOwnProperty.call(kw, a.alias)) seen.add(a.alias);
-      if (v === NOTHING) {
-        throw new TypeError_(`${cls.name}.__init__() missing 1 required argument: '${a.alias}'`);
-      }
+      if (v === NOTHING) throw new TypeError_(`${cls.name}.__init__() missing 1 required argument: '${a.alias}'`);
     }
     self[a.name] = v;
   }
-  for (const k of Object.keys(kw)) {
-    if (!seen.has(k)) throw new TypeError_(`${cls.name}.__init__() got an unexpected keyword argument '${k}'`);
-  }
 }
 
-/** Base for attrs classes; subclasses must declare fields with `declare` and register them via `define`. */
-export class AttrsBase {
-  constructor(kw: Record<string, any> | typeof NO_INIT = {}) {
-    if (kw !== NO_INIT) attrs_init(this, new.target, kw);
+const INIT_NAMES = new WeakMap<Function, ReadonlySet<string>>();
+
+/**
+ * Reject keyword arguments that are not init names of `cls`, with attrs'
+ * `__init__` error. Root constructors call this; each class's constructor
+ * then assigns its own fields.
+ */
+export function check_init_kwargs(cls: Function, kw: object): void {
+  let names = INIT_NAMES.get(cls);
+  if (names == null) {
+    names = new Set(fields(cls).filter((a) => a.init).map((a) => a.alias));
+    INIT_NAMES.set(cls, names);
+  }
+  for (const k in kw) {
+    if (!names.has(k)) throw new TypeError_(`${cls.name}.__init__() got an unexpected keyword argument '${k}'`);
   }
 }
 

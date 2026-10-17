@@ -33,6 +33,24 @@ export class PrinChunk extends Chunk {
   declare display_name: string;
   declare _reserved_68: Uint8Array;
   declare _end_marker: Uint8Array;
+
+  constructor(kw: Record<string, any> = {}) {
+    super(kw);
+    const {
+      chunk_type = "prin",
+      reserved_00 = new Uint8Array(4),
+      match_name = "ADBE Escher",
+      display_name = "Classic 3D",
+      reserved_68 = new Uint8Array(3),
+      end_marker = b("\x01"),
+    } = kw;
+    this.chunk_type = chunk_type;
+    this._reserved_00 = reserved_00;
+    this.match_name = match_name;
+    this.display_name = display_name;
+    this._reserved_68 = reserved_68;
+    this._end_marker = end_marker;
+  }
 }
 define(PrinChunk, {
   chunk_type: field({ default: "prin" }),
@@ -41,7 +59,7 @@ define(PrinChunk, {
   display_name: ascii_field(48, { default: "Classic 3D" }),
   _reserved_68: bytes_field(3, { repr: false }),
   _end_marker: bytes_field(1, { default: b("\x01"), repr: false }),
-});
+}, { init: false });
 register("prin")(PrinChunk);
 
 // ---------------------------------------------------------------------------
@@ -52,11 +70,18 @@ register("prin")(PrinChunk);
 export class SfdtChunk extends Chunk {
   declare chunk_type: string;
   declare value: number;
+
+  constructor(kw: Record<string, any> = {}) {
+    super(kw);
+    const { chunk_type = "sfdt", value = 1 } = kw;
+    this.chunk_type = chunk_type;
+    this.value = value;
+  }
 }
 define(SfdtChunk, {
   chunk_type: field({ default: "sfdt" }),
   value: u4_field({ default: 1 }),
-});
+}, { init: false });
 register("sfdt")(SfdtChunk);
 
 // ---------------------------------------------------------------------------
@@ -68,6 +93,13 @@ export class PguiChunk extends Chunk {
   declare chunk_type: string;
   declare guid: Uint8Array;
 
+  constructor(kw: Record<string, any> = {}) {
+    super(kw);
+    const { chunk_type = "pgui", guid = new Uint8Array(16) } = kw;
+    this.chunk_type = chunk_type;
+    this.guid = guid;
+  }
+
   /** Build a pgui with a fresh random GUID. */
   static new_(): PguiChunk {
     // uuid4().bytes: random bits with the version nibble and RFC 4122 variant set.
@@ -77,7 +109,7 @@ export class PguiChunk extends Chunk {
 define(PguiChunk, {
   chunk_type: field({ default: "pgui" }),
   guid: bytes_field(16),
-});
+}, { init: false });
 register("pgui")(PguiChunk);
 
 // ---------------------------------------------------------------------------
@@ -96,6 +128,12 @@ register("pgui")(PguiChunk);
  */
 export class PrdaChunk extends Chunk {
   declare chunk_type: string;
+
+  constructor(kw: Record<string, any> = {}) {
+    super(kw);
+    const { chunk_type = "prda" } = kw;
+    this.chunk_type = chunk_type;
+  }
 
   static read(
     fp: IO,
@@ -118,7 +156,7 @@ export class PrdaChunk extends Chunk {
 }
 define(PrdaChunk, {
   chunk_type: field({ default: "prda" }),
-});
+}, { init: false });
 register("prda")(PrdaChunk);
 
 /** Classic 3D (`ADBE Escher`) options, 12 bytes. */
@@ -130,6 +168,14 @@ export class ClassicPrdaChunk extends PrdaChunk {
   // tag value as another existing renderer, we should rename this to `_unknown_04`.
   declare _renderer_tag: number;
   declare shadow_map_resolution: number;
+
+  constructor(kw: Record<string, any> = {}) {
+    super(kw);
+    const { version = 1, renderer_tag = 0, shadow_map_resolution = 0 } = kw;
+    this._version = version;
+    this._renderer_tag = renderer_tag;
+    this.shadow_map_resolution = shadow_map_resolution;
+  }
   /** Index into the Shadow Map Resolution dropdown, 0='Comp Size',
    * 1=250, 2=500, 3=750, 4=1000, 5=1500, 6=2000, 7=3000, 8=4000. */
 }
@@ -137,7 +183,7 @@ define(ClassicPrdaChunk, {
   _version: u4_field({ default: 1, repr: false }),
   _renderer_tag: u4_field({ default: 0, repr: false }),
   shadow_map_resolution: u4_field({ default: 0 }),
-});
+}, { init: false });
 
 /**
  * Advanced 3D (`ADBE Calder`) options, 52 bytes.
@@ -175,6 +221,38 @@ export class AdvancedPrdaChunk extends PrdaChunk {
   declare casting_box_center_y: number;
   /** Casting box centre on Z, as a fraction of comp width. */
   declare casting_box_center_z: number;
+
+  constructor(kw: Record<string, any> = {}) {
+    super(kw);
+    const {
+      version = 1,
+      renderer_tag = 3,
+      quality = 8,
+      reserved_12 = 1,
+      reserved_16 = 0,
+      resolution = 1,
+      smoothness = 3,
+      casting_box_size_x = 1.0,
+      casting_box_size_y = 1.0,
+      casting_box_size_z = 1.0,
+      casting_box_center_x = 0.0,
+      casting_box_center_y = 0.0,
+      casting_box_center_z = 0.0,
+    } = kw;
+    this._version = version;
+    this._renderer_tag = renderer_tag;
+    this.quality = quality;
+    this._reserved_12 = reserved_12;
+    this._reserved_16 = reserved_16;
+    this.resolution = resolution;
+    this.smoothness = smoothness;
+    this.casting_box_size_x = casting_box_size_x;
+    this.casting_box_size_y = casting_box_size_y;
+    this.casting_box_size_z = casting_box_size_z;
+    this.casting_box_center_x = casting_box_center_x;
+    this.casting_box_center_y = casting_box_center_y;
+    this.casting_box_center_z = casting_box_center_z;
+  }
 }
 define(AdvancedPrdaChunk, {
   _version: u4_field({ default: 1, repr: false }),
@@ -190,7 +268,7 @@ define(AdvancedPrdaChunk, {
   casting_box_center_x: f4_field({ default: 0.0, endian: "<" }),
   casting_box_center_y: f4_field({ default: 0.0, endian: "<" }),
   casting_box_center_z: f4_field({ default: 0.0, endian: "<" }),
-});
+}, { init: false });
 
 /** Cinema 4D (`ADBE Ernst`) options, 20 bytes. */
 export class Cinema4DPrdaChunk extends PrdaChunk {
@@ -200,6 +278,16 @@ export class Cinema4DPrdaChunk extends PrdaChunk {
   declare quality: number;
   declare _reserved_12: number;
   declare _reserved_16: number;
+
+  constructor(kw: Record<string, any> = {}) {
+    super(kw);
+    const { version = 1, renderer_tag = 1, quality = 25, reserved_12 = 1, reserved_16 = 0 } = kw;
+    this._version = version;
+    this._renderer_tag = renderer_tag;
+    this.quality = quality;
+    this._reserved_12 = reserved_12;
+    this._reserved_16 = reserved_16;
+  }
 }
 define(Cinema4DPrdaChunk, {
   _version: u4_field({ default: 1, repr: false }),
@@ -207,7 +295,7 @@ define(Cinema4DPrdaChunk, {
   quality: u4_field({ default: 25 }),
   _reserved_12: u4_field({ default: 1, repr: false }),
   _reserved_16: u4_field({ default: 0, repr: false }),
-});
+}, { init: false });
 
 /**
  * Ray-traced 3D (`ADBE Picasso`) options, 16 bytes.
@@ -221,13 +309,22 @@ export class RayTracedPrdaChunk extends PrdaChunk {
   declare _renderer_tag: number;
   declare _unknown_08: number;
   declare _unknown_12: number;
+
+  constructor(kw: Record<string, any> = {}) {
+    super(kw);
+    const { version = 1, renderer_tag = 0, unknown_08 = 3, unknown_12 = 1 } = kw;
+    this._version = version;
+    this._renderer_tag = renderer_tag;
+    this._unknown_08 = unknown_08;
+    this._unknown_12 = unknown_12;
+  }
 }
 define(RayTracedPrdaChunk, {
   _version: u4_field({ default: 1, repr: false }),
   _renderer_tag: u4_field({ default: 0, repr: false }),
   _unknown_08: u4_field({ default: 3, repr: false }),
   _unknown_12: u4_field({ default: 1, repr: false }),
-});
+}, { init: false });
 
 // Body size -> variant. Sizes are distinct per renderer, so size alone
 // discriminates without needing the sibling `prin` chunk's match name.
@@ -269,6 +366,36 @@ export class MkifChunk extends Chunk {
   declare color_g: number;
   declare color_b: number;
 
+  constructor(kw: Record<string, any> = {}) {
+    super(kw);
+    const {
+      chunk_type = "mkif",
+      inverted = false,
+      locked = false,
+      mask_motion_blur = 0,
+      mask_feather_falloff = 0,
+      reserved_04 = new Uint8Array(2),
+      mode = 0,
+      mask_id = 0,
+      reserved_0c = new Uint8Array(33),
+      color_r = 0,
+      color_g = 0,
+      color_b = 0,
+    } = kw;
+    this.chunk_type = chunk_type;
+    this.inverted = inverted;
+    this.locked = locked;
+    this.mask_motion_blur = mask_motion_blur;
+    this.mask_feather_falloff = mask_feather_falloff;
+    this._reserved_04 = reserved_04;
+    this.mode = mode;
+    this.mask_id = mask_id;
+    this._reserved_0c = reserved_0c;
+    this.color_r = color_r;
+    this.color_g = color_g;
+    this.color_b = color_b;
+  }
+
   /** Mask color as [R, G, B] in 0.0-1.0 range. */
   get color(): number[] {
     return [this.color_r / 255, this.color_g / 255, this.color_b / 255];
@@ -293,7 +420,7 @@ define(MkifChunk, {
   color_r: u1_field(),
   color_g: u1_field(),
   color_b: u1_field(),
-});
+}, { init: false });
 register("mkif")(MkifChunk);
 
 // ---------------------------------------------------------------------------
@@ -327,6 +454,28 @@ export class ShphChunk extends Chunk {
   declare normalized: boolean;
   /** True when the path is open (not closed). */
   declare open: boolean;
+
+  constructor(kw: Record<string, any> = {}) {
+    super(kw);
+    const {
+      chunk_type = "shph",
+      reserved_00 = b("\xb3\xde\x02"),
+      flags = 1,
+      top_left_x = 0,
+      top_left_y = 0,
+      bottom_right_x = 0,
+      bottom_right_y = 0,
+      reserved_14 = b("\x01\x00\x00\x00"),
+    } = kw;
+    this.chunk_type = chunk_type;
+    this._reserved_00 = reserved_00;
+    this._flags = flags;
+    this.top_left_x = top_left_x;
+    this.top_left_y = top_left_y;
+    this.bottom_right_x = bottom_right_x;
+    this.bottom_right_y = bottom_right_y;
+    this._reserved_14 = reserved_14;
+  }
 }
 define(ShphChunk, {
   chunk_type: field({ default: "shph" }),
@@ -337,7 +486,7 @@ define(ShphChunk, {
   bottom_right_x: f4_field(),
   bottom_right_y: f4_field(),
   _reserved_14: bytes_field(4, { default: b("\x01\x00\x00\x00"), repr: false }),
-});
+}, { init: false });
 descriptor(ShphChunk, "normalized", new BitField("_flags", 0));
 descriptor(ShphChunk, "open", new BitField("_flags", 3));
 register("shph")(ShphChunk);
@@ -374,6 +523,28 @@ export class NmhdChunk extends Chunk {
   declare protected_region: boolean;
   declare navigation: boolean;
 
+  constructor(kw: Record<string, any> = {}) {
+    super(kw);
+    const {
+      chunk_type = "NmHd",
+      reserved_00 = new Uint8Array(3),
+      marker_flags = 0,
+      num_params = 0,
+      duration_value = 0,
+      duration_scale = 600,
+      label = 0,
+      reserved_11 = new Uint8Array(3),
+    } = kw;
+    this.chunk_type = chunk_type;
+    this._reserved_00 = reserved_00;
+    this._marker_flags = marker_flags;
+    this.num_params = num_params;
+    this.duration_value = duration_value;
+    this.duration_scale = duration_scale;
+    this.label = label;
+    this._reserved_11 = reserved_11;
+  }
+
   /** Duration in seconds. */
   get duration_seconds(): number {
     return this.duration_value / (this.duration_scale || 600);
@@ -393,7 +564,7 @@ define(NmhdChunk, {
   duration_scale: u4_field({ default: 600 }),
   label: u1_field(),
   _reserved_11: bytes_field(3, { repr: false }),
-});
+}, { init: false });
 // BitField descriptors
 descriptor(NmhdChunk, "protected_region", new BitField("_marker_flags", 1));
 descriptor(NmhdChunk, "navigation", new BitField("_marker_flags", 0));
@@ -469,6 +640,60 @@ export class FipsChunk extends Chunk {
   declare use_display_color_management: boolean;
   declare auto_resolution: boolean;
 
+  constructor(kw: Record<string, any> = {}) {
+    super(kw);
+    const {
+      chunk_type = "fips",
+      pad_00 = new Uint8Array(7),
+      channels = 0,
+      pad_08 = new Uint8Array(3),
+      grid_safe_flags = 0,
+      draft_flags = 0,
+      preview_flags = 0,
+      view_flags = 0,
+      display_flags = 0,
+      pad_10 = new Uint8Array(7),
+      guide_flags = 0,
+      pad_18 = new Uint8Array(16),
+      roi_top = 0,
+      roi_left = 0,
+      roi_bottom = 0,
+      roi_right = 0,
+      pad_30 = new Uint8Array(21),
+      zoom_type = 0,
+      pad_46 = new Uint8Array(2),
+      zoom = 0,
+      exposure = 0,
+      pad_54 = 0,
+      color_mgmt_flags = 1,
+      resolution_flags = 0,
+    } = kw;
+    this.chunk_type = chunk_type;
+    this._pad_00 = pad_00;
+    this.channels = channels;
+    this._pad_08 = pad_08;
+    this._grid_safe_flags = grid_safe_flags;
+    this._draft_flags = draft_flags;
+    this._preview_flags = preview_flags;
+    this._view_flags = view_flags;
+    this._display_flags = display_flags;
+    this._pad_10 = pad_10;
+    this._guide_flags = guide_flags;
+    this._pad_18 = pad_18;
+    this.roi_top = roi_top;
+    this.roi_left = roi_left;
+    this.roi_bottom = roi_bottom;
+    this.roi_right = roi_right;
+    this._pad_30 = pad_30;
+    this.zoom_type = zoom_type;
+    this._pad_46 = pad_46;
+    this.zoom = zoom;
+    this.exposure = exposure;
+    this._pad_54 = pad_54;
+    this._color_mgmt_flags = color_mgmt_flags;
+    this._resolution_flags = resolution_flags;
+  }
+
   /** Computed fast preview type (0=off, 1=adaptive, 2=draft, 3=fast_draft, 4=wireframe). */
   get fast_preview_type(): number {
     if (this.fast_preview_wireframe) return 4;
@@ -510,7 +735,7 @@ define(FipsChunk, {
   _pad_54: u1_field({ repr: false }),
   _color_mgmt_flags: u1_field({ default: 1, repr: false }),
   _resolution_flags: u1_field({ repr: false }),
-});
+}, { init: false });
 descriptor(FipsChunk, "proportional_grid", new BitField("_grid_safe_flags", 1));
 descriptor(FipsChunk, "title_action_safe", new BitField("_grid_safe_flags", 0));
 descriptor(FipsChunk, "draft3d", new BitField("_draft_flags", 2));
@@ -561,6 +786,12 @@ export function shadow_property(cls: Function, name: string): void {
 export class PardChunk extends Chunk {
   declare chunk_type: string;
   declare _raw_name: Uint8Array;
+
+  constructor(kw: Record<string, any> = {}) {
+    super(kw);
+    const { chunk_type = "pard" } = kw;
+    this.chunk_type = chunk_type;
+  }
 
   /** Control type discriminator at byte 15 of the raw data. */
   get property_control_type(): number {
@@ -637,7 +868,7 @@ export class PardChunk extends Chunk {
 }
 define(PardChunk, {
   chunk_type: field({ default: "pard" }),
-});
+}, { init: false });
 register("pard")(PardChunk);
 
 /**
@@ -653,6 +884,22 @@ export class GenericPardChunk extends PardChunk {
   declare _raw_name: Uint8Array;
   declare _pad_post: Uint8Array;
   declare _body: Uint8Array;
+
+  constructor(kw: Record<string, any> = {}) {
+    super(kw);
+    const {
+      pad_pre = new Uint8Array(15),
+      property_control_type = 0,
+      raw_name = new Uint8Array(32),
+      pad_post = new Uint8Array(8),
+      body = new Uint8Array(92),
+    } = kw;
+    this._pad_pre = pad_pre;
+    (this as any).property_control_type = property_control_type;
+    this._raw_name = raw_name;
+    this._pad_post = pad_post;
+    this._body = body;
+  }
 }
 define(GenericPardChunk, {
   _pad_pre: bytes_field(15, { repr: false }),
@@ -660,7 +907,7 @@ define(GenericPardChunk, {
   _raw_name: bytes_field(32, { repr: false }),
   _pad_post: bytes_field(8, { repr: false }),
   _body: bytes_field(92, { repr: false }),
-});
+}, { init: false });
 
 /** `bytes(list_of_ints)`: raises like CPython outside 0..255 instead of wrapping. */
 export function _bytes_from_ints(value: number[]): Uint8Array {
@@ -687,6 +934,24 @@ export class ColorPardChunk extends PardChunk {
   declare _last_color: Uint8Array;
   declare _default_color: Uint8Array;
 
+  constructor(kw: Record<string, any> = {}) {
+    super(kw);
+    const {
+      pad_pre = new Uint8Array(15),
+      property_control_type = 5,
+      raw_name = new Uint8Array(32),
+      pad_post = new Uint8Array(8),
+      last_color = new Uint8Array(4),
+      default_color = new Uint8Array(4),
+    } = kw;
+    this._pad_pre = pad_pre;
+    (this as any).property_control_type = property_control_type;
+    this._raw_name = raw_name;
+    this._pad_post = pad_post;
+    this._last_color = last_color;
+    this._default_color = default_color;
+  }
+
   get last_color(): number[] {
     return Array.from(this._last_color);
   }
@@ -710,7 +975,7 @@ define(ColorPardChunk, {
   _pad_post: bytes_field(8, { repr: false }),
   _last_color: bytes_field(4, { repr: false }),
   _default_color: bytes_field(4, { repr: false }),
-});
+}, { init: false });
 
 /**
  * Integer slider (type 1, SDK `PF_Param_SLIDER` / `PF_SliderDef`).
@@ -732,6 +997,36 @@ export class IntegerPardChunk extends PardChunk {
   declare slider_min: number | null;
   declare slider_max: number | null;
   declare default_: number | null;
+
+  constructor(kw: Record<string, any> = {}) {
+    super(kw);
+    const {
+      pad_pre = new Uint8Array(15),
+      property_control_type = 1,
+      raw_name = new Uint8Array(32),
+      pad_post = new Uint8Array(8),
+      last_value = 0,
+      value_str = new Uint8Array(32),
+      value_desc = new Uint8Array(32),
+      valid_min = 0,
+      valid_max = 0,
+      slider_min = null,
+      slider_max = null,
+      default_ = null,
+    } = kw;
+    this._pad_pre = pad_pre;
+    (this as any).property_control_type = property_control_type;
+    this._raw_name = raw_name;
+    this._pad_post = pad_post;
+    this.last_value = last_value;
+    this._value_str = value_str;
+    this._value_desc = value_desc;
+    this.valid_min = valid_min;
+    this.valid_max = valid_max;
+    this.slider_min = slider_min;
+    this.slider_max = slider_max;
+    this.default_ = default_;
+  }
 }
 define(IntegerPardChunk, {
   _pad_pre: bytes_field(15, { repr: false }),
@@ -746,7 +1041,7 @@ define(IntegerPardChunk, {
   slider_min: s4_field({ optional: true, default: null }),
   slider_max: s4_field({ optional: true, default: null }),
   default_: s4_field({ optional: true, default: null }),
-});
+}, { init: false });
 
 /**
  * Fixed-point slider (type 2, SDK `PF_Param_FIX_SLIDER` /
@@ -770,6 +1065,36 @@ export class ScalarPardChunk extends PardChunk {
   declare slider_min_raw: number;
   declare slider_max_raw: number;
   declare default_raw: number | null;
+
+  constructor(kw: Record<string, any> = {}) {
+    super(kw);
+    const {
+      pad_pre = new Uint8Array(15),
+      property_control_type = 2,
+      raw_name = new Uint8Array(32),
+      pad_post = new Uint8Array(8),
+      last_value_raw = 0,
+      value_str = new Uint8Array(32),
+      value_desc = new Uint8Array(32),
+      valid_min_raw = 0,
+      valid_max_raw = 0,
+      slider_min_raw = 0,
+      slider_max_raw = 0,
+      default_raw = null,
+    } = kw;
+    this._pad_pre = pad_pre;
+    (this as any).property_control_type = property_control_type;
+    this._raw_name = raw_name;
+    this._pad_post = pad_post;
+    this.last_value_raw = last_value_raw;
+    this._value_str = value_str;
+    this._value_desc = value_desc;
+    this.valid_min_raw = valid_min_raw;
+    this.valid_max_raw = valid_max_raw;
+    this.slider_min_raw = slider_min_raw;
+    this.slider_max_raw = slider_max_raw;
+    this.default_raw = default_raw;
+  }
 
   get last_value(): number {
     return this.last_value_raw / 65536;
@@ -808,7 +1133,7 @@ define(ScalarPardChunk, {
   slider_min_raw: s4_field(),
   slider_max_raw: s4_field(),
   default_raw: s4_field({ optional: true, default: null }),
-});
+}, { init: false });
 
 /**
  * Angle control (type 3, SDK `PF_AngleDef`).
@@ -822,6 +1147,24 @@ export class AnglePardChunk extends PardChunk {
   declare _pad_post: Uint8Array;
   declare last_value_raw: number;
   declare default_raw: number | null;
+
+  constructor(kw: Record<string, any> = {}) {
+    super(kw);
+    const {
+      pad_pre = new Uint8Array(15),
+      property_control_type = 3,
+      raw_name = new Uint8Array(32),
+      pad_post = new Uint8Array(8),
+      last_value_raw = 0,
+      default_raw = null,
+    } = kw;
+    this._pad_pre = pad_pre;
+    (this as any).property_control_type = property_control_type;
+    this._raw_name = raw_name;
+    this._pad_post = pad_post;
+    this.last_value_raw = last_value_raw;
+    this.default_raw = default_raw;
+  }
 
   get last_value(): number {
     return this.last_value_raw / 65536;
@@ -838,7 +1181,7 @@ define(AnglePardChunk, {
   _pad_post: bytes_field(8, { repr: false }),
   last_value_raw: s4_field(),
   default_raw: s4_field({ optional: true, default: null }),
-});
+}, { init: false });
 
 /** Boolean control (type 4): u4 last_value, u1 default. */
 export class BooleanPardChunk extends PardChunk {
@@ -847,6 +1190,24 @@ export class BooleanPardChunk extends PardChunk {
   declare _pad_post: Uint8Array;
   declare last_value: number;
   declare default_: number;
+
+  constructor(kw: Record<string, any> = {}) {
+    super(kw);
+    const {
+      pad_pre = new Uint8Array(15),
+      property_control_type = 4,
+      raw_name = new Uint8Array(32),
+      pad_post = new Uint8Array(8),
+      last_value = 0,
+      default_ = 0,
+    } = kw;
+    this._pad_pre = pad_pre;
+    (this as any).property_control_type = property_control_type;
+    this._raw_name = raw_name;
+    this._pad_post = pad_post;
+    this.last_value = last_value;
+    this.default_ = default_;
+  }
 }
 define(BooleanPardChunk, {
   _pad_pre: bytes_field(15, { repr: false }),
@@ -855,7 +1216,7 @@ define(BooleanPardChunk, {
   _pad_post: bytes_field(8, { repr: false }),
   last_value: u4_field(),
   default_: u1_field(),
-});
+}, { init: false });
 
 /**
  * 2D point control (type 6, SDK `PF_PointDef`).
@@ -875,6 +1236,32 @@ export class TwoDPardChunk extends PardChunk {
   declare restrict_bounds: number;
   declare default_x_raw: number;
   declare default_y_raw: number;
+
+  constructor(kw: Record<string, any> = {}) {
+    super(kw);
+    const {
+      pad_pre = new Uint8Array(15),
+      property_control_type = 6,
+      raw_name = new Uint8Array(32),
+      pad_post = new Uint8Array(8),
+      last_value_x_raw = 0,
+      last_value_y_raw = 0,
+      reserved_40 = new Uint8Array(3),
+      restrict_bounds = 0,
+      default_x_raw = 0,
+      default_y_raw = 0,
+    } = kw;
+    this._pad_pre = pad_pre;
+    (this as any).property_control_type = property_control_type;
+    this._raw_name = raw_name;
+    this._pad_post = pad_post;
+    this.last_value_x_raw = last_value_x_raw;
+    this.last_value_y_raw = last_value_y_raw;
+    this._reserved_40 = reserved_40;
+    this.restrict_bounds = restrict_bounds;
+    this.default_x_raw = default_x_raw;
+    this.default_y_raw = default_y_raw;
+  }
 
   get last_value_x(): number {
     return this.last_value_x_raw * (1.0 / 128);
@@ -900,7 +1287,7 @@ define(TwoDPardChunk, {
   restrict_bounds: u1_field(),
   default_x_raw: s4_field(),
   default_y_raw: s4_field(),
-});
+}, { init: false });
 
 /**
  * Popup control (type 7, SDK `PF_PopupDef`): s4 value, s2 number of
@@ -914,6 +1301,26 @@ export class EnumPardChunk extends PardChunk {
   declare last_value: number;
   declare nb_options: number;
   declare default_: number;
+
+  constructor(kw: Record<string, any> = {}) {
+    super(kw);
+    const {
+      pad_pre = new Uint8Array(15),
+      property_control_type = 7,
+      raw_name = new Uint8Array(32),
+      pad_post = new Uint8Array(8),
+      last_value = 0,
+      nb_options = 0,
+      default_ = 0,
+    } = kw;
+    this._pad_pre = pad_pre;
+    (this as any).property_control_type = property_control_type;
+    this._raw_name = raw_name;
+    this._pad_post = pad_post;
+    this.last_value = last_value;
+    this.nb_options = nb_options;
+    this.default_ = default_;
+  }
 }
 define(EnumPardChunk, {
   _pad_pre: bytes_field(15, { repr: false }),
@@ -923,7 +1330,7 @@ define(EnumPardChunk, {
   last_value: u4_field(),
   nb_options: s2_field(),
   default_: s2_field(),
-});
+}, { init: false });
 
 /**
  * Float slider (type 10, SDK `PF_Param_FLOAT_SLIDER` /
@@ -952,6 +1359,40 @@ export class SliderPardChunk extends PardChunk {
    * writes reliably for float sliders (fixed-point sliders leave it 0). */
   declare display_flags: number | null;
 
+  constructor(kw: Record<string, any> = {}) {
+    super(kw);
+    const {
+      pad_pre = new Uint8Array(15),
+      property_control_type = 10,
+      raw_name = new Uint8Array(32),
+      pad_post = new Uint8Array(8),
+      last_value = 0,
+      phase = 0,
+      value_desc = new Uint8Array(32),
+      valid_min = 0,
+      valid_max = 0,
+      slider_min = 0,
+      slider_max = 0,
+      default_ = null,
+      precision = null,
+      display_flags = null,
+    } = kw;
+    this._pad_pre = pad_pre;
+    (this as any).property_control_type = property_control_type;
+    this._raw_name = raw_name;
+    this._pad_post = pad_post;
+    this.last_value = last_value;
+    this.phase = phase;
+    this._value_desc = value_desc;
+    this.valid_min = valid_min;
+    this.valid_max = valid_max;
+    this.slider_min = slider_min;
+    this.slider_max = slider_max;
+    this.default_ = default_;
+    this._precision = precision;
+    this.display_flags = display_flags;
+  }
+
   /** SDK `PF_ValueDisplayFlag_PERCENT` (bit 0). */
   get displays_percent(): boolean {
     const flags = this.display_flags;
@@ -973,7 +1414,7 @@ define(SliderPardChunk, {
   default_: f4_field({ optional: true, default: null }),
   _precision: u2_field({ optional: true, default: null, repr: false }),
   display_flags: u2_field({ optional: true, default: null }),
-});
+}, { init: false });
 
 /**
  * 3D point control (type 18, SDK `PF_Point3DDef`): f8 value x / y /
@@ -991,6 +1432,32 @@ export class ThreeDPardChunk extends PardChunk {
   declare default_x: number;
   declare default_y: number;
   declare default_z: number;
+
+  constructor(kw: Record<string, any> = {}) {
+    super(kw);
+    const {
+      pad_pre = new Uint8Array(15),
+      property_control_type = 18,
+      raw_name = new Uint8Array(32),
+      pad_post = new Uint8Array(8),
+      last_value_x_raw = 0,
+      last_value_y_raw = 0,
+      last_value_z_raw = 0,
+      default_x = 0,
+      default_y = 0,
+      default_z = 0,
+    } = kw;
+    this._pad_pre = pad_pre;
+    (this as any).property_control_type = property_control_type;
+    this._raw_name = raw_name;
+    this._pad_post = pad_post;
+    this.last_value_x_raw = last_value_x_raw;
+    this.last_value_y_raw = last_value_y_raw;
+    this.last_value_z_raw = last_value_z_raw;
+    this.default_x = default_x;
+    this.default_y = default_y;
+    this.default_z = default_z;
+  }
 
   /** Default x / y / z, in percent of the layer size. */
   get default_(): number[] {
@@ -1020,7 +1487,7 @@ define(ThreeDPardChunk, {
   default_x: f8_field(),
   default_y: f8_field(),
   default_z: f8_field(),
-});
+}, { init: false });
 
 // ---------------------------------------------------------------------------
 // dwga - working gamma selector (1 byte)
@@ -1036,6 +1503,14 @@ export class DwgaChunk extends Chunk {
   declare working_gamma_selector: number;
   declare _reserved_01: Uint8Array;
 
+  constructor(kw: Record<string, any> = {}) {
+    super(kw);
+    const { chunk_type = "dwga", working_gamma_selector = 0, reserved_01 = new Uint8Array(3) } = kw;
+    this.chunk_type = chunk_type;
+    this.working_gamma_selector = working_gamma_selector;
+    this._reserved_01 = reserved_01;
+  }
+
   /** Working gamma (2.2 or 2.4). */
   get working_gamma(): number {
     return this.working_gamma_selector === 0 ? 2.2 : 2.4;
@@ -1049,7 +1524,7 @@ define(DwgaChunk, {
   chunk_type: field({ default: "dwga" }),
   working_gamma_selector: u1_field(),
   _reserved_01: bytes_field(3, { repr: false }),
-});
+}, { init: false });
 register("dwga")(DwgaChunk);
 
 // ---------------------------------------------------------------------------
@@ -1066,11 +1541,18 @@ export class EwotItem extends FmtItem {
   declare _data: Uint8Array;
   declare is_child_property: boolean;
   declare selected: boolean;
+
+  constructor(kw: Record<string, any> = {}) {
+    super(kw);
+    const { flags = 0, data = new Uint8Array(3) } = kw;
+    this._flags = flags;
+    this._data = data;
+  }
 }
 define(EwotItem, {
   _flags: u1_field(),
   _data: bytes_field(3),
-});
+}, { init: false });
 descriptor(EwotItem, "is_child_property", new BitField("_flags", 7));
 descriptor(EwotItem, "selected", new BitField("_flags", 6));
 
@@ -1083,12 +1565,20 @@ export class EwotChunk extends Chunk {
   declare chunk_type: string;
   declare num_entries: number;
   declare items: EwotItem[];
+
+  constructor(kw: Record<string, any> = {}) {
+    super(kw);
+    const { chunk_type = "ewot", num_entries = 0, items = [] } = kw;
+    this.chunk_type = chunk_type;
+    this.num_entries = num_entries;
+    this.items = items;
+  }
 }
 define(EwotChunk, {
   chunk_type: field({ default: "ewot" }),
   num_entries: u4_field(),
   items: items_field(EwotItem, 4),
-});
+}, { init: false });
 register("ewot")(EwotChunk);
 
 // ---------------------------------------------------------------------------
@@ -1110,6 +1600,14 @@ export class OtlnItem extends FmtItem {
   declare is_property: boolean;
   declare is_sub_entry: boolean;
 
+  constructor(kw: Record<string, any> = {}) {
+    super(kw);
+    const { flags = 0, unnamed6 = new Uint8Array(2), entry_type = 0 } = kw;
+    this._flags = flags;
+    this._unnamed6 = unnamed6;
+    this.entry_type = entry_type;
+  }
+
   /** True when this entry is a per-layer boundary marker. */
   get is_layer_marker(): boolean {
     return this.entry_type === 68;
@@ -1119,7 +1617,7 @@ define(OtlnItem, {
   _flags: u1_field(),
   _unnamed6: bytes_field(2),
   entry_type: u1_field(),
-});
+}, { init: false });
 descriptor(OtlnItem, "collapsed", new BitField("_flags", 7));
 descriptor(OtlnItem, "selected", new BitField("_flags", 6));
 descriptor(OtlnItem, "is_property", new BitField("_flags", 5));
@@ -1134,12 +1632,20 @@ export class OtlnChunk extends Chunk {
   declare chunk_type: string;
   declare num_entries: number;
   declare items: OtlnItem[];
+
+  constructor(kw: Record<string, any> = {}) {
+    super(kw);
+    const { chunk_type = "otln", num_entries = 0, items = [] } = kw;
+    this.chunk_type = chunk_type;
+    this.num_entries = num_entries;
+    this.items = items;
+  }
 }
 define(OtlnChunk, {
   chunk_type: field({ default: "otln" }),
   num_entries: u4_field(),
   items: items_field(OtlnItem, 4),
-});
+}, { init: false });
 register("otln")(OtlnChunk);
 
 export const _PARD_VARIANTS = new Map<number, typeof PardChunk>([
@@ -1199,6 +1705,24 @@ export class FeatherPointItem extends FmtItem {
   declare corner_angle: number;
   /** Feather tension 0.0-1.0 (BE f4). */
   declare tension: number;
+
+  constructor(kw: Record<string, any> = {}) {
+    super(kw);
+    const {
+      seg_loc = 0,
+      interp_raw = 0,
+      rel_seg_loc = 0.0,
+      radius = 0.0,
+      corner_angle = 0.0,
+      tension = 0.0,
+    } = kw;
+    this.seg_loc = seg_loc;
+    this.interp_raw = interp_raw;
+    this.rel_seg_loc = rel_seg_loc;
+    this.radius = radius;
+    this.corner_angle = corner_angle;
+    this.tension = tension;
+  }
 }
 define(FeatherPointItem, {
   seg_loc: u4_field({ endian: "<" }),
@@ -1207,7 +1731,7 @@ define(FeatherPointItem, {
   radius: f8_field({ default: 0.0 }),
   corner_angle: f4_field({ default: 0.0 }),
   tension: f4_field({ default: 0.0 }),
-});
+}, { init: false });
 
 export const _FTH5_ITEM_SIZE = 32;
 
@@ -1215,11 +1739,18 @@ export const _FTH5_ITEM_SIZE = 32;
 export class Fth5Chunk extends Chunk {
   declare chunk_type: string;
   declare points: FeatherPointItem[];
+
+  constructor(kw: Record<string, any> = {}) {
+    super(kw);
+    const { chunk_type = "fth5", points = [] } = kw;
+    this.chunk_type = chunk_type;
+    this.points = points;
+  }
 }
 define(Fth5Chunk, {
   chunk_type: field({ default: "fth5" }),
   points: items_field(FeatherPointItem, 32),
-});
+}, { init: false });
 register("fth5")(Fth5Chunk);
 
 // ---------------------------------------------------------------------------
@@ -1229,10 +1760,16 @@ register("fth5")(Fth5Chunk);
 /** One vertex's RotoBezier tension (BE f4). */
 export class TensionItem extends FmtItem {
   declare value: number;
+
+  constructor(kw: Record<string, any> = {}) {
+    super(kw);
+    const { value = 0.0 } = kw;
+    this.value = value;
+  }
 }
 define(TensionItem, {
   value: f4_field({ default: 0.0 }),
-});
+}, { init: false });
 
 /**
  * Per-vertex RotoBezier tensions of a mask shape value, one float per
@@ -1242,11 +1779,18 @@ define(TensionItem, {
 export class OmtnChunk extends Chunk {
   declare chunk_type: string;
   declare tensions: TensionItem[];
+
+  constructor(kw: Record<string, any> = {}) {
+    super(kw);
+    const { chunk_type = "omtn", tensions = [] } = kw;
+    this.chunk_type = chunk_type;
+    this.tensions = tensions;
+  }
 }
 define(OmtnChunk, {
   chunk_type: field({ default: "omtn" }),
   tensions: items_field(TensionItem, 4),
-});
+}, { init: false });
 register("omtn")(OmtnChunk);
 
 // ---------------------------------------------------------------------------
@@ -1256,22 +1800,36 @@ register("omtn")(OmtnChunk);
 export class ApidChunk extends Chunk {
   declare chunk_type: string;
   declare data: Uint8Array;
+
+  constructor(kw: Record<string, any> = {}) {
+    super(kw);
+    const { chunk_type = "apid", data = bytes_.repeat(b("\xff"), 16) } = kw;
+    this.chunk_type = chunk_type;
+    this.data = data;
+  }
 }
 define(ApidChunk, {
   chunk_type: field({ default: "apid" }),
   data: field({ default: bytes_.repeat(b("\xff"), 16) }),
-});
+}, { init: false });
 register("apid")(ApidChunk);
 
 /** Embedded color profile ID (16 bytes, all 0xff = unmanaged). */
 export class EpidChunk extends Chunk {
   declare chunk_type: string;
   declare data: Uint8Array;
+
+  constructor(kw: Record<string, any> = {}) {
+    super(kw);
+    const { chunk_type = "epid", data = bytes_.repeat(b("\xff"), 16) } = kw;
+    this.chunk_type = chunk_type;
+    this.data = data;
+  }
 }
 define(EpidChunk, {
   chunk_type: field({ default: "epid" }),
   data: field({ default: bytes_.repeat(b("\xff"), 16) }),
-});
+}, { init: false });
 register("epid")(EpidChunk);
 
 /**
@@ -1285,99 +1843,162 @@ register("epid")(EpidChunk);
 export class EmpdChunk extends Chunk {
   declare chunk_type: string;
   declare value: boolean;
+
+  constructor(kw: Record<string, any> = {}) {
+    super(kw);
+    const { chunk_type = "empd", value = true } = kw;
+    this.chunk_type = chunk_type;
+    this.value = value;
+  }
 }
 define(EmpdChunk, {
   chunk_type: field({ default: "empd" }),
   value: bool_field({ default: true }),
-});
+}, { init: false });
 register("empd")(EmpdChunk);
 
 /** Linearization setting (4 bytes little-endian). */
 export class LinlChunk extends Chunk {
   declare chunk_type: string;
   declare value: number;
+
+  constructor(kw: Record<string, any> = {}) {
+    super(kw);
+    const { chunk_type = "linl", value = 2 } = kw;
+    this.chunk_type = chunk_type;
+    this.value = value;
+  }
 }
 define(LinlChunk, {
   chunk_type: field({ default: "linl" }),
   value: u4_field({ endian: "<", default: 2 }),
-});
+}, { init: false });
 register("linl")(LinlChunk);
 
 /** Embed profile flag. */
 export class EmbpChunk extends Chunk {
   declare chunk_type: string;
   declare value: boolean;
+
+  constructor(kw: Record<string, any> = {}) {
+    super(kw);
+    const { chunk_type = "embp", value = true } = kw;
+    this.chunk_type = chunk_type;
+    this.value = value;
+  }
 }
 define(EmbpChunk, {
   chunk_type: field({ default: "embp" }),
   value: bool_field({ default: true }),
-});
+}, { init: false });
 register("embp")(EmbpChunk);
 
 /** Input profile working space. */
 export class IpwsChunk extends Chunk {
   declare chunk_type: string;
   declare value: number;
+
+  constructor(kw: Record<string, any> = {}) {
+    super(kw);
+    const { chunk_type = "ipws", value = 1 } = kw;
+    this.chunk_type = chunk_type;
+    this.value = value;
+  }
 }
 define(IpwsChunk, {
   chunk_type: field({ default: "ipws" }),
   value: u1_field({ default: 1 }),
-});
+}, { init: false });
 register("ipws")(IpwsChunk);
 
 /** Display color UI flag (solid sources only). */
 export class DcuiChunk extends Chunk {
   declare chunk_type: string;
   declare value: boolean;
+
+  constructor(kw: Record<string, any> = {}) {
+    super(kw);
+    const { chunk_type = "dcui", value = true } = kw;
+    this.chunk_type = chunk_type;
+    this.value = value;
+  }
 }
 define(DcuiChunk, {
   chunk_type: field({ default: "dcui" }),
   value: bool_field({ default: true }),
-});
+}, { init: false });
 register("dcui")(DcuiChunk);
 
 /** Preserve RGB flag (solid sources only). */
 export class PrgbChunk extends Chunk {
   declare chunk_type: string;
   declare value: number;
+
+  constructor(kw: Record<string, any> = {}) {
+    super(kw);
+    const { chunk_type = "prgb", value = 1 } = kw;
+    this.chunk_type = chunk_type;
+    this.value = value;
+  }
 }
 define(PrgbChunk, {
   chunk_type: field({ default: "prgb" }),
   value: u1_field({ default: 1 }),
-});
+}, { init: false });
 register("prgb")(PrgbChunk);
 
 /** Monitor color space flag. */
 export class McspChunk extends Chunk {
   declare chunk_type: string;
   declare value: boolean;
+
+  constructor(kw: Record<string, any> = {}) {
+    super(kw);
+    const { chunk_type = "Mcsp", value = true } = kw;
+    this.chunk_type = chunk_type;
+    this.value = value;
+  }
 }
 define(McspChunk, {
   chunk_type: field({ default: "Mcsp" }),
   value: bool_field({ default: true }),
-});
+}, { init: false });
 register("Mcsp")(McspChunk);
 
 /** Output color space flag. */
 export class OcspChunk extends Chunk {
   declare chunk_type: string;
   declare value: boolean;
+
+  constructor(kw: Record<string, any> = {}) {
+    super(kw);
+    const { chunk_type = "ocsp", value = true } = kw;
+    this.chunk_type = chunk_type;
+    this.value = value;
+  }
 }
 define(OcspChunk, {
   chunk_type: field({ default: "ocsp" }),
   value: bool_field({ default: true }),
-});
+}, { init: false });
 register("ocsp")(OcspChunk);
 
 /** HDR mode flag. */
 export class HdrmChunk extends Chunk {
   declare chunk_type: string;
   declare value: boolean;
+
+  constructor(kw: Record<string, any> = {}) {
+    super(kw);
+    const { chunk_type = "hdrm", value = true } = kw;
+    this.chunk_type = chunk_type;
+    this.value = value;
+  }
 }
 define(HdrmChunk, {
   chunk_type: field({ default: "hdrm" }),
   value: bool_field({ default: true }),
-});
+}, { init: false });
 register("hdrm")(HdrmChunk);
 
 /** Media start info (8 bytes). */
@@ -1386,24 +2007,45 @@ export class StrtChunk extends Chunk {
   declare _reserved_00: Uint8Array;
   declare fps_byte: number;
   declare _reserved_05: Uint8Array;
+
+  constructor(kw: Record<string, any> = {}) {
+    super(kw);
+    const {
+      chunk_type = "strt",
+      reserved_00 = new Uint8Array(4),
+      fps_byte = 1,
+      reserved_05 = new Uint8Array(3),
+    } = kw;
+    this.chunk_type = chunk_type;
+    this._reserved_00 = reserved_00;
+    this.fps_byte = fps_byte;
+    this._reserved_05 = reserved_05;
+  }
 }
 define(StrtChunk, {
   chunk_type: field({ default: "strt" }),
   _reserved_00: bytes_field(4, { repr: false }),
   fps_byte: u1_field({ default: 1 }),
   _reserved_05: bytes_field(3, { repr: false }),
-});
+}, { init: false });
 register("strt")(StrtChunk);
 
 /** Drop frame flag. */
 export class DropChunk extends Chunk {
   declare chunk_type: string;
   declare value: boolean;
+
+  constructor(kw: Record<string, any> = {}) {
+    super(kw);
+    const { chunk_type = "drop", value = true } = kw;
+    this.chunk_type = chunk_type;
+    this.value = value;
+  }
 }
 define(DropChunk, {
   chunk_type: field({ default: "drop" }),
   value: bool_field({ default: true }),
-});
+}, { init: false });
 register("drop")(DropChunk);
 
 /** Footage interpretation global info (16 bytes). */
@@ -1413,6 +2055,22 @@ export class FtgiChunk extends Chunk {
   declare frame_rate_num: number;
   declare end_frame: number;
   declare time_base: number;
+
+  constructor(kw: Record<string, any> = {}) {
+    super(kw);
+    const {
+      chunk_type = "ftgi",
+      start_offset = 0,
+      frame_rate_num = 1,
+      end_frame = 0xffffffff,
+      time_base = 600,
+    } = kw;
+    this.chunk_type = chunk_type;
+    this.start_offset = start_offset;
+    this.frame_rate_num = frame_rate_num;
+    this.end_frame = end_frame;
+    this.time_base = time_base;
+  }
 }
 define(FtgiChunk, {
   chunk_type: field({ default: "ftgi" }),
@@ -1420,5 +2078,5 @@ define(FtgiChunk, {
   frame_rate_num: u4_field({ default: 1 }),
   end_frame: u4_field({ default: 0xffffffff }),
   time_base: u4_field({ default: 600 }),
-});
+}, { init: false });
 register("ftgi")(FtgiChunk);

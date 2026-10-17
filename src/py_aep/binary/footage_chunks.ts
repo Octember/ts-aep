@@ -237,6 +237,148 @@ export class SspcChunk extends Chunk {
   /** As `media_format`, for single files only (clear on a sequence). */
   declare media_file: boolean;
 
+  constructor(kw: Record<string, any> = {}) {
+    super(kw);
+    const {
+      chunk_type = "sspc",
+      reserved_00 = new Uint8Array(22),
+      source_format_type = "",
+      reserved_1a = new Uint8Array(6),
+      width = 0,
+      reserved_22 = new Uint8Array(2),
+      height = 0,
+      duration_dividend = 1,
+      duration_divisor = 1,
+      reserved_2e = new Uint8Array(6),
+      time_base = 600,
+      reserved_36 = new Uint8Array(2),
+      native_frame_rate_integer = 0,
+      native_frame_rate_fractional = 0,
+      depth = 0,
+      reserved_40 = new Uint8Array(2),
+      reserved_42 = new Uint8Array(3),
+      alpha_flags = 0,
+      premul_color_r = 0,
+      premul_color_g = 0,
+      premul_color_b = 0,
+      alpha_mode_raw = 0,
+      reserved_4a = new Uint8Array(5),
+      from_file = false,
+      reserved_50 = new Uint8Array(3),
+      field_separation_type_raw = 0,
+      reserved_54 = new Uint8Array(3),
+      field_order = 0,
+      reserved_58 = new Uint8Array(17),
+      is_synthetic_a = 1,
+      reserved_6b = new Uint8Array(3),
+      is_synthetic_b = 1,
+      reserved_6e = new Uint8Array(2),
+      flags_70 = 0,
+      reserved_71 = new Uint8Array(2),
+      flags_73 = 0,
+      source_stamp = new Uint8Array(9),
+      depth_flag = 0x0c,
+      loop = 1,
+      reserved_82 = new Uint8Array(4),
+      is_synthetic_c = 1,
+      reserved_87 = new Uint8Array(1),
+      pixel_aspect_dividend = 1,
+      pixel_aspect_divisor = 1,
+      reserved_90 = new Uint8Array(3),
+      remove_pulldown_value = 0,
+      conform_frame_rate_integer = 0,
+      conform_frame_rate_fractional = 0,
+      display_frame_rate_integer = 0,
+      display_frame_rate_fractional = 0,
+      reserved_9c = new Uint8Array(3),
+      flags_9f = 0,
+      audio_sample_rate = 0,
+      reserved_a8 = new Uint8Array(4),
+      start_frame = 0,
+      end_frame = 0,
+      frame_padding = 0,
+      reserved_b8 = new Uint8Array(1),
+      frame_range_set = false,
+      reserved_ba = new Uint8Array(2),
+      layer_id = 0xffffffff,
+      layer_index = 0xffffffff,
+      reserved_c4 = new Uint8Array(3),
+      full_frame = false,
+      reserved_c8 = new Uint8Array(2),
+      reserved_ca = new Uint8Array(2),
+      data_size = 0,
+      reserved_d4 = concat(b("\x01"), bytes_.repeat(b("\x00"), 9)),
+    } = kw;
+    this.chunk_type = chunk_type;
+    this._reserved_00 = reserved_00;
+    this.source_format_type = source_format_type;
+    this._reserved_1a = reserved_1a;
+    this.width = width;
+    this._reserved_22 = reserved_22;
+    this.height = height;
+    this.duration_dividend = duration_dividend;
+    this.duration_divisor = duration_divisor;
+    this._reserved_2e = reserved_2e;
+    this._time_base = time_base;
+    this._reserved_36 = reserved_36;
+    this.native_frame_rate_integer = native_frame_rate_integer;
+    this.native_frame_rate_fractional = native_frame_rate_fractional;
+    this.depth = depth;
+    this._reserved_40 = reserved_40;
+    this._reserved_42 = reserved_42;
+    this._alpha_flags = alpha_flags;
+    this.premul_color_r = premul_color_r;
+    this.premul_color_g = premul_color_g;
+    this.premul_color_b = premul_color_b;
+    this.alpha_mode_raw = alpha_mode_raw;
+    this._reserved_4a = reserved_4a;
+    this.from_file = from_file;
+    this._reserved_50 = reserved_50;
+    this.field_separation_type_raw = field_separation_type_raw;
+    this._reserved_54 = reserved_54;
+    this.field_order = field_order;
+    this._reserved_58 = reserved_58;
+    this._is_synthetic_a = is_synthetic_a;
+    this._reserved_6b = reserved_6b;
+    this._is_synthetic_b = is_synthetic_b;
+    this._reserved_6e = reserved_6e;
+    this._flags_70 = flags_70;
+    this._reserved_71 = reserved_71;
+    this._flags_73 = flags_73;
+    this._source_stamp = source_stamp;
+    this._depth_flag = depth_flag;
+    this.loop = loop;
+    this._reserved_82 = reserved_82;
+    this._is_synthetic_c = is_synthetic_c;
+    this._reserved_87 = reserved_87;
+    this.pixel_aspect_dividend = pixel_aspect_dividend;
+    this.pixel_aspect_divisor = pixel_aspect_divisor;
+    this._reserved_90 = reserved_90;
+    this._remove_pulldown_value = remove_pulldown_value;
+    this.conform_frame_rate_integer = conform_frame_rate_integer;
+    this.conform_frame_rate_fractional = conform_frame_rate_fractional;
+    this.display_frame_rate_integer = display_frame_rate_integer;
+    this.display_frame_rate_fractional = display_frame_rate_fractional;
+    this._reserved_9c = reserved_9c;
+    this._flags_9f = flags_9f;
+    this.audio_sample_rate = audio_sample_rate;
+    this._reserved_a8 = reserved_a8;
+    this.start_frame = start_frame;
+    this.end_frame = end_frame;
+    this.frame_padding = frame_padding;
+    this._reserved_b8 = reserved_b8;
+    this.frame_range_set = frame_range_set;
+    this._reserved_ba = reserved_ba;
+    this.layer_id = layer_id;
+    this.layer_index = layer_index;
+    this._reserved_c4 = reserved_c4;
+    this.full_frame = full_frame;
+    this._reserved_c8 = reserved_c8;
+    this._reserved_ca = reserved_ca;
+    this.data_size = data_size;
+    this._reserved_d4 = reserved_d4;
+  }
+
   // -- Computed properties -----------------------------------------------
 
   /** Native frame rate (integer + fractional/65536). */
@@ -479,7 +621,7 @@ define(SspcChunk, {
   _reserved_ca: bytes_field(2, { repr: false }),
   data_size: u8_field(),
   _reserved_d4: bytes_field(10, { default: concat(b("\x01"), bytes_.repeat(b("\x00"), 9)), repr: false }),
-});
+}, { init: false });
 
 // -- BitField descriptors (not attrs fields) -------------------------------
 descriptor(SspcChunk, "invert_alpha", new BitField("_alpha_flags", 1));
@@ -916,6 +1058,12 @@ export function build_ai_layer_opti_data(
 export class OptiChunk extends Chunk {
   declare chunk_type: string;
 
+  constructor(kw: Record<string, any> = {}) {
+    super(kw);
+    const { chunk_type = "opti" } = kw;
+    this.chunk_type = chunk_type;
+  }
+
   static read(fp: IO, size: number, kw: { chunk_type?: string; [key: string]: any } = {}): OptiChunk {
     const { chunk_type = "" } = kw;
     if (this !== OptiChunk) {
@@ -945,7 +1093,7 @@ export class OptiChunk extends Chunk {
 
 define(OptiChunk, {
   chunk_type: field({ default: "opti" }),
-});
+}, { init: false });
 
 register("opti")(OptiChunk);
 
@@ -967,6 +1115,26 @@ export class SoliOptiChunk extends OptiChunk {
   /** Solid item name. */
   declare solid_name: string;
 
+  constructor(kw: Record<string, any> = {}) {
+    super(kw);
+    const {
+      asset_type = "Soli",
+      asset_type_int = 9,
+      pad = b("\x00\x00\x01\x1a\x3f\x80\x00\x00"),
+      color_r = 0,
+      color_g = 0,
+      color_b = 0,
+      solid_name = "",
+    } = kw;
+    this.asset_type = asset_type;
+    this.asset_type_int = asset_type_int;
+    this._pad = pad;
+    this.color_r = color_r;
+    this.color_g = color_g;
+    this.color_b = color_b;
+    this.solid_name = solid_name;
+  }
+
   /** Solid color as [R, G, B] in 0.0-1.0 range. */
   get color(): number[] {
     return [this.color_r, this.color_g, this.color_b];
@@ -987,7 +1155,7 @@ define(SoliOptiChunk, {
   color_g: f4_field(),
   color_b: f4_field(),
   solid_name: str_field(256, { default: "", encoding: "utf-8" }),
-});
+}, { init: false });
 
 /**
  * PSD footage asset (asset_type='8BPS').
@@ -1076,6 +1244,60 @@ export class PsdOptiChunk extends OptiChunk {
   /** Photoshop layer id (`lyid`, LE u4); 0 for merged/flattened. */
   declare psd_layer_id: number;
 
+  constructor(kw: Record<string, any> = {}) {
+    super(kw);
+    const {
+      asset_type = "8BPS",
+      asset_type_int = 265,
+      total_length = 602,
+      psd_vector_or_merged = false,
+      pad_0b = b("\x00\x01\x01"),
+      psd_layer_index = 0xffffffff,
+      pad_12 = concat(b("SPB8\x01"), bytes_.repeat(b("\x00"), 7)),
+      psd_channels = 4,
+      pad_1f = new Uint8Array(1),
+      psd_canvas_height = 0,
+      psd_canvas_width = 0,
+      psd_bit_depth = 8,
+      pad_29 = new Uint8Array(1),
+      psd_color_mode = 3,
+      pad_2b = new Uint8Array(5),
+      psd_layer_count = 1,
+      pad_32 = new Uint8Array(28),
+      psd_layer_top = 0,
+      psd_layer_left = 0,
+      psd_layer_bottom = 0,
+      psd_layer_right = 0,
+      psd_layer_channels = 0,
+      pad_5f = new Uint8Array(245),
+      psd_layer_id = 0,
+    } = kw;
+    this.asset_type = asset_type;
+    this.asset_type_int = asset_type_int;
+    this._total_length = total_length;
+    this.psd_vector_or_merged = psd_vector_or_merged;
+    this._pad_0b = pad_0b;
+    this.psd_layer_index = psd_layer_index;
+    this._pad_12 = pad_12;
+    this.psd_channels = psd_channels;
+    this._pad_1f = pad_1f;
+    this.psd_canvas_height = psd_canvas_height;
+    this.psd_canvas_width = psd_canvas_width;
+    this.psd_bit_depth = psd_bit_depth;
+    this._pad_29 = pad_29;
+    this.psd_color_mode = psd_color_mode;
+    this._pad_2b = pad_2b;
+    this.psd_layer_count = psd_layer_count;
+    this._pad_32 = pad_32;
+    this.psd_layer_top = psd_layer_top;
+    this.psd_layer_left = psd_layer_left;
+    this.psd_layer_bottom = psd_layer_bottom;
+    this.psd_layer_right = psd_layer_right;
+    this.psd_layer_channels = psd_layer_channels;
+    this._pad_5f = pad_5f;
+    this.psd_layer_id = psd_layer_id;
+  }
+
   /**
    * PSD group/folder name (NUL-terminated UTF-8 at end of chunk).
    *
@@ -1131,7 +1353,7 @@ define(PsdOptiChunk, {
 
   _pad_5f: bytes_field(245, { repr: false }),
   psd_layer_id: u4_field({ endian: "<" }),
-});
+}, { init: false });
 
 /**
  * AI/EPS/PDF footage asset (asset_type='TEXT').
@@ -1211,6 +1433,54 @@ export class TextOptiChunk extends OptiChunk {
   declare text_page_width: number;
 
   declare _pad_24e: Uint8Array;
+
+  constructor(kw: Record<string, any> = {}) {
+    super(kw);
+    const {
+      asset_type = "TEXT",
+      asset_type_int = 8,
+      total_length = 596,
+      pad_0a = new Uint8Array(14),
+      text_width = 0,
+      pad_1a = new Uint8Array(2),
+      text_height = 0,
+      pad_1e = new Uint8Array(10),
+      pad_28 = b("\xff\xff\xff\xff"),
+      pad_2c = new Uint8Array(4),
+      text_document_layers = 0,
+      pad_34 = new Uint8Array(8),
+      text_element_count = 0,
+      text_layer_visible = false,
+      pad_3e = new Uint8Array(6),
+      text_layer_name = "",
+      pad_144 = new Uint8Array(260),
+      text_page_height = 0,
+      pad_24a = new Uint8Array(2),
+      text_page_width = 0,
+      pad_24e = new Uint8Array(6),
+    } = kw;
+    this.asset_type = asset_type;
+    this.asset_type_int = asset_type_int;
+    this._total_length = total_length;
+    this._pad_0a = pad_0a;
+    this.text_width = text_width;
+    this._pad_1a = pad_1a;
+    this.text_height = text_height;
+    this._pad_1e = pad_1e;
+    this._pad_28 = pad_28;
+    this._pad_2c = pad_2c;
+    this.text_document_layers = text_document_layers;
+    this._pad_34 = pad_34;
+    this.text_element_count = text_element_count;
+    this.text_layer_visible = text_layer_visible;
+    this._pad_3e = pad_3e;
+    this.text_layer_name = text_layer_name;
+    this._pad_144 = pad_144;
+    this.text_page_height = text_page_height;
+    this._pad_24a = pad_24a;
+    this.text_page_width = text_page_width;
+    this._pad_24e = pad_24e;
+  }
 }
 
 define(TextOptiChunk, {
@@ -1244,7 +1514,7 @@ define(TextOptiChunk, {
   text_page_width: u2_field(),
 
   _pad_24e: bytes_field(6, { repr: false }),
-});
+}, { init: false });
 
 /** Placeholder footage asset (asset_type_int=2). */
 export class PlaceholderOptiChunk extends OptiChunk {
@@ -1253,6 +1523,20 @@ export class PlaceholderOptiChunk extends OptiChunk {
   declare _pad: Uint8Array;
   /** Placeholder name (256-byte NUL-padded UTF-8). */
   declare placeholder_name: string;
+
+  constructor(kw: Record<string, any> = {}) {
+    super(kw);
+    const {
+      asset_type = "",
+      asset_type_int = 2,
+      pad = b("\x00\x00\x01\x0a"),
+      placeholder_name = "",
+    } = kw;
+    this.asset_type = asset_type;
+    this.asset_type_int = asset_type_int;
+    this._pad = pad;
+    this.placeholder_name = placeholder_name;
+  }
 }
 
 define(PlaceholderOptiChunk, {
@@ -1260,7 +1544,7 @@ define(PlaceholderOptiChunk, {
   asset_type_int: u2_field({ default: 2 }),
   _pad: bytes_field(4, { default: b("\x00\x00\x01\x0a"), repr: false }),
   placeholder_name: str_field(256, { default: "", encoding: "utf-8" }),
-});
+}, { init: false });
 
 export const _OPTI_VARIANTS = new Map<string, typeof OptiChunk>([
   ["Soli", SoliOptiChunk],

@@ -144,6 +144,94 @@ export class LdtaChunk extends Chunk {
   declare preserve_transparency: boolean;
   declare dancing_dissolve: boolean;
 
+  constructor(kw: Record<string, any> = {}) {
+    super(kw);
+    const {
+      chunk_type = "ldta",
+      layer_id = 0,
+      quality = 0,
+      reserved_06 = new Uint8Array(2),
+      stretch_dividend = 1,
+      start_time_dividend = 0,
+      start_time_divisor = 1,
+      in_point_dividend = 0,
+      in_point_divisor = 1,
+      out_point_dividend = 0,
+      out_point_divisor = 1,
+      reserved_24 = new Uint8Array(1),
+      layer_flags_0 = 0,
+      layer_flags_1 = 0,
+      layer_flags_2 = 0x07,
+      source_id = 0,
+      reserved_2c = new Uint8Array(15),
+      reserved_3b = 0,
+      reserved_3c = 0,
+      label = 0,
+      reserved_3e = new Uint8Array(2),
+      layer_name = "",
+      reserved_60 = new Uint8Array(3),
+      blending_mode = 0,
+      reserved_64 = new Uint8Array(3),
+      transfer_flags = 0,
+      reserved_68 = new Uint8Array(3),
+      track_matte_type = 0,
+      stretch_divisor = 1,
+      reserved_70 = 0,
+      reserved_78 = 0,
+      reserved_80 = new Uint8Array(3),
+      layer_type = 0,
+      parent_id = 0,
+      reserved_88 = new Uint8Array(3),
+      light_and_mesh_type = 0,
+      reserved_8c = 0,
+      reserved_90 = 0,
+      reserved_94 = 0,
+      reserved_98 = 0,
+      matte_layer_id = null,
+    } = kw;
+    this.chunk_type = chunk_type;
+    this.layer_id = layer_id;
+    this.quality = quality;
+    this._reserved_06 = reserved_06;
+    this.stretch_dividend = stretch_dividend;
+    this.start_time_dividend = start_time_dividend;
+    this.start_time_divisor = start_time_divisor;
+    this.in_point_dividend = in_point_dividend;
+    this.in_point_divisor = in_point_divisor;
+    this.out_point_dividend = out_point_dividend;
+    this.out_point_divisor = out_point_divisor;
+    this._reserved_24 = reserved_24;
+    this._layer_flags_0 = layer_flags_0;
+    this._layer_flags_1 = layer_flags_1;
+    this._layer_flags_2 = layer_flags_2;
+    this.source_id = source_id;
+    this._reserved_2c = reserved_2c;
+    this._reserved_3b = reserved_3b;
+    this._reserved_3c = reserved_3c;
+    this.label = label;
+    this._reserved_3e = reserved_3e;
+    this.layer_name = layer_name;
+    this._reserved_60 = reserved_60;
+    this.blending_mode = blending_mode;
+    this._reserved_64 = reserved_64;
+    this._transfer_flags = transfer_flags;
+    this._reserved_68 = reserved_68;
+    this.track_matte_type = track_matte_type;
+    this.stretch_divisor = stretch_divisor;
+    this._reserved_70 = reserved_70;
+    this._reserved_78 = reserved_78;
+    this._reserved_80 = reserved_80;
+    this.layer_type = layer_type;
+    this.parent_id = parent_id;
+    this._reserved_88 = reserved_88;
+    this.light_and_mesh_type = light_and_mesh_type;
+    this._reserved_8c = reserved_8c;
+    this._reserved_90 = reserved_90;
+    this._reserved_94 = reserved_94;
+    this._reserved_98 = reserved_98;
+    this.matte_layer_id = matte_layer_id;
+  }
+
   // -- Computed properties -----------------------------------------------
 
   /** Start time in seconds (dividend / divisor). */
@@ -297,7 +385,7 @@ define(LdtaChunk, {
 
   // -- Optional field (bytes 160-163, AE >= 23) --------------------------
   matte_layer_id: u4_field({ default: null, optional: true }),
-});
+}, { init: false });
 
 // -- BitField descriptors (not attrs fields) -----------------------------
 // byte 37: _layer_flags_0

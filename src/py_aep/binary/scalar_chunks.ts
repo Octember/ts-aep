@@ -26,6 +26,12 @@ export class _StringChunkBase extends Chunk {
 
   declare value: string;
 
+  constructor(kw: Record<string, any> = {}) {
+    super(kw);
+    const { value = "" } = kw;
+    this.value = value;
+  }
+
   static read(
     fp: IO,
     size: number,
@@ -46,7 +52,7 @@ export class _StringChunkBase extends Chunk {
 }
 define(_StringChunkBase, {
   value: field({ default: "" }),
-});
+}, { init: false });
 
 // ---------------------------------------------------------------------------
 // Integer chunks (fmt_field declarative - no read/write override)
@@ -55,10 +61,16 @@ define(_StringChunkBase, {
 /** Unsigned 1-byte integer chunk. */
 export class U1Chunk extends Chunk {
   declare value: number;
+
+  constructor(kw: Record<string, any> = {}) {
+    super(kw);
+    const { value = 0 } = kw;
+    this.value = value;
+  }
 }
 define(U1Chunk, {
   value: u1_field(),
-});
+}, { init: false });
 register(
   "efdc",
   "acer",
@@ -77,28 +89,46 @@ register(
 /** Unsigned 2-byte integer chunk. */
 export class U2Chunk extends Chunk {
   declare value: number;
+
+  constructor(kw: Record<string, any> = {}) {
+    super(kw);
+    const { value = 0 } = kw;
+    this.value = value;
+  }
 }
 define(U2Chunk, {
   value: u2_field(),
-});
+}, { init: false });
 register("oacc")(U2Chunk);
 
 /** Signed 2-byte integer chunk. */
 export class S2Chunk extends Chunk {
   declare value: number;
+
+  constructor(kw: Record<string, any> = {}) {
+    super(kw);
+    const { value = 0 } = kw;
+    this.value = value;
+  }
 }
 define(S2Chunk, {
   value: s2_field(),
-});
+}, { init: false });
 register("fivc", "fipc")(S2Chunk);
 
 /** Unsigned 4-byte integer chunk. */
 export class U4Chunk extends Chunk {
   declare value: number;
+
+  constructor(kw: Record<string, any> = {}) {
+    super(kw);
+    const { value = 0 } = kw;
+    this.value = value;
+  }
 }
 define(U4Chunk, {
   value: u4_field(),
-});
+}, { init: false });
 register(
   "CapL",
   "CCId",
@@ -131,10 +161,16 @@ register(
  */
 export class U4LeChunk extends Chunk {
   declare value: number;
+
+  constructor(kw: Record<string, any> = {}) {
+    super(kw);
+    const { value = 0 } = kw;
+    this.value = value;
+  }
 }
 define(U4LeChunk, {
   value: u4_field({ endian: "<" }),
-});
+}, { init: false });
 register("iide", "mrid", "sfid", "StVS")(U4LeChunk);
 
 /**
@@ -147,10 +183,16 @@ register("iide", "mrid", "sfid", "StVS")(U4LeChunk);
  */
 export class S4Chunk extends Chunk {
   declare value: number;
+
+  constructor(kw: Record<string, any> = {}) {
+    super(kw);
+    const { value = 0 } = kw;
+    this.value = value;
+  }
 }
 define(S4Chunk, {
   value: s4_field(),
-});
+}, { init: false });
 register("tdli", "tdpi", "tdps", "CcCt", "CprC", "parn")(S4Chunk);
 
 // ---------------------------------------------------------------------------
@@ -160,10 +202,16 @@ register("tdli", "tdpi", "tdps", "CcCt", "CprC", "parn")(S4Chunk);
 /** 8-byte double-precision float chunk. */
 export class F8Chunk extends Chunk {
   declare value: number;
+
+  constructor(kw: Record<string, any> = {}) {
+    super(kw);
+    const { value = 0.0 } = kw;
+    this.value = value;
+  }
 }
 define(F8Chunk, {
   value: f8_field({ default: 0.0 }),
-});
+}, { init: false });
 register("Smax", "Smin", "adfr", "ppSn")(F8Chunk);
 
 // ---------------------------------------------------------------------------
@@ -175,15 +223,25 @@ export class Utf8Chunk extends _StringChunkBase {
   static _ENCODING = "UTF-8";
 
   declare chunk_type: string;
+
+  constructor(kw: Record<string, any> = {}) {
+    super(kw);
+    const { chunk_type = "Utf8" } = kw;
+    this.chunk_type = chunk_type;
+  }
 }
 define(Utf8Chunk, {
   chunk_type: field({ default: "Utf8" }),
-});
+}, { init: false });
 register("alas", "pjef", "Utf8")(Utf8Chunk);
 
 /** Variable-length ASCII string chunk. */
 export class AsciiChunk extends _StringChunkBase {
   static _ENCODING = "ASCII";
+
+  constructor(kw: Record<string, any> = {}) {
+    super(kw);
+  }
 }
-define(AsciiChunk, {});
+define(AsciiChunk, {}, { init: false });
 register("fitt")(AsciiChunk);

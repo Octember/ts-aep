@@ -99,6 +99,70 @@ export class RouuChunk extends Chunk {
   // so they round-trip), while newly built chunks still write 154 bytes.
   declare _reserved_72: Uint8Array | null;
 
+  constructor(kw: Record<string, any> = {}) {
+    super(kw);
+    const {
+      chunk_type = "Roou",
+      magic = b("FXTC"),
+      video_codec = "FXTC",
+      reserved_08 = b("\x0f\x10\x06\x43\x80\x00\x00\x00"),
+      starting_number = 0,
+      reserved_14 = b("\xff\xff\xff\xff\x01\x00"),
+      format_id = "TIF ",
+      reserved_1e = new Uint8Array(4),
+      width = 100,
+      height = 100,
+      reserved_2a = new Uint8Array(15),
+      applied_marker = 1,
+      reserved_3a = new Uint8Array(8),
+      frame_rate_integer = 30,
+      frame_rate_fractional = 0,
+      depth = 32,
+      reserved_48 = b("\x01\x01\x00\x00\x00"),
+      color_premultiplied = 1,
+      reserved_4e = new Uint8Array(3),
+      color_matted = 1,
+      reserved_52 = bytes_.concat(b("FIEL\x00\x01"), bytes_.repeat(b("\x00"), 12)),
+      audio_sample_rate = -1.0,
+      audio_encoding = 0xffff,
+      audio_bit_depth = 0xffff,
+      audio_channels = 0,
+      reserved_72 = bytes_.concat(
+      bytes_.repeat(b("\x00"), 13),
+      b("\x01"),
+      bytes_.repeat(b("\x00"), 3),
+      b("\x01"),
+      bytes_.repeat(b("\x00"), 22),
+    ),
+    } = kw;
+    this.chunk_type = chunk_type;
+    this._magic = magic;
+    this.video_codec = video_codec;
+    this._reserved_08 = reserved_08;
+    this.starting_number = starting_number;
+    this._reserved_14 = reserved_14;
+    this.format_id = format_id;
+    this._reserved_1e = reserved_1e;
+    this.width = width;
+    this.height = height;
+    this._reserved_2a = reserved_2a;
+    this.applied_marker = applied_marker;
+    this._reserved_3a = reserved_3a;
+    this.frame_rate_integer = frame_rate_integer;
+    this.frame_rate_fractional = frame_rate_fractional;
+    this.depth = depth;
+    this._reserved_48 = reserved_48;
+    this.color_premultiplied = color_premultiplied;
+    this._reserved_4e = reserved_4e;
+    this.color_matted = color_matted;
+    this._reserved_52 = reserved_52;
+    this.audio_sample_rate = audio_sample_rate;
+    this.audio_encoding = audio_encoding;
+    this.audio_bit_depth = audio_bit_depth;
+    this.audio_channels = audio_channels;
+    this._reserved_72 = reserved_72;
+  }
+
   /**
    * Output frame rate, 16.16 fixed point (integer + fractional/65536):
    * the render frame rate divided by (skip frames + 1).
@@ -152,7 +216,7 @@ define(RouuChunk, {
     optional: true,
     repr: false,
   }),
-});
+}, { init: false });
 register("Roou")(RouuChunk);
 
 // ---------------------------------------------------------------------------
@@ -168,6 +232,12 @@ register("Roou")(RouuChunk);
  */
 export class RoptChunk extends Chunk {
   declare chunk_type: string;
+
+  constructor(kw: Record<string, any> = {}) {
+    super(kw);
+    const { chunk_type = "Ropt" } = kw;
+    this.chunk_type = chunk_type;
+  }
 
   /** Format code from the first 4 bytes of raw data (for fallback chunks). */
   get format_code(): string {
@@ -195,7 +265,7 @@ export class RoptChunk extends Chunk {
 
 define(RoptChunk, {
   chunk_type: { default: "Ropt" },
-});
+}, { init: false });
 register("Ropt")(RoptChunk);
 
 // Pad defaults reproducing AE's real `Ropt` bytes per format (oEXR/png! from
@@ -232,6 +302,36 @@ export class CineonRoptChunk extends RoptChunk {
   declare file_format: number;
   declare bit_depth: number;
   declare _pad_end: Uint8Array;
+
+  constructor(kw: Record<string, any> = {}) {
+    super(kw);
+    const {
+      format_code = "sDPX",
+      pad = bytes_.fromhex("00030000003000000000"),
+      ten_bit_black_point = 0,
+      ten_bit_white_point = 1023,
+      converted_black_point = 0.0,
+      converted_white_point = 1.0,
+      current_gamma = 1.0,
+      highlight_expansion = 0,
+      logarithmic_conversion = false,
+      file_format = 1,
+      bit_depth = 10,
+      pad_end = new Uint8Array(1),
+    } = kw;
+    (this as any).format_code = format_code;
+    this._pad = pad;
+    this.ten_bit_black_point = ten_bit_black_point;
+    this.ten_bit_white_point = ten_bit_white_point;
+    this.converted_black_point = converted_black_point;
+    this.converted_white_point = converted_white_point;
+    this.current_gamma = current_gamma;
+    this.highlight_expansion = highlight_expansion;
+    this.logarithmic_conversion = logarithmic_conversion;
+    this.file_format = file_format;
+    this.bit_depth = bit_depth;
+    this._pad_end = pad_end;
+  }
 }
 
 define(CineonRoptChunk, {
@@ -247,7 +347,7 @@ define(CineonRoptChunk, {
   file_format: u1_field({ default: 1 }),
   bit_depth: u1_field({ default: 10 }),
   _pad_end: bytes_field(1, { repr: false }),
-});
+}, { init: false });
 
 /**
  * JPEG render options (format_code='JPEG').
@@ -260,6 +360,16 @@ export class JpegRoptChunk extends RoptChunk {
   declare quality: number;
   declare format_type: number;
   declare scans: number;
+
+  constructor(kw: Record<string, any> = {}) {
+    super(kw);
+    const { format_code = "JPEG", pad = _JPEG_PAD, quality = 5, format_type = 0, scans = 1 } = kw;
+    (this as any).format_code = format_code;
+    this._pad = pad;
+    this.quality = quality;
+    this.format_type = format_type;
+    this.scans = scans;
+  }
 }
 
 define(JpegRoptChunk, {
@@ -268,7 +378,7 @@ define(JpegRoptChunk, {
   quality: u2_field({ default: 5 }),
   format_type: u2_field(),
   scans: u2_field({ default: 1 }),
-});
+}, { init: false });
 
 /**
  * OpenEXR render options (format_code='oEXR').
@@ -284,6 +394,28 @@ export class OpenExrRoptChunk extends RoptChunk {
   declare _pad_11: Uint8Array;
   declare dwa_compression_level: number;
   declare _pad_end: Uint8Array;
+
+  constructor(kw: Record<string, any> = {}) {
+    super(kw);
+    const {
+      format_code = "oEXR",
+      pad_04 = bytes_.fromhex("00010000004e01000000"),
+      compression = 2,
+      thirty_two_bit_float = false,
+      luminance_chroma = false,
+      pad_11 = new Uint8Array(1),
+      dwa_compression_level = 45.0,
+      pad_end = new Uint8Array(56),
+    } = kw;
+    (this as any).format_code = format_code;
+    this._pad_04 = pad_04;
+    this.compression = compression;
+    this.thirty_two_bit_float = thirty_two_bit_float;
+    this.luminance_chroma = luminance_chroma;
+    this._pad_11 = pad_11;
+    this.dwa_compression_level = dwa_compression_level;
+    this._pad_end = pad_end;
+  }
 }
 
 define(OpenExrRoptChunk, {
@@ -295,7 +427,7 @@ define(OpenExrRoptChunk, {
   _pad_11: bytes_field(1, { repr: false }),
   dwa_compression_level: f4_field({ default: 45.0, endian: "<" }),
   _pad_end: bytes_field(56, { repr: false }),
-});
+}, { init: false });
 
 /**
  * Targa render options (format_code='TPIC').
@@ -309,6 +441,24 @@ export class TargaRoptChunk extends RoptChunk {
   declare _pad2: Uint8Array;
   declare rle_compression: boolean;
   declare _pad_end: Uint8Array;
+
+  constructor(kw: Record<string, any> = {}) {
+    super(kw);
+    const {
+      format_code = "TPIC",
+      pad = _TARGA_PAD,
+      bits_per_pixel = 24,
+      pad2 = b("TimS"),
+      rle_compression = false,
+      pad_end = new Uint8Array(1),
+    } = kw;
+    (this as any).format_code = format_code;
+    this._pad = pad;
+    this.bits_per_pixel = bits_per_pixel;
+    this._pad2 = pad2;
+    this.rle_compression = rle_compression;
+    this._pad_end = pad_end;
+  }
 }
 
 define(TargaRoptChunk, {
@@ -318,7 +468,7 @@ define(TargaRoptChunk, {
   _pad2: bytes_field(4, { default: b("TimS"), repr: false }),
   rle_compression: bool_field(),
   _pad_end: bytes_field(1, { repr: false }),
-});
+}, { init: false });
 
 /**
  * TIFF render options (format_code='TIF ').
@@ -335,6 +485,24 @@ export class TiffRoptChunk extends RoptChunk {
   declare _pad_0a: Uint8Array;
   declare ibm_pc_byte_order: boolean;
   declare lzw_compression: boolean;
+
+  constructor(kw: Record<string, any> = {}) {
+    super(kw);
+    const {
+      format_code = "TIF ",
+      pad_04 = Uint8Array.from([1, 9, 0, 0]),
+      chunk_size = 602,
+      pad_0a = bytes_.concat(Uint8Array.from([0, 0, 1, 1]), bytes_.repeat(b("\x00"), 586)),
+      ibm_pc_byte_order = false,
+      lzw_compression = false,
+    } = kw;
+    (this as any).format_code = format_code;
+    this._pad_04 = pad_04;
+    this.chunk_size = chunk_size;
+    this._pad_0a = pad_0a;
+    this.ibm_pc_byte_order = ibm_pc_byte_order;
+    this.lzw_compression = lzw_compression;
+  }
 }
 
 define(TiffRoptChunk, {
@@ -347,7 +515,7 @@ define(TiffRoptChunk, {
   }),
   ibm_pc_byte_order: bool_field(),
   lzw_compression: bool_field(),
-});
+}, { init: false });
 
 /**
  * PNG render options (format_code='png!').
@@ -371,6 +539,34 @@ export class PngRoptChunk extends RoptChunk {
 
   /** The output has an alpha channel. */
   declare has_alpha: boolean;
+
+  constructor(kw: Record<string, any> = {}) {
+    super(kw);
+    const {
+      format_code = "png!",
+      pad = bytes_.fromhex("0001000001420100000000000001"),
+      width = 320,
+      height = 240,
+      pad2 = new Uint8Array(2),
+      bit_depth = 16,
+      compression = 0,
+      flags = 6,
+      reserved_26 = new Uint8Array(8),
+      channel_count = 4,
+      pad_end = new Uint8Array(272),
+    } = kw;
+    (this as any).format_code = format_code;
+    this._pad = pad;
+    this.width = width;
+    this.height = height;
+    this._pad2 = pad2;
+    this.bit_depth = bit_depth;
+    this.compression = compression;
+    this._flags = flags;
+    this._reserved_26 = reserved_26;
+    this.channel_count = channel_count;
+    this._pad_end = pad_end;
+  }
 }
 
 define(PngRoptChunk, {
@@ -386,7 +582,7 @@ define(PngRoptChunk, {
   _reserved_26: bytes_field(8, { repr: false }),
   channel_count: u4_field({ default: 4 }),
   _pad_end: bytes_field(272, { repr: false }),
-});
+}, { init: false });
 /** Python `BitField` descriptors are class attributes with no annotation, so attrs skips them. */
 descriptor(PngRoptChunk, "has_alpha", new BitField("_flags", 2));
 
@@ -416,13 +612,21 @@ export class RoutItem extends FmtItem {
   declare _state: number;
 
   declare render: boolean;
+
+  constructor(kw: Record<string, any> = {}) {
+    super(kw);
+    const { flags = 0, pad = b("\x00\x00"), state = 0 } = kw;
+    this._flags = flags;
+    this._pad = pad;
+    this._state = state;
+  }
 }
 
 define(RoutItem, {
   _flags: u1_field({ repr: false }),
   _pad: bytes_field(2, { default: b("\x00\x00"), repr: false }),
   _state: u1_field({ repr: false }),
-});
+}, { init: false });
 descriptor(RoutItem, "render", new BitField("_flags", 6));
 
 // ---------------------------------------------------------------------------
@@ -532,6 +736,118 @@ export class RenderSettingsItem extends FmtItem {
     "skip_existing_files",
     "template_name",
   ];
+
+  constructor(kw: Record<string, any> = {}) {
+    super(kw);
+    const {
+      reserved_00 = b("\x00\x01\x00\x00\x00\x00\x00"),
+      flag_byte = 0,
+      comp_id = 0,
+      status = 2,
+      reserved_06 = b("\x00\x03\x00\x00"),
+      time_span_start_dividend = 0,
+      time_span_start_divisor = 1,
+      time_span_duration_dividend = 0,
+      time_span_duration_divisor = 1,
+      reserved_11 = new Uint8Array(8),
+      frame_rate_integer = 0,
+      frame_rate_fractional = 0,
+      reserved_14 = new Uint8Array(2),
+      field_render = 0,
+      reserved_16 = new Uint8Array(2),
+      pulldown = 0,
+      quality = 2,
+      resolution_x = 1,
+      resolution_y = 1,
+      reserved_21 = new Uint8Array(2),
+      effects = 2,
+      reserved_23 = new Uint8Array(2),
+      proxy_use = 0,
+      reserved_25 = new Uint8Array(2),
+      motion_blur = 1,
+      reserved_27 = new Uint8Array(2),
+      frame_blending = 1,
+      reserved_29 = new Uint8Array(2),
+      log_type = 0,
+      reserved_31 = new Uint8Array(2),
+      skip_existing_files = false,
+      reserved_33 = new Uint8Array(4),
+      template_name = "Best Settings",
+      reserved_35 = new Uint8Array(1987),
+      settings_written = 0,
+      reserved_36 = new Uint8Array(2),
+      use_this_frame_rate = 0,
+      reserved_37 = new Uint8Array(2),
+      time_span_source = 0,
+      reserved_39 = bytes_.concat(b("\xff\xff\xff\xff\x00\xb4"), bytes_.repeat(b("\x00"), 8)),
+      solo_switches = 2,
+      reserved_41 = new Uint8Array(2),
+      disk_cache = 0,
+      reserved_43 = new Uint8Array(2),
+      guide_layers = 0,
+      reserved_45 = b("\x00\x00\x00\x02\xff\xff"),
+      color_depth = 0xffff,
+      reserved_47 = new Uint8Array(16),
+      start_time = 0,
+      elapsed_seconds = 0,
+      reserved_end = new Uint8Array(16),
+      item_id = 2,
+      remaining = bytes_.concat(b("\x00\x00\x00\x0f"), bytes_.repeat(b("\x00"), 16)),
+    } = kw;
+    this._reserved_00 = reserved_00;
+    this._flag_byte = flag_byte;
+    this.comp_id = comp_id;
+    this.status = status;
+    this._reserved_06 = reserved_06;
+    this.time_span_start_dividend = time_span_start_dividend;
+    this.time_span_start_divisor = time_span_start_divisor;
+    this.time_span_duration_dividend = time_span_duration_dividend;
+    this.time_span_duration_divisor = time_span_duration_divisor;
+    this._reserved_11 = reserved_11;
+    this.frame_rate_integer = frame_rate_integer;
+    this.frame_rate_fractional = frame_rate_fractional;
+    this._reserved_14 = reserved_14;
+    this.field_render = field_render;
+    this._reserved_16 = reserved_16;
+    this.pulldown = pulldown;
+    this.quality = quality;
+    this.resolution_x = resolution_x;
+    this.resolution_y = resolution_y;
+    this._reserved_21 = reserved_21;
+    this.effects = effects;
+    this._reserved_23 = reserved_23;
+    this.proxy_use = proxy_use;
+    this._reserved_25 = reserved_25;
+    this.motion_blur = motion_blur;
+    this._reserved_27 = reserved_27;
+    this.frame_blending = frame_blending;
+    this._reserved_29 = reserved_29;
+    this.log_type = log_type;
+    this._reserved_31 = reserved_31;
+    this.skip_existing_files = skip_existing_files;
+    this._reserved_33 = reserved_33;
+    this.template_name = template_name;
+    this._reserved_35 = reserved_35;
+    this.settings_written = settings_written;
+    this._reserved_36 = reserved_36;
+    this.use_this_frame_rate = use_this_frame_rate;
+    this._reserved_37 = reserved_37;
+    this.time_span_source = time_span_source;
+    this._reserved_39 = reserved_39;
+    this.solo_switches = solo_switches;
+    this._reserved_41 = reserved_41;
+    this.disk_cache = disk_cache;
+    this._reserved_43 = reserved_43;
+    this.guide_layers = guide_layers;
+    this._reserved_45 = reserved_45;
+    this.color_depth = color_depth;
+    this._reserved_47 = reserved_47;
+    this.start_time = start_time;
+    this.elapsed_seconds = elapsed_seconds;
+    this._reserved_end = reserved_end;
+    this.item_id = item_id;
+    this._remaining = remaining;
+  }
 
   /**
    * Copy template-relevant settings from another item.
@@ -645,7 +961,7 @@ define(RenderSettingsItem, {
     default: bytes_.concat(b("\x00\x00\x00\x0f"), bytes_.repeat(b("\x00"), 16)),
     repr: false,
   }),
-});
+}, { init: false });
 /** Python `BitField` descriptors are class attributes with no annotation, so attrs skips them. */
 descriptor(RenderSettingsItem, "queue_item_notify", new BitField("_flag_byte", 2));
 /**
@@ -754,6 +1070,78 @@ export class OutputModuleSettingsItem extends FmtItem {
     "_reserved_5f",
   ];
 
+  constructor(kw: Record<string, any> = {}) {
+    super(kw);
+    const {
+      reserved_00 = b("\x00\x05\x00\x00\x00\x00\x00"),
+      flag_byte_07 = 8,
+      post_render_target_comp_id = 0,
+      reserved_08 = b("\x00\x00\x00\x01"),
+      reserved_09 = new Uint8Array(3),
+      channels = 1,
+      reserved_11 = new Uint8Array(3),
+      resize_quality = 1,
+      reserved_13 = b("\x00\x01\x00"),
+      resize = false,
+      reserved_15 = new Uint8Array(1),
+      lock_aspect_ratio = true,
+      reserved_17 = new Uint8Array(1),
+      flag_byte_22 = 0,
+      crop_top = 0,
+      crop_left = 0,
+      crop_bottom = 0,
+      crop_right = 0,
+      reserved_24 = new Uint8Array(1),
+      output_audio = 0,
+      output_audio_auto = 1,
+      reserved_26 = new Uint8Array(4),
+      include_project_link = 0,
+      post_render_action = 0,
+      post_render_use_comp = 0,
+      reserved_30 = bytes_.repeat(b("\xff"), 16),
+      output_profile_id = bytes_.repeat(b("\xff"), 16),
+      reserved_32 = new Uint8Array(3),
+      convert_to_linear_light = 2,
+      prev_byte_34 = b("\x01"),
+      output_color_space_working = 1,
+      preserve_rgb = false,
+      reserved_5f = new Uint8Array(33),
+    } = kw;
+    this._reserved_00 = reserved_00;
+    this._flag_byte_07 = flag_byte_07;
+    this.post_render_target_comp_id = post_render_target_comp_id;
+    this._reserved_08 = reserved_08;
+    this._reserved_09 = reserved_09;
+    this.channels = channels;
+    this._reserved_11 = reserved_11;
+    this.resize_quality = resize_quality;
+    this._reserved_13 = reserved_13;
+    this.resize = resize;
+    this._reserved_15 = reserved_15;
+    this.lock_aspect_ratio = lock_aspect_ratio;
+    this._reserved_17 = reserved_17;
+    this._flag_byte_22 = flag_byte_22;
+    this.crop_top = crop_top;
+    this.crop_left = crop_left;
+    this.crop_bottom = crop_bottom;
+    this.crop_right = crop_right;
+    this._reserved_24 = reserved_24;
+    this.output_audio = output_audio;
+    this.output_audio_auto = output_audio_auto;
+    this._reserved_26 = reserved_26;
+    this._include_project_link = include_project_link;
+    this.post_render_action = post_render_action;
+    this.post_render_use_comp = post_render_use_comp;
+    this._reserved_30 = reserved_30;
+    this.output_profile_id = output_profile_id;
+    this._reserved_32 = reserved_32;
+    this.convert_to_linear_light = convert_to_linear_light;
+    this._prev_byte_34 = prev_byte_34;
+    this.output_color_space_working = output_color_space_working;
+    this.preserve_rgb = preserve_rgb;
+    this._reserved_5f = reserved_5f;
+  }
+
   /**
    * Copy template-relevant settings from another item.
    *
@@ -822,7 +1210,7 @@ define(OutputModuleSettingsItem, {
   output_color_space_working: u1_field({ default: 1 }),
   preserve_rgb: bool_field(),
   _reserved_5f: bytes_field(33, { repr: false }),
-});
+}, { init: false });
 /** Python `BitField` descriptors are class attributes with no annotation, so attrs skips them. */
 descriptor(OutputModuleSettingsItem, "include_source_xmp", new BitField("_flag_byte_07", 6));
 /**
@@ -854,13 +1242,21 @@ export class RoutChunk extends Chunk {
 
   declare count: number;
   declare items: RoutItem[];
+
+  constructor(kw: Record<string, any> = {}) {
+    super(kw);
+    const { chunk_type = "Rout", count = 0, items = [] } = kw;
+    this.chunk_type = chunk_type;
+    this.count = count;
+    this.items = items;
+  }
 }
 
 define(RoutChunk, {
   chunk_type: { default: "Rout" },
   count: u4_field(),
   items: items_field(RoutItem, 4),
-});
+}, { init: false });
 register("Rout")(RoutChunk);
 
 // ---------------------------------------------------------------------------
@@ -891,6 +1287,24 @@ export class ArsiChunk extends Chunk {
   declare active_slot_state: number;
 
   declare _reserved_180: Uint8Array;
+
+  constructor(kw: Record<string, any> = {}) {
+    super(kw);
+    const {
+      chunk_type = "ARsi",
+      reserved_00 = new Uint8Array(3),
+      queue_nonempty = 0,
+      reserved_04 = new Uint8Array(375),
+      active_slot_state = 0,
+      reserved_180 = new Uint8Array(1492),
+    } = kw;
+    this.chunk_type = chunk_type;
+    this._reserved_00 = reserved_00;
+    this.queue_nonempty = queue_nonempty;
+    this._reserved_04 = reserved_04;
+    this.active_slot_state = active_slot_state;
+    this._reserved_180 = reserved_180;
+  }
 }
 
 define(ArsiChunk, {
@@ -900,5 +1314,5 @@ define(ArsiChunk, {
   _reserved_04: bytes_field(375, { repr: false }),
   active_slot_state: u1_field(),
   _reserved_180: bytes_field(1492, { repr: false }),
-});
+}, { init: false });
 register("ARsi")(ArsiChunk);

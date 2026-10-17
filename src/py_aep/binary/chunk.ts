@@ -6,11 +6,9 @@
  */
 
 import {
-  AttrsBase,
   BytesIO,
   ContextVar,
   Factory,
-  NO_INIT,
   OSError,
   StopIteration,
   ValueError,
@@ -32,6 +30,8 @@ import {
   struct,
   zip,
   type IO,
+  check_init_kwargs,
+  init_generic_fields,
 } from "../../pyrt/index.ts";
 import { _HEADER_STRUCT, read_bytes, read_fmt, read_pad, write_bytes, write_fmt, write_pad } from "./bin_utils.ts";
 import { _decode_fields, _encode_value, _struct_info, type FmtItem } from "./fmt_field.ts";
@@ -48,11 +48,21 @@ import type { HeadChunk } from "./item_chunks.ts";
  * Stores unparsed body bytes in `data`. Typed subclasses override
  * `read()` / `write()` to interpret the body.
  */
-export class Chunk extends AttrsBase {
+export class Chunk {
   declare chunk_type: string;
   declare data: Uint8Array;
   declare synthetic: boolean;
   declare _trailing: Uint8Array;
+
+  constructor(kw: Record<string, any> = {}) {
+    check_init_kwargs(new.target, kw);
+    const { chunk_type = "", data = b(""), synthetic = false } = kw;
+    this.chunk_type = chunk_type;
+    this.data = data;
+    this.synthetic = synthetic;
+    this._trailing = b("");
+    init_generic_fields(this, new.target, kw);
+  }
 
   static read(fp: IO, size: number, kwargs: { chunk_type?: string; [k: string]: any } = {}): Chunk {
     const { chunk_type = "" } = kwargs;
@@ -273,7 +283,7 @@ define(Chunk, {
   data: field({ default: b("") }),
   synthetic: field({ default: false, repr: false }),
   _trailing: field({ default: b(""), repr: false, eq: false, init: false }),
-});
+}, { init: false });
 
 /** LIST or RIFX container chunk.
  *
@@ -288,6 +298,14 @@ export class ListChunk extends Chunk {
   declare list_type: string;
   declare chunks: Chunk[];
   declare chunk_type: string;
+
+  constructor(kw: Record<string, any> = {}) {
+    super(kw);
+    const { list_type = "", chunks = [], chunk_type = "LIST" } = kw;
+    this.list_type = list_type;
+    this.chunks = chunks;
+    this.chunk_type = chunk_type;
+  }
 
   static read(
     fp: IO,
@@ -355,7 +373,7 @@ define(ListChunk, {
   list_type: field({ default: "" }),
   chunks: field({ default: Factory(() => []) }),
   chunk_type: field({ default: "LIST" }),
-});
+}, { init: false });
 register("LIST", "RIFX")(ListChunk);
 
 /**
@@ -379,17 +397,15 @@ export class DeferredListChunk extends ListChunk {
       raw_ctx?: ReadContext | null;
     } = {},
   ) {
-    super(NO_INIT);
     const {
       chunk_type = "LIST",
       list_type = "",
       raw_body = b(""),
       raw_ctx = null,
     } = kwargs;
-    this.chunk_type = chunk_type;
-    this.list_type = list_type;
-    this.data = b("");
-    this.synthetic = false;
+    // ListChunk's constructor assigns `chunks` through the accessor below;
+    // the raw-body state is set after it.
+    super({ chunk_type, list_type });
     this._raw_body = raw_body;
     this._raw_ctx = raw_ctx;
     this._parsed_chunks = null;
@@ -451,6 +467,12 @@ Object.defineProperty(DeferredListChunk.prototype, "chunks", {
  */
 export class ContainerChunk extends Chunk {
   declare chunks: Chunk[];
+
+  constructor(kw: Record<string, any> = {}) {
+    super(kw);
+    const { chunks = [] } = kw;
+    this.chunks = chunks;
+  }
 
   static read(
     fp: IO,
@@ -560,7 +582,7 @@ export class ContainerChunk extends Chunk {
 
 define(ContainerChunk, {
   chunks: field({ default: Factory(() => []) }),
-});
+}, { init: false });
 register("fnam", "pdnm", "RCom")(ContainerChunk);
 
 export const _LEGACY_FIXED_BUFFERS: Map<string, number> = new Map([["fnam", 48]]);

@@ -218,6 +218,94 @@ export class CdtaChunk extends Chunk {
   declare motion_blur: boolean;
   declare hide_shy_layers: boolean;
 
+  constructor(kw: Record<string, any> = {}) {
+    super(kw);
+    const {
+      chunk_type = "cdta",
+      resolution_factor_h = 1,
+      resolution_factor_v = 1,
+      reserved_04 = new Uint8Array(1),
+      time_scale_integer = 4,
+      time_scale_fractional = 0,
+      internal_timebase = 24576,
+      reserved_0c = new Uint8Array(4),
+      standard_timebase = 600,
+      time_dividend = 1,
+      time_divisor = 1,
+      work_area_start_dividend = 1,
+      work_area_start_divisor = 1,
+      work_area_end_dividend = WORK_AREA_TO_END,
+      work_area_end_divisor = 1,
+      duration_dividend = 1,
+      duration_divisor = 1,
+      bg_color_r = 0,
+      bg_color_g = 0,
+      bg_color_b = 0,
+      reserved_37 = new Uint8Array(83),
+      comp_flags_0 = 0,
+      comp_flags_1 = 0,
+      width = 0,
+      height = 0,
+      pixel_aspect_dividend = 1,
+      pixel_aspect_divisor = 1,
+      reserved_98 = new Uint8Array(4),
+      frame_rate_integer = 0,
+      frame_rate_fractional = 0,
+      reserved_a0 = new Uint8Array(4),
+      display_start_time_dividend = 1,
+      display_start_time_divisor = 1,
+      reserved_ac = new Uint8Array(2),
+      shutter_angle = 180,
+      reserved_b0 = 360,
+      shutter_phase = 0,
+      reserved_b8 = 360,
+      reserved_bc = new Uint8Array(8),
+      motion_blur_adaptive_sample_limit = 128,
+      motion_blur_samples_per_frame = 16,
+    } = kw;
+    this.chunk_type = chunk_type;
+    this.resolution_factor_h = resolution_factor_h;
+    this.resolution_factor_v = resolution_factor_v;
+    this._reserved_04 = reserved_04;
+    this.time_scale_integer = time_scale_integer;
+    this.time_scale_fractional = time_scale_fractional;
+    this.internal_timebase = internal_timebase;
+    this._reserved_0c = reserved_0c;
+    this.standard_timebase = standard_timebase;
+    this.time_dividend = time_dividend;
+    this.time_divisor = time_divisor;
+    this.work_area_start_dividend = work_area_start_dividend;
+    this.work_area_start_divisor = work_area_start_divisor;
+    this.work_area_end_dividend = work_area_end_dividend;
+    this.work_area_end_divisor = work_area_end_divisor;
+    this.duration_dividend = duration_dividend;
+    this.duration_divisor = duration_divisor;
+    this.bg_color_r = bg_color_r;
+    this.bg_color_g = bg_color_g;
+    this.bg_color_b = bg_color_b;
+    this._reserved_37 = reserved_37;
+    this._comp_flags_0 = comp_flags_0;
+    this._comp_flags_1 = comp_flags_1;
+    this.width = width;
+    this.height = height;
+    this.pixel_aspect_dividend = pixel_aspect_dividend;
+    this.pixel_aspect_divisor = pixel_aspect_divisor;
+    this._reserved_98 = reserved_98;
+    this.frame_rate_integer = frame_rate_integer;
+    this.frame_rate_fractional = frame_rate_fractional;
+    this._reserved_a0 = reserved_a0;
+    this.display_start_time_dividend = display_start_time_dividend;
+    this.display_start_time_divisor = display_start_time_divisor;
+    this._reserved_ac = reserved_ac;
+    this.shutter_angle = shutter_angle;
+    this._reserved_b0 = reserved_b0;
+    this.shutter_phase = shutter_phase;
+    this._reserved_b8 = reserved_b8;
+    this._reserved_bc = reserved_bc;
+    this.motion_blur_adaptive_sample_limit = motion_blur_adaptive_sample_limit;
+    this.motion_blur_samples_per_frame = motion_blur_samples_per_frame;
+  }
+
   // -- Assembled properties ----------------------------------------------
   // Combine raw integer+fractional or dividend/divisor pairs into floats.
   // Used by model ChunkField descriptors for direct read/write.
@@ -381,7 +469,7 @@ define(CdtaChunk, {
   _reserved_bc: bytes_field(8, { repr: false }),
   motion_blur_adaptive_sample_limit: s4_field({ default: 128 }),
   motion_blur_samples_per_frame: s4_field({ default: 16 }),
-});
+}, { init: false });
 descriptor(CdtaChunk, "draft3d", new BitField("_comp_flags_0", 7));
 descriptor(CdtaChunk, "preserve_nested_resolution", new BitField("_comp_flags_1", 7));
 descriptor(CdtaChunk, "preserve_nested_frame_rate", new BitField("_comp_flags_1", 5));
@@ -398,11 +486,18 @@ register("cdta")(CdtaChunk);
 export class CsctChunk extends Chunk {
   declare chunk_type: string;
   declare value: number;
+
+  constructor(kw: Record<string, any> = {}) {
+    super(kw);
+    const { chunk_type = "CsCt", value = 1 } = kw;
+    this.chunk_type = chunk_type;
+    this.value = value;
+  }
 }
 define(CsctChunk, {
   chunk_type: field({ default: "CsCt" }),
   value: u4_field({ default: 1, endian: "<" }),
-});
+}, { init: false });
 register("CsCt")(CsctChunk);
 
 // ---------------------------------------------------------------------------
@@ -426,6 +521,24 @@ export class CompPresetItem extends FmtItem {
   declare pixel_aspect_dividend: number;
   declare pixel_aspect_divisor: number;
 
+  constructor(kw: Record<string, any> = {}) {
+    super(kw);
+    const {
+      width = 0,
+      height = 0,
+      frame_rate_integer = 0,
+      frame_rate_fractional = 0,
+      pixel_aspect_dividend = 1,
+      pixel_aspect_divisor = 1,
+    } = kw;
+    this.width = width;
+    this.height = height;
+    this.frame_rate_integer = frame_rate_integer;
+    this.frame_rate_fractional = frame_rate_fractional;
+    this.pixel_aspect_dividend = pixel_aspect_dividend;
+    this.pixel_aspect_divisor = pixel_aspect_divisor;
+  }
+
   /** Frame rate assembled from integer + fractional/65536. */
   get frame_rate(): number {
     return this.frame_rate_integer + this.frame_rate_fractional / 65536.0;
@@ -443,4 +556,4 @@ define(CompPresetItem, {
   frame_rate_fractional: u2_field(),
   pixel_aspect_dividend: u4_field({ default: 1 }),
   pixel_aspect_divisor: u4_field({ default: 1 }),
-});
+}, { init: false });

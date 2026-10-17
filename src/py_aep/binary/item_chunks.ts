@@ -68,6 +68,38 @@ export class IdtaChunk extends Chunk {
   declare is_solid: boolean;
   declare is_footage: boolean;
 
+  constructor(kw: Record<string, any> = {}) {
+    super(kw);
+    const {
+      chunk_type = "idta",
+      item_type = 0,
+      reserved_02 = new Uint8Array(14),
+      item_id = 0,
+      flags_14 = new Uint8Array(2),
+      proxy_flags = 0,
+      flags_17 = 0,
+      reserved_18 = new Uint8Array(32),
+      proxy_active = 0,
+      reserved_39 = new Uint8Array(1),
+      label = 0,
+      reserved_3c = new Uint8Array(21),
+      modified_stamp = 0,
+    } = kw;
+    this.chunk_type = chunk_type;
+    this.item_type = item_type;
+    this._reserved_02 = reserved_02;
+    this.item_id = item_id;
+    this._flags_14 = flags_14;
+    this._proxy_flags = proxy_flags;
+    this._flags_17 = flags_17;
+    this._reserved_18 = reserved_18;
+    this._proxy_active = proxy_active;
+    this._reserved_39 = reserved_39;
+    this.label = label;
+    this._reserved_3c = reserved_3c;
+    this._modified_stamp = modified_stamp;
+  }
+
   /**
    * Item time stamp, as a Unix timestamp (`0` when unstamped).
    *
@@ -98,7 +130,7 @@ define(IdtaChunk, {
   label: u1_field(),
   _reserved_3c: bytes_field(21, { repr: false }),
   _modified_stamp: u4_field({ repr: false }),
-});
+}, { init: false });
 register("idta")(IdtaChunk);
 // -- BitField descriptors (not attrs fields) ---------------------------
 descriptor(IdtaChunk, "use_proxy", new BitField("_proxy_flags", 0));
@@ -113,11 +145,18 @@ descriptor(IdtaChunk, "is_footage", new BitField("_flags_17", 5));
 export class IdpcChunk extends Chunk {
   declare chunk_type: string;
   declare data: Uint8Array;
+
+  constructor(kw: Record<string, any> = {}) {
+    super(kw);
+    const { chunk_type = "idpc", data = bytes_.repeat(b("\x00"), 8) } = kw;
+    this.chunk_type = chunk_type;
+    this.data = data;
+  }
 }
 define(IdpcChunk, {
   chunk_type: field({ default: "idpc" }),
   data: field({ default: bytes_.repeat(b("\x00"), 8) }),
-});
+}, { init: false });
 register("idpc")(IdpcChunk);
 
 // ---------------------------------------------------------------------------
@@ -179,6 +218,30 @@ export class HeadChunk extends Chunk {
   declare next_item_id: number;
   /** File revision counter (32-bit), incremented on each user action. */
   declare file_revision: number;
+
+  constructor(kw: Record<string, any> = {}) {
+    super(kw);
+    const {
+      chunk_type = "head",
+      reserved_00a = new Uint8Array(1),
+      file_format_version = 0x61,
+      reserved_00c = new Uint8Array(1),
+      format_subversion = 0x02,
+      version_word = (12 << 22) | (1 << 10) | (1 << 9),
+      reserved_08 = b("\x80\x00\x00\x00"),
+      next_item_id = 1,
+      file_revision = 1,
+    } = kw;
+    this.chunk_type = chunk_type;
+    this._reserved_00a = reserved_00a;
+    this.file_format_version = file_format_version;
+    this._reserved_00c = reserved_00c;
+    this._format_subversion = format_subversion;
+    this._version_word = version_word;
+    this._reserved_08 = reserved_08;
+    this.next_item_id = next_item_id;
+    this.file_revision = file_revision;
+  }
 
   get ae_version_major_a(): number {
     return and(rshift(this._version_word, 26), 0x1f);
@@ -286,7 +349,7 @@ define(HeadChunk, {
   _reserved_08: bytes_field(4, { default: b("\x80\x00\x00\x00"), repr: false }),
   next_item_id: u4_field({ default: 1, repr: false }),
   file_revision: u4_field({ default: 1 }),
-});
+}, { init: false });
 register("head")(HeadChunk);
 
 // ---------------------------------------------------------------------------
@@ -316,6 +379,36 @@ export class NhedChunk extends Chunk {
 
   declare feet_frames_film_type: boolean;
   declare frames_use_feet_frames: boolean;
+
+  constructor(kw: Record<string, any> = {}) {
+    super(kw);
+    const {
+      chunk_type = "nhed",
+      reserved_00 = bytes_.concat(bytes_.repeat(b("\x00"), 7), b("\x05")),
+      display_byte = 0,
+      footage_timecode_display_start_type = 1,
+      reserved_0a = b("\x01"),
+      feet_byte = 0,
+      timecode_default_base = 30,
+      reserved_0d = b("\x10"),
+      frames_count_type = 2,
+      bits_per_channel = 0,
+      transparency_grid_thumbnails = false,
+      reserved_11 = new Uint8Array(15),
+    } = kw;
+    this.chunk_type = chunk_type;
+    this._reserved_00 = reserved_00;
+    this._display_byte = display_byte;
+    this.footage_timecode_display_start_type = footage_timecode_display_start_type;
+    this._reserved_0a = reserved_0a;
+    this._feet_byte = feet_byte;
+    this.timecode_default_base = timecode_default_base;
+    this._reserved_0d = reserved_0d;
+    this.frames_count_type = frames_count_type;
+    this.bits_per_channel = bits_per_channel;
+    this.transparency_grid_thumbnails = transparency_grid_thumbnails;
+    this._reserved_11 = reserved_11;
+  }
 
   /** Time display type (0=TIMECODE, 1=FRAMES). */
   get time_display_type(): number {
@@ -348,7 +441,7 @@ define(NhedChunk, {
   bits_per_channel: u1_field(),
   transparency_grid_thumbnails: bool_field(),
   _reserved_11: bytes_field(15, { repr: false }),
-});
+}, { init: false });
 register("nhed")(NhedChunk);
 descriptor(NhedChunk, "feet_frames_film_type", new BitField("_display_byte", 7));
 descriptor(NhedChunk, "frames_use_feet_frames", new BitField("_feet_byte", 0));
@@ -397,6 +490,46 @@ export class NnhdChunk extends Chunk {
   declare feet_frames_film_type: boolean;
   declare frames_use_feet_frames: boolean;
 
+  constructor(kw: Record<string, any> = {}) {
+    super(kw);
+    const {
+      chunk_type = "nnhd",
+      reserved_00 = new Uint8Array(2),
+      saving_platform = 0,
+      reserved_03 = bytes_.concat(bytes_.repeat(b("\x00"), 4), b("\x05")),
+      display_byte = 0,
+      footage_timecode_display_start_type = 1,
+      reserved_0a = 1,
+      feet_byte = 0,
+      reserved_0c = new Uint8Array(2),
+      timecode_default_base = 30,
+      unknown_10 = b("\x00\x00\x00\x10"),
+      frames_count_type = 2,
+      reserved_15 = new Uint8Array(3),
+      bits_per_channel = 0,
+      transparency_grid_thumbnails = false,
+      system_code_page = 0,
+      unknown_1c = new Uint8Array(12),
+    } = kw;
+    this.chunk_type = chunk_type;
+    this._reserved_00 = reserved_00;
+    this._saving_platform = saving_platform;
+    this._reserved_03 = reserved_03;
+    this._display_byte = display_byte;
+    this.footage_timecode_display_start_type = footage_timecode_display_start_type;
+    this._reserved_0a = reserved_0a;
+    this._feet_byte = feet_byte;
+    this._reserved_0c = reserved_0c;
+    this.timecode_default_base = timecode_default_base;
+    this._unknown_10 = unknown_10;
+    this.frames_count_type = frames_count_type;
+    this._reserved_15 = reserved_15;
+    this.bits_per_channel = bits_per_channel;
+    this.transparency_grid_thumbnails = transparency_grid_thumbnails;
+    this._system_code_page = system_code_page;
+    this._unknown_1c = unknown_1c;
+  }
+
   /** Time display type (0=TIMECODE, 1=FRAMES). */
   get time_display_type(): number {
     return this._display_byte & 0x7f;
@@ -433,7 +566,7 @@ define(NnhdChunk, {
   transparency_grid_thumbnails: bool_field(),
   _system_code_page: u2_field({ repr: false }),
   _unknown_1c: bytes_field(12, { repr: false }),
-});
+}, { init: false });
 register("nnhd")(NnhdChunk);
 // -- Bit-level accessors (not attrs fields) ----------------------------
 descriptor(NnhdChunk, "feet_frames_film_type", new BitField("_display_byte", 7));
@@ -461,6 +594,26 @@ export class TimeDisplayPrefItem extends FmtItem {
   declare timecode_default_base: number;
   declare _reserved_08: number;
   declare frames_count_type: number;
+
+  constructor(kw: Record<string, any> = {}) {
+    super(kw);
+    const {
+      display_byte = 0,
+      footage_timecode_display_start_type = 1,
+      reserved_02 = 1,
+      feet_byte = 0,
+      timecode_default_base = 30,
+      reserved_08 = 16,
+      frames_count_type = 2,
+    } = kw;
+    this.display_byte = display_byte;
+    this.footage_timecode_display_start_type = footage_timecode_display_start_type;
+    this._reserved_02 = reserved_02;
+    this.feet_byte = feet_byte;
+    this.timecode_default_base = timecode_default_base;
+    this._reserved_08 = reserved_08;
+    this.frames_count_type = frames_count_type;
+  }
 }
 define(TimeDisplayPrefItem, {
   display_byte: u1_field(),
@@ -470,7 +623,7 @@ define(TimeDisplayPrefItem, {
   timecode_default_base: u4_field({ default: 30, endian: "<" }),
   _reserved_08: u4_field({ default: 16, endian: "<", repr: false }),
   frames_count_type: u4_field({ default: 2, endian: "<" }),
-});
+}, { init: false });
 
 // ---------------------------------------------------------------------------
 // cmta - item comment (variable-length, null-terminated UTF-8)
@@ -486,6 +639,12 @@ define(TimeDisplayPrefItem, {
 export class CmtaChunk extends Chunk {
   declare chunk_type: string;
 
+  constructor(kw: Record<string, any> = {}) {
+    super(kw);
+    const { chunk_type = "cmta" } = kw;
+    this.chunk_type = chunk_type;
+  }
+
   /** Decoded comment text, LF line endings, no trailing null. */
   get value(): string {
     return split(decode(this.data, "UTF-8"), "\x00")[0].replaceAll("\r\n", "\n");
@@ -499,5 +658,5 @@ export class CmtaChunk extends Chunk {
 }
 define(CmtaChunk, {
   chunk_type: field({ default: "cmta" }),
-});
+}, { init: false });
 register("cmta")(CmtaChunk);
