@@ -11,11 +11,11 @@ import { allowed_values, constrained_keys, type RuleValue } from "../../data/out
 import { parse_format_options } from "../../parsers/format_options.ts";
 import { FORMAT_ID_EXTENSIONS, VIDEO_CODEC_NAMES, resolve_output_filename, resolve_time_span } from "../../resolvers/output.ts";
 import { platform_path } from "../../resolvers/platform_paths.ts";
-import { ChunkField, type Dynamic } from "../descriptors.ts";
+import { ChunkField } from "../descriptors.ts";
 import { CompItem } from "../items/composition.ts";
 import { _validate_number, validate_bool, validate_enum, validate_sequence, validate_string } from "../validators.ts";
 import { CineonFormatOptions, PngFormatOptions, XmlFormatOptions, type JpegFormatOptions, type OpenExrFormatOptions, type TargaFormatOptions, type TiffFormatOptions } from "./format_options/index.ts";
-import { SettingsView, build_resize_to_strings, settings_to_number, settings_to_string } from "./settings.ts";
+import { SettingsView, build_resize_to_strings, settings_to_number, settings_to_string, type SettingsSpec, type SettingValue, type SettingValues } from "./settings.ts";
 import { LHD3_BLOCK_SINGLE, set_lhd3_count, type LdatChunk, type Lhd3Chunk } from "../../binary/ldat_chunks.ts";
 import { HdrmChunk } from "../../binary/misc_chunks.ts";
 import { OutputModuleSettingsItem, RoptChunk, RouuChunk, TiffRoptChunk, type RenderSettingsItem } from "../../binary/render_chunks.ts";
@@ -206,11 +206,42 @@ export function _set_xml_param_raw(om: OutputModule, param_key: string, value: n
   }
 }
 
+/** The value each output module setting reads as: its {@link OutputModule} attribute's type. */
+export type OutputModuleSettingValues = SettingValues & {
+  "Audio Bit Depth": OutputModule["_audio_bit_depth"];
+  "Audio Channels": OutputModule["_audio_channels"];
+  "Audio Sample Rate": OutputModule["_audio_sample_rate"];
+  "Channels": OutputModule["_channels"];
+  "Color": OutputModule["_color_mode"];
+  "Convert to Linear Light": OutputModule["_convert_to_linear_light"];
+  "Crop Bottom": OutputModule["_crop_bottom"];
+  "Crop Left": OutputModule["_crop_left"];
+  "Crop Right": OutputModule["_crop_right"];
+  "Crop Top": OutputModule["_crop_top"];
+  "Crop": OutputModule["_crop"];
+  "Depth": OutputModule["_depth"];
+  "Format": OutputModule["_format"];
+  "Include Project Link": OutputModule["_include_project_link"];
+  "Include Source XMP Metadata": OutputModule["include_source_xmp"];
+  "Lock Aspect Ratio": OutputModule["_lock_aspect_ratio"];
+  "Output Audio": OutputModule["_output_audio"];
+  "Output File Info": OutputModule["_output_file_info"];
+  "Post-Render Action": OutputModule["_post_render_action_setting"];
+  "Preserve RGB": OutputModule["_preserve_rgb"];
+  "Resize Quality": OutputModule["_resize_quality"];
+  "Resize to": OutputModule["_resize_to"];
+  "Resize": OutputModule["_resize"];
+  "Starting #": OutputModule["_starting_number"];
+  "Use Comp Frame Number": OutputModule["_use_comp_frame_number"];
+  "Use Region of Interest": OutputModule["_use_region_of_interest"];
+  "Video Output": OutputModule["_video_output"];
+};
+
 // ---------------------------------------------------------------------------
 // OM_SETTINGS: ExtendScript key -> (attribute, optional enum class)
 // ---------------------------------------------------------------------------
 
-export const OM_SETTINGS = new Map<string, [string, Dynamic]>([
+export const OM_SETTINGS: SettingsSpec = new Map([
   ["Audio Bit Depth", ["_audio_bit_depth", AudioBitDepth]],
   ["Audio Channels", ["_audio_channels", AudioChannels]],
   ["Audio Sample Rate", ["_audio_sample_rate", AudioSampleRate]],
@@ -554,11 +585,11 @@ export class OutputModule {
    * etc. Matches the format from
    * `OutputModule.get_settings(GetSettingsFormat.NUMBER)`.
    */
-  get settings(): SettingsView {
+  get settings(): SettingsView<OutputModuleSettingValues> {
     return new SettingsView(this, OM_SETTINGS);
   }
 
-  set settings(value: Dynamic) {
+  set settings(value: Map<string, unknown> | SettingsView) {
     // NOTE(port): Python accepts any `Mapping`; a `Map` and a `SettingsView` are accepted here.
     if (!(value instanceof Map || value instanceof SettingsView)) {
       throw new ValueError("Settings must be a dictionary of key-value pairs");
@@ -1468,7 +1499,7 @@ export class OutputModule {
    * @param format - The output format. `GetSettingsFormat.NUMBER` returns numeric values (enums
    *   unwrapped to ints). `GetSettingsFormat.STRING` returns all values as strings
    */
-  get_settings(format: GetSettingsFormat = GetSettingsFormat.STRING): Map<string, Dynamic> {
+  get_settings(format: GetSettingsFormat = GetSettingsFormat.STRING): Map<string, SettingValue> {
     if (format === GetSettingsFormat.STRING) {
       return settings_to_string(this.settings, build_resize_to_strings(this._project._preferences));
     }
@@ -1484,7 +1515,7 @@ export class OutputModule {
    * @param key - The setting key (e.g. `"Video Output"`, `"Audio Bit Depth"`).
    * @param format - The output format.
    */
-  get_setting(key: string, format: GetSettingsFormat = GetSettingsFormat.STRING): Dynamic {
+  get_setting(key: string, format: GetSettingsFormat = GetSettingsFormat.STRING): SettingValue {
     return getitem(this.get_settings(format), key);
   }
 

@@ -369,7 +369,7 @@ describe("TestOutputModuleSettings", () => {
     const project = parse_project(OM_SAMPLES_DIR.div(filename));
     const settings = project.render_queue.items[0].output_modules[0].settings;
 
-    expect(settings.__getitem__("Output Audio")).toBe(expected_output_audio);
+    expect<number>(settings.__getitem__("Output Audio")).toBe(expected_output_audio);
   });
 
   test("test_audio_settings_match_after_effects", () => {
@@ -426,7 +426,7 @@ describe("TestOutputModuleSettings", () => {
     const project = parse_project(OM_SAMPLES_DIR.div(filename));
     const settings = project.render_queue.items[0].output_modules[0].settings;
 
-    expect(settings.__getitem__("Audio Sample Rate")).toBe(expected_rate);
+    expect<number>(settings.__getitem__("Audio Sample Rate")).toBe(expected_rate);
   });
 
   test.each([
@@ -438,7 +438,7 @@ describe("TestOutputModuleSettings", () => {
     const project = parse_project(OM_SAMPLES_DIR.div(filename));
     const settings = project.render_queue.items[0].output_modules[0].settings;
 
-    expect(settings.__getitem__("Channels")).toBe(expected_channels);
+    expect<number>(settings.__getitem__("Channels")).toBe(expected_channels);
   });
 
   test.each([
@@ -453,7 +453,7 @@ describe("TestOutputModuleSettings", () => {
     const project = parse_project(OM_SAMPLES_DIR.div(filename));
     const settings = project.render_queue.items[0].output_modules[0].settings;
 
-    expect(settings.__getitem__("Depth")).toBe(expected_depth);
+    expect<number>(settings.__getitem__("Depth")).toBe(expected_depth);
   });
 
   test.each([
@@ -478,7 +478,7 @@ describe("TestOutputModuleSettings", () => {
     const project = parse_project(SAMPLES_DIR.div(filename));
     const settings = project.render_queue.items[0].output_modules[0].settings;
 
-    expect(settings.__getitem__("Format")).toBe(expected_format);
+    expect<number>(settings.__getitem__("Format")).toBe(expected_format);
   });
 
   test("test_color_straight_unmatted", () => {
