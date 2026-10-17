@@ -8,6 +8,7 @@ import * as fs from "node:fs";
 import { createHash } from "node:crypto";
 import * as py_aep from "../../src/py_aep/index.ts";
 import { Dumper, err_name } from "./dump_ts.ts";
+import { AttributeError } from "../../src/pyrt/index.ts";
 
 const WRITES: [string, string, any][] = [
   ["doc", "text", "Hi\nthere"],
@@ -25,6 +26,12 @@ const WRITES: [string, string, any][] = [
   ["range", "text", "ab"],
   ["doc", "auto_kern_type", 11413],
 ];
+
+/** `obj.name` with Python's AttributeError on `None` (the TS twin would raise a JS TypeError). */
+function attr_of(obj: any, name: string): any {
+  if (obj == null) throw new AttributeError(`'NoneType' object has no attribute '${name}'`);
+  return obj[name].bind(obj);
+}
 
 function text_documents(app: any): [string, any][] {
   const out: [string, any][] = [];
@@ -62,7 +69,7 @@ function run_case(out: string, id: string): any {
     for (const [name, args] of [["character_range", [0, -1]], ["paragraph_range", [0]], ["composed_line_range", [0]]] as const) {
       let r: any;
       try {
-        r = doc[name](...args);
+        r = attr_of(doc, name)(...args);
       } catch (e) {
         d.emit(`${path}.${name}()`, { $err: err_name(e) });
         continue;
@@ -75,7 +82,8 @@ function run_case(out: string, id: string): any {
     for (const [target, name, value] of WRITES) {
       try {
         const doc = holder.value;
-        const obj = target === "doc" ? doc : doc.character_range(0, 1);
+        const obj = target === "doc" ? doc : attr_of(doc, "character_range")(0, 1);
+        if (obj == null) throw new AttributeError(`'NoneType' object has no attribute '${name}'`);
         obj[name] = value;
         writes.push("ok");
       } catch (e) {

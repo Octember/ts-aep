@@ -28,7 +28,7 @@ from py_aep.cos import CosName, CosParser, serialize
 sys.path.insert(0, str(pathlib.Path(__file__).parent))
 from dump_py import Dumper  # noqa: E402
 
-PER_SAMPLE = 40
+PER_SAMPLE = 60
 
 # Shapes of the COS paths py_aep reads (array indices written as `*`).
 CHAR_KEYS = "0|1|2|3|4|5|6|7|8|9|11|12|13|18|35|36|52|53|54|56|57|58|62|63|70"
@@ -146,9 +146,17 @@ def make(out, samples):
                 for kind in KINDS:
                     key = f"{sample}|{bi}|{'/'.join(map(str, path))}|{kind}"
                     cands.append((hashlib.sha1(key.encode()).hexdigest(), bi, path, kind))
+        # Hash order, but each (shape, kind) pair once before any repeats,
+        # so a sample's cases spread over the paths and kinds it has.
         cands.sort()
+        seen = set()
+        firsts, repeats = [], []
+        for c in cands:
+            shape = "/".join("*" if isinstance(k, int) else k for k in c[2])
+            (repeats if (shape, c[3]) in seen else firsts).append(c)
+            seen.add((shape, c[3]))
         n = 0
-        for h, bi, path, kind in cands:
+        for h, bi, path, kind in firsts + repeats:
             if n >= PER_SAMPLE:
                 break
             body = bodies[bi]

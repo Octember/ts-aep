@@ -1,5 +1,6 @@
 {
-  "pass": 15578,
+  "pass": 15584,
   "skip": 35,
-  "samples": 644
+  "samples": 644,
+  "fault_cases": 2640
 }
