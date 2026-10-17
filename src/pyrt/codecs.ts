@@ -8,7 +8,18 @@ import { CP1252, MAC_ROMAN } from "./codepages.ts";
 
 export type Errors = "strict" | "surrogateescape" | "ignore" | "replace";
 
+const NORM = new Map<string, string>();
+
 function norm(encoding: string): string {
+  let n = NORM.get(encoding);
+  if (n === undefined) {
+    n = norm_uncached(encoding);
+    NORM.set(encoding, n);
+  }
+  return n;
+}
+
+function norm_uncached(encoding: string): string {
   const e = encoding.toLowerCase().replace(/_/g, "-");
   if (e === "utf8" || e === "utf-8") return "utf-8";
   if (e === "ascii" || e === "us-ascii") return "ascii";
