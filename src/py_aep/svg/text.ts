@@ -3,10 +3,10 @@
  *
  * After Effects' own SVG importer drops `<text>`; py_aep renders it by outlining
  * each glyph with `fontTools` and converting the contours to the same cubic
- * {@link py_aep.svg.types.Subpath | Subpath}s the shape importer uses, so they flow
+ * {@link Subpath | Subpath}s the shape importer uses, so they flow
  * through the existing shape-layer builder unchanged.
  *
- * A `<text>` is split into {@link py_aep.svg.text.TextRun | TextRun}s (the parent text
+ * A `<text>` is split into {@link TextRun | TextRun}s (the parent text
  * plus each `<tspan>`), laid out left-to-right by glyph advance width. Kerning,
  * bidirectional text, and complex-script shaping are out of scope.
  */

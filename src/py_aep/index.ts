@@ -23,7 +23,7 @@ export const __version__ = "0.0.0";
  *
  * This is the main entry point for the library. It parses the binary
  * RIFX data and returns an {@link Application} object whose
- * {@link py_aep.models.application.Application.project | project} attribute
+ * {@link Application.project | project} attribute
  * holds the full project tree.
  *
  * @param aep_file_path - Path to the `.aep` file.

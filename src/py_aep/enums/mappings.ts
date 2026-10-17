@@ -165,7 +165,7 @@ export function adobe_color_profile_names(): string[] {
 /**
  * Return the 16-byte ICC Profile ID for a known color-space name.
  *
- * The inverse of the `_ICC_PROFILE_MAPPING` lookup. Returns `None` for names
+ * The inverse of the `_ICC_PROFILE_MAPPING` lookup. Returns `null` for names
  * not in the table (e.g. an OCIO color space, or a profile py_aep has not
  * catalogued).
  *
@@ -179,7 +179,7 @@ export function profile_id_for_name(name: string): Uint8Array | null {
 /**
  * Map the output color space profile UID to a human-readable name.
  *
- * When `output_color_space_working` is `True`, the project's
+ * When `output_color_space_working` is `true`, the project's
  * working color space name is returned directly.  Otherwise, the
  * 16-byte `output_profile_id` is looked up in the known profiles
  * table.
@@ -187,7 +187,7 @@ export function profile_id_for_name(name: string): Uint8Array | null {
  * @param output_profile_id - 16-byte binary profile identifier from the output-module `ldat` chunk.
  * @param output_color_space_working - Flag indicating "Working Color Space".
  * @param working_space - The project's working color space name.
- * @returns The color space name, or `None` if the profile is unknown.
+ * @returns The color space name, or `null` if the profile is unknown.
  */
 export function map_output_color_space(
   output_profile_id: Uint8Array,

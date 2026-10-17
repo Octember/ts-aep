@@ -80,7 +80,7 @@ export function _ignore_tag(loader: any, suffix: string, node: any): any {
 /**
  * `@lru_cache(maxsize=8) def _load_config_cached(config_path, _stamp)`.
  *
- * Parses a `.ocio` file and returns its top-level mapping, or `None` if it
+ * Parses a `.ocio` file and returns its top-level mapping, or `null` if it
  * cannot be read or parsed.
  *
  * NOTE(port): pyrt `lru_cache` keys object arguments by identity and never
@@ -104,7 +104,7 @@ export const _load_config_cached = lru_cache(
   },
 );
 
-/** `(mtime_ns, size)` cache key for `config_path`, or `None` if unreadable. */
+/** `(mtime_ns, size)` cache key for `config_path`, or `null` if unreadable. */
 export function _config_stamp(config_path: Path): [bigint, number] | null {
   let st: any;
   try {
@@ -118,7 +118,7 @@ export function _config_stamp(config_path: Path): [bigint, number] | null {
 }
 
 /**
- * Parse a `.ocio` config, or `None` if it cannot be read or parsed.
+ * Parse a `.ocio` config, or `null` if it cannot be read or parsed.
  *
  * Memoized on `(path, mtime, size)`: parsing a real config is expensive
  * (~350ms for AE's bundled ACES 1.2) and every color-space read and write
@@ -177,7 +177,7 @@ export function list_config_color_spaces(config_path: Path): string[] {
  * `<install>/Support Files/OpenColorIO-Configs/<name>/`.
  *
  * @param config - The `ocio_configuration_file` value.
- * @returns The resolved `.ocio` path, or `None` if it cannot be located.
+ * @returns The resolved `.ocio` path, or `null` if it cannot be located.
  */
 export function resolve_ocio_config(config: string): Path | null {
   if (!config) return null;
@@ -200,7 +200,7 @@ export function resolve_ocio_config(config: string): Path | null {
  * depend on whether the name is a direct colorspace, a role/alias, or a
  * `display/view` pair, and only the config can tell those apart.
  *
- * @param config - The project's `ocio_configuration_file` value (`None` when
+ * @param config - The project's `ocio_configuration_file` value (`null` when
  *   there is no project to read it from).
  * @param purpose - Completes the error message, e.g.
  *   `"build the color-profile envelope for 'ACEScg'"`.
@@ -430,7 +430,7 @@ export const _guid_table_cached = lru_cache(
 /**
  * Reverse-map a 16-byte `output_profile_id` to its OCIO color-space name.
  *
- * Returns `None` if no assignable color space in the config produces
+ * Returns `null` if no assignable color space in the config produces
  * `profile_id`. The `Guid` of every candidate (~600 two-stage MurmurHash3
  * computations for AE's bundled ACES 1.2) is memoized per config like
  * `_load_config`, so repeated reads are dict lookups.
@@ -613,7 +613,7 @@ export function fnmatchcase(name: string, pat: string): boolean {
  * @param config_path - The resolved `.ocio` config path.
  * @param file_path - The imported file's path.
  *
- * @returns The envelope, or `None` when no rule matches and the config has no
+ * @returns The envelope, or `null` when no rule matches and the config has no
  *   `default` role.
  */
 export function ocio_input_envelope(config_path: Path, file_path: string): string | null {

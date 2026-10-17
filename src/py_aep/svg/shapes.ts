@@ -3,7 +3,7 @@
  *
  * `element_subpaths` turns a basic shape (`rect`, `circle`, `ellipse`,
  * `line`, `polyline`, `polygon`) or a `path` into untransformed cubic
- * {@link py_aep.svg.path_data.RawSubpath | RawSubpath}s. `cubics_to_subpath`
+ * {@link RawSubpath | RawSubpath}s. `cubics_to_subpath`
  * applies the accumulated transform and extracts After Effects vertices +
  * in/out tangents.
  */

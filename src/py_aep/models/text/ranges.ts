@@ -2,7 +2,7 @@
  * Text range models mirroring the AE 24.3+ ExtendScript range API.
  *
  * `CharacterRange`, `ParagraphRange` and `ComposedLineRange` are computed,
- * read-only views over a {@link py_aep.models.text.TextDocument | TextDocument}'s
+ * read-only views over a {@link TextDocument | TextDocument}'s
  * parsed COS data. They are created via the `TextDocument` factory methods
  * (`character_range`, `paragraph_range`, `composed_line_range`), never
  * constructed directly - matching ExtendScript, where `new CharacterRange()`
@@ -872,11 +872,11 @@ export function _apply_para_key(doc: TextDocument, start: number, end: number, k
  *
  * Evaluates the key across every style run overlapping the owning
  * {@link CharacterRange} with AE's mixed-value semantics: a uniform value
- * is returned, disagreement reads as `None` (ExtendScript
+ * is returned, disagreement reads as `null` (ExtendScript
  * `undefined`). `gate` names a boolean style key that must be truthy
  * for a run to participate at all (AE gates `strokeColor` on
  * `applyStroke` and `fillColor` on `applyFill`); when no overlapping
- * run passes the gate the field reads `None`.
+ * run passes the gate the field reads `null`.
  *
  * Writable fields split the style runs at the range boundaries, write
  * the key into the covered runs and re-merge adjacent identical runs,
@@ -1007,7 +1007,7 @@ export class RangeField {
 }
 
 /**
- * A {@link py_aep.cos.CosField | CosField} whose writes style the whole
+ * A {@link CosField | CosField} whose writes style the whole
  * document.
  *
  * AE document-level setters apply to every character or paragraph and
@@ -1048,7 +1048,7 @@ export class DocumentWideCosField extends CosField<any> {
    *
    * Mirrors `RangeField.enum`; the base `CosField.enum` does not
    * validate, so a stray int would serialize a value that reads back
-   * as `None`/undefined. Reads stay tolerant via `from_binary`.
+   * as `null`/undefined. Reads stay tolerant via `from_binary`.
    */
   static enum(enum_cls: any, dict_attr: string, key: string, kwargs: Record<string, any> = {}): any {
     const kw: Record<string, any> = { ...kwargs };
@@ -1097,7 +1097,7 @@ export class _TextRange {
     return this._bounds()[1];
   }
 
-  /** `True` while the range lies within the document bounds. Read-only. */
+  /** `true` while the range lies within the document bounds. Read-only. */
   get is_range_valid(): boolean {
     try {
       this._bounds();
@@ -1150,7 +1150,7 @@ export class _IndexRange extends _TextRange {
  *
  * Created via `TextDocument.character_range(character_start, signed_character_end)`. Most `TextDocument` styling attributes are
  * readable on the range; when the range spans style runs with
- * differing values the attribute reads `None` (ExtendScript
+ * differing values the attribute reads `null` (ExtendScript
  * `undefined`). Bounds re-resolve on every access, so a range created
  * valid raises `ValueError` once the document shrinks beneath it.
  *
@@ -1244,8 +1244,8 @@ export class CharacterRange extends _TextRange {
   /**
    * Resolve one style key over the overlapping runs.
    *
-   * Uniform value -\> that value; disagreement -\> `None`; every run
-   * gated out -\> `None`.
+   * Uniform value -\> that value; disagreement -\> `null`; every run
+   * gated out -\> `null`.
    */
   _resolve_mixed(
     kind: string,
@@ -1399,7 +1399,7 @@ export class CharacterRange extends _TextRange {
   // -- Paragraph / leading style accessors ---------------------------------
 
   /**
-   * The range's auto-leading option; `None` when mixed. Read / Write.
+   * The range's auto-leading option; `null` when mixed. Read / Write.
    *
    * Enabling auto-leading also resets the explicit leading key to
    * AE's sentinel (probed `X_AL_SET`).
@@ -1419,7 +1419,7 @@ export class CharacterRange extends _TextRange {
   }
 
   /**
-   * The range's auto kern type option; `None` when mixed. Read / Write.
+   * The range's auto kern type option; `null` when mixed. Read / Write.
    *
    * Setting a non-manual kern type clears the manual kerning values
    * over the range; AE drops the kern-run array entirely when no
@@ -1455,7 +1455,7 @@ export class CharacterRange extends _TextRange {
   // -- Font ------------------------------------------------------------------
 
   /**
-   * The range's font PostScript name; `None` when mixed. Read / Write.
+   * The range's font PostScript name; `null` when mixed. Read / Write.
    *
    * Setting a font absent from the document's font array prepends
    * it and reindexes existing references, matching AE.
@@ -1486,7 +1486,7 @@ export class CharacterRange extends _TextRange {
     this._propagate();
   }
 
-  /** The range's {@link FontObject}; `None` when mixed. Read-only. */
+  /** The range's {@link FontObject}; `null` when mixed. Read-only. */
   get font_object(): FontObject | null {
     const idx = this._resolve_mixed("char", "0", null, null, null);
     const fonts = this._doc_ref._fonts;
@@ -1503,7 +1503,7 @@ export class CharacterRange extends _TextRange {
    * anywhere in the range; the explicit value only surfaces when
    * auto-leading is uniformly disabled. Setting an explicit value
    * also disables auto-leading over the range (probed `W_LEAD`);
-   * setting `None` clears the explicit value without touching
+   * setting `null` clears the explicit value without touching
    * auto-leading.
    */
   get leading(): number | null {
@@ -1531,7 +1531,7 @@ export class CharacterRange extends _TextRange {
    * AND a manual value is stored for every character in the range
    * (probed `X_TEXT_KERN`: spliced-in characters under NO_AUTO_KERN
    * without values read undefined). Values live in dedicated kerning
-   * runs (`doc["0"]["8"]`) and read `None` when mixed. Setting a
+   * runs (`doc["0"]["8"]`) and read `null` when mixed. Setting a
    * value affects characters `[max(0, start - 1), end)` - AE's pair
    * shift - disables auto-kerning for them, and stores the
    * leading-edge value at `doc["0"]["7"]` when the range starts at 0.
@@ -1573,28 +1573,28 @@ export class CharacterRange extends _TextRange {
     this._propagate();
   }
 
-  /** `True` if the range has All Caps enabled; `None` when mixed. Read-only. */
+  /** `true` if the range has All Caps enabled; `null` when mixed. Read-only. */
   get all_caps(): boolean | null {
     const caps = this.font_caps_option;
     if (caps == null) return null;
     return caps === FontCapsOption.FONT_ALL_CAPS;
   }
 
-  /** `True` if the range has Small Caps enabled; `None` when mixed. Read-only. */
+  /** `true` if the range has Small Caps enabled; `null` when mixed. Read-only. */
   get small_caps(): boolean | null {
     const caps = this.font_caps_option;
     if (caps == null) return null;
     return caps === FontCapsOption.FONT_SMALL_CAPS;
   }
 
-  /** `True` if the range is superscript; `None` when mixed. Read-only. */
+  /** `true` if the range is superscript; `null` when mixed. Read-only. */
   get superscript(): boolean | null {
     const baseline = this.font_baseline_option;
     if (baseline == null) return null;
     return baseline === FontBaselineOption.FONT_FAUXED_SUPERSCRIPT;
   }
 
-  /** `True` if the range is subscript; `None` when mixed. Read-only. */
+  /** `true` if the range is subscript; `null` when mixed. Read-only. */
   get subscript(): boolean | null {
     const baseline = this.font_baseline_option;
     if (baseline == null) return null;
@@ -1683,110 +1683,110 @@ export class ComposedLineRange extends _IndexRange {
 // Descriptor-backed CharacterRange fields (class-body RangeField assignments)
 // ---------------------------------------------------------------------------
 
-/** `font_size`: the range's font size in pixels; `None` when mixed. Read / Write. */
+/** `font_size`: the range's font size in pixels; `null` when mixed. Read / Write. */
 descriptor(CharacterRange, "font_size", RangeField.float("char", "1", { validate: validate_positive_nonzero_number }));
 
-/** `faux_bold`: `True` if faux bold is enabled across the range. Read / Write. */
+/** `faux_bold`: `true` if faux bold is enabled across the range. Read / Write. */
 descriptor(CharacterRange, "faux_bold", RangeField.bool("char", "2"));
 
-/** `faux_italic`: `True` if faux italic is enabled across the range. Read / Write. */
+/** `faux_italic`: `true` if faux italic is enabled across the range. Read / Write. */
 descriptor(CharacterRange, "faux_italic", RangeField.bool("char", "3"));
 
-/** `horizontal_scale`: the range's horizontal scale; `None` when mixed. Read / Write. */
+/** `horizontal_scale`: the range's horizontal scale; `null` when mixed. Read / Write. */
 descriptor(CharacterRange, "horizontal_scale", RangeField.float("char", "6", { validate: validate_number }));
 
-/** `vertical_scale`: the range's vertical scale; `None` when mixed. Read / Write. */
+/** `vertical_scale`: the range's vertical scale; `null` when mixed. Read / Write. */
 descriptor(CharacterRange, "vertical_scale", RangeField.float("char", "7", { validate: validate_number }));
 
-/** `tracking`: the range's spacing between characters; `None` when mixed. Read / Write. */
+/** `tracking`: the range's spacing between characters; `null` when mixed. Read / Write. */
 descriptor(CharacterRange, "tracking", RangeField.int("char", "8", { validate: validate_s4 }));
 
-/** `baseline_shift`: the range's baseline shift in pixels; `None` when mixed. Read / Write. */
+/** `baseline_shift`: the range's baseline shift in pixels; `null` when mixed. Read / Write. */
 descriptor(CharacterRange, "baseline_shift", RangeField.float("char", "9", { validate: validate_number }));
 
-/** `font_caps_option`: the range's font caps option; `None` when mixed. Read / Write. */
+/** `font_caps_option`: the range's font caps option; `null` when mixed. Read / Write. */
 descriptor(CharacterRange, "font_caps_option", RangeField.enum(FontCapsOption, "char", "12"));
 
-/** `font_baseline_option`: the range's font baseline option; `None` when mixed. Read / Write. */
+/** `font_baseline_option`: the range's font baseline option; `null` when mixed. Read / Write. */
 descriptor(CharacterRange, "font_baseline_option", RangeField.enum(FontBaselineOption, "char", "13"));
 
-/** `ligature`: `True` when ligature is used across the range. Read / Write. */
+/** `ligature`: `true` when ligature is used across the range. Read / Write. */
 descriptor(CharacterRange, "ligature", RangeField.bool("char", "18", { default: false }));
 
-/** `baseline_direction`: the range's baseline direction; `None` when mixed. Read / Write. */
+/** `baseline_direction`: the range's baseline direction; `null` when mixed. Read / Write. */
 descriptor(
   CharacterRange,
   "baseline_direction",
   RangeField.enum(BaselineDirection, "char", "35", { default: BaselineDirection.BASELINE_WITH_STREAM }),
 );
 
-/** `tsume`: the range's tsume value (0.0 to 1.0); `None` when mixed. Read / Write. */
+/** `tsume`: the range's tsume value (0.0 to 1.0); `null` when mixed. Read / Write. */
 descriptor(
   CharacterRange,
   "tsume",
   RangeField.float("char", "36", { default: 0.0, validate: validate_normalized_float }),
 );
 
-/** `no_break`: `True` when no-break is applied across the range. Read / Write. */
+/** `no_break`: `true` when no-break is applied across the range. Read / Write. */
 descriptor(CharacterRange, "no_break", RangeField.bool("char", "52", { default: false }));
 
-/** `apply_fill`: when `True`, the range shows a fill; `None` when mixed. Read / Write. */
+/** `apply_fill`: when `true`, the range shows a fill; `null` when mixed. Read / Write. */
 descriptor(CharacterRange, "apply_fill", RangeField.bool("char", "56"));
 
-/** `apply_stroke`: when `True`, the range shows a stroke; `None` when mixed. Read / Write. */
+/** `apply_stroke`: when `true`, the range shows a stroke; `null` when mixed. Read / Write. */
 descriptor(CharacterRange, "apply_stroke", RangeField.bool("char", "57", { default: false }));
 
-/** `stroke_over_fill`: when `True`, the stroke appears over the fill; `None` when mixed. Read / Write. */
+/** `stroke_over_fill`: when `true`, the stroke appears over the fill; `null` when mixed. Read / Write. */
 descriptor(CharacterRange, "stroke_over_fill", RangeField.bool("char", "58", { default: true }));
 
-/** `line_join_type`: the range's line join type for strokes; `None` when mixed. Read / Write. */
+/** `line_join_type`: the range's line join type for strokes; `null` when mixed. Read / Write. */
 descriptor(
   CharacterRange,
   "line_join_type",
   RangeField.enum(LineJoinType, "char", "62", { default: LineJoinType.LINE_JOIN_MITER }),
 );
 
-/** `stroke_width`: the range's stroke thickness; `None` when mixed. Read / Write. */
+/** `stroke_width`: the range's stroke thickness; `null` when mixed. Read / Write. */
 descriptor(
   CharacterRange,
   "stroke_width",
   RangeField.float("char", "63", { default: 1.0, validate: validate_positive_nonzero_number }),
 );
 
-/** `digit_set`: the range's digit set option; `None` when mixed. Read / Write. */
+/** `digit_set`: the range's digit set option; `null` when mixed. Read / Write. */
 descriptor(CharacterRange, "digit_set", RangeField.enum(DigitSet, "char", "70", { default: DigitSet.DEFAULT_DIGITS }));
 
-/** `justification`: the justification of paragraphs in the range; `None` when mixed. Read / Write. */
+/** `justification`: the justification of paragraphs in the range; `null` when mixed. Read / Write. */
 descriptor(CharacterRange, "justification", RangeField.enum(ParagraphJustification, "para", "0"));
 
-/** `first_line_indent`: the paragraphs' first line indent; `None` when mixed. Read / Write. */
+/** `first_line_indent`: the paragraphs' first line indent; `null` when mixed. Read / Write. */
 descriptor(CharacterRange, "first_line_indent", RangeField.float("para", "1", { default: 0.0, validate: validate_number }));
 
-/** `start_indent`: the paragraphs' start indent; `None` when mixed. Read / Write. */
+/** `start_indent`: the paragraphs' start indent; `null` when mixed. Read / Write. */
 descriptor(CharacterRange, "start_indent", RangeField.float("para", "2", { default: 0.0, validate: validate_number }));
 
-/** `end_indent`: the paragraphs' end indent; `None` when mixed. Read / Write. */
+/** `end_indent`: the paragraphs' end indent; `null` when mixed. Read / Write. */
 descriptor(CharacterRange, "end_indent", RangeField.float("para", "3", { default: 0.0, validate: validate_number }));
 
-/** `space_before`: the paragraphs' space before; `None` when mixed. Read / Write. */
+/** `space_before`: the paragraphs' space before; `null` when mixed. Read / Write. */
 descriptor(CharacterRange, "space_before", RangeField.float("para", "4", { default: 0.0, validate: validate_number }));
 
-/** `space_after`: the paragraphs' space after; `None` when mixed. Read / Write. */
+/** `space_after`: the paragraphs' space after; `null` when mixed. Read / Write. */
 descriptor(CharacterRange, "space_after", RangeField.float("para", "5", { default: 0.0, validate: validate_number }));
 
-/** `leading_type`: the paragraphs' leading type; `None` when mixed. Read / Write. */
+/** `leading_type`: the paragraphs' leading type; `null` when mixed. Read / Write. */
 descriptor(CharacterRange, "leading_type", RangeField.enum(LeadingType, "para", "8", { default: LeadingType.ROMAN_LEADING_TYPE }));
 
-/** `auto_hyphenate`: the paragraphs' auto-hyphenate option; `None` when mixed. Read / Write. */
+/** `auto_hyphenate`: the paragraphs' auto-hyphenate option; `null` when mixed. Read / Write. */
 descriptor(CharacterRange, "auto_hyphenate", RangeField.bool("para", "9"));
 
-/** `hanging_roman`: the paragraphs' Roman Hanging Punctuation; `None` when mixed. Read / Write. */
+/** `hanging_roman`: the paragraphs' Roman Hanging Punctuation; `null` when mixed. Read / Write. */
 descriptor(CharacterRange, "hanging_roman", RangeField.bool("para", "21", { default: false }));
 
-/** `every_line_composer`: the paragraphs' Every-Line Composer option; `None` when mixed. Read / Write. */
+/** `every_line_composer`: the paragraphs' Every-Line Composer option; `null` when mixed. Read / Write. */
 descriptor(CharacterRange, "every_line_composer", RangeField.bool("para", "29", { default: false }));
 
-/** `direction`: the paragraphs' direction; `None` when mixed. Read / Write. */
+/** `direction`: the paragraphs' direction; `null` when mixed. Read / Write. */
 descriptor(
   CharacterRange,
   "direction",
@@ -1796,7 +1796,7 @@ descriptor(
 /**
  * `fill_color`: the range's fill color as `[r, g, b]`. Read / Write.
  *
- * Only characters with `apply_fill` participate in the read; `None`
+ * Only characters with `apply_fill` participate in the read; `null`
  * when no character in the range has a fill or the colors are mixed.
  * Setting writes the paint only - like the stroke, it does not enable
  * `apply_fill`.
@@ -1815,7 +1815,7 @@ descriptor(
 /**
  * `stroke_color`: the range's stroke color as `[r, g, b]`. Read / Write.
  *
- * Only characters with `apply_stroke` participate in the read; `None`
+ * Only characters with `apply_stroke` participate in the read; `null`
  * when no character in the range has a stroke or the colors are
  * mixed. Setting writes the paint only - AE does NOT enable
  * `apply_stroke` (probed `W_STROKE_GATE`; the Scripting Guide claims

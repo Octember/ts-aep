@@ -77,7 +77,7 @@ export function psd_layer_box(
   return box;
 }
 
-/** The pixel extent of an enabled, non-inverted vector mask, or `None`. */
+/** The pixel extent of an enabled, non-inverted vector mask, or `null`. */
 export function _path_box(layer: PsdLayer, canvas_w: number, canvas_h: number): _Box | null {
   const block = layer.vector_mask;
   if (block == null || block.length < 8) {

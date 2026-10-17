@@ -253,7 +253,7 @@ export const OM_SETTINGS = new Map<string, [string, any]>([
  */
 export class OutputModule {
   /**
-   * When `True`, writes all source footage XMP metadata to the output file.
+   * When `true`, writes all source footage XMP metadata to the output file.
    * Read / Write.
    */
   declare include_source_xmp: boolean;
@@ -492,7 +492,7 @@ export class OutputModule {
    * - {@link TiffFormatOptions} for TIFF sequences
    * - {@link XmlFormatOptions} for XML-based formats (AVI, H.264, MP3,
    *   QuickTime, WAV)
-   * - `None` for formats without parsed format options
+   * - `null` for formats without parsed format options
    *
    * Read-only.
    */

@@ -181,7 +181,7 @@ export function _component(token: string, scale: number = 255.0): number {
  *
  * @param value - The color token (e.g. `#ffa619`, `red`, `rgb(255,0,0)`).
  * @param current - Value substituted for `currentColor`.
- * @returns RGBA tuple, or `None` for `none`/`transparent`/unparseable/empty.
+ * @returns RGBA tuple, or `null` for `none`/`transparent`/unparseable/empty.
  */
 export function parse_color(value: string | null, current: Rgba = [0.0, 0.0, 0.0, 1.0]): Rgba | null {
   if (!value) return null;

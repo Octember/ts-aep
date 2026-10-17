@@ -133,13 +133,13 @@ export class RenderQueueItem {
   declare name: string;
 
   /**
-   * When `True`, a user notification is enabled for this render queue
+   * When `true`, a user notification is enabled for this render queue
    * item, signaling the user upon render completion. Read / Write.
    */
   declare queue_item_notify: boolean;
 
   /**
-   * The date and time when rendering of this item started, or `None` if
+   * The date and time when rendering of this item started, or `null` if
    * the item has not started rendering. Read-only.
    */
   declare start_time: Date | null;
@@ -367,7 +367,7 @@ export class RenderQueueItem {
   }
 
   /**
-   * When `True`, the item will be rendered when the render queue is
+   * When `true`, the item will be rendered when the render queue is
    * started. Read / Write.
    */
   get render(): boolean {

@@ -269,7 +269,7 @@ export class FolderItem extends Item {
    *
    * Width, height, pixel aspect and frame rate resolve from the named
    * preset in the AE preferences (see
-   * {@link py_aep.models.preferences.Preferences.composition_presets});
+   * {@link Preferences.composition_presets});
    * presets carry no duration, so it must be given.
    *
    * @param name - The name of the new composition. Pass `null` to auto-generate a name (`Comp 1`,

@@ -217,9 +217,9 @@ export class AVItem extends Item {
   declare _viewer: Viewer | null;
 
   /**
-   * When `True`, a proxy is used for the item. Read / Write.
+   * When `true`, a proxy is used for the item. Read / Write.
    *
-   * It is set to `True` by all the `set_proxy` methods, and to `False` by
+   * It is set to `true` by all the `set_proxy` methods, and to `false` by
    * the `set_proxy_to_none()` method.
    */
   declare use_proxy: boolean;
@@ -290,10 +290,10 @@ export class AVItem extends Item {
   }
 
   /**
-   * When `True`, the AVItem has an audio component.
+   * When `true`, the AVItem has an audio component.
    *
    * In a {@link CompItem}, the value is linked to the composition.
-   * In a {@link py_aep.models.items.footage.FootageItem | FootageItem},
+   * In a {@link FootageItem | FootageItem},
    * the value is linked to the `main_source` or `proxy_source` object.
    */
   get has_audio(): boolean {
@@ -301,25 +301,25 @@ export class AVItem extends Item {
   }
 
   /**
-   * `True` if the item has a video component.
+   * `true` if the item has a video component.
    *
    * An AVItem has video when it has non-zero dimensions (`width > 0`
-   * and `height > 0`). In a {@link CompItem}, the value is always `True`.
-   * In a {@link py_aep.models.items.footage.FootageItem | FootageItem},
+   * and `height > 0`). In a {@link CompItem}, the value is always `true`.
+   * In a {@link FootageItem | FootageItem},
    * the value depends on the footage source (e.g. audio-only files
-   * return `False`).
+   * return `false`).
    */
   get has_video(): boolean {
     return this.width > 0 && this.height > 0;
   }
 
   /**
-   * When `True`, the AVItem is a placeholder, or represents footage
+   * When `true`, the AVItem is a placeholder, or represents footage
    * with a source file that could not be found when the project was last
    * saved. Read-only.
    *
-   * Always `False` for a {@link CompItem}; a
-   * {@link py_aep.models.items.footage.FootageItem | FootageItem} reports the
+   * Always `false` for a {@link CompItem}; a
+   * {@link FootageItem | FootageItem} reports the
    * state of its `main_source` (see the `FootageItem` override).
    */
   get footage_missing(): boolean {
@@ -327,11 +327,11 @@ export class AVItem extends Item {
   }
 
   /**
-   * `True` if the item can be used as an alternate source when setting
-   * {@link py_aep.models.properties.property.Property.alternate_source | Property.alternate_source}.
+   * `true` if the item can be used as an alternate source when setting
+   * {@link Property.alternate_source | Property.alternate_source}.
    * Read-only.
    *
-   * A {@link CompItem} or a {@link py_aep.models.items.footage.FootageItem | FootageItem}
+   * A {@link CompItem} or a {@link FootageItem | FootageItem}
    * with a video component can be used as an alternate source; see the
    * `FootageItem` override for footage restrictions.
    */
@@ -400,7 +400,7 @@ export class AVItem extends Item {
   /**
    * Set a placeholder as the proxy source.
    *
-   * @param name - The placeholder name. `None` becomes `Missing Name`. An empty string becomes
+   * @param name - The placeholder name. `null` becomes `Missing Name`. An empty string becomes
    *   `Placeholder`.
    * @param width - Width in pixels (4-30000).
    * @param height - Height in pixels (4-30000).
@@ -428,7 +428,7 @@ export class AVItem extends Item {
    * Set a solid as the proxy source.
    *
    * @param color - Solid color as [R, G, B] in 0.0-1.0 range.
-   * @param name - The solid name. Pass `None` to auto-generate a name from the color (e.g.
+   * @param name - The solid name. Pass `null` to auto-generate a name from the color (e.g.
    *   `Red Solid 1`). An empty string becomes `????`.
    * @param width - Width in pixels (1-30000).
    * @param height - Height in pixels (1-30000).

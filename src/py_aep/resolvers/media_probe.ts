@@ -691,7 +691,7 @@ export function _tiff_photoshop_layer_count(fp: IO, en: string, offset: number, 
  * colour channels plus one for an extra sample marked as alpha
  * (`extra_alpha`: ExtraSamples 1 or 2, not 0 = unspecified) or for
  * Photoshop layer data. `photoshop_layers` is the layer count of that data
- * (tag 37724), `None` when the file has none; without it AE counts an
+ * (tag 37724), `null` when the file has none; without it AE counts an
  * image with an alpha sample as one layer.
  */
 export function _tiff_media_info(
@@ -1773,7 +1773,7 @@ export function _naive_datetime_us(y: number, mo: number, d: number, h: number, 
  *
  * Returns a naive `datetime` (any timezone offset is dropped - all samples
  * in a stream share one offset, so the inter-sample span is unaffected) or
- * `None` if the value cannot be parsed. Here a naive datetime is returned as
+ * `null` if the value cannot be parsed. Here a naive datetime is returned as
  * its microseconds since the epoch, which keeps differences exact.
  *
  * TODO(port): the `datetime.fromisoformat` fallback accepts only YYYY-MM-DD with an optional

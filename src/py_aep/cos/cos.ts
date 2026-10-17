@@ -103,7 +103,7 @@ export function enum_repr(E: any, v: any): string {
  * Safely traverse parsed COS data by successive keys.
  *
  * Each key is tried as a dict string key first and then as a list
- * index. Returns `None` when any step along the path is missing.
+ * index. Returns `null` when any step along the path is missing.
  *
  * @example
  * :

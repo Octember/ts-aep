@@ -121,7 +121,7 @@ export class Keyframe {
    * The "in" interpolation type for the keyframe. Read / Write.
    *
    * Raises `ValueError` if the type is not valid for the owning property
-   * (see {@link py_aep.models.properties.property.Property.is_interpolation_type_valid | is_interpolation_type_valid}).
+   * (see {@link Property.is_interpolation_type_valid | is_interpolation_type_valid}).
    */
   declare in_interpolation_type: KeyframeInterpolationType;
 
@@ -136,12 +136,12 @@ export class Keyframe {
    * The "out" interpolation type for the keyframe. Read / Write.
    *
    * Raises `ValueError` if the type is not valid for the owning property
-   * (see {@link py_aep.models.properties.property.Property.is_interpolation_type_valid | is_interpolation_type_valid}).
+   * (see {@link Property.is_interpolation_type_valid | is_interpolation_type_valid}).
    */
   declare out_interpolation_type: KeyframeInterpolationType;
 
   /**
-   * `True` if the keyframe is roving. The first and last keyframe in
+   * `true` if the keyframe is roving. The first and last keyframe in
    * a property cannot rove. Read / Write.
    *
    * Setting this on a spatial property re-times the run of roving
@@ -156,7 +156,7 @@ export class Keyframe {
   declare roving: boolean;
 
   /**
-   * `True` if the keyframe has temporal auto-Bezier interpolation. Temporal
+   * `true` if the keyframe has temporal auto-Bezier interpolation. Temporal
    * auto-Bezier interpolation affects this keyframe only if the keyframe
    * interpolation type is `KeyframeInterpolationType.BEZIER` for both
    * `in_interpolation_type` and `out_interpolation_type`. Read / Write.
@@ -164,12 +164,12 @@ export class Keyframe {
   declare temporal_auto_bezier: boolean;
 
   /**
-   * `True` if the keyframe has temporal continuity. Temporal continuity affects
+   * `true` if the keyframe has temporal continuity. Temporal continuity affects
    * this keyframe only if the keyframe interpolation type is
    * `KeyframeInterpolationType.BEZIER` for both `in_interpolation_type` and
    * `out_interpolation_type`. Read / Write.
    *
-   * As in After Effects, setting it to `True` turns
+   * As in After Effects, setting it to `true` turns
    * {@link Keyframe.temporal_auto_bezier | temporal_auto_bezier} off, a temporal
    * auto-Bezier keyframe stays continuous, and setting neither interpolation
    * type to `KeyframeInterpolationType.BEZIER` turns it off.
@@ -359,7 +359,7 @@ export class Keyframe {
    * Read raw value from the binary chunk data.
    *
    * Returns a scalar for 1-dimensional properties, a list for
-   * multi-dimensional or color properties, and `None` when the
+   * multi-dimensional or color properties, and `null` when the
    * keyframe type carries no value (e.g. markers).
    */
   _extract_raw_value(): number[] | number | null {
@@ -417,7 +417,7 @@ export class Keyframe {
    *   list contains 2 floating-point values.
    * - If the property value type is `PropertyValueType.ThreeD_SPATIAL`, the
    *   list contains 3 floating-point values.
-   * - If the property value type is neither of these types, returns `None`.
+   * - If the property value type is neither of these types, returns `null`.
    */
   get in_spatial_tangent(): number[] | null {
     const kf_data: any = this._ldat_item.kf_data;
@@ -451,7 +451,7 @@ export class Keyframe {
    *   list contains 2 floating-point values.
    * - If the property value type is `PropertyValueType.ThreeD_SPATIAL`, the
    *   list contains 3 floating-point values.
-   * - If the property value type is neither of these types, returns `None`.
+   * - If the property value type is neither of these types, returns `null`.
    */
   get out_spatial_tangent(): number[] | null {
     const kf_data: any = this._ldat_item.kf_data;
@@ -516,7 +516,7 @@ export class Keyframe {
    * with what AE reports for the same file.
    *
    * Derived in the raw chunk space, matching what these accessors
-   * return. Returns `None` when the keyframe carries no spatial data.
+   * return. Returns `null` when the keyframe carries no spatial data.
    */
   _auto_spatial_tangents(): [number[], number[]] | null {
     if (!("in_spatial_tangents" in (this._ldat_item.kf_data as any))) return null;
@@ -529,7 +529,7 @@ export class Keyframe {
    * AE's derived per-dimension ease speeds for a temporal auto-bezier
    * keyframe, as `(in_speeds, out_speeds)`.
    *
-   * Returns `None` when the value is not numeric, so the caller can fall
+   * Returns `null` when the value is not numeric, so the caller can fall
    * back to the stored ease.
    */
   _auto_temporal_speeds(): [number[], number[]] | null {
@@ -599,7 +599,7 @@ export class Keyframe {
    * properties, this is a {@link Shape}. For text properties, this is a
    * {@link TextDocument}. For marker properties, this is a {@link MarkerValue}.
    * For the Curves effect's curves, this is a {@link Curves}. For properties
-   * that carry no value, this is `None`.
+   * that carry no value, this is `null`.
    */
   get value(): _ValueType {
     if (this._property == null) return this._stored_value;
@@ -1029,10 +1029,10 @@ export class Keyframe {
   }
 
   /**
-   * `True` if the keyframe has spatial auto-Bezier interpolation. This type
+   * `true` if the keyframe has spatial auto-Bezier interpolation. This type
    * of interpolation affects this keyframe only if {@link spatial_continuous} is
-   * also `True`. If the property value type is neither `TwoD_SPATIAL` nor
-   * `ThreeD_SPATIAL`, the value is `False`.
+   * also `true`. If the property value type is neither `TwoD_SPATIAL` nor
+   * `ThreeD_SPATIAL`, the value is `false`.
    */
   get spatial_auto_bezier(): boolean {
     const kf_data: any = this._ldat_item.kf_data;
@@ -1069,9 +1069,9 @@ export class Keyframe {
   }
 
   /**
-   * `True` if the keyframe has spatial continuity. If the property value
+   * `true` if the keyframe has spatial continuity. If the property value
    * type is neither `TwoD_SPATIAL` nor `ThreeD_SPATIAL`, the value is
-   * `False`.
+   * `false`.
    */
   get spatial_continuous(): boolean {
     const kf_data: any = this._ldat_item.kf_data;

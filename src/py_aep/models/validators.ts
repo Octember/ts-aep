@@ -38,8 +38,8 @@ export type NumBound = number | ((instance: any) => number | null) | null;
  *     dynamic bounds. Inclusive unless `exclusive_min` is set.
  * - `max`: Maximum allowed value (inclusive). May be a static number or a callable
  *     `(instance) -> float` for dynamic bounds.
- * - `integer`: When `True`, reject non-`int` values.
- * - `exclusive_min`: When `True`, the value must be strictly greater than `min` (e.g. a
+ * - `integer`: When `true`, reject non-`int` values.
+ * - `exclusive_min`: When `true`, the value must be strictly greater than `min` (e.g. a
  *     positive-but-non-zero size).
  */
 // NOTE(port): int/float — integral values are plain numbers by design (RULEBOOK §4); error messages print whole-number bounds without Python's trailing ".0".
@@ -93,14 +93,14 @@ export function _validate_number(
  * Return a validator that checks a fixed-length numeric sequence.
  *
  * @param kw - Keyword arguments:
- * - `length`: Required number of elements. When `None`, any length is accepted. May be a callable
+ * - `length`: Required number of elements. When `null`, any length is accepted. May be a callable
  *     `(instance) -> int` for dynamic bounds.
  * - `min`: Minimum allowed value per element. May be a static number or a callable
  *     `(instance) -> float` for dynamic bounds. Inclusive unless `exclusive_min` is set.
  * - `max`: Maximum allowed value per element (inclusive). May be a static number or a callable
  *     `(instance) -> float` for dynamic bounds.
- * - `integer`: When `True`, reject non-`int` elements.
- * - `exclusive_min`: When `True`, each element must be strictly greater than `min` (e.g. a
+ * - `integer`: When `true`, reject non-`int` elements.
+ * - `exclusive_min`: When `true`, each element must be strictly greater than `min` (e.g. a
  *     non-zero-area box size).
  */
 export function validate_sequence(
@@ -214,11 +214,11 @@ export const validate_platform = validate_one_of(["windows", "macos"]);
  * Return a validator that checks a string value.
  *
  * @param kw - Keyword arguments:
- * - `allow_empty`: When `False`, reject empty strings.
+ * - `allow_empty`: When `false`, reject empty strings.
  * - `max_length`: Maximum allowed character count.
  * - `max_bytes`: Maximum allowed UTF-8 byte count, for a value stored in a fixed-width chunk field
  *     (where `struct.pack` would otherwise truncate silently, mid-character for multi-byte text).
- * - `allow_null`: When `False`, reject strings containing a NUL (`\x00`) character, which corrupt
+ * - `allow_null`: When `false`, reject strings containing a NUL (`\x00`) character, which corrupt
  *     the COS/text blobs AE reads.
  */
 export function _validate_str(
@@ -252,9 +252,9 @@ export function _validate_str(
  * Return a validator that checks a filesystem path.
  *
  * @param kw - Keyword arguments:
- * - `must_exist`: When `True`, reject paths that don't exist (`ValueError`). When `False`, reject
- *     paths that do exist (`FileExistsError`). When `None`, allow both.
- * - `must_be_file`: When `True`, also reject an existing path that is not a regular file. Without
+ * - `must_exist`: When `true`, reject paths that don't exist (`ValueError`). When `false`, reject
+ *     paths that do exist (`FileExistsError`). When `null`, allow both.
+ * - `must_be_file`: When `true`, also reject an existing path that is not a regular file. Without
  *     this a directory passes `must_exist` and only fails later, deep in a reader, as an
  *     OS-specific error (`PermissionError` on Windows, `IsADirectoryError` elsewhere).
  */

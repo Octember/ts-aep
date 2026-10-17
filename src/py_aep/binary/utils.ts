@@ -289,7 +289,7 @@ export function dump_alas(data: Map<string, any>): string {
  *
  * @param fullpath - Absolute path to the file, or the containing folder for an image sequence.
  * @param kw - Keyword arguments:
- * - `target_is_folder`: `True` when `fullpath` is a sequence folder.
+ * - `target_is_folder`: `true` when `fullpath` is a sequence folder.
  */
 export function build_als2_list(
   fullpath: string,

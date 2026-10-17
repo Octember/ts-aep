@@ -2,7 +2,7 @@
  * Serialize Python objects back to COS (Carousel Object Syntax) binary.
  *
  * This is the inverse of `CosParser.parse`: it takes a nested Python
- * structure (dicts, lists, strings, numbers, bools, `None`,
+ * structure (dicts, lists, strings, numbers, bools, `null`,
  * `IndirectObject`, `IndirectReference`, `Stream`) and emits COS-format
  * bytes suitable for writing back into a btdk chunk's `binary_data`.
  */
@@ -14,7 +14,7 @@ import { CosName, IndirectObject, IndirectReference, Stream } from "./cos.ts";
  * Serialize a parsed COS value tree back to binary.
  *
  * @param data - The Python object tree to serialize. May be a dict, list,
- *   str, int, float, bool, `None`, `bytes`,
+ *   str, int, float, bool, `null`, `bytes`,
  *   `IndirectObject`, `IndirectReference`, or `Stream`.
  * @returns The COS binary representation.
  */

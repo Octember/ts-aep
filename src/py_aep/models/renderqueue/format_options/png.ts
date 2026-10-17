@@ -107,7 +107,7 @@ export class PngFormatOptions extends FormatOptionsBase {
   /**
    * The color primaries used for HDR10 metadata. Corresponds to the
    * `Color Primaries` dropdown in the PNG Options dialog.
-   * Only meaningful when `include_hdr10_metadata` is `True`. An
+   * Only meaningful when `include_hdr10_metadata` is `true`. An
    * out-of-enum stored value reads back as a raw `int` (the binary
    * is trusted). Read / Write.
    */
@@ -131,7 +131,7 @@ export class PngFormatOptions extends FormatOptionsBase {
 
   /**
    * The minimum display luminance in nits for HDR10 metadata, or
-   * `None` if not explicitly set. Corresponds to the
+   * `null` if not explicitly set. Corresponds to the
    * `Luminance Minimum` field in the PNG Options dialog. Read / Write.
    */
   get luminance_min(): number | null {
@@ -151,7 +151,7 @@ export class PngFormatOptions extends FormatOptionsBase {
 
   /**
    * The maximum display luminance in nits for HDR10 metadata, or
-   * `None` if not explicitly set. Corresponds to the
+   * `null` if not explicitly set. Corresponds to the
    * `Luminance Maximum` field in the PNG Options dialog. Read / Write.
    */
   get luminance_max(): number | null {
@@ -171,7 +171,7 @@ export class PngFormatOptions extends FormatOptionsBase {
 
   /**
    * The maximum content light level in nits for HDR10 metadata, or
-   * `None` if not explicitly set. Corresponds to the
+   * `null` if not explicitly set. Corresponds to the
    * `Content Light Maximum` field in the PNG Options dialog. Read / Write.
    */
   get content_light_max(): number | null {
@@ -191,7 +191,7 @@ export class PngFormatOptions extends FormatOptionsBase {
 
   /**
    * The maximum frame average light level in nits for HDR10 metadata,
-   * or `None` if not explicitly set. Corresponds to the
+   * or `null` if not explicitly set. Corresponds to the
    * `Content Light Average` field in the PNG Options dialog. Read / Write.
    */
   get content_light_average(): number | null {

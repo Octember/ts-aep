@@ -93,7 +93,7 @@ export const _PSD_FOOTAGE_DIMENSIONS: Map<number, string> = new Map<number, stri
 
 /**
  * Resolve a `Choose Layer Dialog` popup index to its string value, or
- * `None` when the preference is unset (or holds an unknown index).
+ * `null` when the preference is unset (or holds an unknown index).
  */
 export function _choose_layer_pref(preferences: Preferences, key: string, mapping: Map<number, string>): string | null {
   if (!preferences.have_pref(_CHOOSE_LAYER_SECTION, key, PREFType.PREF_Type_MACHINE_SPECIFIC)) {
@@ -105,7 +105,7 @@ export function _choose_layer_pref(preferences: Preferences, key: string, mappin
 
 /**
  * The sticky Layer Options choice for a PSD/PSB COMP import (`"editable"`
- * or `"merge"`), or `None` when the preference is unset.
+ * or `"merge"`), or `null` when the preference is unset.
  *
  * Mirrors the "PSD Comp Layer Styles Option v2" import-dialog preference
  * that AE's own `importFile` follows.
@@ -116,7 +116,7 @@ export function psd_comp_layer_styles(preferences: Preferences): string | null {
 
 /**
  * The sticky Layer Options choice for a single-layer PSD/PSB FOOTAGE
- * import (`"merge"` or `"ignore"`), or `None` when the preference is unset.
+ * import (`"merge"` or `"ignore"`), or `null` when the preference is unset.
  *
  * Mirrors the "PSD Footage Layer Styles Option" import-dialog preference.
  */
@@ -126,7 +126,7 @@ export function psd_footage_layer_styles(preferences: Preferences): string | nul
 
 /**
  * The sticky Footage Dimensions choice for a single-layer PSD/PSB FOOTAGE
- * import (`"document"` or `"layer"`), or `None` when the preference is unset.
+ * import (`"document"` or `"layer"`), or `null` when the preference is unset.
  *
  * Mirrors the "PSD Dimensions Popup" import-dialog preference.
  */
@@ -481,7 +481,7 @@ export class Preferences {
   /**
    * Return `(found, value, is_override)`.
    *
-   * `value` is a typed Python value when `is_override` is `True`,
+   * `value` is a typed Python value when `is_override` is `true`,
    * otherwise the raw pref-file text (AE's mixed hex/ASCII encoding).
    */
   _resolve(section_name: string, key_name: string, pref_type: PREFType): [boolean, any, boolean] {
@@ -689,7 +689,7 @@ export class Preferences {
    * Delete the given preference from this object's view.
    *
    * The file value (if any) is masked, not removed from disk:
-   * {@link have_pref} returns `False` and getters fall back to their
+   * {@link have_pref} returns `false` and getters fall back to their
    * `default` afterwards.
    *
    * @param section_name - The name of a preferences section.

@@ -110,7 +110,7 @@ export function _list_remove(xs: any[], x: any): void {
  *
  * Info:
  *     `Layer` is a subclass of {@link PropertyGroup}, which is a subclass of
- *     {@link py_aep.models.properties.property_base.PropertyBase | PropertyBase}. All
+ *     {@link PropertyBase | PropertyBase}. All
  *     methods and attributes of {@link PropertyGroup}, in addition to those listed below,
  *     are available when working with `Layer` objects.
  *
@@ -147,7 +147,7 @@ export class Layer extends PropertyGroup {
   static _LIVE_DEFAULTS: ReadonlyArray<readonly [string, string]> = [];
 
   /**
-   * When `True`, the layer is enabled. Overrides `PropertyBase.enabled`
+   * When `true`, the layer is enabled. Overrides `PropertyBase.enabled`
    * to read from the ldta chunk. Read / Write.
    */
   declare enabled: boolean;
@@ -166,25 +166,25 @@ export class Layer extends PropertyGroup {
   declare label: Label;
 
   /**
-   * When `True`, the layer is locked. This corresponds to the lock toggle
+   * When `true`, the layer is locked. This corresponds to the lock toggle
    * in the Layer panel. Read / Write.
    */
   declare locked: boolean;
 
-  /** When `True`, the layer was created as a null object. Read-only. */
+  /** When `true`, the layer was created as a null object. Read-only. */
   declare null_layer: boolean;
 
   /** The ID of the layer's parent layer. `0` if the layer has no parent. */
   declare _parent_id: number;
 
   /**
-   * When `True`, the layer is "shy", meaning that it is hidden in the
+   * When `true`, the layer is "shy", meaning that it is hidden in the
    * Layer panel if the composition's "Hide all shy layers" option is
    * toggled on. Read / Write.
    */
   declare shy: boolean;
 
-  /** When `True`, the layer is soloed. Read / Write. */
+  /** When `true`, the layer is soloed. Read / Write. */
   declare solo: boolean;
 
   /**
@@ -524,7 +524,7 @@ export class Layer extends PropertyGroup {
   /**
    * Whether the layer transforms in three dimensions.
    *
-   * `False` on the base {@link Layer}: only an {@link AVLayer} carries the
+   * `false` on the base {@link Layer}: only an {@link AVLayer} carries the
    * 3D switch, and cameras and lights are always 3D, so both override
    * this. Read-only.
    */
@@ -535,7 +535,7 @@ export class Layer extends PropertyGroup {
   /**
    * The layer's pixel dimensions, for denormalizing effect points.
    *
-   * `None` on the base {@link Layer}: `width` / `height` live on
+   * `null` on the base {@link Layer}: `width` / `height` live on
    * {@link AVLayer}, and a camera or light has neither, so nothing
    * normalized against a layer sits on one.
    */
@@ -646,18 +646,18 @@ export class Layer extends PropertyGroup {
   }
 
   /**
-   * `True` if the layer has a video switch in the Timeline panel.
+   * `true` if the layer has a video switch in the Timeline panel.
    *
-   * Always `False` for {@link CameraLayer} and {@link LightLayer} objects.
+   * Always `false` for {@link CameraLayer} and {@link LightLayer} objects.
    */
   get has_video(): boolean {
     return false;
   }
 
   /**
-   * `True` if the layer is an adjustment layer.
+   * `true` if the layer is an adjustment layer.
    *
-   * Always `False` for {@link CameraLayer} and {@link LightLayer} objects.
+   * Always `false` for {@link CameraLayer} and {@link LightLayer} objects.
    * Overridden in {@link AVLayer} to read from the binary chunk.
    */
   get adjustment_layer(): boolean {
@@ -665,9 +665,9 @@ export class Layer extends PropertyGroup {
   }
 
   /**
-   * `True` if the layer is an environment layer.
+   * `true` if the layer is an environment layer.
    *
-   * Always `False` for {@link CameraLayer} and {@link LightLayer} objects.
+   * Always `false` for {@link CameraLayer} and {@link LightLayer} objects.
    * Overridden in {@link AVLayer} to read from the binary chunk.
    */
   get environment_layer(): boolean {
@@ -675,7 +675,7 @@ export class Layer extends PropertyGroup {
   }
 
   /**
-   * When `True`, the layer is active at the current time.
+   * When `true`, the layer is active at the current time.
    *
    * Overrides {@link PropertyBase.active} to evaluate
    * {@link active_at_time} at {@link time}.
@@ -687,9 +687,9 @@ export class Layer extends PropertyGroup {
   /**
    * The layer's marker property.
    *
-   * A {@link py_aep.models.properties.property.Property | Property} with
+   * A {@link Property | Property} with
    * `match_name="ADBE Marker"` whose keyframes hold marker values.
-   * `None` when the layer has no markers.
+   * `null` when the layer has no markers.
    */
   get marker(): Property | null {
     let prop: any;
@@ -754,7 +754,7 @@ export class Layer extends PropertyGroup {
    * with `layer.effects.add_property(...)`. An empty group is falsy,
    * so `if layer.effects:` still means "has effects".
    *
-   * `None` on {@link CameraLayer} and {@link LightLayer}, the only layer kinds
+   * `null` on {@link CameraLayer} and {@link LightLayer}, the only layer kinds
    * AE gives no Effects group; every other layer kind always has one.
    */
   get effects(): PropertyGroup | null {
@@ -769,7 +769,7 @@ export class Layer extends PropertyGroup {
    * {@link PropertyGroup} representing one mask.
    *
    * Like {@link effects}, the group is returned even when it is empty (an
-   * empty group is falsy), and is `None` only on {@link CameraLayer} and
+   * empty group is falsy), and is `null` only on {@link CameraLayer} and
    * {@link LightLayer}, which AE gives no Masks group.
    */
   get masks(): PropertyGroup | null {
@@ -782,7 +782,7 @@ export class Layer extends PropertyGroup {
    * This is the Text `PropertyGroup` (match name `ADBE Text Properties`),
    * holding Source Text, Path Options, More Options and the Animators.
    *
-   * `None` on every layer that is not a {@link TextLayer}: unlike
+   * `null` on every layer that is not a {@link TextLayer}: unlike
    * {@link effects} and {@link masks}, this group is never synthesized for
    * other layer kinds because AE does not expose it on them.
    */
@@ -791,11 +791,11 @@ export class Layer extends PropertyGroup {
   }
 
   /**
-   * The child `PropertyGroup` for `match_name`, or `None` when this
+   * The child `PropertyGroup` for `match_name`, or `null` when this
    * layer kind does not have it.
    *
    * Missing top-level groups are synthesized per layer kind by
-   * `synthesize_layer_properties`, so a `None` here means the kind has
+   * `synthesize_layer_properties`, so a `null` here means the kind has
    * no such group at all, not that the `.aep` merely omitted an empty
    * one (AE writes the Effect / Mask Parade only once it has content).
    */
@@ -859,7 +859,7 @@ export class Layer extends PropertyGroup {
   }
 
   /**
-   * The parent of this layer; can be `None`.
+   * The parent of this layer; can be `null`.
    *
    * Offset values are calculated to counterbalance any transforms above this layer
    * in the hierarchy, so that when you set the parent there is no apparent jump in
@@ -908,7 +908,7 @@ export class Layer extends PropertyGroup {
   }
 
   /**
-   * Parent this layer to `new_parent` (`None` to unparent), rewriting
+   * Parent this layer to `new_parent` (`null` to unparent), rewriting
    * its transform so `child_world` (its world matrix under the old
    * parent, at comp `time`) does not move.
    *
@@ -1170,7 +1170,7 @@ export class Layer extends PropertyGroup {
    * In this case, an offset is calculated and set in the child layer's transform
    * fields, to prevent the jump from occurring.
    *
-   * @param new_parent - The new parent layer, or `None` to unparent.
+   * @param new_parent - The new parent layer, or `null` to unparent.
    * @throws {@link ValueError} If `new_parent` is this layer itself, one of its descendants, or a
    *   layer in another composition.
    */
@@ -1182,7 +1182,7 @@ export class Layer extends PropertyGroup {
   /**
    * Return whether the layer is active at the given time.
    *
-   * For this method to return `True`, three conditions must be met:
+   * For this method to return `true`, three conditions must be met:
    *
    * 1. The layer must be `enabled`.
    * 2. No other layer in the {@link containing_comp} may be soloed unless

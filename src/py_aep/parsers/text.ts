@@ -1,9 +1,9 @@
 /**
  * Parse COS (Carousel Object Structure) text data into text models.
  *
- * Transforms the dict returned by {@link py_aep.cos.CosParser | CosParser} for a
- * `btdk` chunk into {@link py_aep.models.text.TextDocument | TextDocument} and
- * {@link py_aep.models.text.FontObject | FontObject} instances.
+ * Transforms the dict returned by {@link CosParser | CosParser} for a
+ * `btdk` chunk into {@link TextDocument | TextDocument} and
+ * {@link FontObject | FontObject} instances.
  *
  * The COS data layout follows the structure documented in the
  * `lottie-docs AEP reference <https://github.com/nickt/lottie-docs/blob/main/docs/aep.md#list-btdk>`_.
@@ -174,7 +174,7 @@ export function parse_text_documents(
  * {@link py_aep.parsers.property.parse_text_document | parse_text_document}.
  *
  * @param cos_data - The parsed COS dict from a `btdk` chunk (the return
- *   value of {@link py_aep.cos.CosParser.parse | CosParser.parse}).
+ *   value of {@link CosParser.parse | CosParser.parse}).
  * @param btdk_body - The btdk chunk body for COS write-back.
  * @returns A tuple `(text_documents, fonts)` where `text_documents` is a
  *   list of {@link TextDocument} (one per keyframe) and `fonts` is

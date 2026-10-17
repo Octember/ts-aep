@@ -781,7 +781,7 @@ export function effect_definition_entries(
  * `name` is matched against the effect match name across all entries
  * first, then against the `fnam` display name.
  *
- * @returns `(match_name, display_name, def_sspc)` for the matching definition, or `None`.
+ * @returns `(match_name, display_name, def_sspc)` for the matching definition, or `null`.
  */
 export function match_effect_definition(
   entries: [string, string, ListChunk][],

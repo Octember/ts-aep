@@ -181,7 +181,7 @@ export class SspcChunk extends Chunk {
   // -- Extended settings (bytes 184-221) ---------------------------------
   declare _reserved_b8: Uint8Array;
   /**
-   * Byte 0xB9: `True` when the sequence was imported with a user-set
+   * Byte 0xB9: `true` when the sequence was imported with a user-set
    * frame range. AE sets it for ranged imports only - a sequence with
    * missing interior frames but no range keeps 0 (probed range fixtures,
    * AE 2026).
@@ -205,11 +205,11 @@ export class SspcChunk extends Chunk {
 
   declare _reserved_c4: Uint8Array;
   /**
-   * Byte 0xC7: `True` when the footage spans its full source frame
-   * (including a chosen layer imported at Document Size), `False` for a
+   * Byte 0xC7: `true` when the footage spans its full source frame
+   * (including a chosen layer imported at Document Size), `false` for a
    * layer cropped to its content box (`COMP_CROPPED_LAYERS` or a chosen
    * layer imported at Layer Size). Written only for file footage;
-   * solids/placeholders leave it `False`.
+   * solids/placeholders leave it `false`.
    */
   declare full_frame: boolean;
 
@@ -514,7 +514,7 @@ register("sspc")(SspcChunk);
  *
  * @param source_format - 4-char `sspc` source-format code.
  * @param kw - Keyword arguments:
- * - `sequence`: `True` for an image sequence.
+ * - `sequence`: `true` for an image sequence.
  */
 export function build_generic_opti_data(source_format: string, kw: { sequence?: boolean } = {}): Uint8Array {
   const { sequence = false } = kw;
@@ -851,7 +851,7 @@ export function build_ai_document_opti_data(width: number, height: number, layer
  * - `text_document_layers` (0x30): the source document's layer count.
  * - `text_element_count` (0x3C): element/page count (1).
  * - `text_layer_visible` (0x3D): the source layer's visibility in the
- *   Illustrator/PDF document (`False` for a layer the file's default
+ *   Illustrator/PDF document (`false` for a layer the file's default
  *   configuration hides).
  * - `text_layer_name` (0x44): the layer name, NUL-terminated.
  * - `text_page_height`/`text_page_width` (0x248/0x24C): the redundant
@@ -875,7 +875,7 @@ export function build_ai_document_opti_data(width: number, height: number, layer
  * @param layer_name - The referenced layer's name.
  * @param layer_count - How many layers the source document has.
  * @param artwork_bounds - The layer's artwork box `(x0, y0, x1, y1)` in page points for a Layer
- *   Size import; `None` keeps the full-page box (Document Size and comp imports).
+ *   Size import; `null` keeps the full-page box (Document Size and comp imports).
  * @param visible - The layer's visibility in the source document
  *   (`resolvers.ai_layers.AiLayer.visible`).
  */
@@ -1006,10 +1006,10 @@ export class PsdOptiChunk extends OptiChunk {
   declare _total_length: number;
 
   /**
-   * `True` for a layer with a vector mask (a shape layer's included,
+   * `true` for a layer with a vector mask (a shape layer's included,
    * enabled or disabled) and for the merged still of a flattened (layerless)
    * file imported as a one-layer composition; other per-layer and plain
-   * merged optis leave it `False` (measured on AE 2026).
+   * merged optis leave it `false` (measured on AE 2026).
    */
   declare psd_vector_or_merged: boolean;
 
@@ -1188,7 +1188,7 @@ export class TextOptiChunk extends OptiChunk {
   declare text_element_count: number;
 
   /**
-   * The source layer's visibility in the Illustrator/PDF document: `False`
+   * The source layer's visibility in the Illustrator/PDF document: `false`
    * for a layer listed in the file's `/OCProperties` `/D` `/OFF` array, which
    * AE also imports with its comp-layer video switch off. Zero for
    * whole-document footage, which has no source layer.

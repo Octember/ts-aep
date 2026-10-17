@@ -24,12 +24,12 @@ import { AVLayer } from "./av_layer.ts";
  * @see https://ae-scripting.docsforadobe.dev/layer/threedmodellayer/
  */
 export class ThreeDModelLayer extends AVLayer {
-  /** `True` for 3D Model layers. Read-only. */
+  /** `true` for 3D Model layers. Read-only. */
   get can_set_collapse_transformation(): boolean {
     return true;
   }
 
-  /** `False` for 3D Model layers (time remapping is not supported). Read-only. */
+  /** `false` for 3D Model layers (time remapping is not supported). Read-only. */
   get can_set_time_remap_enabled(): boolean {
     return false;
   }

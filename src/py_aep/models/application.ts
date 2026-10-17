@@ -147,7 +147,7 @@ export class Application {
 
   /**
    * The Viewer object for the currently focused or active-focused viewer
-   * (Composition, Layer, or Footage) panel. Returns `None` if no viewers
+   * (Composition, Layer, or Footage) panel. Returns `null` if no viewers
    * are open. Read-only.
    */
   get active_viewer(): Viewer | null {
@@ -167,7 +167,7 @@ export class Application {
    * A string indicating the version and build of After Effects, formatted
    * as "\{major\}.\{minor\}x\{build\}" (e.g., "25.6x101"). Read / Write.
    *
-   * Alias for {@link py_aep.models.application.Application.version | version}.
+   * Alias for {@link Application.version | version}.
    *
    * **Warning:** This attribute is read-only in ExtendScript. Modifying it could
    * cause issues when opening the file in After Effects.

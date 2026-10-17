@@ -277,8 +277,8 @@ export class Property extends PropertyBase {
   declare _vector: boolean;
 
   /**
-   * When `True`, the property's X/Y ratio is locked (the constrain
-   * proportions switch of a Scale or Mask Feather; `True` on any property
+   * When `true`, the property's X/Y ratio is locked (the constrain
+   * proportions switch of a Scale or Mask Feather; `true` on any property
    * without one). Read-only.
    */
   declare locked_ratio: boolean;
@@ -286,7 +286,7 @@ export class Property extends PropertyBase {
   declare _is_spatial_raw: boolean;
 
   /**
-   * When `True`, the named property defines a spatial value.
+   * When `true`, the named property defines a spatial value.
    *
    * Examples are position and effect point controls. Read-only.
    */
@@ -306,7 +306,7 @@ export class Property extends PropertyBase {
   /**
    * Whether the property interpolates along a spatial motion path.
    *
-   * `is_spatial` also reports `True` for colors, to match what
+   * `is_spatial` also reports `true` for colors, to match what
    * ExtendScript says; a color has no motion path, so the keyframe
    * binary (the ldat item's key flags and layout), the speed math and
    * the roving guard ask this instead.
@@ -710,13 +710,13 @@ export class Property extends PropertyBase {
     this._default_arbp = null;
   }
 
-  /** `True` for a variable-font axis slot property. */
+  /** `true` for a variable-font axis slot property. */
   get _is_vf_axis(): boolean {
     return this.match_name.startsWith(VF_AXIS_PREFIX);
   }
 
   /**
-   * The raw 4CC tag number of an ACTIVE axis property, else `None`.
+   * The raw 4CC tag number of an ACTIVE axis property, else `null`.
    *
    * Read from the static value's second dimension or the first
    * keyframe's, then cached (see `_vf_tag_cache`).
@@ -740,7 +740,7 @@ export class Property extends PropertyBase {
 
   /**
    * The 4-character variable-font axis tag (e.g. `wght`) bound to
-   * this `ADBE Text VF Axis` property. `None` for non-axis properties
+   * this `ADBE Text VF Axis` property. `null` for non-axis properties
    * and for unused axis slots. Read-only.
    *
    * **Warning:** 
@@ -761,7 +761,7 @@ export class Property extends PropertyBase {
   }
 
   /**
-   * Speed unit factor for an effect point's ease, or `None`.
+   * Speed unit factor for an effect point's ease, or `null`.
    *
    * AE stores an effect point's ease speed normalized against the
    * composition height, and ExtendScript reports it in pixel units. The
@@ -801,7 +801,7 @@ export class Property extends PropertyBase {
   }
 
   /**
-   * `keyframe`'s position in `keyframes`, `None` once it is removed.
+   * `keyframe`'s position in `keyframes`, `null` once it is removed.
    *
    * Cached by identity and checked on every read, so after any change
    * to the list a stale entry is rebuilt (once) rather than trusted: an
@@ -996,8 +996,8 @@ export class Property extends PropertyBase {
    * Flip the synthetic flag on `tdmn` and the whole `tdbs` subtree.
    *
    * `write_aep` skips synthetic chunks, so this is what hides a
-   * property from the writer or reveals it: `False` materializes,
-   * `True` un-materializes (see `_revert_to_synthetic`).
+   * property from the writer or reveals it: `false` materializes,
+   * `true` un-materializes (see `_revert_to_synthetic`).
    */
   _set_subtree_synthetic(value: boolean): void {
     if (this._tdmn != null) this._tdmn.synthetic = value;
@@ -1325,7 +1325,7 @@ export class Property extends PropertyBase {
   }
 
   /**
-   * `True` when this property's tdum/tduM is an all-zero `[0.0]`
+   * `true` when this property's tdum/tduM is an all-zero `[0.0]`
    * placeholder that ExtendScript reports as no bound.
    *
    * AE writes `[0.0]` bound chunks for Scale and the separated-Position
@@ -1351,7 +1351,7 @@ export class Property extends PropertyBase {
    * Read the raw value from the cdat chunk body.
    *
    * Returns a scalar for 1D non-color properties, a list for
-   * multi-dimensional or color properties, or `None` when the
+   * multi-dimensional or color properties, or `null` when the
    * chunk has no data.
    */
   _read_cdat_raw(): any {
@@ -1468,7 +1468,7 @@ export class Property extends PropertyBase {
   }
 
   /**
-   * The leader's value composed from its followers, or `None`.
+   * The leader's value composed from its followers, or `null`.
    *
    * While `dimensions_separated` is on, the leader's own `cdat` is dead:
    * AE resets it to the comp-centre default on separate and drives the
@@ -1495,7 +1495,7 @@ export class Property extends PropertyBase {
   /**
    * This leader's X / Y / Z followers while dimensions are separated.
    *
-   * `None` when the property is not a separated leader, and while the
+   * `null` when the property is not a separated leader, and while the
    * followers have not been synthesized yet - they are created after
    * the leader, so the leader is briefly separated with nothing to
    * drive.
@@ -1520,7 +1520,7 @@ export class Property extends PropertyBase {
   /**
    * A keyed Curves effect's curves at `keyframe`, from its own aRbp.
    *
-   * `None` when the aRbs does not hold one aRbp per keyframe.
+   * `null` when the aRbs does not hold one aRbp per keyframe.
    */
   _keyframe_curves(keyframe: Keyframe): Curves | null {
     py_assert(this._arbs != null);
@@ -1563,7 +1563,7 @@ export class Property extends PropertyBase {
    * key; the first key's before it and the last key's after it. AE
    * interpolates between linear keys in a way ExtendScript cannot read
    * (reading a Curves key's value aborts the script), so between them
-   * this is `None` rather than a guess.
+   * this is `null` rather than a guess.
    */
   _keyed_curves_at(time: number): Curves | null {
     const keys = this.keyframes;
@@ -1604,13 +1604,13 @@ export class Property extends PropertyBase {
   /**
    * The value of the named property at the current time.
    *
-   * If `expression_enabled` is `True`, returns the evaluated expression
+   * If `expression_enabled` is `true`, returns the evaluated expression
    * value. If there are keyframes, returns the keyframed value at the
    * current time. Otherwise, returns the static value. Read / Write.
    *
    * The type depends on `property_value_type`:
    * `list[float]`, `float`, `int`, {@link Curves}, {@link Gradient},
-   * {@link MarkerValue}, {@link Shape}, {@link TextDocument}, or `None`.
+   * {@link MarkerValue}, {@link Shape}, {@link TextDocument}, or `null`.
    *
    * Mutations on complex value types (TextDocument, Shape,
    * MarkerValue, Gradient) write through to the backing chunks
@@ -1857,7 +1857,7 @@ export class Property extends PropertyBase {
 
   /**
    * The minimum permitted value of the named property. Only valid if
-   * `has_min` is `True`. Read-only.
+   * `has_min` is `true`. Read-only.
    */
   get min_value(): any {
     if (_UNBOUNDED_MATCH_NAMES.has(this.match_name)) return null;
@@ -1871,7 +1871,7 @@ export class Property extends PropertyBase {
 
   /**
    * The maximum permitted value of the named property. Only valid if
-   * `has_max` is `True`. Read-only.
+   * `has_max` is `true`. Read-only.
    */
   get max_value(): any {
     if (_UNBOUNDED_MATCH_NAMES.has(this.match_name)) return null;
@@ -1911,7 +1911,7 @@ export class Property extends PropertyBase {
    *
    * Only custom dropdown menus are supported (the `Menu` property of
    * a Dropdown Menu Control, whose item strings are stored in the
-   * project file); returns `None` for every other property.
+   * project file); returns `null` for every other property.
    * ExtendScript additionally covers built-in dropdowns, but their
    * item strings are application resources absent from the file.
    * Read-only.
@@ -2073,12 +2073,12 @@ export class Property extends PropertyBase {
   }
 
   /**
-   * When `True`, the named property can vary over time - that is, keyframe
+   * When `true`, the named property can vary over time - that is, keyframe
    * values or expressions can be written to this property.
    *
    * **Note:** 
    * A small subset of effect dropdown / menu parameters may report
-   * `can_vary_over_time` as `False` in the binary even though After
+   * `can_vary_over_time` as `false` in the binary even though After
    * Effects allows keyframing them.
    * Read-only.
    */
@@ -2094,10 +2094,10 @@ export class Property extends PropertyBase {
   }
 
   /**
-   * When `True`, the property's dimensions are represented as separate
+   * When `true`, the property's dimensions are represented as separate
    * properties. For example, if the layer's position is represented as X
    * Position and Y Position properties in the Timeline panel, the Position
-   * property has this attribute set to `True`. This attribute applies only
+   * property has this attribute set to `true`. This attribute applies only
    * when the property is a "separation leader" (a multidimensional property
    * that can be separated). Read / Write.
    */
@@ -2371,7 +2371,7 @@ export class Property extends PropertyBase {
 
   /**
    * The expression for the named property. Writeable only when
-   * `can_set_expression` for the named property is `True`.
+   * `can_set_expression` for the named property is `true`.
    * Read / Write.
    */
   get expression(): string {
@@ -2423,8 +2423,8 @@ export class Property extends PropertyBase {
   }
 
   /**
-   * When `True`, the named property uses its associated expression to
-   * generate a value. When `False`, the keyframe information or static
+   * When `true`, the named property uses its associated expression to
+   * generate a value. When `false`, the keyframe information or static
    * value of the property is used. Read / Write.
    */
   get expression_enabled(): boolean {
@@ -2461,7 +2461,7 @@ export class Property extends PropertyBase {
     this._tdb4.expression_disabled = !value;
   }
 
-  /** When `True`, an expression can be set for the named property. Read-only. */
+  /** When `true`, an expression can be set for the named property. Read-only. */
   get can_set_expression(): boolean {
     return resolve_can_set_expression(this);
   }
@@ -2575,7 +2575,7 @@ export class Property extends PropertyBase {
   }
 
   /**
-   * `True` if the property is a multidimensional property that
+   * `true` if the property is a multidimensional property that
    * can be separated.
    */
   get is_separation_leader(): boolean {
@@ -2583,7 +2583,7 @@ export class Property extends PropertyBase {
   }
 
   /**
-   * `True` if the property is a component of a separated
+   * `true` if the property is a component of a separated
    * multidimensional property (e.g. X Position, Y Position,
    * Z Position).
    */
@@ -2594,7 +2594,7 @@ export class Property extends PropertyBase {
   /**
    * For a separated follower, the dimension it represents.
    *
-   * Returns 0, 1, or 2 for X, Y, or Z. Returns `None` for
+   * Returns 0, 1, or 2 for X, Y, or Z. Returns `null` for
    * properties that are not separation followers.
    */
   get separation_dimension(): number | null {
@@ -2607,7 +2607,7 @@ export class Property extends PropertyBase {
    *
    * Returns the {@link Property} that acts as the separation leader
    * (e.g. Position) for this follower (e.g. X Position).
-   * Returns `None` when this property is not a follower or the
+   * Returns `null` when this property is not a follower or the
    * leader cannot be found.
    */
   get separation_leader(): Property | null {
@@ -2667,7 +2667,7 @@ export class Property extends PropertyBase {
   }
 
   /**
-   * `True` if the property value differs from its default.
+   * `true` if the property value differs from its default.
    *
    * A property is considered modified when it has keyframes, has an
    * expression (enabled or disabled), or when its current value
@@ -2736,7 +2736,7 @@ export class Property extends PropertyBase {
   }
 
   /**
-   * `True` if this is an Essential Property that supports Media
+   * `true` if this is an Essential Property that supports Media
    * Replacement (its alternate source can be set). Read-only.
    *
    * Decoded from the `blsi` chunk beside an `ADBE Layer Source Alternate`
@@ -2748,7 +2748,7 @@ export class Property extends PropertyBase {
 
   /**
    * The alternate source item set for a Media Replacement slot, or
-   * `None` when unset / unsupported. Read / Write.
+   * `null` when unset / unsupported. Read / Write.
    *
    * After Effects wraps the replacement footage in a composition, so this
    * resolves to that wrapper item (the `blsi` item id).
@@ -2773,8 +2773,8 @@ export class Property extends PropertyBase {
    * assumed to already be a wrapper).
    *
    * Raises `ValueError` when this property is not a media-replacement slot
-   * (`can_set_alternate_source` is `False`), when `source` is not in the
-   * project, or when `source.is_media_replacement_compatible` is `False`,
+   * (`can_set_alternate_source` is `false`), when `source` is not in the
+   * project, or when `source.is_media_replacement_compatible` is `false`,
    * and `TypeError` when `source` is not an `AVItem`.
    */
   set alternate_source(source: AVItem) {
@@ -2843,7 +2843,7 @@ export class Property extends PropertyBase {
   /**
    * The originating source an Essential Property points at - a
    * `Property`/`PropertyGroup` (created from a Property) or an `AVLayer`
-   * (Media Replacement Footage), or `None`. Read-only.
+   * (Media Replacement Footage), or `null`. Read-only.
    *
    * Media-replacement overrides resolve to the source composition's
    * `AVLayer` (matched by the controller's `CCId`/`CLId`). Property-source
@@ -2855,22 +2855,22 @@ export class Property extends PropertyBase {
     return _essential_properties().resolve_essential_property_source(this);
   }
 
-  /** `True` if the property is the Menu property of a Dropdown Menu Control effect. */
+  /** `true` if the property is the Menu property of a Dropdown Menu Control effect. */
   get is_dropdown_effect(): boolean {
     return this._property_control_type === PropertyControlType.ENUM;
   }
 
-  /** `True` if the named property has keyframes or an enabled expression. */
+  /** `true` if the named property has keyframes or an enabled expression. */
   get is_time_varying(): boolean {
     return py_bool(py_or(py_and(this.expression, this.expression_enabled), this._animated));
   }
 
-  /** `True` if there is a maximum permitted value for the named property. */
+  /** `true` if there is a maximum permitted value for the named property. */
   get has_max(): boolean {
     return this.max_value != null;
   }
 
-  /** `True` if there is a minimum permitted value for the named property. */
+  /** `true` if there is a minimum permitted value for the named property. */
   get has_min(): boolean {
     return this.min_value != null;
   }
@@ -2887,12 +2887,12 @@ export class Property extends PropertyBase {
    *
    * time: The composition time in seconds at which to evaluate
    * the property.
-   * pre_expression: When `True` the value is evaluated before
+   * pre_expression: When `true` the value is evaluated before
    * any expression is applied (the only mode supported by
    * the parser).
    *
    * ValueError: If `time` is NaN.
-   * NotImplementedError: If `pre_expression` is `False`,
+   * NotImplementedError: If `pre_expression` is `false`,
    * because the parser cannot evaluate expressions.
    */
   value_at_time(time: number, pre_expression = true): any {
@@ -3022,7 +3022,7 @@ export class Property extends PropertyBase {
   /**
    * Composition seconds to the owning layer's own seconds.
    *
-   * The inverse of the mapping {@link py_aep.Keyframe.time | Keyframe.time}
+   * The inverse of the mapping {@link Keyframe.time | Keyframe.time}
    * applies. Interpolation runs on this axis because AE's ease speeds
    * are per layer second and a negatively stretched layer's keyframes
    * only ascend here.
@@ -3046,7 +3046,7 @@ export class Property extends PropertyBase {
   }
 
   /**
-   * Returns `True` if the named property can be interpolated using
+   * Returns `true` if the named property can be interpolated using
    * the specified keyframe interpolation type.
    *
    * `KeyframeInterpolationType.HOLD` is valid for every property that
@@ -3061,7 +3061,7 @@ export class Property extends PropertyBase {
    *
    * ValueError: If `type` is not a `KeyframeInterpolationType`
    * member (After Effects raises a parameter error rather than
-   * returning `False`).
+   * returning `false`).
    */
   is_interpolation_type_valid(type: number): boolean {
     validate_enum(KeyframeInterpolationType)(type);
@@ -3100,7 +3100,7 @@ export class Property extends PropertyBase {
 
   /**
    * The complex-value kind storing keyframe values in a parallel
-   * container, or `None` for ordinary numeric properties.
+   * container, or `null` for ordinary numeric properties.
    */
   _parallel_kind(): ParallelKind | null {
     const wrapper = this._wrapper;
@@ -3242,11 +3242,11 @@ export class Property extends PropertyBase {
    *
    * Gates on what py_aep can produce: the supported control types are
    * Checkbox, Color, single-value numeric Slider and Source Text (a
-   * Dropdown param reports `False` - AE would build a type-13 Dropdown
+   * Dropdown param reports `false` - AE would build a type-13 Dropdown
    * controller, which py_aep does not). Paths through indexed groups -
    * effects, masks, shape contents, text animators - are addressed by AE's
    * child index (validated against AE 2026 output), so their children are
-   * addable, including on duplicate siblings. Reports `False` for an effect
+   * addable, including on duplicate siblings. Reports `false` for an effect
    * param whose parT definitions are unavailable, children of `ADBE Effect Built In Params`, a by-name node ambiguous among its siblings, a
    * property already exposed, or a layer not in `comp`.
    *
@@ -3260,7 +3260,7 @@ export class Property extends PropertyBase {
    * Add this property to `comp`'s Essential Graphics panel, using the
    * property's own name for the controller.
    *
-   * Returns `True` on success, or `False` when the property cannot be added
+   * Returns `true` on success, or `false` when the property cannot be added
    * (see `can_add_to_motion_graphics_template`).
    *
    * comp: The composition to add the property to.
@@ -3273,7 +3273,7 @@ export class Property extends PropertyBase {
    * Add this property to `comp`'s Essential Graphics panel with an
    * explicit controller `name`.
    *
-   * Returns `True` on success, or `False` when the property cannot be
+   * Returns `true` on success, or `false` when the property cannot be
    * added (see `can_add_to_motion_graphics_template`).
    *
    * comp: The composition to add the property to.
@@ -3552,7 +3552,7 @@ export class Property extends PropertyBase {
    *
    * Located on the path as it was before the keyframe at `idx` was
    * inserted, which is what the inserted key's value was read from.
-   * `None` when the time falls on another segment of a roving run.
+   * `null` when the time falls on another segment of a roving run.
    */
   _motion_path_parameter(idx: number, time: number): number | null {
     const before = [...this.keyframes.slice(0, idx), ...this.keyframes.slice(idx + 1)];
@@ -3702,7 +3702,7 @@ export class Property extends PropertyBase {
    *
    * Drops the expression `Utf8` chunk from the `tdbs` and clears the
    * tdb4 expression flag, so `expression` becomes `""` and
-   * `expression_enabled` `False`. A no-op when no expression is set.
+   * `expression_enabled` `false`. A no-op when no expression is set.
    */
   _clear_expression(): void {
     if (this._expression_utf8 == null && !this._expression) return;
@@ -4384,7 +4384,7 @@ export class Property extends PropertyBase {
    * has a source. Source-less layers (shape, text, null) store the
    * anchor in raw pixels - AE does not normalize it - so applying a
    * scale (which would fall back to comp size) corrupts the value.
-   * - All others: `None`.
+   * - All others: `null`.
    */
   get _effect_scale(): number[] | null {
     // Allow explicit override via __dict__ (e.g. from tests).
@@ -4447,9 +4447,9 @@ export class Property extends PropertyBase {
   }
 
   /**
-   * The containing layer's pixel dimensions, or `None`.
+   * The containing layer's pixel dimensions, or `null`.
    *
-   * `None` while the property has no layer at all - an effect
+   * `null` while the property has no layer at all - an effect
    * definition parsed out of `LIST:EfdG` is a free-standing template,
    * so there is nothing to normalize against yet.
    */
@@ -4475,7 +4475,7 @@ export function _deactivate_follower(follower: Property): void {
   follower._value = 0.0;
 }
 
-/** Per-dimension `(v0, v1)` pairs for the segment, or `None` if not numeric. */
+/** Per-dimension `(v0, v1)` pairs for the segment, or `null` if not numeric. */
 export function _segment_components(prev_kf: Keyframe, next_kf: Keyframe): [number[][], number] | null {
   const v0 = prev_kf._stored_value;
   const v1 = next_kf._stored_value;
@@ -4500,7 +4500,7 @@ export function _segment_components(prev_kf: Keyframe, next_kf: Keyframe): [numb
  * `tdsb` enable bit, `tdum`/`tduM` bounds and `tdb4` flags are the EGP
  * slider state, not what ExtendScript reports (the leaf has no `pard`, so
  * e.g. a checkbox override's own `tdb4` reports it cannot vary over time
- * while ExtendScript reports the source checkbox's `True`). Leaves are
+ * while ExtendScript reports the source checkbox's `true`). Leaves are
  * re-classed to this type after the override group is parsed (see
  * `parsers/property.py::_dispatch_ovg2`); this keeps the base `Property`
  * accessors - and round-trip serialization - untouched.
@@ -4510,7 +4510,7 @@ export class _EssentialOverrideProperty extends Property {
   declare _ov_ctrl_name: any;
 
   /**
-   * The resolved source `Property`, or `None` when it does not resolve
+   * The resolved source `Property`, or `null` when it does not resolve
    * (e.g. a Media Replacement leaf whose source is an `AVLayer`). Cached.
    */
   _override_source(): Property | null {
@@ -4524,7 +4524,7 @@ export class _EssentialOverrideProperty extends Property {
 
   /**
    * The name of the override leaf's Essential Graphics controller, or
-   * `None` when it does not resolve. Cached. This is the display name AE
+   * `null` when it does not resolve. Cached. This is the display name AE
    * shows for the override - the leaf's own `tdsn` may be empty.
    */
   _override_controller_name(): string | null {
@@ -4586,13 +4586,13 @@ export class _EssentialOverrideProperty extends Property {
    * Inherit the source parameter's denormalization scale.
    *
    * An override leaf stores its value in the raw 0-1 form AE keeps, but
-   * the leaf is not inside an effect, so its own `_effect_scale` is `None`
+   * the leaf is not inside an effect, so its own `_effect_scale` is `null`
    * and the value would stay normalized. Borrowing the source's scale puts
    * `value` in the same units the source reports (e.g. source-comp pixels
    * for a point control), matching ExtendScript and making `is_modified`
-   * compare like for like. `None` for non-point sources and for
+   * compare like for like. `null` for non-point sources and for
    * media-replacement overrides (whose source is an `AVLayer`, not a
-   * `Property`), which fall back to the base (also `None`).
+   * `Property`), which fall back to the base (also `null`).
    */
   get _effect_scale(): number[] | null {
     if (this._effect_scale_dict != null) {

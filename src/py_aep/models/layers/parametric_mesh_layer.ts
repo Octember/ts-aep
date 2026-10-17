@@ -19,7 +19,7 @@ import type { Property } from "../properties/property.ts";
 import type { PropertyGroup } from "../properties/property_group.ts";
 
 /**
- * `type(None)` is NoneType, which is never `None` itself. Keeps the
+ * `type(None)` is NoneType, which is never `null` itself. Keeps the
  * `type(old) is not cls` check below true when an option is unset and no
  * class maps to the mesh type.
  */
@@ -145,14 +145,14 @@ export class ParametricMeshLayer extends AVLayer {
   }
 
   /**
-   * `False` for Parametric Mesh layers: collapse transformation is
+   * `false` for Parametric Mesh layers: collapse transformation is
    * forced on and cannot be changed. Read-only.
    */
   get can_set_collapse_transformation(): boolean {
     return false;
   }
 
-  /** `False` for Parametric Mesh layers (time remapping is not supported). Read-only. */
+  /** `false` for Parametric Mesh layers (time remapping is not supported). Read-only. */
   get can_set_time_remap_enabled(): boolean {
     return false;
   }

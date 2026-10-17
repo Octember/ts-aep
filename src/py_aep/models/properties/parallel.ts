@@ -7,7 +7,7 @@
  * `om-s`/`omks`, `GCst`/`GCky`, `btds`/btdk COS). The kinds differ in a
  * small set of facts and conversions; each {@link ParallelKind} subclass
  * centralizes one kind so the generic keyframe mutation algorithms in
- * {@link py_aep.models.properties.property.Property | Property} are written once.
+ * {@link Property | Property} are written once.
  *
  * All binary forms were reverse-engineered from AE 2026 static-vs-keyed
  * output pairs (`aep-compare` ground-truth workflow).

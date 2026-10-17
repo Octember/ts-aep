@@ -27,29 +27,29 @@ export class LayerSpec {
   readonly height: number;
 
   /**
-   * `((anchor_x, anchor_y), (position_x, position_y))`, or `None` to leave
+   * `((anchor_x, anchor_y), (position_x, position_y))`, or `null` to leave
    * the layer centered by `CompItem.add` (whole-canvas layers).
    */
   readonly transform: readonly [readonly [number, number], readonly [number, number]] | null;
 
   /**
-   * `True` when the footage spans the full source frame; `False` for a layer
+   * `true` when the footage spans the full source frame; `false` for a layer
    * cropped to its content box.
    */
   readonly full_frame: boolean;
 
-  /** `True` when the comp layer should be marked as an adjustment layer. */
+  /** `true` when the comp layer should be marked as an adjustment layer. */
   readonly is_adjustment: boolean;
 
   /**
-   * Photoshop layer id (`lyid`) for the `sspc` layer binding; `None` for
+   * Photoshop layer id (`lyid`) for the `sspc` layer binding; `null` for
    * sources without one (AI/PDF layers, EPS, flattened documents).
    */
   readonly layer_id: number | null;
 
   /**
    * 0-based document index of the layer for the `sspc` layer binding;
-   * `None` for single-layer documents (EPS, flattened PSD).
+   * `null` for single-layer documents (EPS, flattened PSD).
    */
   readonly layer_index: number | null;
 
@@ -61,13 +61,13 @@ export class LayerSpec {
 
   /**
    * Override for the `sspc` 0xC8 kind bytes (PSD layer-styles mode);
-   * `None` applies `FileSource._new`'s whole-file rule.
+   * `null` applies `FileSource._new`'s whole-file rule.
    */
   readonly reserved_c8: Uint8Array | null;
 
   /**
    * Resolved layer styles to serialize on the comp layer (an
-   * editable-layer-styles PSD import); `None` writes the plain skeleton.
+   * editable-layer-styles PSD import); `null` writes the plain skeleton.
    */
   readonly styles: PsdLayerStyles | null;
 
@@ -85,21 +85,21 @@ export class LayerSpec {
   readonly preserve_transparency: boolean;
 
   /**
-   * The comp layer's video switch. `False` for a source layer the document
+   * The comp layer's video switch. `false` for a source layer the document
    * hides (an Illustrator layer in the file's `/D` `/OFF` array), which AE
    * imports as a layer with its eyeball off.
    */
   readonly enabled: boolean;
 
   /**
-   * A PSD layer's own alpha: `False` for Photoshop's Background layer,
-   * which has no transparency. `None` for the layers of other files, which
+   * A PSD layer's own alpha: `false` for Photoshop's Background layer,
+   * which has no transparency. `null` for the layers of other files, which
    * take the file's alpha and depth.
    */
   readonly has_alpha: boolean | null;
 
   /**
-   * A PSD layer's own pixel depth (`sspc` byte 0x3E); `None` with
+   * A PSD layer's own pixel depth (`sspc` byte 0x3E); `null` with
    * `has_alpha`.
    */
   readonly depth: number | null;
@@ -183,12 +183,12 @@ export class LayerGroupSpec {
   /** The group's contents, bottom layer first. */
   readonly children: Array<LayerSpec | LayerGroupSpec>;
 
-  /** Override for the nested comp's item name; `None` uses `name`. A clipping run's precomp is named `"<main comp> (n)"` by AE. */
+  /** Override for the nested comp's item name; `null` uses `name`. A clipping run's precomp is named `"<main comp> (n)"` by AE. */
   readonly comp_name: string | null;
 
   /**
    * Baked parent-layer display name with `name_set` kept OFF (a
-   * clipping run bakes the base layer's name); `None` leaves the name
+   * clipping run bakes the base layer's name); `null` leaves the name
    * empty so it inherits the nested comp's name (groups).
    */
   readonly layer_name: string | null;
@@ -197,7 +197,7 @@ export class LayerGroupSpec {
   readonly collapsed: boolean;
 
   /**
-   * `False` for a group hidden in Photoshop: AE 2026 turns the parent
+   * `false` for a group hidden in Photoshop: AE 2026 turns the parent
    * layer's video switch off and leaves the children's own switches as they
    * are (synthetic hidden_group.psd).
    */

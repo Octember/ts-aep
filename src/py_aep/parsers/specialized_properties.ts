@@ -106,7 +106,7 @@ export function _parse_shape_shap(shap_chunk: ListChunk, layer: Layer | null, ma
    * @param layer - The owning layer, which a mask shape denormalizes against. Only optional because
    *   a shape-layer path does not need one.
    * @param mask_path - The Mask Path property this shape is a value of (its mask's RotoBezier
-   *   switch decides the reported tangents), or `None` for a shape-layer path.
+   *   switch decides the reported tangents), or `null` for a shape-layer path.
    * @returns A {@link Shape} with absolute coordinates and tangent offsets.
    * @throws {@link ValueError} If a mask shape is parsed without its layer, which would silently
    *   yield raw normalized coordinates.
@@ -181,7 +181,7 @@ export function parse_shape(
    * @param layer - The owning layer, required for a mask path (which denormalizes against the
    *   layer, not the composition).
    * @returns A {@link Property} with `property_value_type` set to
-   *   {@link py_aep.enums.PropertyValueType.SHAPE | SHAPE} and `value` set to a {@link Shape}.
+   *   {@link PropertyValueType.SHAPE | SHAPE} and `value` set to a {@link Shape}.
    */
   const tdbs_chunk = find_by_list_type(oms_chunk.chunks, "tdbs");
   const prop = parse_property(tdbs_chunk, match_name, composition, property_depth, tdmn);

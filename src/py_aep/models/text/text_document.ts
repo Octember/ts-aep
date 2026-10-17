@@ -206,7 +206,7 @@ export class TextDocument {
   }
 
   /**
-   * `True` when the composed-line APIs may not reflect this
+   * `true` when the composed-line APIs may not reflect this
    * document's current content. Read-only.
    *
    * Point text is never stale (its composed lines are the
@@ -231,10 +231,10 @@ export class TextDocument {
   /** The Text layer's font size in pixels. Read / Write. */
   declare font_size: number | null;
 
-  /** `True` if a Text layer has faux bold enabled. Read / Write. */
+  /** `true` if a Text layer has faux bold enabled. Read / Write. */
   declare faux_bold: boolean | null;
 
-  /** `True` if a Text layer has faux italic enabled. Read / Write. */
+  /** `true` if a Text layer has faux italic enabled. Read / Write. */
   declare faux_italic: boolean | null;
 
   /** The Text layer's spacing between characters. Read / Write. */
@@ -290,13 +290,13 @@ export class TextDocument {
   /** This Text layer's tsume value (0.0 to 1.0). Read / Write. */
   declare tsume: number;
 
-  /** When `True`, the Text layer shows a fill. Read / Write. */
+  /** When `true`, the Text layer shows a fill. Read / Write. */
   declare apply_fill: boolean | null;
 
-  /** When `True`, the Text layer shows a stroke. Read / Write. */
+  /** When `true`, the Text layer shows a stroke. Read / Write. */
   declare apply_stroke: boolean;
 
-  /** When `True`, the stroke appears over the fill. Read / Write. */
+  /** When `true`, the stroke appears over the fill. Read / Write. */
   declare stroke_over_fill: boolean;
 
   /** The Text layer's stroke thickness in pixels. Read / Write. */
@@ -362,17 +362,17 @@ export class TextDocument {
   /**
    * The Text layer's Every-Line Composer option. Read / Write.
    *
-   * `True` when Every-Line Composer is used, `False` for Single-Line.
+   * `true` when Every-Line Composer is used, `false` for Single-Line.
    */
   declare every_line_composer: boolean;
 
   /** The Text layer's baseline direction. Read / Write. */
   declare baseline_direction: BaselineDirection;
 
-  /** When `True`, ligature is used. Read / Write. */
+  /** When `true`, ligature is used. Read / Write. */
   declare ligature: boolean;
 
-  /** When `True`, the no-break attribute is applied. Read / Write. */
+  /** When `true`, the no-break attribute is applied. Read / Write. */
   declare no_break: boolean;
 
   /** The Text layer's digit set option. Read / Write. */
@@ -396,9 +396,9 @@ export class TextDocument {
    * @param text - Initial text content. When empty, the template's placeholder text is left
    *   unchanged.
    * @param box_size - `[width, height]` for box (paragraph) text. When given, converts the document
-   *   to box text; `None` leaves it as point text.
+   *   to box text; `null` leaves it as point text.
    * @param line_orientation - Text {@link LineOrientation}. When given, sets the layer's
-   *   orientation (e.g. vertical); `None` leaves the template's horizontal default.
+   *   orientation (e.g. vertical); `null` leaves the template's horizontal default.
    */
   constructor(
     text: string = "",
@@ -506,7 +506,7 @@ export class TextDocument {
      * Instance override stored when a field has no COS backing.
      *
      * Set by `_from_binary` fallback kwargs and by setters when the
-     * backing style dict is `None`. Returns `None` when absent.
+     * backing style dict is `null`. Returns `null` when absent.
      */
     return this.__dict__.get(name) ?? null;
   }
@@ -660,7 +660,7 @@ export class TextDocument {
   }
 
   _font_index(post_script_name: string): number | null {
-    /** Return the index of a font in `_fonts`, or `None` if absent. */
+    /** Return the index of a font in `_fonts`, or `null` if absent. */
     for (const [idx, fo] of this._fonts.entries()) {
       if (fo.post_script_name === post_script_name) return idx;
     }
@@ -805,28 +805,28 @@ export class TextDocument {
     return null;
   }
 
-  /** `True` if a Text layer has All Caps enabled. Read-only. */
+  /** `true` if a Text layer has All Caps enabled. Read-only. */
   get all_caps(): boolean | null {
     const caps = this.font_caps_option;
     if (caps == null) return null;
     return caps === FontCapsOption.FONT_ALL_CAPS;
   }
 
-  /** `True` if a Text layer has Small Caps enabled. Read-only. */
+  /** `true` if a Text layer has Small Caps enabled. Read-only. */
   get small_caps(): boolean | null {
     const caps = this.font_caps_option;
     if (caps == null) return null;
     return caps === FontCapsOption.FONT_SMALL_CAPS;
   }
 
-  /** `True` if a Text layer has superscript enabled. Read-only. */
+  /** `true` if a Text layer has superscript enabled. Read-only. */
   get superscript(): boolean | null {
     const baseline = this.font_baseline_option;
     if (baseline == null) return null;
     return baseline === FontBaselineOption.FONT_FAUXED_SUPERSCRIPT;
   }
 
-  /** `True` if a Text layer has subscript enabled. Read-only. */
+  /** `true` if a Text layer has subscript enabled. Read-only. */
   get subscript(): boolean | null {
     const baseline = this.font_baseline_option;
     if (baseline == null) return null;
@@ -878,7 +878,7 @@ export class TextDocument {
   }
 
   _box_frame(): Dict | null {
-    /** Return the COS box-frame dict, or `None` if absent. */
+    /** Return the COS box-frame dict, or `null` if absent. */
     const frame = cos_get(this._cos_data, "0", "8", "0", 0, "0");
     return frame instanceof Map ? frame : null;
   }
@@ -901,7 +901,7 @@ export class TextDocument {
   }
 
   _box_outline(): number[] | null {
-    /** Return the box's 16-vertex outline coordinates, or `None`. */
+    /** Return the box's 16-vertex outline coordinates, or `null`. */
     const frame = this._box_frame();
     const coords = frame != null ? cos_get(frame, "1", "0") : null;
     if (Array.isArray(coords) && coords.length >= 14) return coords;
@@ -909,7 +909,7 @@ export class TextDocument {
   }
 
   /**
-   * `True` if this is a box (paragraph) text layer. Read-only.
+   * `true` if this is a box (paragraph) text layer. Read-only.
    *
    * Box text stores the bounding-box vertex array in the frame; point
    * text omits it.
@@ -919,7 +919,7 @@ export class TextDocument {
     return frame instanceof Map && frame.get("1") instanceof Map;
   }
 
-  /** `True` if this is a point text layer. Read-only. */
+  /** `true` if this is a point text layer. Read-only. */
   get point_text(): boolean {
     return !this.box_text;
   }
@@ -927,7 +927,7 @@ export class TextDocument {
   /**
    * The size of the text box as `[width, height]`. Read / Write.
    *
-   * `None` for point text. Setting dimensions on point text converts
+   * `null` for point text. Setting dimensions on point text converts
    * it into a box (paragraph) text layer; on box text it resizes the
    * box while keeping its top-left corner fixed.
    */
@@ -961,7 +961,7 @@ export class TextDocument {
   /**
    * The top-left position of the text box as `[x, y]`. Read / Write.
    *
-   * `None` for point text. Setting moves the box while keeping its
+   * `null` for point text. Setting moves the box while keeping its
    * size; requires box (paragraph) text.
    */
   get box_text_pos(): number[] | null {
@@ -1041,14 +1041,14 @@ export class TextDocument {
   }
 
   /**
-   * `True` if the text overflows the box. Read-only.
+   * `true` if the text overflows the box. Read-only.
    *
    * A composition covers fewer characters than the stored text
    * exactly when the text overflows (probed via
    * `samples/models/text/box_overflow.aep`). Reads the persisted AE
    * cache while the document is untouched and the calibrated
    * composer after layout-affecting py-side writes (see
-   * `composition_stale`). `None` for point text (ExtendScript reads
+   * `composition_stale`). `null` for point text (ExtendScript reads
    * undefined there) and for documents without a cache.
    */
   get box_overflow(): boolean | null {
@@ -1072,7 +1072,7 @@ export class TextDocument {
    * time; after a layout-affecting py-side write the calibrated
    * composed-line resolver recomposes it, otherwise the cached
    * count stays (matching ExtendScript's un-reapplied values - see
-   * `composition_stale`). `None` for documents never parsed from a
+   * `composition_stale`). `null` for documents never parsed from a
    * layer.
    */
   get composed_line_count(): number | null {

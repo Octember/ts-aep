@@ -353,7 +353,7 @@ export const parse_aep_chunks = extract_leaf_chunks;
  * @param typed1 - Optional decoded chunks for file 1 (enables float-tolerant comparison of
  *   coordinate fields).
  * @param typed2 - Optional decoded chunks for file 2.
- * @param exact - When `True`, disable float tolerance (byte-exact).
+ * @param exact - When `true`, disable float tolerance (byte-exact).
  * @returns Tuple of (differences, paths only in data1, paths only in data2, paths of the
  *   float-precision-only differences suppressed).
  */
@@ -470,7 +470,7 @@ export function compare_structure(file1: Path, file2: Path): StructuralDifferenc
  * The first file is treated as the reference.
  *
  * @param files - List of AEP file paths (first = reference).
- * @param exact - When `True`, disable float tolerance (byte-exact); otherwise chunks differing only
+ * @param exact - When `true`, disable float tolerance (byte-exact); otherwise chunks differing only
  *   in float-precision coordinates across all present files are suppressed, matching two-file mode.
  * @returns Tuple of (chunk differences, missing chunk info, parsed data per file, paths of the
  *   float-precision-only chunk differences suppressed).

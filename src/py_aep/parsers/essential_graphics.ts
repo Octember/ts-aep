@@ -101,7 +101,7 @@ export function _parse_controller(cctl_chunk: ListChunk): EssentialGraphicsContr
  *
  * @param child_chunks - The child chunks of a composition LIST:Item chunk.
  * @returns A tuple of (template_name_utf8_chunk, controllers) if an Essential Graphics container is
- *   found, otherwise `None`.
+ *   found, otherwise `null`.
  */
 export const parse_essential_graphics = _suppress_materialization().decorate(
   function parse_essential_graphics(

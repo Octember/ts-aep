@@ -153,7 +153,7 @@ export class Item {
   // uses an Item as a set member or dict key (dicts are keyed by int id).
 
   /**
-   * The parent folder of this item. `None` for the root folder.
+   * The parent folder of this item. `null` for the root folder.
    * Read / Write.
    *
    * Setting this moves the item into another folder. The item's binary
@@ -197,10 +197,10 @@ export class Item {
   }
 
   /**
-   * When `True`, this item is selected. Read-only.
+   * When `true`, this item is selected. Read-only.
    *
    * **Note:** Item selection is not stored in the `.aep` binary format; it is a
-   * runtime-only state. Parsed projects always report `False`.
+   * runtime-only state. Parsed projects always report `false`.
    */
   get selected(): boolean {
     return false;

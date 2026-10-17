@@ -112,10 +112,10 @@ export type FmtFieldOptions = {
  * - `encoding`: When set, the raw `bytes` from `struct.unpack` are decoded to `str` up to the first
  *     NUL, and on write the `str` is encoded back and NUL-padded to fill the fixed size (non-zero
  *     bytes read after the NUL are written back unchanged, see `_NulTailStr`).
- * - `optional`: When `True`, the field may be absent in older binary versions. Use `default=None`
- *     so that `None` means "not present" (preserves round-trip fidelity). Optional fields must come
+ * - `optional`: When `true`, the field may be absent in older binary versions. Use `default=None`
+ *     so that `null` means "not present" (preserves round-trip fidelity). Optional fields must come
  *     after all required fields.
- * - `endian`: Per-field byte-order override (e.g. `"<"` for little-endian). When `None` (default),
+ * - `endian`: Per-field byte-order override (e.g. `"<"` for little-endian). When `null` (default),
  *     the chunk-level big-endian default is used. Triggers per-field I/O in `Chunk.read()` /
  *     `Chunk.write()`.
  * - `coerce`: Type callable applied after unpacking (e.g. `bool`). On write, the inverse is applied
@@ -244,16 +244,16 @@ export function _struct_info_uncached(cls: Function): _StructInfo | null {
   /**
    * Derive struct layout metadata for a chunk class.
    *
-   * Returns a 10-tuple `(fmt, data_fields, encodings, optional_start, endians, items_info, coerces, init_names, simple, expected_size)` or `None` for raw-bytes chunks that have neither
+   * Returns a 10-tuple `(fmt, data_fields, encodings, optional_start, endians, items_info, coerces, init_names, simple, expected_size)` or `null` for raw-bytes chunks that have neither
    * `fmt_field` nor `items_field` fields.
    *
    * - `encodings`: field-index -\> encoding name.
    * - `optional_start`: index of first optional field.
    * - `endians`: field-index -\> endian override (`"<"` or `">"`);
    *   non-empty triggers per-field I/O in `Chunk.read()` / `Chunk.write()`.
-   * - `items_info`: `(init_param_name, item_cls, item_size)` or `None`.
+   * - `items_info`: `(init_param_name, item_cls, item_size)` or `null`.
    * - `coerces`: field-index -\> type callable (e.g. `bool`).
-   * - `simple`: `True` when the chunk has no string encodings, endian
+   * - `simple`: `true` when the chunk has no string encodings, endian
    *   overrides, optional fields, or items, so `_decode_fields` can be
    *   replaced with `dict(zip(init_names, values))` plus inline coerce
    *   and trailing-bytes handling.

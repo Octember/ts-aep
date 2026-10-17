@@ -22,7 +22,7 @@ import type { Item } from "../models/items/item.ts";
  * @param folder_chunks - Chunks from a `LIST:Fold` or `LIST:Sfdr` body.
  * @param items - Ordered list of items in this folder, used to resolve each viewer block to its
  *   item.
- * @returns A list of parsed {@link py_aep.models.viewer.viewer.Viewer | Viewer} objects.
+ * @returns A list of parsed {@link Viewer | Viewer} objects.
  */
 export function parse_viewers(folder_chunks: Chunk[], items: Item[]): Viewer[] {
   const blocks = group_chunks(folder_chunks, "fvdv", "fifl");
@@ -49,7 +49,7 @@ export function parse_viewers(folder_chunks: Chunk[], items: Item[]): Viewer[] {
  * @param block - The sequence of chunks from `fvdv` to `fifl`.
  * @param item - The item this viewer belongs to (for ROI validation).
  * @param viewer - The parent viewer that owns these views.
- * @returns A list of {@link py_aep.models.viewer.view.View | View} objects.
+ * @returns A list of {@link View | View} objects.
  */
 export function _parse_views(block: Chunk[], item: Item | null, viewer: Viewer): View[] {
   const fips_chunks = filter_by_type(block, "fips") as FipsChunk[];
@@ -73,10 +73,10 @@ export function _parse_views(block: Chunk[], item: Item | null, viewer: Viewer):
  * Build a Viewer from a block of folder-level chunks.
  *
  * A Viewer represents an open panel.  Blocks without a `fitt` chunk
- * have no open panel and return `None`.
+ * have no open panel and return `null`.
  *
  * @param block - The sequence of chunks from `fvdv` to `fifl`.
- * @returns A {@link py_aep.models.viewer.viewer.Viewer | Viewer} instance, or `None` if the block
+ * @returns A {@link Viewer | Viewer} instance, or `null` if the block
  *   does not contain a recognised viewer type.
  */
 export function _build_viewer(block: Chunk[]): Viewer | null {

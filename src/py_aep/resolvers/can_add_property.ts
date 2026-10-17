@@ -127,7 +127,7 @@ export const _NAMED_ADDABLE_GROUPS: ReadonlySet<string> = new Set(["ADBE Text An
  *
  * Returns the resolved match name plus its builder category if the
  * group is an indexed group and `name` is a valid match name or display
- * name for the group type, `None` otherwise. `kind` is the single
+ * name for the group type, `null` otherwise. `kind` is the single
  * source of truth for the category, so the model dispatches on it
  * without re-classifying the match name. For the Effect Parade, only
  * the expression controls py_aep can create are accepted (AE itself
@@ -176,7 +176,7 @@ export function resolve_addable(
 /**
  * Check whether a property with the given name can be added.
  *
- * Returns `True` if the group is an indexed group and `name` is a
+ * Returns `true` if the group is an indexed group and `name` is a
  * valid match name or display name for the group type. For the Effect
  * Parade, only the expression controls py_aep can create are
  * accepted.

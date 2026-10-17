@@ -26,7 +26,7 @@ export class View {
   }
 
   /**
-   * When `True`, indicates if the view is the active view in its
+   * When `true`, indicates if the view is the active view in its
    * viewer. Read-only.
    *
    * **Note:** The active locked view index is not persisted in the binary

@@ -284,7 +284,7 @@ export type VideoCodec = EnumValue<typeof VideoCodec>;
  *
  * These values are extracted from the `ADBEAudioInterleave` parameter in
  * the XML-based format options of AVI output modules. The dialog's
- * `None` choice stores no parameter at all (the accessor reads `None`).
+ * `null` choice stores no parameter at all (the accessor reads `null`).
  *
  * Not available in ExtendScript.
  */

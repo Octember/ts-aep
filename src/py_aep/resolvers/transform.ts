@@ -335,7 +335,7 @@ export function build_local_matrix(
  * (measured on AE 2026).
  *
  * @param layer - The layer whose world matrix to build.
- * @param time - Composition time in seconds to evaluate animated transform properties at; `None`
+ * @param time - Composition time in seconds to evaluate animated transform properties at; `null`
  *   uses each property's static `value`.
  * @param flatten_2d - Drop the out-of-plane terms (see `_layer_local_matrix`).
  * @param kw - Keyword arguments:
@@ -424,7 +424,7 @@ export function square_pixels(matrix: Mat4, comp_aspect: number, space_aspect: n
 }
 
 /**
- * Evaluate `group[match_name]`: static `value` when `time` is `None`,
+ * Evaluate `group[match_name]`: static `value` when `time` is `null`,
  * else `value_at_time(time)`.
  */
 export function _prop_value(group: PropertyGroup, match_name: string, time: number | null): any {

@@ -253,7 +253,7 @@ export function _reorder_and_fill(
    * @param skip - Match names to skip synthesis for. Checked only when the match name is **not**
    *   already in the container - existing children are always preserved in canonical position.
    * @param value_overrides - `{match_name: (value, default_value)}` for overriding synthesized
-   *   property values. When `None`, uses `spec.value` / `spec.default_value`.
+   *   property values. When `null`, uses `spec.value` / `spec.default_value`.
    * @param tail_mode - What non-spec children to append after the canonical entries: `"groups"`
    *   (only `PropertyGroup`), `"all"` (everything), or `"none"` (nothing).
    */
@@ -655,7 +655,7 @@ export class PropertyGroup extends PropertyBase {
      *
      * Camera Zoom and Focus Distance default to AE's 50mm-lens zoom
      * (`comp width * pixel aspect / 0.72`), a value the static spec table
-     * cannot express. Returns `None` for groups with no comp-dependent
+     * cannot express. Returns `null` for groups with no comp-dependent
      * defaults.
      */
     if (this.match_name !== "ADBE Camera Options Group") return null;
@@ -808,7 +808,7 @@ export class PropertyGroup extends PropertyBase {
   }
 
   /**
-   * `True` if any child property is modified.
+   * `true` if any child property is modified.
    *
    * For indexed groups (such as Effects or Masks parades), the group
    * is considered modified when it has any children - adding items to
@@ -869,7 +869,7 @@ export class PropertyGroup extends PropertyBase {
     /**
      * Check whether a property with the given name can be added.
      *
-     * Returns `True` if this group is an indexed group and `name` is
+     * Returns `true` if this group is an indexed group and `name` is
      * a valid match name or display name for the group type. For the
      * Effect Parade, the expression controls py_aep can create plus
      * any effect already defined in the project (`LIST:EfdG`) are
@@ -894,14 +894,14 @@ export class PropertyGroup extends PropertyBase {
    * The axis bounds, default value, and display name are read from
    * the variable font file with fontTools (After Effects reads them
    * from the installed font; the project file does not store a font
-   * path). Pass `font_file` explicitly, or leave it `None` to locate
+   * path). Pass `font_file` explicitly, or leave it `null` to locate
    * the installed font from the text document's font family.
    *
    * **Note:** This functionality was added in After Effects 26.0.
    *
    * @param axis_tag - The 4-character tag identifying the variable font axis (e.g. `wght`, `wdth`,
    *   `slnt`, `ital`, `opsz`).
-   * @param font_file - Optional path to the variable font file. When `None`, the font is located in
+   * @param font_file - Optional path to the variable font file. When `null`, the font is located in
    *   the OS font directories by the text document's font family.
    * @throws {@link ValueError} If this group is not a text animator Properties group, the font
    *   cannot be located or is not a variable font, `axis_tag` is not one of the font's axes, or all
@@ -1143,7 +1143,7 @@ export class PropertyGroup extends PropertyBase {
      * project falls back to the baked table, which is what lets an
      * effect be added to a project that has never used it.
      *
-     * Returns `(match_name, display_name, def_sspc)`, else `None`.
+     * Returns `(match_name, display_name, def_sspc)`, else `null`.
      */
     if (this.match_name !== "ADBE Effect Parade") return null;
     const project = this._containing_layer.containing_comp._project;

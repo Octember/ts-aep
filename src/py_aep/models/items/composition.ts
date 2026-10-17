@@ -486,36 +486,36 @@ export class CompItem extends AVItem {
   declare bg_color: number[];
 
   /**
-   * When `True`, Draft 3D mode is enabled for the composition.
+   * When `true`, Draft 3D mode is enabled for the composition.
    * Read / Write.
    *
    * **Warning:** Deprecated in After Effects 2024 in favor of the new Draft 3D mode.
    */
   declare draft3d: boolean;
 
-  /** When `True`, frame blending is enabled for this Composition. Corresponds
+  /** When `true`, frame blending is enabled for this Composition. Corresponds
    * to the value of the Frame Blending button in the Composition panel.
    * Read / Write. */
   declare frame_blending: boolean;
 
-  /** When `True`, only layers with `shy` set to `False` are shown in the
-   * Timeline panel. When `False`, all layers are visible, including those
-   * whose `shy` value is `True`. Corresponds to the value of the Hide All
+  /** When `true`, only layers with `shy` set to `false` are shown in the
+   * Timeline panel. When `false`, all layers are visible, including those
+   * whose `shy` value is `true`. Corresponds to the value of the Hide All
    * Shy Layers button in the Composition panel. Read / Write. */
   declare hide_shy_layers: boolean;
 
-  /** When `True`, motion blur is enabled for the composition. Corresponds
+  /** When `true`, motion blur is enabled for the composition. Corresponds
    * to the value of the Motion Blur button in the Composition panel.
    * Read / Write. */
   declare motion_blur: boolean;
 
-  /** When `True`, the frame rate of nested compositions is preserved in
+  /** When `true`, the frame rate of nested compositions is preserved in
    * the current composition. Corresponds to the value of the "Preserve frame
    * rate when nested or in render queue" option in the Advanced tab of the
    * Composition Settings dialog box. Read / Write. */
   declare preserve_nested_frame_rate: boolean;
 
-  /** When `True`, the resolution of nested compositions is preserved in
+  /** When `true`, the resolution of nested compositions is preserved in
    * the current composition. Corresponds to the value of the "Preserve
    * Resolution When Nested" option in the Advanced tab of the Composition
    * Settings dialog box. Read / Write. */
@@ -891,7 +891,7 @@ export class CompItem extends AVItem {
     /**
      * Store the work area the way AE's setters do: in whole timebase
      * units, snapped to frames, and with an end at or past the end of the
-     * composition (or `None`) stored as "runs to the end".
+     * composition (or `null`) stored as "runs to the end".
      */
     const cdta = this._cdta;
     const [timebase, units_per_frame] = _grid(cdta);
@@ -949,7 +949,7 @@ export class CompItem extends AVItem {
   }
 
   /**
-   * When `True`, timecode is displayed in drop-frame format. Only
+   * When `true`, timecode is displayed in drop-frame format. Only
    * applicable when `frameRate` is 29.97 or 59.94. Read / Write.
    */
   declare drop_frame: boolean;
@@ -1593,7 +1593,7 @@ export class CompItem extends AVItem {
      * each `CcCt` count (AE keeps the `CIFO`/`CIF2`/`CIF3` copies in sync).
      *
      * Returns the CIF3 copy's editable chunks `(name_utf8, ctyp)` for the
-     * controller model - the parser's preferred container - or `None` when
+     * controller model - the parser's preferred container - or `null` when
      * the comp has no CIF containers (not produced by AE or py_aep).
      */
     const containers = this._cif_containers();
@@ -1641,7 +1641,7 @@ export class CompItem extends AVItem {
     /**
      * Add `prop` to this comp's Essential Graphics panel.
      *
-     * Returns `False` (adding nothing) when `prop` cannot be exposed - see
+     * Returns `false` (adding nothing) when `prop` cannot be exposed - see
      * `resolvers.motion_graphics`.
      */
     this._ensure_comp_parsed();
@@ -1667,7 +1667,7 @@ export class CompItem extends AVItem {
      * Add `layer` to this comp's Essential Graphics panel as a Media
      * Replacement (type 14) controller.
      *
-     * Returns `False` (adding nothing) when the layer is not eligible -
+     * Returns `false` (adding nothing) when the layer is not eligible -
      * see `resolvers.motion_graphics.can_add_layer`.
      */
     this._ensure_comp_parsed();
@@ -1786,7 +1786,7 @@ export class CompItem extends AVItem {
   }
 
   /**
-   * When `True`, the composition has an audio component.
+   * When `true`, the composition has an audio component.
    *
    * A composition has audio when at least one of its layers has a
    * source with audio.
@@ -1832,10 +1832,10 @@ export class CompItem extends AVItem {
   }
 
   /**
-   * The front-most enabled camera layer, or `None`.
+   * The front-most enabled camera layer, or `null`.
    *
    * Returns the first {@link CameraLayer} that is active at the current
-   * composition time. The value is `None` when the composition
+   * composition time. The value is `null` when the composition
    * contains no active camera layers.
    */
   get active_camera(): CameraLayer | null {
@@ -2123,7 +2123,7 @@ export class CompItem extends AVItem {
     /**
      * Create a new camera layer at the top of the layer stack.
      *
-     * @param name - Layer name. Auto-generated if `None`.
+     * @param name - Layer name. Auto-generated if `null`.
      * @param center_point - The `[x, y]` center point. Defaults to `[width/2, height/2]`.
      * @returns The newly created {@link CameraLayer}.
      */
@@ -2172,7 +2172,7 @@ export class CompItem extends AVItem {
     /**
      * Create a new light layer at the top of the layer stack.
      *
-     * @param name - Layer name. Auto-generated if `None`.
+     * @param name - Layer name. Auto-generated if `null`.
      * @param center_point - The `[x, y]` center point. Defaults to `[width/2, height/2]`.
      * @returns The newly created {@link LightLayer}.
      */
@@ -2218,7 +2218,7 @@ export class CompItem extends AVItem {
     /**
      * Create a new parametric mesh layer at the top of the layer stack.
      *
-     * @param name - Layer name. Auto-generated if `None`.
+     * @param name - Layer name. Auto-generated if `null`.
      * @param mesh_type - The type of parametric mesh (required, keyword-only).
      * @returns The newly created {@link ParametricMeshLayer}.
      */
@@ -2313,7 +2313,7 @@ export class CompItem extends AVItem {
      * the matte layer inside the new composition (the original stays
      * untouched).
      *
-     * When `move_all_attributes` is `False` (allowed for a single
+     * When `move_all_attributes` is `false` (allowed for a single
      * source-backed layer only), the selected layer stays in this
      * composition with all its attributes and its source is swapped to
      * the new composition, which is sized from the layer's source and
@@ -2326,12 +2326,12 @@ export class CompItem extends AVItem {
      * @param layer_indices - 0-based indices of the layers to precompose (ExtendScript uses 1-based
      *   indices).
      * @param name - The name of the new composition.
-     * @param move_all_attributes - `True` (default) to move all attributes into the new
-     *   composition; `False` to leave them on the retained layer ("Leave all attributes" in the
+     * @param move_all_attributes - `true` (default) to move all attributes into the new
+     *   composition; `false` to leave them on the retained layer ("Leave all attributes" in the
      *   Pre-compose dialog).
      * @returns The newly created {@link CompItem}.
      * @throws {@link ValueError} If `layer_indices` is empty or contains an out-of-range index, or
-     *   if `move_all_attributes` is `False` with more than one index or with a layer that has no
+     *   if `move_all_attributes` is `false` with more than one index or with a layer that has no
      *   source.
      */
     validate_string(name);
@@ -2583,7 +2583,7 @@ export class CompItem extends AVItem {
      * Create a new solid layer at the top of the layer stack.
      *
      * @param color - Solid color as `[R, G, B]` in 0.0--1.0 range.
-     * @param name - The solid and layer name. Pass `None` to auto-generate a name from the color
+     * @param name - The solid and layer name. Pass `null` to auto-generate a name from the color
      *   (e.g. `Red Solid 1`).
      * @param width - Solid width in pixels. Defaults to comp width.
      * @param height - Solid height in pixels. Defaults to comp height.
@@ -2652,8 +2652,8 @@ export class CompItem extends AVItem {
      * Build the binary btds/btdk structure for a text layer.
      *
      * @param text - The text content.
-     * @param box_size - `[width, height]` for box text; `None` for point text.
-     * @param line_orientation - Text {@link LineOrientation}; `None` for the default horizontal
+     * @param box_size - `[width, height]` for box text; `null` for point text.
+     * @param line_orientation - Text {@link LineOrientation}; `null` for the default horizontal
      *   orientation.
      * @returns A `(LIST:btds, btgu, tdmn)` tuple to inject into the root tdgp.
      */
@@ -2735,7 +2735,7 @@ export class CompItem extends AVItem {
   /**
    * Create a new box (paragraph) text layer at the top of the layer stack.
    *
-   * @param box_size - `[width, height]` of the text box. If `None`, uses the composition
+   * @param box_size - `[width, height]` of the text box. If `null`, uses the composition
    *   dimensions.
    * @param text - Initial text content.
    * @returns The newly created {@link TextLayer}.
@@ -2764,7 +2764,7 @@ export class CompItem extends AVItem {
    * Vertical text flows top-to-bottom with lines stacking right-to-left,
    * matching the Vertical Type Tool default.
    *
-   * @param box_size - `[width, height]` of the text box. If `None`, uses the composition
+   * @param box_size - `[width, height]` of the text box. If `null`, uses the composition
    *   dimensions.
    * @param text - Initial text content.
    * @returns The newly created {@link TextLayer}.
@@ -2790,20 +2790,20 @@ descriptor(
   new ChunkField<number[]>("_cdta", "bg_color", { validate: validate_rgb_color }),
 );
 
-/** When `True`, Draft 3D mode is enabled for the composition. Read / Write. */
+/** When `true`, Draft 3D mode is enabled for the composition. Read / Write. */
 descriptor(CompItem, "draft3d", ChunkField.bool("_cdta", "draft3d"));
 
-/** When `True`, frame blending is enabled for this Composition. Read / Write. */
+/** When `true`, frame blending is enabled for this Composition. Read / Write. */
 descriptor(CompItem, "frame_blending", ChunkField.bool("_cdta", "frame_blending"));
 
-/** When `True`, only layers with `shy` set to `False` are shown in the
+/** When `true`, only layers with `shy` set to `false` are shown in the
  * Timeline panel. Read / Write. */
 descriptor(CompItem, "hide_shy_layers", ChunkField.bool("_cdta", "hide_shy_layers"));
 
-/** When `True`, motion blur is enabled for the composition. Read / Write. */
+/** When `true`, motion blur is enabled for the composition. Read / Write. */
 descriptor(CompItem, "motion_blur", ChunkField.bool("_cdta", "motion_blur"));
 
-/** When `True`, the frame rate of nested compositions is preserved in
+/** When `true`, the frame rate of nested compositions is preserved in
  * the current composition. Read / Write. */
 descriptor(
   CompItem,
@@ -2811,7 +2811,7 @@ descriptor(
   ChunkField.bool("_cdta", "preserve_nested_frame_rate"),
 );
 
-/** When `True`, the resolution of nested compositions is preserved in
+/** When `true`, the resolution of nested compositions is preserved in
  * the current composition. Read / Write. */
 descriptor(
   CompItem,
@@ -2922,7 +2922,7 @@ descriptor(
   }),
 );
 
-/** When `True`, timecode is displayed in drop-frame format. Only
+/** When `true`, timecode is displayed in drop-frame format. Only
  * applicable when `frameRate` is 29.97 or 59.94. Read / Write. */
 descriptor(
   CompItem,

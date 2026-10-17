@@ -26,13 +26,13 @@ export class ViewOptions {
   declare channels: ChannelType;
 
   /**
-   * When `True`, checkerboards (transparency grid) is enabled in the current view.
+   * When `true`, checkerboards (transparency grid) is enabled in the current view.
    * Read / Write.
    */
   declare checkerboards: boolean;
 
   /**
-   * When `True`, Draft 3D mode is enabled for the Composition panel. This
+   * When `true`, Draft 3D mode is enabled for the Composition panel. This
    * corresponds to the value of the Draft 3D button in the Composition panel.
    * Read / Write.
    */
@@ -43,37 +43,37 @@ export class ViewOptions {
    */
   declare exposure: number;
 
-  /** When `True`, the grid overlay is visible in the view. Read / Write. */
+  /** When `true`, the grid overlay is visible in the view. Read / Write. */
   declare grid: boolean;
 
-  /** When `True`, indicates guides are locked in the view. Read / Write. */
+  /** When `true`, indicates guides are locked in the view. Read / Write. */
   declare guides_locked: boolean;
 
   /**
-   * When `True`, indicates layers snap to guides when dragged in the view.
+   * When `true`, indicates layers snap to guides when dragged in the view.
    * Read / Write.
    */
   declare guides_snap: boolean;
 
   /**
-   * When `True`, indicates guides are visible in the view. Read / Write.
+   * When `true`, indicates guides are visible in the view. Read / Write.
    */
   declare guides_visibility: boolean;
 
   /**
-   * When `True`, indicates mask and shape paths are visible in the view.
+   * When `true`, indicates mask and shape paths are visible in the view.
    * Read / Write.
    */
   declare mask_and_shape_path: boolean;
 
   /**
-   * When `True`, indicates the proportional grid overlay is visible in the
+   * When `true`, indicates the proportional grid overlay is visible in the
    * view. Read / Write.
    */
   declare proportional_grid: boolean;
 
   /**
-   * When `True`, the region of interest (ROI) selection is active in the view.
+   * When `true`, the region of interest (ROI) selection is active in the view.
    * Read / Write.
    */
   declare region_of_interest: boolean;
@@ -90,17 +90,17 @@ export class ViewOptions {
   /** Right coordinate of the region of interest in pixels. Read / Write. */
   declare roi_right: number;
 
-  /** When `True`, indicates rulers are shown in the view. Read / Write. */
+  /** When `true`, indicates rulers are shown in the view. Read / Write. */
   declare rulers: boolean;
 
   /**
-   * When `True`, indicates title/action safe margin guides are visible in the
+   * When `true`, indicates title/action safe margin guides are visible in the
    * view. Read / Write.
    */
   declare title_action_safe: boolean;
 
   /**
-   * When `True`, indicates display color management is enabled for the view.
+   * When `true`, indicates display color management is enabled for the view.
    * Read / Write.
    */
   declare use_display_color_management: boolean;

@@ -107,7 +107,7 @@ export class _EnumParam {
 /**
  * Descriptor for plain integer XML parameters (read/write).
  *
- * Reads return `None` when the parameter is absent and fall back to
+ * Reads return `null` when the parameter is absent and fall back to
  * the raw string when it is non-numeric (the binary is trusted, like
  * `_try_enum_or_int` for enums). Writes require an `int`.
  */
@@ -528,7 +528,7 @@ export class XmlFormatOptions extends FormatOptionsBase {
   /**
    * Look up an Adobe param and convert to an enum or int.
    *
-   * Returns `None` when the param is absent or non-numeric.
+   * Returns `null` when the param is absent or non-numeric.
    */
   _enum_param(key: string, enum_cls: any): any {
     const raw = dict_get(this.params, key, "");
@@ -538,7 +538,7 @@ export class XmlFormatOptions extends FormatOptionsBase {
 
   /**
    * The video codec as a {@link VideoCodec} FourCC integer value extracted
-   * from the `ADBEVideoCodec` parameter, or `None` for audio-only
+   * from the `ADBEVideoCodec` parameter, or `null` for audio-only
    * formats (MP3, WAV). Falls back to a plain `int` when the codec is
    * not in the {@link VideoCodec} enum.
    * Read / Write.
@@ -547,7 +547,7 @@ export class XmlFormatOptions extends FormatOptionsBase {
 
   /**
    * The audio codec as an {@link AudioCodec} integer value extracted from
-   * the `ADBEAudioCodec` parameter, or `None` when the parameter is
+   * the `ADBEAudioCodec` parameter, or `null` when the parameter is
    * absent. Falls back to a plain `int` when the codec is not in the
    * {@link AudioCodec} enum.
    * Read / Write.
@@ -559,7 +559,7 @@ export class XmlFormatOptions extends FormatOptionsBase {
    * `ADBEVideoFPS` parameter. Adobe stores this as ticks per frame
    * using a time base of 254,016,000,000 ticks/second, so
    * `frame_rate = 254016000000 / ADBEVideoFPS`.
-   * `None` for audio-only formats (MP3, WAV).
+   * `null` for audio-only formats (MP3, WAV).
    * Read / Write.
    */
   get frame_rate(): number | null {
@@ -585,7 +585,7 @@ export class XmlFormatOptions extends FormatOptionsBase {
   /**
    * The dialog's top-level `Audio Format` (AAC / MPEG / PCM) as an
    * {@link MPEGAudioFormat} FourCC integer value extracted from the
-   * `ADBEMPEGAudioFormat` parameter, or `None` when the parameter is
+   * `ADBEMPEGAudioFormat` parameter, or `null` when the parameter is
    * absent. Despite the parameter's `MPEG` prefix it selects among all
    * three families. Falls back to a plain `int` when the value is not
    * in the {@link MPEGAudioFormat} enum.
@@ -595,7 +595,7 @@ export class XmlFormatOptions extends FormatOptionsBase {
 
   /**
    * The MPEG-1 audio layer as an {@link MPEGAudioLayer} value extracted
-   * from the `ADBEMPEGAudioLayer` parameter, or `None` when the
+   * from the `ADBEMPEGAudioLayer` parameter, or `null` when the
    * parameter is absent. Only meaningful when `mpeg_audio_format` is
    * `MPEGAudioFormat.MPEG`. Read / Write.
    */
@@ -604,20 +604,20 @@ export class XmlFormatOptions extends FormatOptionsBase {
   /**
    * The AVI audio interleave interval as an {@link AudioInterleave} value
    * extracted from the `ADBEAudioInterleave` parameter. The dialog's
-   * `None` choice stores no parameter, so reads return `None` for it.
+   * `null` choice stores no parameter, so reads return `null` for it.
    * Read / Write.
    */
   declare audio_interleave: any;
 
   /**
    * The MP3 audio bitrate in kbps, from the `BitRate` parameter
-   * (note: not ADBE-prefixed), or `None` when absent. Read / Write.
+   * (note: not ADBE-prefixed), or `null` when absent. Read / Write.
    */
   declare bitrate: any;
 
   /**
    * The H.264 audio bitrate in kbps, from the `ADBEAudioBitrate`
-   * parameter, or `None` when absent. Read / Write.
+   * parameter, or `null` when absent. Read / Write.
    */
   declare audio_bitrate: any;
 
@@ -654,13 +654,13 @@ export class XmlFormatOptions extends FormatOptionsBase {
   /**
    * The H.264 encoding level as the raw integer from the
    * `ADBEVideoMPEGProfileLevel` parameter (level x 10, e.g. `41` for
-   * 4.1; `100` is Unrestricted), or `None` when absent. Read / Write.
+   * 4.1; `100` is Unrestricted), or `null` when absent. Read / Write.
    */
   declare level: any;
 
   /**
    * The DNxHR/DNxHD resolution preset as a {@link DnxResolution} value
-   * extracted from the `ADBEVideoResolution` parameter, or `None` when
+   * extracted from the `ADBEVideoResolution` parameter, or `null` when
    * the parameter is absent. Only meaningful when `video_codec` is
    * `VideoCodec.DNXHR_DNXHD`; the param survives codec changes (stale
    * under other codecs). Falls back to a plain `int` when the value is
@@ -670,7 +670,7 @@ export class XmlFormatOptions extends FormatOptionsBase {
 
   /**
    * The DNxHR/DNxHD `Alpha` choice from the `ADBEDNxHDAlphaType`
-   * parameter: `1` = Compressed, `None` (param absent) = None. Only
+   * parameter: `1` = Compressed, `null` (param absent) = None. Only
    * meaningful when `video_codec` is `VideoCodec.DNXHR_DNXHD`.
    * (`ADBEVideoAlphaType` is unrelated - it reads `true` on every
    * sampled module.) Read / Write.
@@ -680,7 +680,7 @@ export class XmlFormatOptions extends FormatOptionsBase {
   /**
    * The MPEG multiplexer as an {@link MPEGMultiplexer} FourCC integer
    * value extracted from the `ADBEMPEGMultiplexer` parameter, or
-   * `None` when the parameter is absent. Falls back to a plain `int`
+   * `null` when the parameter is absent. Falls back to a plain `int`
    * when the value is not in the {@link MPEGMultiplexer} enum.
    * Read / Write.
    */
@@ -689,7 +689,7 @@ export class XmlFormatOptions extends FormatOptionsBase {
   /**
    * The MPEG mux stream compatibility as an
    * {@link MPEGMuxStreamCompatibility} FourCC integer value extracted from
-   * the `ADBEMPEGMuxStreamCompatibility` parameter, or `None` when the
+   * the `ADBEMPEGMuxStreamCompatibility` parameter, or `null` when the
    * parameter is absent. Falls back to a plain `int` when the value
    * is not in the {@link MPEGMuxStreamCompatibility} enum.
    * Read / Write.

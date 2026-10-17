@@ -385,7 +385,7 @@ export function _profile_record(blob: Uint8Array): ColorProfileRecord {
 export function named_media_profile(source_format: string, info: MediaInfo): string | null {
   /**
    * The profile After Effects records by name only for a TIFF or Photoshop
-   * image whose colours are not RGB, or `None` when it records an ICC
+   * image whose colours are not RGB, or `null` when it records an ICC
    * profile (or none) instead.
    *
    * A file tagged with a non-RGB profile names that profile; an untagged one
@@ -439,7 +439,7 @@ export function _media_profile_records(
    * variants.
    *
    * @param icc_profile - The profile the media file embeds, if any (see
-   *   {@link py_aep.resolvers.media_probe.MediaInfo | MediaInfo.icc_profile}).
+   *   {@link MediaInfo | MediaInfo.icc_profile}).
    * @param source_format - Its `sspc` 4-char format code.
    * @param has_video - Whether the media has picture at all (audio-only QuickTime is recorded like
    *   any other audio file).
@@ -447,7 +447,7 @@ export function _media_profile_records(
    * @param embedded_profile_name - A named media color space, for the formats that carry one (`.ai`
    *   and friends, non-RGB TIFF/PSD).
    * @param color_mode - The Photoshop colour mode the image reads as (see
-   *   {@link py_aep.resolvers.media_probe.MediaInfo | MediaInfo.color_mode}); an untagged bitmap
+   *   {@link MediaInfo | MediaInfo.color_mode}); an untagged bitmap
    *   TIFF/PSD is assigned sRGB rather than taken as carrying it.
    */
   if (embedded_profile_name != null || _UNPROFILED_FORMATS.has(source_format)) {
@@ -627,7 +627,7 @@ export class FileSource extends FootageSource {
     return this._file_names;
   }
 
-  /** `True` if the file is a folder, else `False`. Read-only. */
+  /** `true` if the file is a folder, else `false`. Read-only. */
   get target_is_folder(): boolean {
     return this._target_is_folder;
   }
@@ -688,7 +688,7 @@ export class FileSource extends FootageSource {
     this._write_ocsp(envelope);
   }
 
-  /** `True` for an imported 3D model scene (e.g. an `.fbx`). */
+  /** `true` for an imported 3D model scene (e.g. an `.fbx`). */
   get _is_3d_model_scene(): boolean {
     return this._sspc.source_format_type === FORMAT_3D_MODEL_SCENE;
   }
@@ -860,17 +860,17 @@ export class FileSource extends FootageSource {
      * @param pixel_aspect - Pixel aspect ratio.
      * @param has_alpha - Whether the footage has an alpha channel.
      * @param depth - Pixel depth AE caches for the footage (see
-     *   {@link py_aep.resolvers.media_probe.MediaInfo | MediaInfo.depth}).
+     *   {@link MediaInfo | MediaInfo.depth}).
      * @param media_flag - Mark the footage the way AE marks its media formats
      *   (`FileFormat.media_flag`): `sspc` 0x70 bit 3, and 0x9F bit 3 for a single file.
      * @param alpha_premultiplied - When `has_alpha`, select PREMULTIPLIED rather than the STRAIGHT
      *   default.
      * @param audio_sample_rate - Audio sample rate in Hz (0 = no audio).
-     * @param sequence_prefix - Filename text before the frame number. When not `None`, the source
+     * @param sequence_prefix - Filename text before the frame number. When not `null`, the source
      *   is an image sequence.
      * @param sequence_ext - Filename extension including the dot (sequence only).
      * @param sequence_files - The frame file names of an alphabetical sequence, in order. When not
-     *   `None`, the source is an image sequence listed by name rather than numbered, and
+     *   `null`, the source is an image sequence listed by name rather than numbered, and
      *   `sequence_prefix`, `sequence_ext`, `start_frame`, `end_frame` and `frame_padding` are not
      *   used.
      * @param start_frame - First frame number (sequence only).
@@ -879,22 +879,22 @@ export class FileSource extends FootageSource {
      * @param opti_data - Raw `opti` asset-info bytes. Empty is accepted by AE for single still
      *   images; sequences and audio need the generic header (see `build_generic_opti_data`).
      * @param embedded_profile_name - Name of the source's embedded color profile, recorded in
-     *   `LIST:CLRS` (matching AE). `None` for sources with no embedded profile.
+     *   `LIST:CLRS` (matching AE). `null` for sources with no embedded profile.
      * @param icc_profile - The ICC profile the media file embeds (see
-     *   {@link py_aep.resolvers.media_probe.MediaInfo | MediaInfo.icc_profile}). `None` selects the
+     *   {@link MediaInfo | MediaInfo.icc_profile}). `null` selects the
      *   profile AE assigns to media that carries none - see `_media_profile_records`.
-     * @param full_frame - When `True` (default, every standard import), the footage spans its full
-     *   source frame. Set `False` for a layer cropped to its content box (`COMP_CROPPED_LAYERS`, or
+     * @param full_frame - When `true` (default, every standard import), the footage spans its full
+     *   source frame. Set `false` for a layer cropped to its content box (`COMP_CROPPED_LAYERS`, or
      *   a chosen layer imported at Layer Size).
      * @param layer_name - Name of the referenced layer when the source is a single layer of a
      *   layered file; stored in the Pin's `Utf8` slot after `sspc` (empty otherwise, matching AE).
-     * @param layer_id - Photoshop layer id for a layer-bound source; `None` keeps the `0xFFFFFFFF`
+     * @param layer_id - Photoshop layer id for a layer-bound source; `null` keeps the `0xFFFFFFFF`
      *   unbound sentinel.
-     * @param layer_index - 0-based document index of the referenced layer; `None` keeps the
+     * @param layer_index - 0-based document index of the referenced layer; `null` keeps the
      *   `0xFFFFFFFF` unbound sentinel.
      * @param data_size - Cached source data size for `sspc` byte 0xD0 (see `SspcChunk.data_size`);
      *   `0` lets AE re-derive it.
-     * @param reserved_c8 - Override for the `sspc` 0xC8 kind bytes. `None` applies the whole-file
+     * @param reserved_c8 - Override for the `sspc` 0xC8 kind bytes. `null` applies the whole-file
      *   rule (see below); layer-bound and merged-PSD sources pass AE's observed per-context value.
      * @param color_mode - The Photoshop colour mode the image reads as (see
      *   `_media_profile_records`); 3 (RGB) by default.
@@ -1085,7 +1085,7 @@ export class FileSource extends FootageSource {
      * `AVItem.set_proxy*`.
      *
      * @param file - Path to the source file, or a representative frame for a sequence.
-     * @param sequence - When `True`, import as a numbered image sequence.
+     * @param sequence - When `true`, import as a numbered image sequence.
      * @param force_alphabetical - For a sequence, order frames alphabetically rather than
      *   numerically.
      * @param windows - Write what AE on Windows writes rather than AE on macOS: the BMP/GIF
@@ -1723,7 +1723,7 @@ export class FileSource extends FootageSource {
   /**
    * The layer-styles choice recorded for a Photoshop single-layer
    * binding: `"editable"`, `"merge"` or `"ignore"` (see
-   * `ImportOptions.layer_styles`), or `None` when this source is not a
+   * `ImportOptions.layer_styles`), or `null` when this source is not a
    * PSD single-layer binding (merged/whole-document footage, other
    * formats). Read-only.
    *

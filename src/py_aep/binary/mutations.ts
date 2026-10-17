@@ -402,7 +402,7 @@ export function build_parallel_ldat_item(
  * `bbox` is `(top_left_x, top_left_y, bottom_right_x, bottom_right_y)`;
  * `points` are the normalized bezier control points (3 per vertex);
  * `tensions` the per-vertex RotoBezier tensions (empty `omtn` when
- * `None`); `feather_points` are copied, so the source keeps its own.
+ * `null`); `feather_points` are copied, so the source keeps its own.
  */
 export function build_shap(
   bbox: [number, number, number, number],

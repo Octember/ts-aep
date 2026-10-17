@@ -58,7 +58,7 @@ export class _ParseContext {
    * layer, not the composition, so the layer has to travel with the
    * parse. It is the layer itself rather than its size so the size stays
    * lazy - a mask `Shape` reads it back at value-read time, and so
-   * follows the layer if its source is later replaced. `None` only where
+   * follows the layer if its source is later replaced. `null` only where
    * there is genuinely no layer (a project-level parse).
    */
   readonly layer: Layer | null;

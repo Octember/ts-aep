@@ -55,7 +55,7 @@ export class LightLayer extends Layer {
 
   static _LIVE_DEFAULTS = [["ADBE Transform Group", "ADBE Position"]] as const;
 
-  /** Always `True`: a camera / light layer only exists in 3D space.
+  /** Always `true`: a camera / light layer only exists in 3D space.
    * Read-only. */
   get is_3d(): boolean {
     return true;
@@ -133,7 +133,7 @@ export class LightLayer extends Layer {
 
   /**
    * The layer used as a light source when `light_type` is
-   * `LightType.ENVIRONMENT`. Returns `None` if no source is assigned.
+   * `LightType.ENVIRONMENT`. Returns `null` if no source is assigned.
    * Read / Write.
    *
    * The light source can be any 2D video, still, pre-composition, text

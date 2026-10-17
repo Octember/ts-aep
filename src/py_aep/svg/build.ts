@@ -1,7 +1,7 @@
 /**
  * Build a shape layer's Contents from parsed SVG drawables.
  *
- * Translates {@link py_aep.svg.types.SvgDrawable | SvgDrawable}s into After Effects
+ * Translates {@link SvgDrawable | SvgDrawable}s into After Effects
  * shape groups through the public `add_property` API - one `ADBE Vector Group` per drawable, in reverse document order (AE Contents index 0
  * renders on top, matching SVG's last-painted-on-top), each holding the
  * path(s), stroke, and fill. Solid paints become Fill/Stroke; gradient

@@ -288,7 +288,7 @@ export class Curves {
    * One channel's curve at `x` in 0..1, on its own (not through the
    * master): the spline through its points, or its map read linearly
    * when drawn with the pencil. Clamped to 0..1 unless `clamp` is
-   * `False`, which leaves the spline's overshoot between the points.
+   * `false`, which leaves the spline's overshoot between the points.
    *
    * @throws {@link ValueError} If `channel` is not one of `CURVES_CHANNELS`, or `x` is not a finite
    *   number.

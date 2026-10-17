@@ -256,10 +256,10 @@ export class PropertyBase {
   }
 
   /**
-   * When `True`, the property is selected. Read / Write.
+   * When `true`, the property is selected. Read / Write.
    *
    * **Note:** Property selection is stored in the `.aep` binary format but very complex.
-   * Parsed projects report `False` for now.
+   * Parsed projects report `false` for now.
    */
   get selected(): boolean {
     return false;
@@ -285,7 +285,7 @@ export class PropertyBase {
   }
 
   /**
-   * When `True`, the property is not shown in the UI. An elided
+   * When `true`, the property is not shown in the UI. An elided
    * property is still present in the timeline but hidden from view.
    * Read-only.
    */
@@ -294,7 +294,7 @@ export class PropertyBase {
   }
 
   /**
-   * When `True`, this property is an effect {@link PropertyGroup}.
+   * When `true`, this property is an effect {@link PropertyGroup}.
    * Read-only.
    */
   get is_effect(): boolean {
@@ -302,7 +302,7 @@ export class PropertyBase {
   }
 
   /**
-   * When `True`, this property is a mask {@link PropertyGroup}.
+   * When `true`, this property is a mask {@link PropertyGroup}.
    * Read-only.
    */
   get is_mask(): boolean {
@@ -319,7 +319,7 @@ export class PropertyBase {
   }
 
   /**
-   * The parent {@link PropertyGroup} of this property, or `None` for
+   * The parent {@link PropertyGroup} of this property, or `null` for
    * top-level layer property groups. Read-only.
    */
   get parent_property(): PropertyGroup | null {
@@ -375,7 +375,7 @@ export class PropertyBase {
     this._name_utf8.value = value;
   }
 
-  /** `True` if the name has been explicitly set by the user. Read-only. */
+  /** `true` if the name has been explicitly set by the user. Read-only. */
   get is_name_set(): boolean {
     if (this._name != null) return true;
     if (this._name_utf8 != null) {
@@ -393,7 +393,7 @@ export class PropertyBase {
   /**
    * The 0-based position of this property within its parent group.
    *
-   * Returns `None` for layers (property depth 0).
+   * Returns `null` for layers (property depth 0).
    *
    * **Warning:** Unlike ExtendScript (1-based), this uses Python's 0-based
    * convention so that `group.properties[prop.property_index]`
@@ -407,9 +407,9 @@ export class PropertyBase {
   }
 
   /**
-   * `True` if the `enabled` attribute value can be set.
+   * `true` if the `enabled` attribute value can be set.
    *
-   * This is `True` for all layers, effect property groups, shape
+   * This is `true` for all layers, effect property groups, shape
    * vector groups, text path options, and the Layer Styles group
    * and its individual styles. Read-only.
    */
@@ -470,7 +470,7 @@ export class PropertyBase {
   }
 
   /**
-   * `True` if this property has been changed since its creation.
+   * `true` if this property has been changed since its creation.
    *
    * A property is considered modified if its value differs from the
    * default, if it has keyframes, or if an expression is enabled.

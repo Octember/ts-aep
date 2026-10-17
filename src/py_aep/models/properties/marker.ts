@@ -227,7 +227,7 @@ export class MarkerValue {
   }
 
   /**
-   * When `True`, the FlashVideo cue point is for an event; otherwise, it is
+   * When `true`, the FlashVideo cue point is for an event; otherwise, it is
    * for navigation.
    */
   get event_cue_point(): boolean {
@@ -250,8 +250,8 @@ descriptor(MarkerValue, "navigation", ChunkField.bool("_nmhd", "navigation"));
 
 /**
  * State of the Protected Region option in the Composition Marker dialog box.
- * When `True`, the composition marker behaves as a protected region. Will
- * also return `True` for protected region markers on nested composition
+ * When `true`, the composition marker behaves as a protected region. Will
+ * also return `true` for protected region markers on nested composition
  * layers, but is otherwise not applicable to layer markers. Read / Write.
  */
 descriptor(MarkerValue, "protected_region", ChunkField.bool("_nmhd", "protected_region"));

@@ -166,11 +166,11 @@ export function _validate_enum_member(enum_cls: any, value: any, public_name: st
  * @param transform - Optional callable applied when *getting* (binary -\> user-facing value).
  * @param reverse - 1-arg callable applied when *setting* (user-facing -\> binary value). Returns a
  *   scalar written to `field`.
- * @param read_only - When `True`, the field cannot be set. Defaults to `False`.
+ * @param read_only - When `true`, the field cannot be set. Defaults to `false`.
  * @param validate - Optional callable called with the user-facing value before any reverse
  *   transform. Must raise `ValueError` or `TypeError` if the value is invalid.
- * @param default - Optional default value returned when the chunk body is `None`. If not given,
- *   accessing the field when the body is `None` raises `AttributeError`.
+ * @param default - Optional default value returned when the chunk body is `null`. If not given,
+ *   accessing the field when the body is `null` raises `AttributeError`.
  * @param pre_set - Optional method name on the model instance, invoked after validation and before
  *   the value is written.
  * @param post_set - Optional method name on the model instance, or a callable receiving the model
@@ -336,7 +336,7 @@ export class ChunkField<T> {
    * `int` is used.
    *
    * @param kw - Keyword arguments:
-   * - `allow_out_of_enum_values`: When `True`, a stored value outside the enum reads back raw
+   * - `allow_out_of_enum_values`: When `true`, a stored value outside the enum reads back raw
    *     instead of raising - real `.aep` files hold them (an unlabelled output depth, a format id
    *     from a third-party output plugin) and the binary is trusted. Wrapping the transform hides
    *     the enum class from `_enum_class`, so write-side membership strictness is restored via

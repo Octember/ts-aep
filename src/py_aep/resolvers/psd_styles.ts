@@ -95,7 +95,7 @@ export class PsdLayerStyles {
   disabled: readonly string[];
 
   /**
-   * `True` when the layer carries blend-options tagged blocks
+   * `true` when the layer carries blend-options tagged blocks
    * (`iOpa`/`infx`/`brst`). AE enables the container + Blend Options chain
    * (`tdsb` 0x01) for these layers even when no style is enabled.
    */
@@ -752,7 +752,7 @@ export function parse_layer_styles(
    *
    * @param leaf - A `PsdLayer` from `read_psd_layers` (carries the raw blocks).
    * @param global_light - The document global light from `read_global_light`.
-   * @returns The resolved styles, or `None` when the layer has no style-related blocks at all or
+   * @returns The resolved styles, or `null` when the layer has no style-related blocks at all or
    *   its descriptor cannot be decoded (the layer then keeps the plain disabled skeleton; a warning
    *   is emitted so the style loss is visible).
    */

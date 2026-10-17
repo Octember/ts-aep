@@ -112,7 +112,7 @@ export class FootageSource {
 
   /**
    * Defines how the alpha information in the footage is interpreted.
-   * If `has_alpha` is `False`, this attribute has no relevant meaning.
+   * If `has_alpha` is `false`, this attribute has no relevant meaning.
    * Read / Write.
    */
   declare alpha_mode: AlphaMode;
@@ -124,24 +124,24 @@ export class FootageSource {
   declare field_separation_type: FieldSeparationType;
 
   /**
-   * When `True`, the footage has an alpha component. In this case, the
+   * When `true`, the footage has an alpha component. In this case, the
    * attributes `alpha_mode`, `invert_alpha`, and `premultiplied` have valid
-   * values. When `False`, those attributes have no relevant meaning for the
+   * values. When `false`, those attributes have no relevant meaning for the
    * footage. Read-only.
    */
   declare has_alpha: boolean;
 
   /**
-   * When `True`, After Effects uses special algorithms to determine how to
+   * When `true`, After Effects uses special algorithms to determine how to
    * perform high-quality field separation. Read / Write.
    */
   declare high_quality_field_separation: boolean;
 
   /**
-   * When `True`, an alpha channel in a footage clip or proxy should be
+   * When `true`, an alpha channel in a footage clip or proxy should be
    * inverted. This attribute is valid only if an alpha is present. If
-   * `has_alpha` is `False`, or if `alpha_mode` is
-   * {@link py_aep.enums.AlphaMode | AlphaMode.IGNORE}, this attribute is
+   * `has_alpha` is `false`, or if `alpha_mode` is
+   * {@link AlphaMode | AlphaMode.IGNORE}, this attribute is
    * ignored. Read / Write.
    */
   declare invert_alpha: boolean;
@@ -155,7 +155,7 @@ export class FootageSource {
   /**
    * The color to be premultiplied. This attribute is valid only if
    * the `alpha_mode` is
-   * {@link py_aep.enums.AlphaMode | AlphaMode.PREMULTIPLIED}.
+   * {@link AlphaMode | AlphaMode.PREMULTIPLIED}.
    * Read / Write.
    */
   declare premul_color: number[];
@@ -232,7 +232,7 @@ export class FootageSource {
 
   /**
    * Controls which pulldown phase to remove from the source footage.
-   * {@link py_aep.enums.PulldownPhase | PulldownPhase.OFF} by default.
+   * {@link PulldownPhase | PulldownPhase.OFF} by default.
    * Read / Write.
    */
   declare remove_pulldown: PulldownPhase;
@@ -512,7 +512,7 @@ export class FootageSource {
   }
 
   /**
-   * When `True`, the footage Preserve RGB setting is enabled.
+   * When `true`, the footage Preserve RGB setting is enabled.
    * From the Interpret Footage \> Color Management tab. Read / Write.
    *
    * **Note:** Not exposed in ExtendScript.
@@ -538,7 +538,7 @@ export class FootageSource {
    *
    * Returns `"Embedded"`, `"Working Color Space"`, the name of an assigned
    * OCIO color space, or the name of an Adobe ICC profile (e.g.
-   * `"Apple RGB"`). As with {@link py_aep.models.project.Project.working_space | working_space},
+   * `"Apple RGB"`). As with {@link Project.working_space | working_space},
    * an assigned OCIO space reads back as AE's stored `colorProfileName`:
    * `"<family>/<name>"` for a direct color-space pick (e.g.
    * `"ACES/ACES - ACEScg"`), or the target name for a role/alias pick.
@@ -674,7 +674,7 @@ export class FootageSource {
   }
 
   /**
-   * Whether the footage is still; When `False`, it has a
+   * Whether the footage is still; When `false`, it has a
    * time-based component. Read-only.
    */
   get is_still(): boolean {

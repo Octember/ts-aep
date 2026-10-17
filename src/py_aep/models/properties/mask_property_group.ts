@@ -42,7 +42,7 @@ export const _MASK_COLOR_CYCLE: readonly (readonly [number, number, number])[] =
  *
  * Info:
  *     `MaskPropertyGroup` is a subclass of PropertyGroup object. All methods and
- *     attributes of {@link py_aep.models.properties.property_base.PropertyBase | PropertyBase}
+ *     attributes of {@link PropertyBase | PropertyBase}
  *     object and {@link PropertyGroup}, in addition to those listed below, are available
  *     when working with `MaskPropertyGroup`.
  *
@@ -67,11 +67,11 @@ export class MaskPropertyGroup extends PropertyGroup {
    */
   declare color: number[];
 
-  /** When `True`, the mask is inverted. Read / Write. */
+  /** When `true`, the mask is inverted. Read / Write. */
   declare inverted: boolean;
 
   /**
-   * When `True`, the mask is locked and cannot be edited in the user
+   * When `true`, the mask is locked and cannot be edited in the user
    * interface. Read / Write.
    */
   declare locked: boolean;
@@ -95,7 +95,7 @@ export class MaskPropertyGroup extends PropertyGroup {
   declare _mask_shape_tdsb: TdsbChunk | null;
 
   /**
-   * When `True`, the mask uses RotoBezier, enabling curved mask segments
+   * When `true`, the mask uses RotoBezier, enabling curved mask segments
    * without direction handles. Read / Write.
    *
    * The flag lives in the Mask Shape's `tdsb`. A freshly added mask has
@@ -268,7 +268,7 @@ export class MaskPropertyGroup extends PropertyGroup {
    *
    * Mirrors After Effects: a freshly added mask carries no Mask Shape
    * subtree, and enabling RotoBezier (`roto_bezier=True`) or setting a
-   * plain bezier path (`False` - the tdsb roto flag stays clear, like
+   * plain bezier path (`false` - the tdsb roto flag stays clear, like
    * AE's own imports) materializes the implicit default full-frame
    * rectangle as an explicit path.
    */

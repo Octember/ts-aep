@@ -83,8 +83,8 @@ export function _int_float_guard(fn: (x: any) => number): (x: any) => number {
 /**
  * Descriptor that proxies a single key on a COS dict.
  *
- * The dict is retrieved from the model instance via `getattr(obj, dict_attr)`.  When the dict is `None` the descriptor returns
- * `default` (which defaults to `None`).
+ * The dict is retrieved from the model instance via `getattr(obj, dict_attr)`.  When the dict is `null` the descriptor returns
+ * `default` (which defaults to `null`).
  *
  * Unlike `ChunkField`, this descriptor is scalar-only: `reverse`
  * always returns a single value written to one dict key.
@@ -94,10 +94,10 @@ export function _int_float_guard(fn: (x: any) => number): (x: any) => number {
  * @param transform - Optional callable applied when *getting* (COS value -\> user-facing value).
  * @param reverse - 1-arg callable applied when *setting* (user-facing -\> COS value). Always returns
  *   a scalar.
- * @param read_only - When `True`, the field cannot be set.
+ * @param read_only - When `true`, the field cannot be set.
  * @param validate - Optional callable called with the user-facing value before any `reverse`
  *   transform.
- * @param default - Value returned when the dict is `None` or the key is absent. Defaults to `None`.
+ * @param default - Value returned when the dict is `null` or the key is absent. Defaults to `null`.
  * @param min_version - Minimum AE major version required to *set* this field. Writes to an older
  *   file raise `AttributeError`; reads are always allowed. Mirrors `models.descriptors.ChunkField`.
  */
@@ -174,7 +174,7 @@ export class CosField<T> {
   }
 
   /**
-   * Validate a non-`None` user value and reverse-transform it to
+   * Validate a non-`null` user value and reverse-transform it to
    * the form stored in the COS dict.
    */
   _coerce(obj: any, value: any): any {

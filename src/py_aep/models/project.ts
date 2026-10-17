@@ -281,7 +281,7 @@ export class Project {
   declare display_start_frame: number;
 
   /**
-   * When `True`, the Frames field in the UI is displayed as
+   * When `true`, the Frames field in the UI is displayed as
    * feet+frames. Read / Write.
    */
   declare frames_use_feet_frames: boolean;
@@ -293,7 +293,7 @@ export class Project {
   declare time_display_type: TimeDisplayType;
 
   /**
-   * When `True`, thumbnail views use the transparency checkerboard
+   * When `true`, thumbnail views use the transparency checkerboard
    * pattern. Read / Write.
    */
   declare transparency_grid_thumbnails: boolean;
@@ -340,7 +340,7 @@ export class Project {
   // in __init__ so the descriptor chain is: getattr(self, "_aep") -> self,
   // then getattr(self, "_xmp") -> the raw XMP string.
   /**
-   * The XMP packet for the project, containing metadata. `None` when the
+   * The XMP packet for the project, containing metadata. `null` when the
    * project has no XMP packet (e.g. projects created via `py_aep.new()`).
    * Read / Write.
    */
@@ -736,7 +736,7 @@ export class Project {
 
   /**
    * The item that is currently active and is to be acted upon, or
-   * `None` if no item is currently selected or if multiple items are
+   * `null` if no item is currently selected or if multiple items are
    * selected. Read-only.
    */
   get active_item(): Item | null {
@@ -929,7 +929,7 @@ export class Project {
 
   /**
    * Directories scanned to resolve ICC profiles when writing an
-   * Adobe-CMS working space. `None` (default) auto-discovers the standard
+   * Adobe-CMS working space. `null` (default) auto-discovers the standard
    * Adobe Color directories. Assign a list of folders containing `.icc`/
    * `.icm` files to override (e.g. for a non-default install or CI).
    */
@@ -1152,7 +1152,7 @@ export class Project {
   /**
    * Import a placeholder footage item into the project root folder.
    *
-   * @param name - The placeholder name. Pass `None` to use `Missing Name`. An empty string becomes
+   * @param name - The placeholder name. Pass `null` to use `Missing Name`. An empty string becomes
    *   `Placeholder`.
    * @param width - Width in pixels (4-30000).
    * @param height - Height in pixels (4-30000).
@@ -1355,7 +1355,7 @@ export class Project {
 
   /**
    * The COMP-import Layer Options value: the user's explicit choice, or
-   * the machine's sticky PSD-comp import preference. `None` (no preference,
+   * the machine's sticky PSD-comp import preference. `null` (no preference,
    * or no preferences directory) keeps AE's `editable` dialog default.
    */
   _resolve_comp_layer_styles(options: ImportOptions): string | null {
@@ -1933,8 +1933,8 @@ export class Project {
    * @param no_font_locking - Accepted for ExtendScript parity and ignored. After Effects uses it to
    *   suppress the fallback font it picks when `to_font` lacks glyphs for the text; that fallback
    *   is a runtime font-engine decision py_aep does not make, so py_aep always performs the direct
-   *   replacement (i.e. it behaves as if this were `True`).
-   * @returns `True` if at least one layer was changed.
+   *   replacement (i.e. it behaves as if this were `true`).
+   * @returns `true` if at least one layer was changed.
    */
   replace_font(from_font: FontObject | string, to_font: FontObject | string, no_font_locking = false): boolean {
     validate_bool(no_font_locking);

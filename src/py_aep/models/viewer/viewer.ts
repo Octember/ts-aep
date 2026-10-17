@@ -70,7 +70,7 @@ export class Viewer {
   }
 
   /**
-   * When `True`, indicates if the viewer panel is active.
+   * When `true`, indicates if the viewer panel is active.
    * Read-only.
    */
   get active(): boolean {

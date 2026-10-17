@@ -34,7 +34,7 @@ export class CameraLayer extends Layer {
   // (2 * tan(fov/2) rounds to 0.72; AE uses the exact ratio).
   static _zoom_dividend: number = 0.72;
 
-  /** Always `True`: a camera / light layer only exists in 3D space.
+  /** Always `true`: a camera / light layer only exists in 3D space.
    * Read-only. */
   get is_3d(): boolean {
     return true;

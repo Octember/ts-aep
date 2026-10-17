@@ -289,7 +289,7 @@ export function _postscript_index(): Map<string, [Path, number, string | null]> 
  * Resolve a PostScript name (name ID 6) to an installed font face.
  *
  * Returns `(font file path, face index)` - the index selects a face
- * within a `.ttc` collection - or `None` when no matching font is
+ * within a `.ttc` collection - or `null` when no matching font is
  * installed. This mirrors how AE's text engine identifies fonts, so
  * the composed-line resolver uses it for measurement.
  */
@@ -305,7 +305,7 @@ export function resolve_postscript(
 
 /**
  * The installed font's version string (name ID 5) for a PostScript
- * name, or `None` when no matching font is installed.
+ * name, or `null` when no matching font is installed.
  *
  * AE stamps this host-resolved string on font entries it registers in
  * a text document and on the used-font records (probed via the
@@ -378,7 +378,7 @@ export function _pick(
  * Resolve a single family name to an installed font face, with NO
  * generic fallback.
  *
- * Unlike `resolve_font`, an uninstalled family returns `None` instead
+ * Unlike `resolve_font`, an uninstalled family returns `null` instead
  * of degrading to the sans-serif chain; used where substituting a
  * different font would be wrong (e.g. reading variable-font axes).
  * Returns `(font file path, face index)`.
@@ -400,7 +400,7 @@ export function resolve_font_exact(family: string): [Path, number] | null {
  * `family` may be a comma-separated list (quotes stripped); the first
  * installed family wins. Returns `(font file path, face index)` - the index
  * selects a face within a `.ttc` collection (0 for a single-face file) - or
- * `None` when no listed family is found.
+ * `null` when no listed family is found.
  */
 export function resolve_font(
   family: string,

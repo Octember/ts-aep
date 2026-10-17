@@ -48,7 +48,7 @@ export class FontObject {
 
   /**
    * For variable fonts, an ordered array with a length matching the
-   * number of design axes defined by the font. `None` for non-variable
+   * number of design axes defined by the font. `null` for non-variable
    * fonts. Read-only.
    *
    * Stored in the file as 16.16 fixed-point integers; exposed as floats
@@ -59,14 +59,14 @@ export class FontObject {
   declare _font_data: Map<string, any>;
   declare _font_entry: Map<string, any> | null;
 
-  /** Returns `True` if the font is a variable font. Read-only. */
+  /** Returns `true` if the font is a variable font. Read-only. */
   get has_design_axes(): boolean {
     return this.design_vector != null;
   }
 
   /**
    * The family prefix of the variable font. For example, the family
-   * of the PostScript name `SFPro-Bold` is `SFPro`. `None` for
+   * of the PostScript name `SFPro-Bold` is `SFPro`. `null` for
    * non-variable fonts. Read-only.
    */
   get family_prefix(): string | null {
