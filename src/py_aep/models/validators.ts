@@ -185,10 +185,7 @@ export function validate_enum(enum_cls: EnumHelpers<unknown>): Validator {
       throw new TypeError_(`expected a ${enum_cls.__name__}, got ${type_name(value)}`);
     }
     if (typeof value === "number" && Number.isInteger(value)) {
-      try {
-        enum_cls.of(value);
-      } catch (e) {
-        if (!(e instanceof ValueError)) throw e;
+      if (enum_cls.of_or_null(value) === null) {
         throw new ValueError(`${repr(value)} is not a valid ${enum_cls.__name__} value`);
       }
       return;

@@ -4,7 +4,7 @@
  * These enums match the values used in After Effects ExtendScript.
  */
 
-import { ValueError, getitem, int, int_enum, type EnumValue } from "../../pyrt/index.ts";
+import { getitem, int, int_enum, type EnumValue } from "../../pyrt/index.ts";
 
 /**
  * Auto kerning type option for text characters.
@@ -79,12 +79,7 @@ export const BoxAutoFitPolicy = int_enum(
   {
     /** Convert COS value (0-3) to BoxAutoFitPolicy. */
     from_binary(value: number): number {
-      try {
-        return this.of(value + 13412);
-      } catch (e) {
-        if (!(e instanceof ValueError)) throw e;
-        return this.NONE;
-      }
+      return this.of_or_null(value + 13412) ?? this.NONE;
     },
     /** Convert BoxAutoFitPolicy to COS value (0-3). */
     to_binary(self: number): number {
@@ -115,12 +110,7 @@ export const BoxFirstBaselineAlignment = int_enum(
   {
     /** Convert COS value (0-8) to BoxFirstBaselineAlignment. */
     from_binary(value: number): number {
-      try {
-        return this.of(value + 13012);
-      } catch (e) {
-        if (!(e instanceof ValueError)) throw e;
-        return this.ASCENT;
-      }
+      return this.of_or_null(value + 13012) ?? this.ASCENT;
     },
     /** Convert BoxFirstBaselineAlignment to COS value (0-8). */
     to_binary(self: number): number {
@@ -146,12 +136,7 @@ export const BoxVerticalAlignment = int_enum(
   {
     /** Convert COS value (0-3) to BoxVerticalAlignment. */
     from_binary(value: number): number {
-      try {
-        return this.of(value + 12812);
-      } catch (e) {
-        if (!(e instanceof ValueError)) throw e;
-        return this.TOP;
-      }
+      return this.of_or_null(value + 12812) ?? this.TOP;
     },
     /** Convert BoxVerticalAlignment to COS value (0-3). */
     to_binary(self: number): number {

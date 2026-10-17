@@ -465,12 +465,7 @@ export const PostRenderAction = int_enum("PostRenderAction", {
 }, {
   /** Convert binary value to PostRenderAction. */
   from_binary(value: number): number {
-    try {
-      return this.of(value + 3612);
-    } catch (e) {
-      if (!(e instanceof ValueError)) throw e;
-      return this.NONE;
-    }
+    return this.of_or_null(value + 3612) ?? this.NONE;
   },
 
   /** Convert PostRenderAction to binary value. */

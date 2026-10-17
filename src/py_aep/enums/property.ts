@@ -2,7 +2,7 @@
  * Property-related After Effects enumerations.
  */
 
-import { ValueError, int, int_enum, type EnumValue } from "../../pyrt/index.ts";
+import { int, int_enum, type EnumValue } from "../../pyrt/index.ts";
 
 /**
  * The type of effect control for a property.
@@ -76,12 +76,7 @@ export const KeyframeInterpolationType = int_enum("KeyframeInterpolationType", {
 }, {
   /** Convert binary value to KeyframeInterpolationType. */
   from_binary(value: number): number {
-    try {
-      return this.of(value + 6611);
-    } catch (e) {
-      if (!(e instanceof ValueError)) throw e;
-      return this.LINEAR;
-    }
+    return this.of_or_null(value + 6611) ?? this.LINEAR;
   },
   /** Convert KeyframeInterpolationType to binary value. */
   to_binary(self: number): number {
