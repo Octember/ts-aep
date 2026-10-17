@@ -2,7 +2,7 @@ import { LayerType, LightType } from "../../enums/index.ts";
 
 import { LdtaChunk } from "../../binary/layer_chunks.ts";
 import { default_camera_zoom } from "../../resolvers/transform.ts";
-import { ChunkField } from "../descriptors.ts";
+import {ChunkField, type EffectParamDefs, type Dynamic} from "../descriptors.ts";
 import { label_index } from "../preferences.ts";
 import { AVLayer } from "./av_layer.ts";
 import { _UNDEFINED_ID, Layer, _no_source_id } from "./layer.ts";
@@ -87,16 +87,16 @@ export class LightLayer extends Layer {
     duration: number;
     containing_comp: CompItem;
     light_type?: number;
-    effect_param_defs?: Map<string, Map<string, Map<string, unknown>>> | null;
+    effect_param_defs?: EffectParamDefs | null;
   }): LightLayer;
-  static _new(...args: any[]): any;
+  static _new(...args: Dynamic[]): Dynamic;
   static _new(kw: {
     name: string;
     layer_id: number;
     duration: number;
     containing_comp: CompItem;
     light_type?: number;
-    effect_param_defs?: Map<string, Map<string, Map<string, unknown>>> | null;
+    effect_param_defs?: EffectParamDefs | null;
   }): LightLayer {
     // NOTE(port): Python `# type: ignore[override]` is type-only; overloads above mirror Layer._new's signature set.
     const {

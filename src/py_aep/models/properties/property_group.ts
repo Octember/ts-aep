@@ -44,6 +44,8 @@ import { Property, _values_equal, _vf_tag_from_str } from "./property.ts";
 import { _INDEXED_GROUP_MATCH_NAMES, PropertyBase } from "./property_base.ts";
 import type { MaskPropertyGroup } from "./mask_property_group.ts";
 import type { MatchNameTypes } from "./match_name_types.ts";
+import type { Dynamic } from "../descriptors.ts";
+
 
 const _mask_property_group = deferred<typeof import("./mask_property_group.ts")>("py_aep/models/properties/mask_property_group");
 const _effect = deferred<typeof import("../../parsers/effect.ts")>("py_aep/parsers/effect");
@@ -410,7 +412,7 @@ export function _derive_layer_styles_enabled(
  */
 export class PropertyGroup extends PropertyBase {
   /** Child properties by attribute name, resolved through `__getattr__` (Python's dynamic `group.child_name`). */
-  [key: string]: any;
+  [key: string]: Dynamic;
 
   /**
    * The child list as stored, WITHOUT running deferred child synthesis.
@@ -746,7 +748,7 @@ export class PropertyGroup extends PropertyBase {
     }
   }
 
-  __setattr__(name: string, value: unknown): void {
+  __setattr__(name: string, value: Dynamic): void {
     // A name the class does not define would only become a Python
     // attribute: nothing reaches the file, and it would shadow the child
     // that attribute access resolves (`transform.position = [...]` leaves
@@ -921,7 +923,7 @@ export class PropertyGroup extends PropertyBase {
       );
     }
     // Typed Any: `.text.source_text` only resolves on a text layer.
-    const layer: any = this._containing_layer;
+    const layer: Dynamic = this._containing_layer;
 
     let font_number = 0;
     if (font_file == null) {

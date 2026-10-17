@@ -19,7 +19,7 @@ import {
   py_eq,
   type ClassAttributes,
 } from "../../../pyrt/index.ts";
-import { ChunkField } from "../descriptors.ts";
+import { ChunkField, type Dynamic } from "../descriptors.ts";
 import { Guide } from "../guide.ts";
 import { validate_name, validate_string } from "../validators.ts";
 import type { Project } from "../project.ts";
@@ -141,7 +141,7 @@ export class Item {
 
   // Python `__eq__` returns NotImplemented for a non-Item; the reflected
   // comparison then falls back to identity, which is False here.
-  __eq__(other: unknown): boolean {
+  __eq__(other: Dynamic): boolean {
     if (!(other instanceof Item)) return false;
     return this.id === other.id;
   }

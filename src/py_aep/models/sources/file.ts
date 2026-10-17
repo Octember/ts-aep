@@ -1,5 +1,6 @@
 // Port of py_aep/models/sources/file.py.
 
+import type { Dynamic } from "../descriptors.ts";
 import * as host from "../../../pyrt/host.ts";
 
 import { OptiChunk, SspcChunk, TextOptiChunk, build_ai_document_opti_data, build_ai_layer_opti_data, build_craw_opti_data, build_dpx_opti_data, build_exr_opti_data, build_generic_opti_data, build_psd_layer_opti_data, build_psd_opti_data, build_rhdr_opti_data, build_text_opti_data, build_tiff_opti_data } from "../../binary/footage_chunks.ts";
@@ -80,8 +81,8 @@ export function _splitext_ext(name: string): string {
  * `Path` lets raw Node errors through, which are not `OSError` instances, so
  * the `errno` check matches Python's `except OSError` for fs failures.
  */
-export function _is_os_error(e: unknown): boolean {
-  return e instanceof OSError || typeof (e as { errno?: unknown } | null)?.errno === "number";
+export function _is_os_error(e: Dynamic): boolean {
+  return e instanceof OSError || typeof e?.errno === "number";
 }
 
 export function _opti_data(

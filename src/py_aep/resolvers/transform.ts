@@ -19,9 +19,7 @@
 
 import { AutoOrientType, LayerType, LightType } from "../enums/index.ts";
 import type { CompItem } from "../models/items/composition.ts";
-import type { AVLayer } from "../models/layers/av_layer.ts";
 import type { Layer } from "../models/layers/layer.ts";
-import type { LightLayer } from "../models/layers/light_layer.ts";
 import type { MatchNameTypes } from "../models/properties/match_name_types.ts";
 import type { Property } from "../models/properties/property.ts";
 import type { PropertyGroup } from "../models/properties/property_group.ts";
@@ -515,7 +513,7 @@ export function rig_aims_at_poi(layer: Layer): boolean {
   const layer_type = layer._ldta.layer_type;
   if (!_RIG_TYPES.has(layer_type)) return false;
   const aims =
-    layer_type === LayerType.CAMERA || _AIMED_LIGHTS.has((layer as LightLayer).light_type);
+    layer_type === LayerType.CAMERA || _AIMED_LIGHTS.has(layer.light_type);
   return aims && layer.auto_orient === AutoOrientType.CAMERA_OR_POINT_OF_INTEREST;
 }
 
@@ -619,7 +617,7 @@ export function _auto_rotation(layer: Layer, time: number, position: number[]): 
  */
 export function _camera_position(layer: Layer, time: number): number[] {
   const comp = layer.containing_comp;
-  const camera = (layer as AVLayer)._active_camera_at(time);
+  const camera = layer._active_camera_at(time);
   if (camera != null) {
     const world = build_world_matrix(camera, time, undefined, { as_parent: true });
     return world.transform_point([0.0, 0.0, 0.0]);

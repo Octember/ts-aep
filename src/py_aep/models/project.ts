@@ -34,7 +34,7 @@ import { has_enabled_styles, parse_layer_styles, read_global_light } from "../re
 import type { PsdLayerStyles } from "../resolvers/psd_styles.ts";
 import { LayerGroupSpec, LayerSpec } from "../synthesis/layer.ts";
 import { _ADV_BLEND_SPECS, _BLEND_OPTIONS_SPECS, _LAYER_STYLE_CHILD_SPECS, _STYLE_ANGLE_SUFFIXES, _STYLE_ENUM_SUFFIXES, _STYLE_HINT_BOUNDS, _STYLE_HINT_BOUNDS_EXCEPTIONS, PropSpec } from "../synthesis/property.ts";
-import { ChunkField } from "./descriptors.ts";
+import { ChunkField, type EffectParamDefs, type Dynamic } from "./descriptors.ts";
 import { ImportOptions } from "./import_options.ts";
 import { CompItem } from "./items/composition.ts";
 import { FolderItem } from "./items/folder.ts";
@@ -129,7 +129,7 @@ export function ET_tostring(el: Element): string {
 
 
 /** `isinstance(x, (list, tuple))` as used by the port. */
-export function is_list_or_tuple(x: unknown): boolean {
+export function is_list_or_tuple(x: Dynamic): boolean {
   return Array.isArray(x);
 }
 
@@ -369,7 +369,7 @@ export class Project {
   declare _items: Map<number, Item>;
   declare _render_queue: RenderQueue | null;
   declare _active_item: Item | null;
-  declare _effect_param_defs: Map<string, Map<string, Map<string, any>>>;
+  declare _effect_param_defs: EffectParamDefs;
   declare _effect_definitions_cache: [string, string, ListChunk][] | null;
   declare _used_in_linked: boolean;
   declare _id_counter_reconciled: boolean;
@@ -1893,7 +1893,7 @@ export class Project {
       let entries: [TextDocument, number][];
       if (source_text.keyframes?.length > 0) {
         entries = source_text.keyframes.map(
-          (kf) => [kf.value, kf.time - layer.start_time] as [TextDocument, number],
+          (kf) => [kf.value, kf.time - layer.start_time],
         );
       } else {
         entries = [[source_text.value, 0.0]];
@@ -2066,7 +2066,7 @@ export class Project {
     for (const footage of this.footages) {
       const key = footage._consolidation_key();
       if (key == null) continue;
-      setdefault(groups, key, [] as FootageItem[]).push(footage);
+      setdefault(groups, key, []).push(footage);
     }
     let removed = 0;
     for (const duplicates of groups.values()) {
@@ -2158,7 +2158,7 @@ export class Project {
     for (const chunk of recursive_find(this._rifx.chunks, "alas", undefined, true)) {
       const alas = chunk;
       const text = alas.value;
-      const data = text ? json_loads(text) : new Map<string, any>();
+      const data = text ? json_loads(text) : new Map<string, Dynamic>();
       if (!py_eq(dict_get(data, "ascendcount_base"), PENDING_ASCENDCOUNT)) continue;
       const counts = relative_path_counts(project_file, dict_get(data, "fullpath", ""), {
         target_is_folder: py_bool(dict_get(data, "target_is_folder")),
@@ -2305,14 +2305,14 @@ export class Project {
   };
 
   /** Return the color profile settings Map. */
-  _get_cms_settings(): Map<string, any> {
+  _get_cms_settings(): Map<string, Dynamic> {
     if (this._cms_utf8 != null) {
       const cms_data = json_loads(this._cms_utf8.value);
-      const merged = new Map<string, any>(Object.entries(this.constructor._CMS_DEFAULTS));
+      const merged = new Map<string, Dynamic>(Object.entries(this.constructor._CMS_DEFAULTS));
       for (const [k, v] of cms_data) merged.set(k, v);
       return merged;
     }
-    return new Map<string, any>(Object.entries(this.constructor._CMS_DEFAULTS));
+    return new Map<string, Dynamic>(Object.entries(this.constructor._CMS_DEFAULTS));
   }
 
   /** Update a single key in the CMS settings JSON chunk. */
@@ -2322,7 +2322,7 @@ export class Project {
       data.set(key, value);
       this._cms_utf8.value = json_dumps(data);
     } else {
-      const data = new Map<string, any>(Object.entries(this.constructor._CMS_DEFAULTS));
+      const data = new Map<string, Dynamic>(Object.entries(this.constructor._CMS_DEFAULTS));
       data.set(key, value);
       const chunk = new Utf8Chunk({ value: json_dumps(data) });
       this._rifx.chunks.push(chunk);
@@ -2565,7 +2565,7 @@ export function _stamp_style_tdb4(leaf: Property, match_name: string, timebase: 
 // write a parameter leaf only when its value differs from these (AE 2026);
 // the synthesis tables are the byte-verified source, and only the Layer
 // Styles + Blend Options tables can carry keys the resolver emits.
-export const _STYLE_SPEC_DEFAULTS = new Map<string, any>();
+export const _STYLE_SPEC_DEFAULTS = new Map<string, Dynamic>();
 for (const spec_list of _LAYER_STYLE_CHILD_SPECS.values()) {
   for (const spec of spec_list) {
     if (spec.value != null) _STYLE_SPEC_DEFAULTS.set(spec.match_name, spec.value);
@@ -2662,7 +2662,7 @@ export function _serialize_import_layer_styles(layer: Layer, styles: PsdLayerSty
   }
   if (!styles.values?.size) return;
   const timebase = layer.containing_comp._cdta.internal_timebase;
-  const source = layer.source as AVItem;
+  const source = layer.source;
   const point_aspect = (source.width * source.pixel_aspect) / source.height;
   const leaves = _style_leaf_map(container);
   for (const [match_name, value] of styles.values) {

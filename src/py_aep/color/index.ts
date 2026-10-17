@@ -5,6 +5,12 @@
  * `models/` for reading and writing AE color-management settings.
  */
 
+/**
+ * Parsed JSON/YAML and Node-style errors (`error.code`). Dynamic on purpose:
+ * the trees are whatever the file contained, and callers read them by key.
+ */
+export type Dyn = any;
+
 // The Python __init__.py has no code and no __all__, so nothing is re-exported.
 // This keeps the file a module under isolatedModules.
 export {};

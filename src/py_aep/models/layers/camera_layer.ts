@@ -5,6 +5,8 @@ import { default_camera_zoom } from "../../resolvers/transform.ts";
 import { label_index } from "../preferences.ts";
 import { Layer, type LiveDefaultGroup, type LiveDefaultProperty } from "./layer.ts";
 import type { CompItem } from "../items/composition.ts";
+import type {EffectParamDefs, Dynamic} from "../descriptors.ts";
+
 
 /**
  * The CameraLayer object represents a camera layer within a composition.
@@ -75,15 +77,15 @@ export class CameraLayer extends Layer {
     layer_id: number;
     duration: number;
     containing_comp: CompItem;
-    effect_param_defs?: Map<string, Map<string, Map<string, unknown>>> | null;
+    effect_param_defs?: EffectParamDefs | null;
   }): CameraLayer;
-  static _new(...args: any[]): any;
+  static _new(...args: Dynamic[]): Dynamic;
   static _new(kw: {
     name: string;
     layer_id: number;
     duration: number;
     containing_comp: CompItem;
-    effect_param_defs?: Map<string, Map<string, Map<string, unknown>>> | null;
+    effect_param_defs?: EffectParamDefs | null;
   }): CameraLayer {
     const {
       name,

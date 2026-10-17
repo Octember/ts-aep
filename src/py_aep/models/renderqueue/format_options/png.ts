@@ -14,14 +14,14 @@ import {
   py_bool,
 } from "../../../../pyrt/index.ts";
 import { Hdr10ColorPrimaries, PngCompression } from "../../../enums/index.ts";
-import { ChunkField, enum_or_raw } from "../../descriptors.ts";
+import { ChunkField, enum_or_raw, type Dynamic } from "../../descriptors.ts";
 import { validate_enum, validate_one_of, validate_positive_number } from "../../validators.ts";
 import { FormatOptionsBase } from "./base.ts";
 import type { PngRoptChunk } from "../../../binary/render_chunks.ts";
 import type { Utf8Chunk } from "../../../binary/scalar_chunks.ts";
 
 /** HDR10 metadata JSON as AE stores it (parsed, not validated): the binary is trusted, so values are read as scalars. */
-type Hdr10Meta = Map<string, any>;
+type Hdr10Meta = Map<string, Dynamic>;
 
 /**
  * PNG format-specific render options.
@@ -118,7 +118,7 @@ export class PngFormatOptions extends FormatOptionsBase {
   get color_primaries(): Hdr10ColorPrimaries | number {
     const raw = this._hdr10_meta.get("displayPrimaries") ?? null;
     if (raw == null) return Hdr10ColorPrimaries.P3_D65;
-    return enum_or_raw((v: unknown) => {
+    return enum_or_raw((v: Dynamic) => {
       // Python `int(v)` raises TypeError for a list / dict; pyrt `int` would not.
       if (!is_real(v) && typeof v !== "string" && typeof v !== "boolean") {
         throw new TypeError_(`int() argument must be a string, a bytes-like object or a real number, not '${type_name(v)}'`);

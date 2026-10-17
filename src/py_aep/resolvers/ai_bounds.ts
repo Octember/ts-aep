@@ -32,12 +32,9 @@
  */
 
 import * as zlib from "../../pyrt/zlib.ts";
-/** PDF objects are walked dynamically (outside the typed text-document tree). */
-type CosValue = any;
-type CosDict = Map<string, CosValue>;
 import { IndirectReference } from "../cos/index.ts";
 import { STD14_EXTENT, STD14_FIRST_CODE, STD14_STANDARD_QUOTES, STD14_WIDTHS } from "../data/std14_metrics.ts";
-import { UnsupportedAiLayersError, _find_ai_icc, _object_offsets, _parse_object_at, read_ai_layer_ocgs } from "./ai_layers.ts";
+import { UnsupportedAiLayersError, _find_ai_icc, _object_offsets, _parse_object_at, read_ai_layer_ocgs, type CosValue } from "./ai_layers.ts";
 import {
   Path,
   type PathLike,
@@ -62,8 +59,10 @@ import {
   hypot,
 } from "../../pyrt/index.ts";
 
+type CosDict = Map<string, CosValue>;
+
 export type Box = [number, number, number, number];
-export type Matrix = [number, number, number, number, number, number];
+export type Matrix = number[];
 export type Pt = [number, number];
 export type Segment = [string, ...Pt[]];
 /** `(widths, default width, y-min, y-max, two-byte)` in glyph space. */
@@ -153,7 +152,7 @@ export const _INLINE_IMAGE_END = /[ \t\n\r\f\v\x00]EI[ \t\n\r\f\v\x00]|[ \t\n\r\
 // geometry
 
 /** `str(x)` for a content-stream operand: every number there is a Python float (`1.0`). */
-export function _operand_str(x: unknown): string {
+export function _operand_str(x: CosValue): string {
   return is_real(x) ? num_str(x, true) : str(x);
 }
 
@@ -288,7 +287,7 @@ export class _Document {
   _data: Uint8Array;
   _name: string;
   _offsets: Map<number, number>;
-  _cache: Map<number, unknown>;
+  _cache: Map<number, CosValue>;
   _catalog: CosDict | null;
 
   constructor(data: Uint8Array, name: string) {
@@ -371,7 +370,7 @@ export class _Document {
     }
     if (body == null) throw this._reject("unreadable content stream");
     const filters = this.get(info, "Filter");
-    const names: unknown[] = !Array.isArray(filters) ? [filters] : filters;
+    const names: CosValue[] = !Array.isArray(filters) ? [filters] : filters;
     if (this.get(info, "DecodeParms") != null) {
       throw this._reject(
         "the content stream uses a decode-parameter filter " +
@@ -454,7 +453,7 @@ export class _Document {
     return pages;
   }
 
-  *_walk_pages(node: any, depth: number): Generator<CosDict> {
+  *_walk_pages(node: CosValue, depth: number): Generator<CosDict> {
     node = _as_dict(this.resolve(node));
     if (node == null || depth > 32) return;
     if (str(dict_get(node, "Type", "")) === "Page") {
@@ -470,7 +469,7 @@ export class _Document {
   /** The page's content stream(s), concatenated and decoded. */
   page_content(page: CosDict): Uint8Array {
     const contents = this.resolve(dict_get(this.resolve(page), "Contents"));
-    const parts: unknown[] = Array.isArray(contents) ? contents : [contents];
+    const parts: CosValue[] = Array.isArray(contents) ? contents : [contents];
     return join_bytes(
       NEWLINE,
       parts.filter((part) => part != null).map((part) => this.stream(part)),
@@ -648,9 +647,9 @@ export function _read_hex_string(data: Uint8Array, pos: number): [Uint8Array, nu
   return [bytes_.fromhex(digits), end + 1];
 }
 
-export function _read_array(data: Uint8Array, pos: number): [unknown[], number] {
+export function _read_array(data: Uint8Array, pos: number): [CosValue[], number] {
   pos += 1;
-  const out: unknown[] = [];
+  const out: CosValue[] = [];
   const size = data.length;
   while (pos < size) {
     if (bytes_eq(data.subarray(pos, pos + 1), RBRACKET)) return [out, pos + 1];
@@ -834,7 +833,7 @@ export function _type0_metrics(doc: _Document, font: CosDict): Metrics {
   const default_ = dw !== 0 ? dw : 1000.0;
   const widths = new Map<number, number>();
   const table = doc.get(child, "W");
-  const entries: unknown[] = Array.isArray(table) ? table : [];
+  const entries: CosValue[] = Array.isArray(table) ? table : [];
   let index = 0;
   while (index < entries.length) {
     const start = doc.number(entries[index]);
@@ -939,7 +938,7 @@ export class _Measurer {
       } else if (op === "Q") {
         if (saved.length > 0) gs = saved.pop()!;
       } else if (op === "cm" && operands.length >= 6) {
-        gs.ctm = _mat_mul(operands.slice(-6) as Matrix, gs.ctm);
+        gs.ctm = _mat_mul(operands.slice(-6), gs.ctm);
       } else if (op === "w" && operands.length > 0) {
         gs.line_width = float(operands.at(-1));
       } else if (op === "M" && operands.length > 0) {
@@ -1037,7 +1036,7 @@ export class _Measurer {
         gs.metrics = _font_metrics(this._doc, gs.font);
         gs.size = float(operands.at(-1));
       } else if (op === "Tm" && operands.length >= 6) {
-        const tm = operands.slice(-6).map((v) => float(v)) as Matrix;
+        const tm = operands.slice(-6).map((v) => float(v));
         text_matrix = line_matrix = tm;
       } else if ((op === "Td" || op === "TD") && operands.length >= 2) {
         if (op === "TD") gs.leading = -float(operands.at(-1));
@@ -1067,7 +1066,7 @@ export class _Measurer {
           text_matrix = line_matrix;
         }
         const shown = operands.at(-1);
-        const items: unknown[] = Array.isArray(shown) ? shown : [shown];
+        const items: CosValue[] = Array.isArray(shown) ? shown : [shown];
         text_matrix = this._show_text(gs, text_matrix, items);
       }
       operands = [];
@@ -1131,7 +1130,7 @@ export class _Measurer {
     if (subtype === "Form") {
       const matrix = doc.get(xobject, "Matrix");
       if (Array.isArray(matrix) && matrix.length === 6) {
-        ctm = _mat_mul(matrix.map((v) => doc.number(v)) as Matrix, ctm);
+        ctm = _mat_mul(matrix.map((v) => doc.number(v)), ctm);
       }
     }
     const bbox = doc.get(xobject, "BBox");

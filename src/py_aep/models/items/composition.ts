@@ -36,7 +36,7 @@ import {
   zip,
   type ClassAttributes,
 } from "../../../pyrt/index.ts";
-import { ChunkField } from "../descriptors.ts";
+import { ChunkField, type EffectParamDefs } from "../descriptors.ts";
 import { EssentialGraphicsController, SourcePropertyRef } from "../essential_graphics.ts";
 import { AVLayer, _unregister_source_usage } from "../layers/av_layer.ts";
 import { CameraLayer } from "../layers/camera_layer.ts";
@@ -415,7 +415,7 @@ export function _rewrite_eg_identity(
     for (const cctl of filter_by_list_type(cif.chunks, "CCtl")) {
       const utf8s = filter_by_type(cctl.chunks, "Utf8");
       if (utf8s?.length > 0) {
-        const uuid_utf8 = utf8s[0] as Utf8Chunk;
+        const uuid_utf8 = utf8s[0];
         if (!uuid_map.has(uuid_utf8.value)) {
           uuid_map.set(uuid_utf8.value, uuid4());
         }
@@ -1043,7 +1043,7 @@ export class CompItem extends AVItem {
   declare prin_list: ListChunk;
   declare _prin: PrinChunk;
   declare _prda: PrdaChunk;
-  declare _deferred_layers: [ListChunk[], Map<string, Map<string, Map<string, any>>>] | null;
+  declare _deferred_layers: [ListChunk[], EffectParamDefs] | null;
   declare _layers_loaded: boolean;
   declare _deferred_child_chunks: Chunk[] | null;
   declare _marker_property: Property<MarkerValue | null> | null;
@@ -1061,7 +1061,7 @@ export class CompItem extends AVItem {
     _name_utf8: Utf8Chunk;
     project: Project;
     parent_folder: FolderItem;
-    effect_param_defs: Map<string, Map<string, Map<string, any>>>;
+    effect_param_defs: EffectParamDefs;
     proxy_source: FileSource | SolidSource | PlaceholderSource | null;
   }) {
     // Skip AVItem's extra params - they're all descriptor-backed on
@@ -1201,9 +1201,9 @@ export class CompItem extends AVItem {
     // effect layer parameters (e.g. Set Matte's source layer) - both
     // can only point at layers of this comp.
     for (const tdpi of recursive_find(cloned_item.chunks, "tdpi")) {
-      const value = (tdpi as S4Chunk).value;
+      const value = tdpi.value;
       if (id_map.has(value)) {
-        (tdpi as S4Chunk).value = id_map.get(value)!;
+        tdpi.value = id_map.get(value)!;
       }
     }
 
@@ -1293,7 +1293,7 @@ export class CompItem extends AVItem {
     const [layer_chunks, deferred_effect_param_defs] = deferred;
     this._deferred_layers = null;
 
-    let effect_param_defs: Map<string, Map<string, Map<string, any>>>;
+    let effect_param_defs: EffectParamDefs;
     if (deferred_effect_param_defs?.size > 0) {
       effect_param_defs = deferred_effect_param_defs;
     } else if (this._project != null) {
@@ -2094,7 +2094,7 @@ export class CompItem extends AVItem {
       effect_param_defs: this._project._effect_param_defs,
     });
     this._insert_layer(layer);
-    return layer as AVLayer;
+    return layer;
   }
 
   add_shape(): ShapeLayer {
@@ -2114,7 +2114,7 @@ export class CompItem extends AVItem {
       effect_param_defs: this._project._effect_param_defs,
     });
     this._insert_layer(layer);
-    return layer as ShapeLayer;
+    return layer;
   }
 
   add_camera(name: string | null = null, center_point: number[] | null = null): CameraLayer {
@@ -2291,7 +2291,7 @@ export class CompItem extends AVItem {
       item._used_in.add(this);
     }
 
-    return layer as AVLayer;
+    return layer;
   }
 
   precompose(layer_indices: number[], name: string, move_all_attributes = true): CompItem {
@@ -2382,7 +2382,7 @@ export class CompItem extends AVItem {
       this.duration,
       this.frame_rate,
     );
-    const cloned = clone_chunk_tree(this._cdta) as CdtaChunk;
+    const cloned = clone_chunk_tree(this._cdta);
     cloned.width = width;
     cloned.height = height;
     const cdta_idx = index_by_identity(new_comp._item_list.chunks, new_comp._cdta);
@@ -2638,7 +2638,7 @@ export class CompItem extends AVItem {
       footage._used_in.add(this);
     }
 
-    return layer as AVLayer;
+    return layer;
   }
 
   _build_text_btds(
@@ -2717,7 +2717,7 @@ export class CompItem extends AVItem {
       effect_param_defs: this._project._effect_param_defs,
     });
     this._insert_layer(layer);
-    return layer as TextLayer;
+    return layer;
   }
 
   /**

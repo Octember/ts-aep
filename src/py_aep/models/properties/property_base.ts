@@ -19,7 +19,7 @@ import { clone_chunk_tree } from "../../binary/mutations.ts";
 import { TDSN_SENTINEL, type TdmnChunk, type TdsbChunk } from "../../binary/property_chunks.ts";
 import { find_by_type, index_by_identity } from "../../binary/utils.ts";
 import { MATCH_NAME_TO_AUTO_NAME } from "../../data/match_names.ts";
-import { ChunkField } from "../descriptors.ts";
+import { ChunkField, type EffectParamDefs } from "../descriptors.ts";
 import { validate_bool, validate_name } from "../validators.ts";
 import type { Utf8Chunk } from "../../binary/scalar_chunks.ts";
 import type { Layer } from "../layers/layer.ts";
@@ -648,7 +648,7 @@ export class PropertyBase {
     const comp = layer.containing_comp;
 
     // Get effect param defs from the project
-    let effect_param_defs: Map<string, Map<string, Map<string, unknown>>> = new Map();
+    let effect_param_defs: EffectParamDefs = new Map();
     const project = comp._project;
     if (project != null) {
       effect_param_defs = project._effect_param_defs;

@@ -24,6 +24,7 @@ import * as host from "../../pyrt/host.ts";
 
 import { Gradient, GradientAlphaStop, GradientColorStop } from "../models/properties/gradient.ts";
 import { iter_image_resources } from "./media_probe.ts";
+import type { Dynamic } from "./ai_layers.ts";
 import type { PsdGroup, PsdLayer, PsdStyleBlocks } from "./psd_layers.ts";
 import {
   BytesIO,
@@ -695,7 +696,7 @@ export function read_global_light(file: PathLike): [number, number] {
     (() => {
       try {
         return host.fs.readFileSync(fspath(file));
-      } catch (e: any) {
+      } catch (e: Dynamic) {
         const path = fspath(file);
         if (e?.code === "ENOENT") throw new FileNotFoundError(`[Errno 2] No such file or directory: '${path}'`);
         throw new OSError(String(e?.message ?? e));

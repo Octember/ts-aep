@@ -20,6 +20,7 @@ import {
 } from "../../pyrt/index.ts";
 import type { EnumHelpers, EnumValue } from "../../pyrt/enum.ts";
 import type { FieldValue } from "../binary/fmt_field.ts";
+import type { ParamDef } from "../parsers/effect.ts";
 import { get_ae_version_major } from "../ae_version.ts";
 import { validate_bool, validate_enum } from "./validators.ts";
 
@@ -48,16 +49,23 @@ type ChunkFieldKey<O, A extends string> = [keyof ChunkBody<O, A> & string] exten
 /** The type of field `F` on that body. */
 type RawField<O, A extends string, F extends string> = F extends keyof ChunkBody<O, A> ? ChunkBody<O, A>[F] : FieldValue;
 
+/** A value whose type is fixed only at runtime: parsed JSON, duck typing, effect fields. */
+export type Dynamic = any;
+
 /**
  * The model object a `ChunkField` reads through: its chunk body is found by
  * name (`getattr(obj, chunk_attr)`) and a synthetic body is materialized
  * through `obj._ensure_materialized()`, which only owners of synthetic chunks
  * define (Python duck typing).
  */
-export type ChunkOwner = any;
+export type ChunkOwner = Dynamic;
+
+/** Effect match name → parameter match name → pard field bag. */
+export type EffectParamDefs = Map<string, Map<string, ParamDef>>;
+
 
 /** Python `**kwargs` that `ChunkField.enum` rewrites key by key before forwarding them. */
-type Kwargs = Record<string, any>;
+type Kwargs = Record<string, Dynamic>;
 
 /**
  * Keyword arguments of `ChunkField` for a field reading as `T` on an `O`.
@@ -130,7 +138,7 @@ export function _suppress_materialization() {
  * Python `isinstance(x, IntEnum)` for a py_enum object (pyrt/enum.ts).
  */
 // NOTE(port): int_enum === py_enum in pyrt, so this also admits non-int enums; the only non-IntEnum enum in py_aep (cos.TokenType) never reaches a descriptor, so the IntEnum check matches Python.
-export function is_enum(x: any): x is EnumHelpers<unknown> {
+export function is_enum(x: Dynamic): x is EnumHelpers<unknown> {
   return x != null && typeof x === "object" && "__members__" in x && typeof x.has === "function";
 }
 
@@ -153,11 +161,11 @@ export function _enum_class(transform: ChunkTransform | null | undefined): EnumH
  * bound to the enum (its `__self__`); a py_enum method needs `this` bound
  * the same way, and `_enum_class` finds the enum through `__self__`.
  */
-export function bound_enum_method(enum_cls: any, name: string, dflt: any): any {
+export function bound_enum_method(enum_cls: Dynamic, name: string, dflt: Dynamic): Dynamic {
   const m = getattr(enum_cls, name, dflt);
   // Python's default is the enum class itself, which is callable (`E(v)`); a
   // py_enum object is not, so use `E.of` and keep `__self__` for `_enum_class`.
-  if (m === dflt && is_enum(m)) return Object.assign((v: unknown) => m.of(v), { __self__: m });
+  if (m === dflt && is_enum(m)) return Object.assign((v: Dynamic) => m.of(v), { __self__: m });
   if (m === dflt || typeof m !== "function") return m;
   return Object.assign(m.bind(enum_cls), { __self__: enum_cls });
 }
@@ -177,8 +185,8 @@ export function bound_enum_method(enum_cls: any, name: string, dflt: any): any {
  * is for the read paths that are not `ChunkField`s (e.g. a `@property`
  * over decoded JSON).
  */
-export function enum_or_raw(convert: (value: any) => any): (value: any) => any {
-  function _transform(value: any): any {
+export function enum_or_raw(convert: (value: Dynamic) => Dynamic): (value: Dynamic) => Dynamic {
+  function _transform(value: Dynamic): Dynamic {
     try {
       return convert(value);
     } catch (e) {
@@ -197,7 +205,7 @@ export function enum_or_raw(convert: (value: any) => any): (value: any) => any {
  * Raw ints must appear in the enum's value map; any other type must
  * already be an instance of the enum.
  */
-export function _validate_enum_member(enum_cls: EnumHelpers<unknown>, value: unknown, public_name: string): void {
+export function _validate_enum_member(enum_cls: EnumHelpers<unknown>, value: Dynamic, public_name: string): void {
   if (enum_cls.has(value)) return;
   // NOTE(port): int/float — integral values are plain numbers by design (RULEBOOK §4); an integer-valued float such as 2.0 takes the int branch and gets the "Invalid value" message instead of "is not a valid".
   // A Python bool is an int that hashes like 0/1, so it is checked as its int value.

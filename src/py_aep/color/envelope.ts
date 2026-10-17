@@ -25,6 +25,7 @@
 
 import { encode, getitem, json_dumps, json_loads } from "../../pyrt/index.ts";
 import { b64decode, b64encode } from "../../pyrt/base64.ts";
+import type { Dyn } from "./index.ts";
 
 // baseProfileType values.
 
@@ -188,7 +189,7 @@ export class ColorProfile {
  * @param envelope_json - The raw `Utf8` chunk value (the outer JSON string).
  */
 export function parse_envelope(envelope_json: string): ColorProfile {
-  const outer: Map<string, any> = json_loads(envelope_json);
+  const outer: Map<string, Dyn> = json_loads(envelope_json);
   const base: Map<string, string> = getitem(outer, "baseColorProfile");
   return new ColorProfile(
     getitem(base, "colorProfileName"),

@@ -6,6 +6,7 @@ import { parse_comp_presets, type CompPreset } from "../parsers/comp_presets.ts"
 import { PrefsFile, decode_pref_bool, decode_pref_number, decode_pref_string, find_prefs_file, parse_hex_value, parse_number_text } from "../parsers/prefs.ts";
 import { validate_bool, validate_enum, validate_name, validate_number } from "./validators.ts";
 import type { TextDocument } from "./text/text_document.ts";
+import type { Dynamic } from "./descriptors.ts";
 import {
   Path,
   type PathLike,
@@ -484,7 +485,7 @@ export class Preferences {
    * `value` is a typed value when `is_override` is `true`,
    * otherwise the raw pref-file text (AE's mixed hex/ASCII encoding).
    */
-  _resolve(section_name: string, key_name: string, pref_type: PREFType): [boolean, any, boolean] {
+  _resolve(section_name: string, key_name: string, pref_type: PREFType): [boolean, Dynamic, boolean] {
     validate_name(section_name);
     validate_name(key_name);
     _validate_pref_type(pref_type);
@@ -587,7 +588,7 @@ export class Preferences {
     if (typeof value === "boolean") return str(int(value));
     // NOTE(port): int/float — integral values are plain numbers by design (RULEBOOK §4); a float override such as 30.0 returns "30" where Python returns "30.0".
     if (typeof value === "number") return str(value);
-    return value as string;
+    return value;
   }
 
   /**

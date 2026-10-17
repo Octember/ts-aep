@@ -49,6 +49,7 @@ import {
   type_name,
 } from "../../pyrt/index.ts";
 import type { Path } from "../../pyrt/index.ts";
+import type { Dynamic } from "./ai_layers.ts";
 
 /** Read/seek surface shared by `BytesIO` and `_BoundedReader`. */
 export interface ProbeStream {
@@ -559,7 +560,7 @@ export function _probe_exr(fp: ProbeStream): MediaInfo {
 }
 
 /** Attributes of one EXR part header keyed by name: width/height/compression (number), channels (string[]), name (string). */
-export type ExrHeader = Map<string, any>;
+export type ExrHeader = Map<string, Dynamic>;
 
 /** The attributes `_probe_exr` uses from one EXR part header. */
 export function _read_exr_header(fp: ProbeStream): ExrHeader {
