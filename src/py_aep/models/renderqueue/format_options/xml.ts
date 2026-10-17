@@ -3,7 +3,6 @@
 import * as ET from "../../../../pyrt/etree.ts";
 import {
   KeyError,
-  NotImplementedError,
   RuntimeError,
   TypeError_,
   ValueError,
@@ -16,8 +15,6 @@ import {
   encode,
   int,
   isdigit,
-  py_bool,
-  py_or,
   repr,
   round,
   str,
@@ -129,7 +126,7 @@ export class _ScalarParam {
   __get__(obj: XmlFormatOptions | null, objtype?: Function | null): any {
     if (obj == null) return this;
     const raw = dict_get(obj.params, this._key, "");
-    if (!py_bool(raw)) return null;
+    if (!raw) return null;
     try {
       return int(raw);
     } catch (e) {
@@ -181,7 +178,7 @@ export function _extract_params(
     param_elements.set(identifier, elem);
     const val_elem = elem.find("ParamValue");
     if (val_elem == null) continue;
-    params.set(identifier, py_or(val_elem.text, ""));
+    params.set(identifier, val_elem.text || "");
     value_elements.set(identifier, val_elem);
   }
   return [params, value_elements, param_elements];
@@ -373,13 +370,13 @@ export class XmlFormatOptions extends FormatOptionsBase {
     // is a `__setitem__` surface, which `__setattr__` cannot see.
     this._check_attached();
     if (this._xml_root == null) return;
-    const val_elem = dict_get(this._val_elements, key);
+    const val_elem = this._val_elements.get(key);
     if (val_elem != null) {
       val_elem.text = str_value;
       this._sync_xml();
       return;
     }
-    const param_elem = dict_get(this._param_elements, key);
+    const param_elem = this._param_elements.get(key);
     if (param_elem != null) {
       // An existing but UNSET param: restore its value in place rather
       // than appending a duplicate element. AE writes `ParamValue` as
@@ -416,7 +413,7 @@ export class XmlFormatOptions extends FormatOptionsBase {
     this._check_attached();
     if (this._xml_root == null) return;
     this._val_elements.delete(key);
-    const param_elem = dict_get(this._param_elements, key);
+    const param_elem = this._param_elements.get(key);
     if (param_elem == null) return;
     const val = param_elem.find("ParamValue");
     if (val != null) param_elem.remove(val);
@@ -474,14 +471,14 @@ export class XmlFormatOptions extends FormatOptionsBase {
    * Params outside `_PARAM_RULE_KEYS` are not format-gated.
    */
   _check_param_rule(param_key: string, value: any): void {
-    const rule_key = dict_get(_PARAM_RULE_KEYS, param_key, null);
+    const rule_key = _PARAM_RULE_KEYS.get(param_key) ?? null;
     if (rule_key == null) return;
     this._require_om()._check_format_rule(rule_key, value);
   }
 
   /** Re-resolve dependent settings after a context param write. */
   _clamp_after_param(param_key: string): void {
-    const rule_key = dict_get(_PARAM_RULE_KEYS, param_key, null);
+    const rule_key = _PARAM_RULE_KEYS.get(param_key) ?? null;
     if (rule_key == null) return;
     this._require_om()._apply_singleton_clamps(dict_get(CLAMP_DEPENDENTS, rule_key, []) as string[]);
   }
@@ -539,7 +536,7 @@ export class XmlFormatOptions extends FormatOptionsBase {
    */
   _enum_param(key: string, enum_cls: any): any {
     const raw = dict_get(this.params, key, "");
-    if (!py_bool(raw)) return null;
+    if (!raw) return null;
     return _try_enum_or_int(enum_cls, raw);
   }
 
@@ -571,7 +568,7 @@ export class XmlFormatOptions extends FormatOptionsBase {
    */
   get frame_rate(): number | null {
     const fps_str = dict_get(this.params, "ADBEVideoFPS", "");
-    if (!py_bool(fps_str)) return null;
+    if (!fps_str) return null;
     try {
       const ticks = int(fps_str);
       if (ticks > 0) return _ADOBE_TICKS_PER_SECOND / ticks;
@@ -642,7 +639,7 @@ export class XmlFormatOptions extends FormatOptionsBase {
    */
   get profile(): any {
     const raw = dict_get(this.params, "ADBEVideoMPEGProfile", "");
-    if (!py_bool(raw)) return MPEGProfile.BASELINE;
+    if (!raw) return MPEGProfile.BASELINE;
     const result = _try_enum_or_int(MPEGProfile, raw);
     // A non-numeric param is as good as absent.
     if (result == null) return MPEGProfile.BASELINE;

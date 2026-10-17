@@ -11,7 +11,7 @@ import { FootageItem } from "./footage.ts";
 import { Item } from "./item.ts";
 import type { Project } from "../project.ts";
 import type { Viewer } from "../viewer/viewer.ts";
-import { ValueError, StopIteration, dict_get, py_bool, py_cmp, repr, sorted, deferred } from "../../../pyrt/index.ts";
+import { ValueError, StopIteration, py_cmp, repr, sorted, deferred } from "../../../pyrt/index.ts";
 
 const _composition = deferred<typeof import("./composition.ts")>("py_aep/models/items/composition");
 
@@ -264,7 +264,7 @@ export class FolderItem extends Item {
     // 2026 for both script addComp and SVG import). Match that ordering.
     const block = [comp._item_list, ...comp._view_data];
     const container = this._children_container;
-    const insert_at = py_bool(container) && container[0].chunk_type === "fdta" ? 1 : 0;
+    const insert_at = container?.length > 0 && container[0].chunk_type === "fdta" ? 1 : 0;
     container.splice(insert_at, 0, ...block);
 
     // Register in project and parent
@@ -305,14 +305,14 @@ export class FolderItem extends Item {
   ): CompItem {
     validate_name(preset);
     const presets = this._project._preferences.composition_presets();
-    if (!py_bool(presets)) {
+    if (!presets?.length) {
       throw new ValueError(
         "no composition presets available; pass 'ae_preferences_dir' " +
           "to parse()/new() to read them from the AE preferences",
       );
     }
     let matches = presets.filter((p) => p.name === preset);
-    if (!py_bool(matches)) {
+    if (!matches?.length) {
       const needle = preset.toLowerCase();
       matches = presets.filter((p) => p.name.toLowerCase().includes(needle));
     }
@@ -370,10 +370,10 @@ export class FolderItem extends Item {
     const header: Chunk[] = [];
     const blocks: [Item, Chunk[]][] = [];
     for (const chunk of this._children_container) {
-      const item = dict_get(by_item_list, chunk);
+      const item = by_item_list.get(chunk) ?? null;
       if (item != null) {
         blocks.push([item, [chunk]]);
-      } else if (py_bool(blocks)) {
+      } else if (blocks.length > 0) {
         blocks.at(-1)![1].push(chunk);
       } else {
         header.push(chunk);

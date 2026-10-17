@@ -26,10 +26,6 @@ import {
   bytes_,
   bytes_eq,
   decode,
-  dict_get,
-  len,
-  py_bool,
-  range,
   repr,
   rstrip,
   sorted,
@@ -74,40 +70,40 @@ export function icc_profile_id(data: Uint8Array): Uint8Array {
  * @returns The profile description string, or `null` if not found.
  */
 export function icc_profile_description(data: Uint8Array): string | null {
-  if (len(data) < 132) return null;
+  if (data.length < 132) return null;
   const tag_count = bytes_.int_from_bytes(bytes_.slice(data, 128, 132), "big");
   let offset = 132;
-  for (const _ of range(tag_count)) {
-    if (offset + 12 > len(data)) return null;
+  for (let i = 0; i < tag_count; i++) {
+    if (offset + 12 > data.length) return null;
     const sig = bytes_.slice(data, offset, offset + 4);
     const tag_offset = bytes_.int_from_bytes(bytes_.slice(data, offset + 4, offset + 8), "big");
     if (bytes_eq(sig, b("desc"))) {
-      if (tag_offset + 12 > len(data)) return null;
+      if (tag_offset + 12 > data.length) return null;
       const type_sig = bytes_.slice(data, tag_offset, tag_offset + 4);
       if (bytes_eq(type_sig, b("desc"))) {
         // ICCv2 textDescriptionType
         const str_len = bytes_.int_from_bytes(bytes_.slice(data, tag_offset + 8, tag_offset + 12), "big");
-        const end = Math.min(tag_offset + 12 + str_len, len(data));
+        const end = Math.min(tag_offset + 12 + str_len, data.length);
         const raw = bytes_.slice(data, tag_offset + 12, end);
         return decode(bytes_.rstrip(raw, b("\x00")), "ascii", "replace");
       }
       if (bytes_eq(type_sig, b("mluc"))) {
         // ICCv4 multiLocalizedUnicodeType
-        if (tag_offset + 16 > len(data)) return null;
+        if (tag_offset + 16 > data.length) return null;
         const rec_count = bytes_.int_from_bytes(bytes_.slice(data, tag_offset + 8, tag_offset + 12), "big");
         if (rec_count === 0) return null;
         const rec_off = tag_offset + 16;
         const s_len = bytes_.int_from_bytes(bytes_.slice(data, rec_off + 4, rec_off + 8), "big");
         const s_offset = bytes_.int_from_bytes(bytes_.slice(data, rec_off + 8, rec_off + 12), "big");
         const abs_off = tag_offset + s_offset;
-        const end = Math.min(abs_off + s_len, len(data));
+        const end = Math.min(abs_off + s_len, data.length);
         const raw16 = bytes_.slice(data, abs_off, end);
         // pyrt decode() keeps lone surrogates and drops a trailing odd byte; CPython emits U+FFFD for each.
         const dec16 = decode(raw16, "utf-16-be", "replace");
-        const odd_after_high = len(raw16) % 2 === 1 && /[\uD800-\uDBFF]$/.test(dec16);
+        const odd_after_high = raw16.length % 2 === 1 && /[\uD800-\uDBFF]$/.test(dec16);
         const text16 =
           dec16.replace(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g, "\uFFFD") +
-          (len(raw16) % 2 === 1 && !odd_after_high ? "\uFFFD" : "");
+          (raw16.length % 2 === 1 && !odd_after_high ? "\uFFFD" : "");
         return rstrip(text16, "\x00");
       }
     }
@@ -132,7 +128,7 @@ export function default_icc_directories(): Path[] {
     const base = new Path("C:\\Program Files (x86)\\Common Files\\Adobe\\Color");
     const dirs = [base.div("MPProfiles"), base.div("Profiles"), base.div("Profiles", "Recommended")];
     const local_appdata = host.env.LOCALAPPDATA;
-    if (py_bool(local_appdata)) {
+    if (local_appdata) {
       dirs.push(new Path(local_appdata).div("Adobe", "Color", "Profiles"));
     }
     const system_root = host.env.SystemRoot ?? "C:\\Windows";
@@ -212,10 +208,10 @@ export class IccProfileLibrary {
             if (!(e instanceof OSError || typeof (e as any)?.code === "string")) throw e;
             continue;
           }
-          if (len(data) < 132 || !bytes_eq(bytes_.slice(data, 36, 40), b("acsp"))) continue;
+          if (data.length < 132 || !bytes_eq(bytes_.slice(data, 36, 40), b("acsp"))) continue;
           const desc = icc_profile_description(data);
           // First directory wins (MPProfiles is the canonical set).
-          if (py_bool(desc) && !by_name.has(desc)) by_name.set(desc, f);
+          if (desc && !by_name.has(desc)) by_name.set(desc, f);
         }
       }
       this._by_name = by_name;
@@ -230,7 +226,7 @@ export class IccProfileLibrary {
    *   found in the searched directories.
    */
   bytes_for(name: string): Uint8Array {
-    const path = dict_get(this._index(), name);
+    const path = this._index().get(name);
     if (path == null) throw new ColorProfileNotFoundError(name, this._dirs);
     return path.read_bytes();
   }
@@ -247,7 +243,7 @@ export class IccProfileLibrary {
   hash_for(name: string): Uint8Array {
     const known = profile_id_for_name(name);
     if (known != null) return known;
-    const path = dict_get(this._index(), name);
+    const path = this._index().get(name);
     if (path == null) throw new ColorProfileNotFoundError(name, this._dirs);
     return icc_profile_id(path.read_bytes());
   }

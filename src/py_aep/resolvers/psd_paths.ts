@@ -8,7 +8,7 @@
  * the psd_vector_mask/psd_shape_layer fixtures).
  */
 
-import { bytes_, len, range, struct } from "../../pyrt/index.ts";
+import { bytes_, struct } from "../../pyrt/index.ts";
 import { Shape } from "../models/properties/shape.ts";
 
 // Path record selectors (PSD spec "Path resource format").
@@ -19,7 +19,7 @@ export const _KNOT_SELECTORS: ReadonlySet<number> = new Set([1, 2, 4, 5]);
 /** Decode a knot record to `[in_point, anchor, out_point]` pixel coords. */
 export function _knot(record: Uint8Array, canvas_w: number, canvas_h: number): number[][] {
   const points: number[][] = [];
-  for (const i of range(3)) {
+  for (let i = 0; i < 3; i++) {
     const [vert, horiz] = struct.unpack(">ii", bytes_.slice(record, 2 + i * 8, 10 + i * 8));
     points.push([(horiz / 0x1000000) * canvas_w, (vert / 0x1000000) * canvas_h]);
   }
@@ -56,7 +56,7 @@ export function parse_vector_mask(block: Uint8Array, canvas_w: number, canvas_h:
   };
 
   let pos = 8; // version (3) + flags
-  while (pos + 26 <= len(block)) {
+  while (pos + 26 <= block.length) {
     const record = bytes_.slice(block, pos, pos + 26);
     const selector = struct.unpack(">H", bytes_.slice(record, 0, 2))[0];
     if (selector === _CLOSED_LENGTH || selector === _OPEN_LENGTH) {

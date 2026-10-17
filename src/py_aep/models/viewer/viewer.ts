@@ -74,7 +74,7 @@ export class Viewer {
    * Read-only.
    */
   get active(): boolean {
-    return py_bool(this._foac) && py_bool(this._foac.value) && py_bool(this._fiac) && py_bool(this._fiac.value);
+    return this._foac != null && py_bool(this._foac.value) && this._fiac != null && py_bool(this._fiac.value);
   }
 }
 

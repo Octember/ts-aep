@@ -34,6 +34,12 @@ If a rewrite needs a paragraph-long comment to justify it, don't make it.
 Replace pyrt helpers with plain TS where the operand types make it exact. No
 renames, no signature changes, no structural changes.
 
+Applied by `bun tools/codemods/pass1_native_idioms.ts`, which asks the type
+checker for each operand and only rewrites when a rule below holds; calls on
+`any`, on maps whose values may be null, or on `__len__`/`__eq__` objects stay.
+`--dry --report` lists what it keeps and why. Hand edits on top of it go
+through the same rules.
+
 ### Truthiness: `py_bool`, `py_or`, `py_and`
 
 `py_bool(x)` is Python truth: `None`, `0`, `NaN`-is-true, empty

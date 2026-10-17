@@ -7,7 +7,6 @@ import {
   bytes_eq,
   descriptor,
   float_repr,
-  py_bool,
   py_cmp,
   repr,
   round,
@@ -648,7 +647,7 @@ export class FootageSource {
       if (!(e instanceof ChunkNotFoundError)) throw e;
       return null;
     }
-    return py_bool(after) ? (after[0] as Utf8Chunk) : null;
+    return after?.length > 0 ? (after[0] as Utf8Chunk) : null;
   }
 
   _ocsp_profile(): ColorProfile | null {
@@ -667,7 +666,7 @@ export class FootageSource {
       if (!(e instanceof ChunkNotFoundError)) throw e;
       return "{}";
     }
-    return py_bool(after) ? (after[0] as Utf8Chunk).value : "{}";
+    return after?.length > 0 ? (after[0] as Utf8Chunk).value : "{}";
   }
 
   _write_ocsp(envelope: string): void {

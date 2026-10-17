@@ -26,7 +26,6 @@ import {
   KeyError,
   ValueError,
   descriptor,
-  dict_get,
   getattr,
   getitem,
   mod,
@@ -451,10 +450,10 @@ export class Layer extends PropertyGroup {
     const source_id = this._ldta.source_id;
     if (this._ldta.layer_type === LayerType.PARAMETRIC_MESH) {
       this._ldta.name_set = true;
-    } else if (!py_bool(value) || source_id === 0) {
+    } else if (!value || source_id === 0) {
       this._ldta.name_set = false;
     } else {
-      const source_item = dict_get(this.containing_comp._project.items, source_id);
+      const source_item = this.containing_comp._project.items.get(source_id) ?? null;
       this._ldta.name_set = !py_eq(getattr(source_item, "name", null), value);
     }
   }
@@ -468,7 +467,7 @@ export class Layer extends PropertyGroup {
 
   set comment(value: string) {
     validate_string(value);
-    if (!py_bool(value)) {
+    if (!value) {
       // AE drops the chunk and the flag rather than store "".
       if (this._cmta != null) {
         const chunks = this._layer_list.chunks;
@@ -503,11 +502,7 @@ export class Layer extends PropertyGroup {
    * `"ParametricMeshLayer"`, or `"Layer"`. Read-only.
    */
   get layer_type(): string {
-    return dict_get(
-      (this.constructor as typeof Layer)._LAYER_TYPE_NAMES,
-      LayerType.of(this._ldta.layer_type),
-      "AVLayer",
-    );
+    return (this.constructor as typeof Layer)._LAYER_TYPE_NAMES.get(LayerType.of(this._ldta.layer_type)) ?? "AVLayer";
   }
 
   /**
@@ -885,7 +880,7 @@ export class Layer extends PropertyGroup {
    */
   get parent(): Layer | null {
     if (this._parent_id === 0) return null;
-    return dict_get(this.containing_comp.layers_by_id, this._parent_id);
+    return this.containing_comp.layers_by_id.get(this._parent_id) ?? null;
   }
 
   set parent(value: Layer | null) {
@@ -962,7 +957,7 @@ export class Layer extends PropertyGroup {
 
     const current = (match_name: string): any => {
       const prop = transform.__getitem__(match_name) as Property;
-      return py_bool(prop.keyframes) ? prop.value_at_time(time) : prop.value;
+      return prop.keyframes?.length > 0 ? prop.value_at_time(time) : prop.value;
     };
 
     // Decompose into AE transform components, keeping anchor fixed.
@@ -998,7 +993,7 @@ export class Layer extends PropertyGroup {
       // values are left untouched, matching ExtendScript (the layer
       // may visually jump for those).
       const prop = transform.__getitem__(match_name) as Property;
-      if (py_bool(prop.keyframes)) return;
+      if (prop.keyframes?.length > 0) return;
       if (!py_eq(prop.value, new_value)) prop.value = new_value;
     };
 
@@ -1017,7 +1012,7 @@ export class Layer extends PropertyGroup {
       for (const [dimension, follower] of followers.entries()) {
         for (const keyframe of follower.keyframes) {
           const time = keyframe.time;
-          let point: number[] | null = dict_get(remapped, time);
+          let point: number[] | null = remapped.get(time) ?? null;
           if (point == null) {
             point = remap.transform_point(leader.value_at_time(time) as number[]);
             remapped.set(time, point);
@@ -1035,7 +1030,7 @@ export class Layer extends PropertyGroup {
     // [200, 50, 100] each key is divided per axis. Skipping them left
     // the layer 25 px out at one time and 62 px at another.
     const scale_prop = transform.__getitem__("ADBE Scale") as Property;
-    if (py_bool(scale_prop.keyframes)) {
+    if (scale_prop.keyframes?.length > 0) {
       const scale_now = current("ADBE Scale") as number[];
       const factors = Array.from(range(new_scale.length), (axis) =>
         axis < scale_now.length && scale_now[axis] !== 0
@@ -1065,12 +1060,12 @@ export class Layer extends PropertyGroup {
       // the followers itself on a reparent (measured on AE 2026: a
       // separated child at (150, 160) under a parent at (300, 40)
       // becomes X = -150, Y = 120), so go through them directly.
-      if (separated.some((follower) => py_bool(follower.keyframes))) {
+      if (separated.some((follower) => follower.keyframes?.length > 0)) {
         remap_separated_keyframes(pos, separated);
       } else {
         pos._set_separated_value(new_pos, separated);
       }
-    } else if (py_bool(pos.keyframes)) {
+    } else if (pos.keyframes?.length > 0) {
       const remap = parent_remap;
       for (const kf of pos.keyframes) {
         const kf_value = kf.value as number[];
@@ -1096,7 +1091,7 @@ export class Layer extends PropertyGroup {
       // [700, 400, -100] turned 30 degrees about Y became
       // [123.2, 100, 186.6]).
       const poi = transform.__getitem__("ADBE Anchor Point") as Property;
-      if (py_bool(poi.keyframes)) {
+      if (poi.keyframes?.length > 0) {
         for (const kf of poi.keyframes) {
           const kf_value = kf.value as number[];
           kf.value = parent_remap.transform_point(kf_value).slice(0, kf_value.length);
@@ -1126,7 +1121,7 @@ export class Layer extends PropertyGroup {
       // into Rotate Z (measured: a 2D child under a 30-degree parent
       // gets rotZ = -30 and orientation stays [0,0,0]).
       const rotation = transform.__getitem__("ADBE Rotate Z") as Property;
-      if (py_bool(rotation.keyframes)) {
+      if (rotation.keyframes?.length > 0) {
         // AE offsets every rotation keyframe rather than giving up on
         // an animated one - keys of 15 and 75 under a 30-degree
         // parent became -15 and 45. Skipping them, as
@@ -1154,7 +1149,7 @@ export class Layer extends PropertyGroup {
     // its position compensated but not its rotation, and jump by 362 px
     // in a case where AE does not move it at all.
     const orientation_prop = transform.__getitem__("ADBE Orientation") as Property;
-    if (py_bool(orientation_prop.keyframes)) {
+    if (orientation_prop.keyframes?.length > 0) {
       for (const keyframe of orientation_prop.keyframes) {
         keyframe.value = compose_orientation(keyframe.value as number[], rotation_delta);
       }
@@ -1206,7 +1201,7 @@ export class Layer extends PropertyGroup {
     validate_number(time);
     if (!this.enabled) return false;
 
-    const any_solo = py_bool(this.containing_comp.solo_layers);
+    const any_solo = this.containing_comp.solo_layers?.length > 0;
     if (any_solo && !this.solo) return false;
 
     if (time < this.in_point || time >= this.out_point) return false;
@@ -1503,7 +1498,7 @@ export class Layer extends PropertyGroup {
       if (!(src_prop instanceof Property) || !(dst_prop instanceof Property)) continue;
       // An animated property carries real chunks that the clone copied
       // verbatim, so there is nothing to carry over.
-      if (py_bool(src_prop.keyframes) || py_bool(dst_prop.keyframes)) continue;
+      if (src_prop.keyframes?.length > 0 || dst_prop.keyframes?.length > 0) continue;
       const value = src_prop.value;
       if (value == null || py_eq(value, dst_prop.value)) continue;
       dst_prop.value = value;

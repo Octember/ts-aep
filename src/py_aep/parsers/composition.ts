@@ -1,4 +1,3 @@
-import { py_bool } from "../../pyrt/index.ts";
 import type { Chunk, ListChunk } from "../binary/chunk.ts";
 import type { CmtaChunk, IdtaChunk } from "../binary/item_chunks.ts";
 import type { Utf8Chunk } from "../binary/scalar_chunks.ts";
@@ -37,7 +36,7 @@ export function parse_composition(
   effect_param_defs: Map<string, Map<string, Map<string, any>>>,
 ): CompItem {
   const pin_chunks = filter_by_list_type(child_chunks, "Pin ");
-  const proxy_source = py_bool(pin_chunks) ? parse_source(pin_chunks[0]) : null;
+  const proxy_source = pin_chunks?.length > 0 ? parse_source(pin_chunks[0]) : null;
 
   return new CompItem({
     _child_chunks: child_chunks,

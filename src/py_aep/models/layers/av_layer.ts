@@ -7,7 +7,6 @@ import {
   KeyError,
   NotImplementedError,
   ValueError,
-  dict_get,
   float,
   float_repr,
   getattr,
@@ -471,7 +470,7 @@ export class AVLayer extends Layer {
       this._source = null;
       return null;
     } else {
-      const result = dict_get(this.containing_comp._project.items, this._source_id);
+      const result = this.containing_comp._project.items.get(this._source_id) ?? null;
       if (result != null) {
         this._source = result as AVItem;
         return this._source;
@@ -551,7 +550,7 @@ export class AVLayer extends Layer {
     if (source == null) {
       return true;
     }
-    return py_bool(source.has_video);
+    return !!source.has_video;
   }
 
   /** `True` if the layer has an audio component. Read-only. */
@@ -560,7 +559,7 @@ export class AVLayer extends Layer {
     if (source == null) {
       return false;
     }
-    return py_bool(source.has_audio);
+    return !!source.has_audio;
   }
 
   /**
@@ -857,7 +856,7 @@ export class AVLayer extends Layer {
   _text_ink_rect(time: number): { top: number; left: number; width: number; height: number } {
     const text = this.__getitem__("ADBE Text Properties") as PropertyGroup;
     const animators = text.__getitem__("ADBE Text Animators") as PropertyGroup;
-    if (py_bool(animators.properties)) {
+    if (animators.properties?.length > 0) {
       throw new NotImplementedError("source_rect_at_time does not model text animators");
     }
     const path_options = text.__getitem__("ADBE Text Path Options") as PropertyGroup;
@@ -921,7 +920,7 @@ export class AVLayer extends Layer {
     if (!(prop instanceof Property)) {
       return false;
     }
-    return py_bool(prop._animated);
+    return !!prop._animated;
   }
 
   set time_remap_enabled(value: boolean) {
@@ -935,7 +934,7 @@ export class AVLayer extends Layer {
     if (!(prop instanceof Property)) {
       return;
     }
-    const currently_enabled = py_bool(prop._animated);
+    const currently_enabled = !!prop._animated;
     if (value && !currently_enabled) {
       // Enabling time remapping converts the static Time Remap property
       // into an animated one (cdat -> LIST:list swap + animated tdb4
@@ -954,7 +953,7 @@ export class AVLayer extends Layer {
       prop._add_key(this.start_time, 0.0);
       prop._add_key(this.start_time + duration, duration);
     } else if (!value && currently_enabled) {
-      while (py_bool(prop.keyframes)) {
+      while (prop.keyframes?.length > 0) {
         prop.remove_key(0);
       }
     }
@@ -1025,7 +1024,7 @@ export class AVLayer extends Layer {
   get track_matte_layer(): AVLayer | null {
     // AE 23+: explicit ID-based lookup
     if (this._matte_layer_id !== 0) {
-      const layer = dict_get(this.containing_comp.layers_by_id, this._matte_layer_id);
+      const layer = this.containing_comp.layers_by_id.get(this._matte_layer_id) ?? null;
       if (layer instanceof AVLayer) {
         return layer;
       }
@@ -1050,7 +1049,7 @@ export class AVLayer extends Layer {
     if (this.source != null) {
       return this.source.name;
     }
-    return py_or(this._auto_name, "");
+    return this._auto_name || "";
   }
 
   /**
@@ -1170,7 +1169,7 @@ export class AVLayer extends Layer {
 
     const synthesized = (match_name: string): Property | null => {
       const prop = transform.property(match_name);
-      if (!(prop instanceof Property) || py_bool(prop.keyframes)) {
+      if (!(prop instanceof Property) || prop.keyframes?.length > 0) {
         return null;
       }
       if (prop._tdbs == null || !prop._tdbs.synthetic) {

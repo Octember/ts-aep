@@ -14,14 +14,12 @@ import {
   int,
   islower,
   isspace,
-  len,
   max,
   min,
   mod,
   py_bool,
   py_eq,
   radians,
-  range,
   repr,
   hypot,
   pattern_match,
@@ -150,7 +148,7 @@ export class _PathParser {
 
   run(): RawSubpath[] {
     let cmd = "";
-    while (this._i < len(this._tokens)) {
+    while (this._i < this._tokens.length) {
       const tok = this._tokens[this._i];
       if (_COMMANDS.has(tok)) {
         cmd = tok;
@@ -178,8 +176,8 @@ export class _PathParser {
 
   _read_args(n: number): number[] {
     const args: number[] = [];
-    for (const _ of range(n)) {
-      if (this._i >= len(this._tokens) || _COMMANDS.has(this._tokens[this._i])) {
+    for (let i = 0; i < n; i++) {
+      if (this._i >= this._tokens.length || _COMMANDS.has(this._tokens[this._i])) {
         throw new UnsupportedSVGError("Path data ended mid-command");
       }
       args.push(float(this._tokens[this._i]));
@@ -189,14 +187,14 @@ export class _PathParser {
   }
 
   _flush(closed: boolean): void {
-    if (py_bool(this._segs)) {
+    if (this._segs?.length > 0) {
       this._subpaths.push(new RawSubpath(this._segs, closed));
       this._segs = [];
     }
   }
 
   _close(): void {
-    if (py_bool(this._segs)) {
+    if (this._segs?.length > 0) {
       // Add the closing straight segment back to the subpath start.
       if (!py_eq([this.cx, this.cy], [this.sx, this.sy])) {
         this._segs.push([this.cx, this.cy, this.cx, this.cy, this.sx, this.sy, this.sx, this.sy]);
@@ -361,7 +359,7 @@ export class _PathParser {
     const delta = dtheta / n_segs;
     const t = (4.0 / 3.0) * Math.tan(delta / 4.0);
     let theta = theta1;
-    for (const i of range(n_segs)) {
+    for (let i = 0; i < n_segs; i++) {
       const cos1 = Math.cos(theta);
       const sin1 = Math.sin(theta);
       const cos2 = Math.cos(theta + delta);

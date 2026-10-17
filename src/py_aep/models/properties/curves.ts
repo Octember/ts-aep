@@ -18,7 +18,6 @@ import {
   at,
   bytes_,
   bytes_eq,
-  enumerate,
   float,
   floordiv,
   getitem,
@@ -220,7 +219,7 @@ export class Curves {
     obj._version = chunk.version;
     obj._mode = chunk.mode;
     obj._channels = new Map();
-    for (const [c, [name, record]] of enumerate(zip(CURVES_CHANNELS, chunk.records))) {
+    for (const [c, [name, record]] of zip(CURVES_CHANNELS, chunk.records).entries()) {
       const lut = bytes_.slice(chunk.maps, 256 * c, 256 * (c + 1));
       let points = record.points;
       if (points.length < 2) {

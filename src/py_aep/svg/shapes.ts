@@ -16,15 +16,12 @@ import type { CubicSeg } from "./path_data.ts";
 import type { Affine } from "./transform.ts";
 import { Subpath } from "./types.ts";
 import {
-  dict_get,
   float,
   getattr,
   max,
   min,
   mod,
-  py_bool,
   py_eq,
-  py_or,
   py_slice,
   strip,
   zip,
@@ -63,9 +60,9 @@ export function _f(
   ctx: LengthContext | null,
   default_: number = 0.0,
 ): number {
-  if (ctx == null) return parse_length(dict_get(attrs, key), default_);
+  if (ctx == null) return parse_length(attrs.get(key) ?? null, default_);
   const ref = getattr(ctx, _PERCENT_AXIS[key]);
-  return parse_length(dict_get(attrs, key), default_, ref, ctx.font_size);
+  return parse_length(attrs.get(key) ?? null, default_, ref, ctx.font_size);
 }
 
 /** An absent or `auto` corner radius, which takes the other radius. */
@@ -89,7 +86,7 @@ export function element_subpaths(
   ctx: LengthContext | null = null,
 ): RawSubpath[] {
   if (tag === "path") {
-    return parse_path(dict_get(attrs, "d", ""));
+    return parse_path(attrs.get("d") ?? "");
   }
   if (tag === "rect") {
     return _rect(attrs, ctx);
@@ -116,10 +113,10 @@ export function _rect(attrs: Map<string, string>, ctx: LengthContext | null): Ra
   }
   let rx = _f(attrs, "rx", ctx);
   let ry = _f(attrs, "ry", ctx);
-  if (_is_auto(dict_get(attrs, "rx"))) {
+  if (_is_auto(attrs.get("rx") ?? null)) {
     rx = ry;
   }
-  if (_is_auto(dict_get(attrs, "ry"))) {
+  if (_is_auto(attrs.get("ry") ?? null)) {
     ry = rx;
   }
   rx = min([max([rx, 0.0]), w / 2.0]);
@@ -187,9 +184,9 @@ export function _ellipse(
     ry = _f(attrs, "ry", ctx);
     // `auto` takes the other radius (SVG 2). AE 2026 reads it as 0 and
     // imports `rx="auto" ry="20"` as a zero-width ellipse.
-    if (strip(py_or(dict_get(attrs, "rx"), "")) === "auto") {
+    if (strip(attrs.get("rx") || "") === "auto") {
       rx = ry;
-    } else if (strip(py_or(dict_get(attrs, "ry"), "")) === "auto") {
+    } else if (strip(attrs.get("ry") || "") === "auto") {
       ry = rx;
     }
   }
@@ -214,7 +211,7 @@ export function _ellipse(
 }
 
 export function _poly(attrs: Map<string, string>, closed: boolean): RawSubpath[] {
-  const nums = pattern_findall(NUMBER_RE, dict_get(attrs, "points", "")).map((n) => float(n));
+  const nums = pattern_findall(NUMBER_RE, attrs.get("points") ?? "").map((n) => float(n));
   const pts = zip(py_slice(nums, 0, null, 2), py_slice(nums, 1, null, 2));
   if (pts.length < 2) {
     return [];
@@ -242,7 +239,7 @@ export function _poly(attrs: Map<string, string>, closed: boolean): RawSubpath[]
  */
 export function cubics_to_subpath(raw: RawSubpath, transform: Affine): Subpath | null {
   const segs = raw.segments;
-  if (!py_bool(segs)) {
+  if (!segs?.length) {
     return null;
   }
   // Transform every control point of every segment.

@@ -19,7 +19,6 @@ import {
   deferred,
   descriptor,
   int,
-  len,
   py_assert,
   type PathLike,
 } from "../../../pyrt/index.ts";
@@ -551,7 +550,7 @@ export class AVItem extends Item {
 
   /** Replace or append a LIST:Pin chunk at the given index. */
   _replace_pin(pin_index: number, new_pin: ListChunk): void {
-    if (pin_index < len(this._pin_chunks)) {
+    if (pin_index < this._pin_chunks.length) {
       const old_pin = this._pin_chunks[pin_index];
       const idx = index_by_identity(this._item_list.chunks, old_pin);
       this._item_list.chunks[idx] = new_pin;

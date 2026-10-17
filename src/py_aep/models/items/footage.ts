@@ -23,7 +23,6 @@ import {
   ValueError,
   hasattr,
   py_assert,
-  py_bool,
   repr,
   sorted,
   tkey,
@@ -293,7 +292,7 @@ export class FootageItem extends AVItem {
       source.is_still,
       source.native_frame_rate,
       source.media_color_space,
-      py_bool(attrs) ? sorted(Array.from(attrs.entries())) : [],
+      attrs?.size > 0 ? sorted(Array.from(attrs.entries())) : [],
     );
   }
 

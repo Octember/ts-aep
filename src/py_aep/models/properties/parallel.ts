@@ -13,7 +13,7 @@
  * output pairs (`aep-compare` ground-truth workflow).
  */
 
-import { b, deferred, float, NotImplementedError, py_bool, TypeError_, instance_dict } from "../../../pyrt/index.ts";
+import { b, deferred, float, NotImplementedError, TypeError_, instance_dict } from "../../../pyrt/index.ts";
 import { type Chunk, ListChunk } from "../../binary/chunk.ts";
 import { LdatItemType, type LdatItem } from "../../binary/ldat_chunks.ts";
 import { build_parallel_ldat_item, clone_chunk_tree, set_orientation_item_values } from "../../binary/mutations.ts";
@@ -89,7 +89,7 @@ export class ParallelKind {
    * keyframe's value, or the static value.
    */
   held_value(prop: Property, time: number): any {
-    if (!py_bool(prop.keyframes)) {
+    if (!prop.keyframes?.length) {
       return prop._value;
     }
     return prop.keyframes[prop.nearest_key_index(time)].value;
@@ -279,7 +279,7 @@ export class _ShapeKind extends ParallelKind {
    * [107, 114]]).
    */
   held_value(prop: Property, time: number): any {
-    if (!py_bool(prop.keyframes)) {
+    if (!prop.keyframes?.length) {
       return prop._value;
     }
     return prop.value_at_time(time);

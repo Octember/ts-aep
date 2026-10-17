@@ -1,6 +1,6 @@
 // `from __future__ import annotations` and `from typing import TYPE_CHECKING, cast`
 // are dropped: annotations are types only and `cast(...)` is `as` in TS.
-import { dict_get, getattr } from "../../pyrt/index.ts";
+import { getattr } from "../../pyrt/index.ts";
 import type { Path } from "../../pyrt/index.ts";
 import { HeadChunk, NhedChunk, NnhdChunk } from "../binary/item_chunks.ts";
 import { DwgaChunk } from "../binary/misc_chunks.ts";
@@ -184,7 +184,7 @@ export const parse_project = _suppress_materialization()(function parse_project(
     // the id behind when the active item is deleted outside its own
     // bookkeeping, and opens such a file with nothing selected). Treat a
     // dangling id as "no active item" rather than failing the parse.
-    project._active_item = dict_get(project.items, fcid_chunk.value);
+    project._active_item = project.items.get(fcid_chunk.value) ?? null;
   } catch (e) {
     if (!(e instanceof ChunkNotFoundError)) throw e;
   }

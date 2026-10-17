@@ -23,13 +23,10 @@ import {
   bytes_eq,
   deferred,
   descriptor,
-  dict_get,
-  enumerate,
   float,
   getattr,
   getitem,
   int,
-  len,
   py_assert,
   py_bool,
   py_eq,
@@ -238,7 +235,7 @@ export function _materialize_layer(layer: Layer): void {
     // five-layer new project: 60 extra tdb4 chunks, +23 KB.
     for (const child of group._properties) {
       if (child instanceof PropertyGroup) {
-        if (_OMITTED_EMPTY_GROUPS.has(child.match_name) && !py_bool(child.properties)) {
+        if (_OMITTED_EMPTY_GROUPS.has(child.match_name) && !child.properties?.length) {
           continue;
         }
         _materialize_tree(child);
@@ -262,7 +259,7 @@ export function _materialize_layer(layer: Layer): void {
       if (unwritten.has(top.match_name)) {
         continue;
       }
-      if (_OMITTED_EMPTY_GROUPS.has(top.match_name) && !py_bool(top.properties)) {
+      if (_OMITTED_EMPTY_GROUPS.has(top.match_name) && !top.properties?.length) {
         continue;
       }
       _materialize_tree(top);
@@ -419,7 +416,7 @@ export function _rewrite_eg_identity(
     }
     for (const cctl of filter_by_list_type(cif.chunks, "CCtl") as ListChunk[]) {
       const utf8s = filter_by_type(cctl.chunks, "Utf8");
-      if (py_bool(utf8s)) {
+      if (utf8s?.length > 0) {
         const uuid_utf8 = utf8s[0] as Utf8Chunk;
         if (!uuid_map.has(uuid_utf8.value)) {
           uuid_map.set(uuid_utf8.value, uuid4());
@@ -430,8 +427,8 @@ export function _rewrite_eg_identity(
         // AE zeroes the controller's cached value/default in the
         // duplicate and re-derives them from the source property
         // (probed in AE 2026 on a slider controller).
-        if (["CVal", "CDef"].includes(chunk.chunk_type) && py_bool(chunk.data)) {
-          chunk.data = bytes_.repeat(b("\x00"), len(chunk.data));
+        if (["CVal", "CDef"].includes(chunk.chunk_type) && chunk.data?.length > 0) {
+          chunk.data = bytes_.repeat(b("\x00"), chunk.data.length);
         }
       }
       let cprp: ListChunk;
@@ -1095,7 +1092,7 @@ export class CompItem extends AVItem {
     // Layer deferral: collect layer chunks and source IDs now, parse
     // the actual Layer objects on first access via _ensure_layers_loaded.
     const layer_chunks = filter_by_list_type(kw._child_chunks, "Layr");
-    if (py_bool(layer_chunks)) {
+    if (layer_chunks?.length > 0) {
       this._deferred_layers = [layer_chunks, kw.effect_param_defs];
       this._layers_loaded = false;
     } else {
@@ -1235,7 +1232,7 @@ export class CompItem extends AVItem {
     // already ran (the lazy pass covers it otherwise).
     if (project._used_in_linked) {
       for (const source_id of new_comp._source_ids_for_linking()) {
-        const source = dict_get(project.items, source_id);
+        const source = project.items.get(source_id) ?? null;
         if (source != null && "_used_in" in source) {
           (source as any)._used_in.add(new_comp);
         }
@@ -1254,7 +1251,7 @@ export class CompItem extends AVItem {
         if (lc instanceof DeferredListChunk && lc._parsed_chunks == null) {
           const raw = lc._raw_body;
           if (
-            len(raw) >= _LDTA_SOURCE_ID_END &&
+            raw.length >= _LDTA_SOURCE_ID_END &&
             bytes_eq(bytes_.slice(raw, 0, 4), b("ldta"))
           ) {
             const sid = bytes_.int_from_bytes(
@@ -1305,7 +1302,7 @@ export class CompItem extends AVItem {
     this._deferred_layers = null;
 
     let effect_param_defs: Map<string, any>;
-    if (py_bool(deferred_effect_param_defs)) {
+    if (deferred_effect_param_defs?.size > 0) {
       effect_param_defs = deferred_effect_param_defs;
     } else if (this._project != null) {
       effect_param_defs = this._project._effect_param_defs;
@@ -1441,7 +1438,7 @@ export class CompItem extends AVItem {
   get _layer_id_to_index(): Map<number, number> {
     if (this.__layer_id_to_index == null) {
       this.__layer_id_to_index = new Map(
-        [...enumerate(this.layers)].map(([idx, layer]) => [layer.id, idx] as const),
+        [...this.layers.entries()].map(([idx, layer]) => [layer.id, idx] as const),
       );
     }
     return this.__layer_id_to_index;
@@ -1503,7 +1500,7 @@ export class CompItem extends AVItem {
    * `motionGraphicsTemplateControllerCount`.
    */
   get motion_graphics_template_controller_count(): number {
-    return len(this.motion_graphics_controllers);
+    return this.motion_graphics_controllers.length;
   }
 
   /**
@@ -1598,7 +1595,7 @@ export class CompItem extends AVItem {
      * the comp has no CIF containers (not produced by AE or py_aep).
      */
     const containers = this._cif_containers();
-    if (!py_bool(containers)) {
+    if (!containers?.length) {
       return null;
     }
     let model_name_utf8: Utf8Chunk | null = null;
@@ -1726,7 +1723,7 @@ export class CompItem extends AVItem {
    */
   get renderer(): string {
     const binary_name = str(this._prin.match_name);
-    return dict_get(_RENDERER_BINARY_TO_EXTENDSCRIPT, binary_name, binary_name);
+    return _RENDERER_BINARY_TO_EXTENDSCRIPT.get(binary_name) ?? binary_name;
   }
 
   set renderer(value: string) {
@@ -1828,7 +1825,7 @@ export class CompItem extends AVItem {
 
   /** The number of layers in the composition. */
   get num_layers(): number {
-    return len(this.layers);
+    return this.layers.length;
   }
 
   /**
@@ -1864,7 +1861,7 @@ export class CompItem extends AVItem {
      *     rel_index: The index position of the layer relative to the
      *         other_layer to return.
      */
-    if (py_bool(name)) {
+    if (name) {
       for (const layer of this.layers) {
         if (layer.name === name) {
           return layer;
@@ -2032,7 +2029,7 @@ export class CompItem extends AVItem {
     const view_block = build_layer_view_block();
 
     let chunk_idx: number;
-    if (py_bool(this.layers)) {
+    if (this.layers?.length > 0) {
       try {
         chunk_idx = index_by_identity(this._item_list.chunks, this.layers[0]._layer_list);
       } catch (e) {
@@ -2366,10 +2363,10 @@ export class CompItem extends AVItem {
      *         has no source.
      */
     validate_string(name);
-    if (!Array.isArray(layer_indices) || !py_bool(layer_indices)) {
+    if (!Array.isArray(layer_indices) || !layer_indices?.length) {
       throw new ValueError("layer_indices must be a non-empty list.");
     }
-    const check_index = _validate_number({ integer: true, min: 0, max: len(this.layers) - 1 });
+    const check_index = _validate_number({ integer: true, min: 0, max: this.layers.length - 1 });
     for (const idx of layer_indices) {
       check_index(idx);
     }
@@ -2495,7 +2492,7 @@ export class CompItem extends AVItem {
         if (!matte_id || id_map.has(matte_id) || matte_map.has(matte_id)) {
           continue;
         }
-        const matte_layer = dict_get(this.layers_by_id, matte_id);
+        const matte_layer = this.layers_by_id.get(matte_id) ?? null;
         if (matte_layer != null) {
           const [m_start, m_end] = this._layer_block_slice(matte_layer);
           const m_block = this._item_list.chunks
@@ -2510,10 +2507,10 @@ export class CompItem extends AVItem {
           // ids: follow a parent/matte that moved, drop one that
           // stayed behind (it does not exist in the new comp).
           if (m_ldta.parent_id) {
-            m_ldta.parent_id = dict_get(id_map, m_ldta.parent_id, 0);
+            m_ldta.parent_id = id_map.get(m_ldta.parent_id) ?? 0;
           }
           if (m_ldta.matte_layer_id) {
-            m_ldta.matte_layer_id = dict_get(id_map, m_ldta.matte_layer_id, 0);
+            m_ldta.matte_layer_id = id_map.get(m_ldta.matte_layer_id) ?? 0;
           }
           matte_map.set(matte_id, copy_id);
           final_blocks.push(m_block);
@@ -2527,11 +2524,11 @@ export class CompItem extends AVItem {
     for (const ly of moved) {
       const ldta = ly._ldta;
       if (ldta.parent_id) {
-        ldta.parent_id = dict_get(id_map, ldta.parent_id, 0);
+        ldta.parent_id = id_map.get(ldta.parent_id) ?? 0;
       }
       const matte_id = ldta.matte_layer_id || 0;
       if (matte_id) {
-        ldta.matte_layer_id = py_or(dict_get(id_map, matte_id), dict_get(matte_map, matte_id, 0));
+        ldta.matte_layer_id = py_or(id_map.get(matte_id), matte_map.get(matte_id) ?? 0);
       }
     }
 
@@ -2555,7 +2552,7 @@ export class CompItem extends AVItem {
     const effect_defs = project._effect_param_defs;
     for (const block of final_blocks) {
       new_comp._item_list.chunks.splice(insert_at, 0, ...block);
-      insert_at += len(block);
+      insert_at += block.length;
       const new_layer = _layer().parse_layer(block[0] as ListChunk, new_comp, effect_defs);
       new_comp._layers.push(new_layer);
     }
@@ -2743,7 +2740,7 @@ export class CompItem extends AVItem {
     }
 
     const existing = new Set(this.layers.map((lyr) => lyr.name));
-    text = py_or(text, auto_name(TextLayer._auto_name, existing));
+    text = text || auto_name(TextLayer._auto_name, existing);
 
     const [btds, btgu, td_mn] = this._build_text_btds(text, box_size, line_orientation);
 

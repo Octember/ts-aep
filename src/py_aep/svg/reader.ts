@@ -35,8 +35,6 @@ import { Affine, parse_transform } from "./transform.ts";
 import { GradientStop, SolidPaint, StrokeStyle, SvgDocument, SvgDrawable, type GradientPaint, type Subpath } from "./types.ts";
 import {
   Path,
-  PyException,
-  dict_get,
   encode,
   fspath,
   int,
@@ -44,8 +42,6 @@ import {
   lstrip,
   max,
   min,
-  py_bool,
-  py_or,
   rstrip,
   strip,
   warn,
@@ -162,7 +158,7 @@ export function read_svg(source: string | PathLike | Uint8Array): SvgDocument {
   root_tf = root_tf.multiply(parse_transform(root.get("transform", "")));
   reader._root_ctm = root_tf;
   reader._viewport = [width, height];
-  const root_opacity = parse_ratio(dict_get(root_style, "opacity"), 1.0);
+  const root_opacity = parse_ratio(root_style.get("opacity") ?? null, 1.0);
   const drawables = reader.walk(root, root_tf, root_style, root_opacity);
   return new SvgDocument(width, height, drawables);
 }
@@ -188,7 +184,7 @@ export class _Reader {
     this._by_id = new Map();
     for (const elem of root.iter()) {
       const eid = elem.get("id");
-      if (py_bool(eid)) this._by_id.set(eid as string, elem);
+      if (eid) this._by_id.set(eid as string, elem);
     }
     this._root = root;
     this._parents = null;
@@ -200,7 +196,7 @@ export class _Reader {
   static _collect_css(root: Element): CssRule[] {
     const rules: CssRule[] = [];
     for (const elem of root.iter()) {
-      if (local_name(elem.tag) === "style" && py_bool(elem.text)) {
+      if (local_name(elem.tag) === "style" && elem.text) {
         rules.push(...parse_css(elem.text as string));
       }
     }
@@ -223,7 +219,7 @@ export class _Reader {
     let cur: Element | null = elem;
     while (cur != null && this._parents.has(cur)) {
       chain.push(cur);
-      cur = dict_get(this._parents, cur);
+      cur = this._parents.get(cur) ?? null;
     }
     let ctm = this._root_ctm;
     for (const node of [...chain].reverse()) {
@@ -267,12 +263,12 @@ export class _Reader {
     if (_UNSUPPORTED_TAGS.has(tag)) throw new UnsupportedSVGError(`Unsupported element: <${tag}>`);
 
     const style = resolve_properties(parent_style, tag, elem.attrib, this._css);
-    if (dict_get(style, "display") === "none") return;
+    if ((style.get("display") ?? null) === "none") return;
     const local_tf = ctm.multiply(parse_transform(elem.get("transform", "")));
     // `opacity` is a non-inherited compositing factor; AE flattens an SVG
     // group/element opacity by multiplying it into the leaf's paint
     // opacity, so accumulate it down the tree and fold it into the leaf.
-    const eff_opacity = opacity * parse_ratio(dict_get(style, "opacity"), 1.0);
+    const eff_opacity = opacity * parse_ratio(style.get("opacity") ?? null, 1.0);
 
     if (tag === "svg") {
       this._visit_viewport(elem, local_tf, style, eff_opacity, out, depth);
@@ -306,7 +302,7 @@ export class _Reader {
      * the nearest viewport and its font size.
      */
     const font_size = parse_length(
-      dict_get(style, "font-size"),
+      style.get("font-size") ?? null,
       DEFAULT_FONT_SIZE,
       DEFAULT_FONT_SIZE,
       DEFAULT_FONT_SIZE,
@@ -353,13 +349,13 @@ export class _Reader {
      */
     const ctx = this._ctx(style);
     const width = parse_length(
-      py_or(sizing.get("width"), viewport.get("width")),
+      sizing.get("width") || viewport.get("width"),
       ctx.width,
       ctx.width,
       ctx.font_size,
     );
     const height = parse_length(
-      py_or(sizing.get("height"), viewport.get("height")),
+      sizing.get("height") || viewport.get("height"),
       ctx.height,
       ctx.height,
       ctx.font_size,
@@ -389,13 +385,13 @@ export class _Reader {
     out: SvgDrawable[],
     depth = 0,
   ): void {
-    const ref = py_or(elem.get("href"), elem.get("{http://www.w3.org/1999/xlink}href"));
-    if (!py_bool(ref) || !(ref as string).startsWith("#")) return;
+    const ref = elem.get("href") || elem.get("{http://www.w3.org/1999/xlink}href");
+    if (!ref || !(ref as string).startsWith("#")) return;
     const target_id = (ref as string).slice(1);
     if (this._use_stack.includes(target_id)) {
       throw new UnsupportedSVGError(`Recursive <use> reference: #${target_id}`);
     }
-    const target = dict_get(this._by_id, target_id);
+    const target = this._by_id.get(target_id) ?? null;
     if (target == null) return;
     const ctx = this._ctx(style);
     const x = parse_length(elem.get("x"), 0.0, ctx.width, ctx.font_size);
@@ -427,9 +423,9 @@ export class _Reader {
     // <tspan> become a run (carrying its own font/fill), laid out
     // left-to-right. <textPath> children are dispatched to _add_text_path;
     // a run with an absolute x starts a new anchor chunk (outline_runs).
-    if (dict_get(style, "visibility") === "hidden") return;
+    if ((style.get("visibility") ?? null) === "hidden") return;
     const runs: [TextRun, Map<string, string>][] = [];
-    if (py_bool(elem.text) && py_bool(strip(elem.text as string))) {
+    if (elem.text && strip(elem.text as string)) {
       const run = this._make_run(elem.text as string, style, null);
       if (run != null) runs.push([run, style]);
     }
@@ -437,7 +433,7 @@ export class _Reader {
       const ctag = local_name(child.tag);
       if (ctag === "tspan") {
         const cstyle = resolve_properties(style, "tspan", child.attrib, this._css);
-        if (py_bool(child.text) && py_bool(strip(child.text as string))) {
+        if (child.text && strip(child.text as string)) {
           const run = this._make_run(child.text as string, cstyle, child);
           if (run != null) runs.push([run, cstyle]);
         }
@@ -446,10 +442,10 @@ export class _Reader {
       }
       // Text after a child element (its `tail`) belongs to the parent.
       const tail = child.tail;
-      if (py_bool(tail) && py_bool(strip(tail as string))) {
+      if (tail && strip(tail as string)) {
         const run = this._make_run(tail as string, style, null);
         if (run != null) runs.push([run, style]);
-      } else if (py_bool(tail) && !py_bool(strip(tail as string)) && py_bool(runs)) {
+      } else if (tail && !strip(tail as string) && runs.length > 0) {
         // A whitespace-only tail between two runs (e.g.
         // `<tspan>foo</tspan> <tspan>bar</tspan>`) is a significant SVG
         // space that collapses to one space. Fold it into the preceding
@@ -460,7 +456,7 @@ export class _Reader {
         if (!last_run.text.endsWith(" ")) last_run.text += " ";
       }
     }
-    if (!py_bool(runs)) return;
+    if (runs.length === 0) return;
     // Trim the whole sequence's leading/trailing whitespace (each run's
     // internal whitespace was already collapsed in _make_run); a single
     // space between runs stays significant.
@@ -469,7 +465,7 @@ export class _Reader {
     last.text = rstrip(last.text, " ");
     const origin_x = parse_number(elem.get("x", "0"));
     const origin_y = parse_number(elem.get("y", "0"));
-    const anchor = strip(py_or(dict_get(style, "text-anchor"), "start"));
+    const anchor = strip(style.get("text-anchor") || "start");
     const per_run = outline_runs(
       runs.map(([r]) => r),
       origin_x,
@@ -478,7 +474,7 @@ export class _Reader {
       anchor,
     );
     for (const [[, run_style], subpaths] of zip(runs, per_run)) {
-      if (!py_bool(subpaths)) continue;
+      if (!subpaths?.length) continue;
       out.push(this._emit(subpaths, run_style, ctm, elem.get("id"), opacity));
     }
   }
@@ -487,32 +483,32 @@ export class _Reader {
     // Font is resolved from the cascaded/inherited style; position
     // attributes (x/y/dx/dy) come from the run's own element.
     text = _collapse_ws(text);
-    const family = dict_get(style, "font-family", "sans-serif");
-    const weight = strip(py_or(dict_get(style, "font-weight"), ""));
-    const font_style = strip(py_or(dict_get(style, "font-style"), ""));
+    const family = style.get("font-family") ?? "sans-serif";
+    const weight = strip(style.get("font-weight") || "");
+    const font_style = strip(style.get("font-style") || "");
     const bold = ["bold", "bolder"].includes(weight) || (isdigit(weight) && int(weight) >= 600);
     const italic = ["italic", "oblique"].includes(font_style);
     const resolved = resolve_font(family, { bold, italic });
     if (resolved == null) return null;
     const [font_path, font_number] = resolved;
     const abs_x =
-      elem != null && py_bool(elem.get("x")) ? parse_number(elem.get("x")) : null;
+      elem != null && elem.get("x") ? parse_number(elem.get("x")) : null;
     const abs_y =
-      elem != null && py_bool(elem.get("y")) ? parse_number(elem.get("y")) : null;
-    const dx = elem != null && py_bool(elem.get("dx")) ? parse_number(elem.get("dx")) : 0.0;
-    const dy = elem != null && py_bool(elem.get("dy")) ? parse_number(elem.get("dy")) : 0.0;
+      elem != null && elem.get("y") ? parse_number(elem.get("y")) : null;
+    const dx = elem != null && elem.get("dx") ? parse_number(elem.get("dx")) : 0.0;
+    const dy = elem != null && elem.get("dy") ? parse_number(elem.get("dy")) : 0.0;
     // TextRun fields in declaration order: text, font_path, font_size,
     // letter_spacing, abs_x, abs_y, dx, dy, anchor, font_number.
     return new TextRun(
       text,
       font_path,
-      parse_number(py_or(dict_get(style, "font-size"), "16")),
-      parse_number(py_or(dict_get(style, "letter-spacing"), "0")),
+      parse_number(style.get("font-size") || "16"),
+      parse_number(style.get("letter-spacing") || "0"),
       abs_x,
       abs_y,
       dx,
       dy,
-      py_or(strip(py_or(dict_get(style, "text-anchor"), "")), null),
+      strip(style.get("text-anchor") || "") || null,
       font_number,
     );
   }
@@ -526,10 +522,10 @@ export class _Reader {
   ): void {
     // A <textPath> lays its text along a referenced path's geometry, in the
     // path's own coordinate space (its accumulated transform).
-    const href = py_or(tp_elem.get("href"), tp_elem.get("{http://www.w3.org/1999/xlink}href"));
-    if (!py_bool(href) || !(href as string).startsWith("#")) return;
-    const target = dict_get(this._by_id, (href as string).slice(1));
-    if (target == null || !(py_bool(tp_elem.text) && py_bool(strip(tp_elem.text as string)))) {
+    const href = tp_elem.get("href") || tp_elem.get("{http://www.w3.org/1999/xlink}href");
+    if (!href || !(href as string).startsWith("#")) return;
+    const target = this._by_id.get((href as string).slice(1)) ?? null;
+    if (target == null || !(!!tp_elem.text && !!strip(tp_elem.text as string))) {
       return;
     }
     const ctm = this._element_ctm(target);
@@ -543,7 +539,7 @@ export class _Reader {
       if (!(e instanceof UnsupportedSVGError)) throw e;
       return; // referenced element is not a path/basic shape
     }
-    const raw_off = strip(py_or(tp_elem.get("startOffset"), "0"));
+    const raw_off = strip(tp_elem.get("startOffset") || "0");
     let off_abs: number;
     let off_frac: number | null;
     if (raw_off.endsWith("%")) {
@@ -566,7 +562,7 @@ export class _Reader {
         letter_spacing: run.letter_spacing,
       },
     );
-    if (!py_bool(subpaths)) return;
+    if (!subpaths?.length) return;
     out.push(this._emit(subpaths, style, ctm, text_elem.get("id"), opacity));
   }
 
@@ -583,8 +579,8 @@ export class _Reader {
       const sp = cubics_to_subpath(raw, ctm);
       if (sp != null) subpaths.push(sp);
     }
-    if (!py_bool(subpaths)) return null;
-    if (dict_get(style, "visibility") === "hidden") return null;
+    if (subpaths.length === 0) return null;
+    if ((style.get("visibility") ?? null) === "hidden") return null;
 
     // `opacity` already includes this element's own opacity (folded in by
     // the caller alongside every ancestor's), so use it directly.
@@ -618,7 +614,7 @@ export class _Reader {
     const bbox = _bbox(subpaths);
     return new SvgDrawable(
       subpaths,
-      this._paint(dict_get(style, "fill", "black"), dict_get(style, "fill-opacity"), bbox, ctm),
+      this._paint(style.get("fill") ?? "black", style.get("fill-opacity") ?? null, bbox, ctm),
       this._stroke(style, bbox, ctm),
       name,
       opacity,
@@ -638,8 +634,8 @@ export class _Reader {
     const alpha = parse_ratio(opacity, 1.0);
     const url = _URL_RE.exec(value);
     if (url) {
-      const gd = dict_get(this._gradients, url[1]);
-      if (gd == null || !py_bool(gd.stops)) {
+      const gd = this._gradients.get(url[1]) ?? null;
+      if (gd == null || !gd.stops?.length) {
         // Unknown paint server (pattern, missing gradient): no paint.
         return null;
       }
@@ -657,8 +653,8 @@ export class _Reader {
 
   _stroke(style: Map<string, string>, bbox: Bbox, ctm: Affine): StrokeStyle | null {
     const paint = this._paint(
-      dict_get(style, "stroke", "none"),
-      dict_get(style, "stroke-opacity"),
+      style.get("stroke") ?? "none",
+      style.get("stroke-opacity") ?? null,
       bbox,
       ctm,
     );
@@ -667,18 +663,18 @@ export class _Reader {
     // A percentage width refers to the viewport's normalized diagonal
     // (AE 2026: 5 % of a 200 x 100 viewBox is 7.906).
     const width =
-      parse_length(dict_get(style, "stroke-width"), 1.0, ctx.diagonal, ctx.font_size) *
+      parse_length(style.get("stroke-width") ?? null, 1.0, ctx.diagonal, ctx.font_size) *
       ctm.mean_scale;
     if (width <= 0) return null;
     if (!Number.isFinite(width)) throw new UnsupportedSVGError("SVG stroke-width is out of range");
-    const cap = dict_get(_CAP, strip(py_or(dict_get(style, "stroke-linecap"), "")), 1);
-    const join = dict_get(_JOIN, strip(py_or(dict_get(style, "stroke-linejoin"), "")), 1);
+    const cap = _CAP.get(strip(style.get("stroke-linecap") || "")) ?? 1;
+    const join = _JOIN.get(strip(style.get("stroke-linejoin") || "")) ?? 1;
     // SVG requires a miter limit >= 1 (AE's Miter Limit too); AE 2026
     // imports a smaller one clamped to 1.
-    const miter = max([1.0, parse_number(dict_get(style, "stroke-miterlimit", "4"))]);
-    const dashes = strip(py_or(dict_get(style, "stroke-dasharray"), ""))
+    const miter = max([1.0, parse_number(style.get("stroke-miterlimit") ?? "4")]);
+    const dashes = strip(style.get("stroke-dasharray") || "")
       .split(new RegExp(`[,${_PY_WS}]+`))
-      .filter((t) => py_bool(t) && t !== "none")
+      .filter((t) => !!t && t !== "none")
       .map((t) => parse_number(t) * ctm.mean_scale);
     return new StrokeStyle(paint, width, cap, join, miter, dashes);
   }
@@ -693,7 +689,7 @@ export function _bbox(subpaths: Subpath[]): Bbox {
       ys.push(vy);
     }
   }
-  if (!py_bool(xs)) return [0.0, 0.0, 0.0, 0.0];
+  if (xs.length === 0) return [0.0, 0.0, 0.0, 0.0];
   return [min(xs), min(ys), max(xs), max(ys)];
 }
 

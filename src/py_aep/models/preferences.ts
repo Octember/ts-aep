@@ -15,13 +15,9 @@ import {
   b,
   bytes_,
   decode,
-  dict_get,
   float,
   getitem,
   int,
-  len,
-  py_bool,
-  py_or,
   repr,
   round,
   sorted,
@@ -106,7 +102,7 @@ export function _choose_layer_pref(preferences: Preferences, key: string, mappin
     return null;
   }
   const idx = int(preferences.get_pref_as_number(_CHOOSE_LAYER_SECTION, key, PREFType.PREF_Type_MACHINE_SPECIFIC));
-  return dict_get(mapping, idx);
+  return mapping.get(idx) ?? null;
 }
 
 /**
@@ -253,15 +249,11 @@ export function default_character_style(preferences: Preferences): Record<string
     vertical_scale: number("Vertical Scale", factory.vertical_scale * _SCALE_PERCENT) / _SCALE_PERCENT,
     baseline_shift: number("Baseline Shift", factory.baseline_shift),
     auto_leading: flag("Auto Leading", factory.auto_leading),
-    auto_kern_type: dict_get(
-      _AUTO_KERN_BY_PREF,
-      strip(
+    auto_kern_type: _AUTO_KERN_BY_PREF.get(strip(
         preferences.get_pref_as_string(_TEXT_STYLE_SECTION, "Auto Kerning Type", PREFType.PREF_Type_MACHINE_SPECIFIC_TEXT, {
           default: "Metric Auto Kerning",
         }),
-      ),
-      factory.auto_kern_type,
-    ),
+      )) ?? factory.auto_kern_type,
   };
 }
 
@@ -279,11 +271,7 @@ export function default_paragraph_style(preferences: Preferences): Record<string
   const raw_justification = preferences.get_pref_as_string(_PARA_SHEET_SECTION, "Justification", PREFType.PREF_Type_MACHINE_SPECIFIC_TEXT, {
     default: "Left",
   });
-  const justification = dict_get(
-    _JUSTIFICATION_BY_PREF,
-    strip(split(raw_justification, "|")[0]),
-    factory.justification,
-  );
+  const justification = _JUSTIFICATION_BY_PREF.get(strip(split(raw_justification, "|")[0])) ?? factory.justification;
   return {
     justification: justification,
     first_line_indent: number("First Line Indent", factory.first_line_indent),
@@ -308,7 +296,7 @@ export function _default_out_point(preferences: Preferences, key: string): numbe
     default: "0/0",
   });
   const parts = split(raw, "/");
-  if (len(parts) !== 2) return null;
+  if (parts.length !== 2) return null;
   // try/except ValueError around float(): None when either half is malformed.
   const value_scale = (() => {
     try {
@@ -355,7 +343,7 @@ export function apply_text_style_prefs(document: TextDocument, preferences: Pref
   const font = preferences.have_pref(_TEXT_STYLE_SECTION, "Font PostScript Name", _TXT)
     ? preferences.get_pref_as_string(_TEXT_STYLE_SECTION, "Font PostScript Name", _TXT)
     : null;
-  if (py_bool(font) && document.font !== font) {
+  if (font && document.font !== font) {
     document.font = font;
   }
 
@@ -366,7 +354,7 @@ export function apply_text_style_prefs(document: TextDocument, preferences: Pref
 
   const fill = [number("Fill Red"), number("Fill Green"), number("Fill Blue")];
   if (!fill.includes(null)) {
-    const current_fill = py_or(document.fill_color, [0.0, 0.0, 0.0]);
+    const current_fill = document.fill_color?.length > 0 ? document.fill_color : [0.0, 0.0, 0.0];
     if (zip(current_fill, fill).some(([c, n]) => differs(c, float(n)))) {
       document.fill_color = fill.map((n) => float(n));
     }
@@ -385,14 +373,14 @@ export function apply_text_style_prefs(document: TextDocument, preferences: Pref
 
   if (preferences.have_pref(_TEXT_STYLE_SECTION, "Render Fill", _TXT)) {
     const apply_fill = preferences.get_pref_as_bool(_TEXT_STYLE_SECTION, "Render Fill", _TXT);
-    if (py_bool(document.apply_fill) !== apply_fill) {
+    if (!!document.apply_fill !== apply_fill) {
       document.apply_fill = apply_fill;
     }
   }
 
   if (preferences.have_pref(_TEXT_STYLE_SECTION, "Render Stroke", _TXT)) {
     const apply_stroke = preferences.get_pref_as_bool(_TEXT_STYLE_SECTION, "Render Stroke", _TXT);
-    if (py_bool(document.apply_stroke) !== apply_stroke) {
+    if (!!document.apply_stroke !== apply_stroke) {
       document.apply_stroke = apply_stroke;
     }
     // Stroke width/color were probed only with the stroke rendered;
@@ -405,7 +393,7 @@ export function apply_text_style_prefs(document: TextDocument, preferences: Pref
       }
       const stroke = [number("Stroke Red"), number("Stroke Green"), number("Stroke Blue")];
       if (!stroke.includes(null)) {
-        const current = py_or(document.stroke_color, [0.0, 0.0, 0.0]);
+        const current = document.stroke_color?.length > 0 ? document.stroke_color : [0.0, 0.0, 0.0];
         if (zip(current, stroke).some(([c, n]) => differs(c, float(n)))) {
           document.stroke_color = stroke.map((n) => float(n));
         }
@@ -780,8 +768,8 @@ export class Preferences {
     for (const key of sorted([...section.keys()])) {
       // Each entry is `<name> NUL <template> NUL` in AE's mixed
       // hex/ASCII encoding.
-      const parts = bytes_.split(parse_hex_value(getitem(section, key)), b("\x00")).filter((p) => py_bool(p));
-      if (len(parts) >= 2) {
+      const parts = bytes_.split(parse_hex_value(getitem(section, key)), b("\x00")).filter((p) => p?.length > 0);
+      if (parts.length >= 2) {
         const name = decode(parts[0], "utf-8", "replace");
         presets.set(name, decode(parts[1], "utf-8", "replace"));
       }

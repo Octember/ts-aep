@@ -4,7 +4,6 @@ import {
   ValueError,
   TypeError_,
   py_assert,
-  py_bool,
   floordiv,
   mod,
   min,
@@ -446,7 +445,7 @@ export class Shape {
     if (!Array.isArray(value)) {
       throw new ValueError("vertices must be a list of [x,y] pairs");
     }
-    if (!py_bool(value)) {
+    if (!value?.length) {
       // AE 2026 refuses it too: "Value array does not have at least 1
       // element(s)".
       throw new ValueError("vertices needs at least one [x, y] pair");

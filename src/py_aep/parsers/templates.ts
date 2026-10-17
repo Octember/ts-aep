@@ -16,14 +16,9 @@ import {
   bytes_,
   concat,
   decode,
-  dict_get,
-  enumerate,
   floordiv,
   int,
-  len,
   py_assert,
-  py_bool,
-  range,
   rstrip,
   split,
   strip,
@@ -84,14 +79,14 @@ export class OutputModuleTemplate {
 
 /** Extract a hex/ASCII value from a preference section. */
 export function _extract_section_value(lines: string[], key: string): Uint8Array | null {
-  for (const [i, line] of enumerate(lines)) {
+  for (const [i, line] of lines.entries()) {
     if (!line.includes(key)) continue;
     const m = re_match(String.raw`\s*"` + re_escape(key) + String.raw`"\s*=\s*(.+)`, line);
     if (!m) continue;
     const value_parts: string[] = [strip(m[1])];
     for (let j = i + 1; j < lines.length; j++) {
       const next_line = strip(lines[j]);
-      if (!py_bool(next_line) || next_line.startsWith("#") || next_line.startsWith("[")) break;
+      if (!next_line || next_line.startsWith("#") || next_line.startsWith("[")) break;
       if (next_line.startsWith('"')) break;
       value_parts.push(next_line);
     }
@@ -116,7 +111,7 @@ export function _extract_section_value(lines: string[], key: string): Uint8Array
  */
 export function parse_render_templates(prefs_dir: Path): [RenderSettingsItem[], number | null] {
   const render_files = prefs_dir.glob("*-indep-render.txt");
-  if (!py_bool(render_files)) {
+  if (!render_files?.length) {
     return [[], null];
   }
 
@@ -131,27 +126,27 @@ export function parse_render_templates(prefs_dir: Path): [RenderSettingsItem[], 
 
   // The prefs format omits the last 64 bytes (_remaining field).
   // Pad to match the aep format.
-  const remaining = len(raw) - _HEADER_SIZE;
+  const remaining = raw.length - _HEADER_SIZE;
 
   const raw_default_index = _extract_int_value(lines, "Default RS Index");
 
   const count = floordiv(remaining, _RS_PREFS_ITEM_SIZE);
   const templates: RenderSettingsItem[] = [];
   let default_index: number | null = null;
-  for (const idx of range(count)) {
+  for (let idx = 0; idx < count; idx++) {
     const offset = _HEADER_SIZE + idx * _RS_PREFS_ITEM_SIZE;
     const item_data = bytes_.slice(raw, offset, offset + _RS_PREFS_ITEM_SIZE);
     const item = RenderSettingsItem.frombytes(
       concat(item_data, bytes_.repeat(b("\x00"), _RS_ITEM_SIZE_DIFF)),
     );
     py_assert(item instanceof RenderSettingsItem);
-    if (!py_bool(item.clean_template_name)) {
+    if (!item.clean_template_name) {
       continue;
     }
     // The prefs default index counts raw entries; remap it to the
     // filtered list. A filtered-out default yields None (no default).
     if (idx === raw_default_index) {
-      default_index = len(templates);
+      default_index = templates.length;
     }
     templates.push(item);
   }
@@ -186,7 +181,7 @@ export function _extract_int_value(lines: string[], key: string): number | null 
  */
 export function parse_output_templates(prefs_dir: Path): [OutputModuleTemplate[], number | null] {
   const output_files = prefs_dir.glob("*-indep-output.txt");
-  if (!py_bool(output_files)) {
+  if (!output_files?.length) {
     return [[], null];
   }
 
@@ -216,30 +211,30 @@ export function parse_output_templates(prefs_dir: Path): [OutputModuleTemplate[]
 
   const raw_default_index = _extract_int_value(lines, "Default OM Index");
 
-  const remaining = len(raw) - _HEADER_SIZE;
+  const remaining = raw.length - _HEADER_SIZE;
   const count = floordiv(remaining, _OM_PREFS_ITEM_SIZE);
   const templates: OutputModuleTemplate[] = [];
   let default_index: number | null = null;
-  for (const idx of range(count)) {
+  for (let idx = 0; idx < count; idx++) {
     const offset = _HEADER_SIZE + idx * _OM_PREFS_ITEM_SIZE;
     const item_data = bytes_.slice(raw, offset, offset + _OM_PREFS_ITEM_SIZE);
     const item = OutputModuleSettingsItem.frombytes(item_data);
     py_assert(item instanceof OutputModuleSettingsItem);
-    const name = dict_get(names, idx, "");
-    if (!py_bool(name) || name.startsWith("_HIDDEN")) {
+    const name = names.get(idx) ?? "";
+    if (!name || name.startsWith("_HIDDEN")) {
       continue;
     }
     // The prefs default index counts raw entries; remap it to the
     // filtered list. A filtered-out default yields None (no default).
     if (idx === raw_default_index) {
-      default_index = len(templates);
+      default_index = templates.length;
     }
     templates.push(
       new OutputModuleTemplate(
         item,
         name,
-        dict_get(format_infos, idx),
-        dict_get(format_opts, idx),
+        format_infos.get(idx) ?? null,
+        format_opts.get(idx) ?? null,
       ),
     );
   }
@@ -282,7 +277,7 @@ export function _parse_id_hex_section(text: string, section: string, id_prefix: 
 
   for (const line of split(text, "\n")) {
     const stripped = rstrip(line);
-    if (!py_bool(stripped)) {
+    if (!stripped) {
       continue;
     }
     if (stripped.startsWith("[")) {

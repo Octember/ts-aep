@@ -34,7 +34,7 @@ import { PropertyBase } from "./property_base.ts";
 import { Shape } from "./shape.ts";
 import type { PropertyGroup } from "./property_group.ts";
 import { type MaskPropertyGroup } from "./mask_property_group.ts";
-import { deferred, deepcopy, dict_get, getitem, isclose, py_bool, py_eq, py_or, py_and, sorted, warn, int, round, floordiv, TypeError_, ValueError, KeyError, IndexError, AttributeError, NotImplementedError, py_assert, contains, repr, hasattr, getattr, min, max, range, enumerate, zip, len, float, lshift, rshift, and, or, b, descriptor, list_mul, type_name } from "../../../pyrt/index.ts";
+import { deferred, deepcopy, dict_get, getitem, isclose, py_bool, py_eq, py_or, py_and, sorted, warn, int, round, floordiv, TypeError_, ValueError, KeyError, IndexError, AttributeError, NotImplementedError, py_assert, repr, hasattr, getattr, min, max, range, zip, len, float, lshift, rshift, and, or, b, descriptor, list_mul, type_name } from "../../../pyrt/index.ts";
 
 const _property_group = deferred<typeof import("./property_group.ts")>("py_aep/models/properties/property_group");
 const _av_item = deferred<typeof import("../items/av_item.ts")>("py_aep/models/items/av_item");
@@ -128,8 +128,8 @@ export function _same_path(a: Shape, b: any): boolean {
     py_eq(a.vertices, b.vertices) &&
     py_eq(a._stored_tangents(-1), b._stored_tangents(-1)) &&
     py_eq(a._stored_tangents(1), b._stored_tangents(1)) &&
-    !py_bool(a.feather_points) &&
-    !py_bool(b.feather_points)
+    !a.feather_points?.length &&
+    !b.feather_points?.length
   );
 }
 
@@ -291,7 +291,7 @@ export class Property extends PropertyBase {
    * Examples are position and effect point controls. Read-only.
    */
   get is_spatial(): boolean {
-    const override = dict_get(_ISSPATIAL_OVERRIDES, this.match_name);
+    const override = _ISSPATIAL_OVERRIDES.get(this.match_name) ?? null;
     if (override != null) return override;
     if (this._color) {
       // ExtendScript reports every color property as spatial, but AE
@@ -300,7 +300,7 @@ export class Property extends PropertyBase {
       // 2026), so the raw bit would say otherwise.
       return true;
     }
-    return py_bool(this._is_spatial_raw);
+    return !!this._is_spatial_raw;
   }
 
   /**
@@ -317,7 +317,7 @@ export class Property extends PropertyBase {
 
   /** Display name of the property. Read / Write. */
   get name(): string {
-    const override = dict_get(_NAME_OVERRIDES, this.match_name);
+    const override = _NAME_OVERRIDES.get(this.match_name) ?? null;
     if (override != null) return override;
     // Active variable-font axes display as e.g. "Font Axis Weight".
     // AE stores the name (from the font's axis name table) in a vfdn
@@ -332,7 +332,7 @@ export class Property extends PropertyBase {
         }
       }
       const tag = this.axis_tag;
-      if (tag != null) return "Font Axis " + dict_get(_VF_AXIS_STANDARD_NAMES, tag, tag);
+      if (tag != null) return "Font Axis " + (_VF_AXIS_STANDARD_NAMES.get(tag) ?? tag);
     }
     const base_name = super.name;
     // NO_VALUE effect properties that store the match_name in tdsn
@@ -726,11 +726,11 @@ export class Property extends PropertyBase {
     if (!this._is_vf_axis) return null;
     if (this._vf_tag_cache != null) return this._vf_tag_cache;
     let raw: number | null = null;
-    if (this._cdat != null && len(this._cdat.values) >= 2) {
+    if (this._cdat != null && this._cdat.values.length >= 2) {
       raw = this._cdat.values[1];
-    } else if (py_bool(this.keyframes)) {
+    } else if (this.keyframes?.length > 0) {
       const kf_raw = this.keyframes[0]._extract_raw_value();
-      if (Array.isArray(kf_raw) && len(kf_raw) >= 2) raw = kf_raw[1];
+      if (Array.isArray(kf_raw) && kf_raw.length >= 2) raw = kf_raw[1];
     }
     if (py_bool(raw)) {
       this._vf_tag_cache = raw;
@@ -797,7 +797,7 @@ export class Property extends PropertyBase {
     for (const [i, kf] of this.keyframes.entries()) {
       kf._bind_property(this);
       kf._prev = i > 0 ? this.keyframes[i - 1] : null;
-      kf._next = i < len(this.keyframes) - 1 ? this.keyframes[i + 1] : null;
+      kf._next = i < this.keyframes.length - 1 ? this.keyframes[i + 1] : null;
     }
   }
 
@@ -812,7 +812,7 @@ export class Property extends PropertyBase {
     const keyframes = this.keyframes;
     let positions: Map<Keyframe, number> = this._keyframe_positions || new Map();
     let index = positions.get(keyframe) ?? null;
-    if (index == null || index >= len(keyframes) || keyframes[index] !== keyframe) {
+    if (index == null || index >= keyframes.length || keyframes[index] !== keyframe) {
       positions = new Map(keyframes.map((kf, i) => [kf, i] as const));
       this._keyframe_positions = positions;
       index = positions.get(keyframe) ?? null;
@@ -832,7 +832,7 @@ export class Property extends PropertyBase {
       kf._prev = this.keyframes[idx - 1];
       this.keyframes[idx - 1]._next = kf;
     }
-    if (idx + 1 < len(this.keyframes)) {
+    if (idx + 1 < this.keyframes.length) {
       kf._next = this.keyframes[idx + 1];
       this.keyframes[idx + 1]._prev = kf;
     }
@@ -890,10 +890,10 @@ export class Property extends PropertyBase {
     this.keyframes.splice(new_, 0, ...this.keyframes.splice(old, 1));
     ldat.items.splice(new_, 0, ...ldat.items.splice(old, 1));
     const container = this._kf_value_container;
-    if (container != null && old < len(container.chunks)) {
+    if (container != null && old < container.chunks.length) {
       container.chunks.splice(new_, 0, ...container.chunks.splice(old, 1));
     }
-    if (this._arbs != null && old < len(this._arbs.chunks)) {
+    if (this._arbs != null && old < this._arbs.chunks.length) {
       // The Curves effect's curves, one aRbp per key: AE pairs them by
       // position, so a key's curves move with it.
       this._arbs.chunks.splice(new_, 0, ...this._arbs.chunks.splice(old, 1));
@@ -926,14 +926,14 @@ export class Property extends PropertyBase {
     // time and ease unchanged.
     if (this.match_name === "ADBE Orientation") return;
     const keyframes = this.keyframes;
-    if (len(keyframes) < 3) return;
+    if (keyframes.length < 3) return;
     // This runs on every value, time and tangent write, so a property
     // with no roving keyframes must not pay for a full pass. The flag is
     // read off the chunk rather than through the `roving` descriptor:
     // that hop was four fifths of the cost.
     if (!keyframes.some((kf) => kf._ldat_item.roving)) return;
     const targets = roving_keyframe_times(keyframes, this._arc_metric);
-    if (!py_bool(targets)) return;
+    if (!targets?.size) return;
     // Units count layer time, so there is no composition-time offset or
     // stretch to undo here. Converting scaled the run by the stretch
     // factor and displaced it by the layer's start time, pushing roving
@@ -946,14 +946,14 @@ export class Property extends PropertyBase {
       // A degenerate path (coincident keyframes) can map a key onto a
       // unit another key holds; AE steps it away from that key's
       // side, one unit at a time, for at most ten tries per keyframe.
-      for (const _ of range(10 * len(keyframes))) {
-        const holder = dict_get(holders, units);
+      for (let j = 0, n = 10 * keyframes.length; j < n; j++) {
+        const holder = holders.get(units) ?? null;
         if (holder == null || holder === index) break;
         units += holder > index ? -1 : 1;
       }
       // Still taken once the tries run out (wedged between two keys):
       // leave it where it is rather than stack two keys on one unit.
-      if (units === kf.time_units || dict_get(holders, units, index) !== index) continue;
+      if (units === kf.time_units || (holders.get(units) ?? index) !== index) continue;
       holders.delete(kf.time_units);
       holders.set(units, index);
       kf._ldat_item.time_units = units;
@@ -1105,7 +1105,7 @@ export class Property extends PropertyBase {
     // ENUM / LAYER. This bypasses the can_vary / fallback gating below,
     // which only governs layer/shape props.
     const effect_bounded =
-      this._is_in_effect() && contains((this.constructor as typeof Property)._EFFECT_BOUNDED_CONTROL_TYPES, this._property_control_type);
+      this._is_in_effect() && (this.constructor as typeof Property)._EFFECT_BOUNDED_CONTROL_TYPES.has(this._property_control_type);
     if (!effect_bounded) {
       // AE writes [0.0] bounds only on ANIMATABLE bounded leaves; it omits
       // them on bounded menu/dropdown leaves (Line Cap, Fill Rule, Grad
@@ -1122,7 +1122,7 @@ export class Property extends PropertyBase {
       // _PLACEHOLDER_UNBOUNDED (e.g. Light Intensity) even though
       // ExtendScript reports hasMin/hasMax=False, and rejects a
       // materialized one that lacks them ("missing data in file").
-      const placeholder_unbounded = contains(_PLACEHOLDER_UNBOUNDED, this.match_name);
+      const placeholder_unbounded = _PLACEHOLDER_UNBOUNDED.has(this.match_name);
       if (!multi_dim_vector && !this._bound_chunks_hint && !fallback_bounded && !placeholder_unbounded) {
         return;
       }
@@ -1201,7 +1201,7 @@ export class Property extends PropertyBase {
         const cdat = new CdatChunk({ values: list_mul([0.0], 5) });
         this._tdbs.chunks.splice(index_by_identity(this._tdbs.chunks, this._tdb4) + 1, 0, cdat);
         this._cdat = cdat;
-      } else if (len(this._cdat.values) < 5) {
+      } else if (this._cdat.values.length < 5) {
         this._cdat.values = list_mul([0.0], 5);
       }
       return;
@@ -1289,8 +1289,8 @@ export class Property extends PropertyBase {
       const cdat = new CdatChunk({ values: list_mul([0.0], target) });
       this._tdbs.chunks.splice(index_by_identity(this._tdbs.chunks, this._tdb4) + 1, 0, cdat);
       this._cdat = cdat;
-    } else if (len(this._cdat.values) < target) {
-      this._cdat.values = [...this._cdat.values, ...list_mul([0.0], target - len(this._cdat.values))];
+    } else if (this._cdat.values.length < target) {
+      this._cdat.values = [...this._cdat.values, ...list_mul([0.0], target - this._cdat.values.length)];
     }
     this._write_cdat(value);
   }
@@ -1305,7 +1305,7 @@ export class Property extends PropertyBase {
   _materialize_static_orientation(): void {
     const kind = this._parallel_kind();
     if (kind == null || kind.name !== "orientation") return;
-    if (this._wrapper != null || py_bool(this.keyframes)) return;
+    if (this._wrapper != null || this.keyframes?.length > 0) return;
     let value = this._value;
     if (!Array.isArray(value)) {
       value = Array.isArray(this.default_value) ? this.default_value : [0.0, 0.0, 0.0];
@@ -1337,14 +1337,14 @@ export class Property extends PropertyBase {
    * untouched.
    */
   _is_placeholder_bound(body: TdumChunk): boolean {
-    return contains(_PLACEHOLDER_UNBOUNDED, this.match_name) && body.values.every((v) => v === 0.0);
+    return _PLACEHOLDER_UNBOUNDED.has(this.match_name) && body.values.every((v) => v === 0.0);
   }
 
   /** Extract value from a tdum/tduM chunk body. */
   static _read_tdum(body: TdumChunk): number | number[] {
     if (body.is_color) return [...body.values];
     if (body.is_integer) return int(body.values[0]);
-    if (len(body.values) === 1) return body.values[0];
+    if (body.values.length === 1) return body.values[0];
     return [...body.values];
   }
 
@@ -1358,7 +1358,7 @@ export class Property extends PropertyBase {
   _read_cdat_raw(): any {
     if (this._cdat == null) return null;
     const values = this._cdat.values.slice(0, this.dimensions);
-    if (!py_bool(values)) return null;
+    if (values.length === 0) return null;
     if (this.dimensions === 1 && !this._color) return values[0];
     return values;
   }
@@ -1373,7 +1373,7 @@ export class Property extends PropertyBase {
     if (raw == null) return null;
     // 0. Variable-font axis: the binary stores [value, tag4cc] but
     //    ExtendScript exposes only the scalar axis value.
-    if (this._is_vf_axis && Array.isArray(raw) && len(raw) >= 2) {
+    if (this._is_vf_axis && Array.isArray(raw) && raw.length >= 2) {
       if (this._vf_tag_cache == null && py_bool(raw[1])) this._vf_tag_cache = raw[1];
       return raw[0];
     }
@@ -1386,20 +1386,20 @@ export class Property extends PropertyBase {
       }
       // For 2D layers, Z-Scale is stored as 0.01 in the binary
       // (irrelevant axis). ES always normalizes it to 100.
-      if (this._scale_z_override != null && Array.isArray(raw) && len(raw) >= 3) {
+      if (this._scale_z_override != null && Array.isArray(raw) && raw.length >= 3) {
         raw[2] = this._scale_z_override;
       }
     }
     // 2. Color (ARGB 0-255 -> RGBA 0-1)
     if (this._color) {
-      if (Array.isArray(raw) && len(raw) === 4) {
+      if (Array.isArray(raw) && raw.length === 4) {
         const [a, r, g, b_] = raw;
         raw = [r / 255.0, g / 255.0, b_ / 255.0, a / 255.0];
       }
     }
     // 3. Effect point (0-1 fraction -> pixel coordinates)
     if (this._effect_scale != null) {
-      if (Array.isArray(raw) && len(raw) >= 2) {
+      if (Array.isArray(raw) && raw.length >= 2) {
         raw = this._apply_effect_scale(raw);
       }
     }
@@ -1415,7 +1415,7 @@ export class Property extends PropertyBase {
   _unresolve_value(value: any): any {
     if (value == null) return null;
     if (!(typeof value === "number" || typeof value === "boolean" || Array.isArray(value))) return value;
-    if (Array.isArray(value) && py_bool(value) && !(typeof value[0] === "number" || typeof value[0] === "boolean")) return value;
+    if (Array.isArray(value) && value?.length > 0 && !(typeof value[0] === "number" || typeof value[0] === "boolean")) return value;
     // 0. Variable-font axis: re-attach the tag dimension to a scalar
     //    ExtendScript-style value (raw 2-dim lists pass through).
     if (this._is_vf_axis && (typeof value === "number" || typeof value === "boolean")) {
@@ -1425,13 +1425,13 @@ export class Property extends PropertyBase {
     }
     // 3. Reverse effect point (pixel coordinates -> 0-1 fraction)
     if (this._effect_scale != null) {
-      if (Array.isArray(value) && len(value) >= 2) {
+      if (Array.isArray(value) && value.length >= 2) {
         value = this._apply_effect_scale(value, { invert: true });
       }
     }
     // 2. Reverse color (RGBA 0-1 -> ARGB 0-255)
     if (this._color) {
-      if (Array.isArray(value) && len(value) === 4) {
+      if (Array.isArray(value) && value.length === 4) {
         const [r, g, b_, a] = value;
         value = [a * 255.0, r * 255.0, g * 255.0, b_ * 255.0];
       }
@@ -1456,7 +1456,7 @@ export class Property extends PropertyBase {
   _write_cdat(value: any): void {
     if (this._cdat == null) return;
     if (!(typeof value === "number" || typeof value === "boolean" || Array.isArray(value))) return;
-    if (Array.isArray(value) && py_bool(value) && !(typeof value[0] === "number" || typeof value[0] === "boolean")) return;
+    if (Array.isArray(value) && value?.length > 0 && !(typeof value[0] === "number" || typeof value[0] === "boolean")) return;
     const raw_value = this._unresolve_value(value);
     const raw = [...this._cdat.values];
     if (Array.isArray(raw_value)) {
@@ -1526,7 +1526,7 @@ export class Property extends PropertyBase {
   _keyframe_curves(keyframe: Keyframe): Curves | null {
     py_assert(this._arbs != null);
     const arbps = this._arbs.chunks;
-    if (len(arbps) !== len(this.keyframes)) {
+    if (arbps.length !== this.keyframes.length) {
       return null;
     }
     const arbp = arbps[index_by_identity(this.keyframes, keyframe)];
@@ -1569,7 +1569,7 @@ export class Property extends PropertyBase {
   _keyed_curves_at(time: number): Curves | null {
     const keys = this.keyframes;
     if (time <= keys[0].time) return this._keyframe_curves(keys[0]);
-    if (time >= keys[len(keys) - 1].time) return this._keyframe_curves(keys[len(keys) - 1]);
+    if (time >= keys[keys.length - 1].time) return this._keyframe_curves(keys[keys.length - 1]);
     const previous = [...keys].reverse().find((k) => k.time <= time)!;
     if (isclose(previous.time, time, 0.0, 1e-9) || previous.out_interpolation_type === KeyframeInterpolationType.HOLD) {
       return this._keyframe_curves(previous);
@@ -1645,13 +1645,13 @@ export class Property extends PropertyBase {
     if (this._tdpi != null && this._composition != null) {
       const layer_id = this._tdpi.value;
       if (layer_id === 0) return 0;
-      return dict_get(this._composition._layer_id_to_index, layer_id, -1) + 1;
+      return (this._composition._layer_id_to_index.get(layer_id) ?? -1) + 1;
     }
     const separated = this._separated_value();
     if (separated != null) return separated;
-    if (this._arbs != null && !py_bool(this.keyframes)) return this._static_curves();
+    if (this._arbs != null && !this.keyframes?.length) return this._static_curves();
     if (this._value != null) return this._wire_text_version(this._value);
-    if (py_bool(this.keyframes)) return this._stored_value_at(0);
+    if (this.keyframes?.length > 0) return this._stored_value_at(0);
     if (this._cdat != null) return this._resolve_value(this._read_cdat_raw());
     if (this.match_name === "ADBE Mask Shape") {
       // A mask AE never needed a path for stores none; AE reports the
@@ -1691,7 +1691,7 @@ export class Property extends PropertyBase {
     _validate_value(this, value);
     if (!Array.isArray(value)) {
       throw new ValueError(
-        "a dimension-separated property's value must be a sequence " + `of ${len(followers)} numbers`,
+        "a dimension-separated property's value must be a sequence " + `of ${followers.length} numbers`,
       );
     }
     for (const [follower, component] of zip(followers, value)) {
@@ -1726,7 +1726,7 @@ export class Property extends PropertyBase {
       _validate_value(this, value);
     }
     if (value === this._value && !(typeof value === "number" || typeof value === "boolean" || Array.isArray(value))) return;
-    if (py_bool(this.keyframes)) {
+    if (this.keyframes?.length > 0) {
       // ExtendScript: "Can not call setValue() on a property with
       // keyframes." Writing a static value alongside keyframe data
       // produces a file AE refuses to open.
@@ -1836,7 +1836,7 @@ export class Property extends PropertyBase {
       }
     }
     const value_chunk = kind.build_value_chunk(this, value);
-    if (py_bool(container.chunks)) {
+    if (container.chunks?.length > 0) {
       container.chunks[0] = value_chunk;
     } else {
       container.chunks.push(value_chunk);
@@ -1862,7 +1862,7 @@ export class Property extends PropertyBase {
    * `has_min` is `True`. Read-only.
    */
   get min_value(): any {
-    if (contains(_UNBOUNDED_MATCH_NAMES, this.match_name)) return null;
+    if (_UNBOUNDED_MATCH_NAMES.has(this.match_name)) return null;
     if (this._min_value_fallback !== _UNSET) return this._min_value_fallback;
     if (this._tdum != null) {
       if (this._is_placeholder_bound(this._tdum)) return null;
@@ -1876,7 +1876,7 @@ export class Property extends PropertyBase {
    * `has_max` is `True`. Read-only.
    */
   get max_value(): any {
-    if (contains(_UNBOUNDED_MATCH_NAMES, this.match_name)) return null;
+    if (_UNBOUNDED_MATCH_NAMES.has(this.match_name)) return null;
     if (this._max_value_fallback !== _UNSET) return this._max_value_fallback;
     if (this._tduM != null) {
       if (this._is_placeholder_bound(this._tduM)) return null;
@@ -1897,7 +1897,7 @@ export class Property extends PropertyBase {
     if (this._property_control_type === PropertyControlType.ANGLE) return "degrees";
     // The map holds the spatial-valued exceptions (e.g. ADBE Orientation
     // is 3D-spatial but degrees), so it must win over the pixels heuristic.
-    const mapped = dict_get(UNITS_TEXT_MAP, this.match_name);
+    const mapped = UNITS_TEXT_MAP.get(this.match_name) ?? null;
     if (mapped != null) return mapped;
     if (
       ([PropertyValueType.TwoD_SPATIAL, PropertyValueType.ThreeD_SPATIAL] as number[]).includes(this._property_value_type!)
@@ -1923,12 +1923,12 @@ export class Property extends PropertyBase {
    */
   get value_text(): string | null {
     const params = this.property_parameters;
-    if (!py_bool(params)) return null;
+    if (!params?.length) return null;
     const value = this.value;
     if (typeof value !== "number" && typeof value !== "boolean") return null;
     // Dropdown values are 1-based indices into the menu strings.
     const index = int(value) - 1;
-    if (0 <= index && index < len(params)) return params[index];
+    if (0 <= index && index < params.length) return params[index];
     return null;
   }
 
@@ -1956,7 +1956,7 @@ export class Property extends PropertyBase {
         "property_parameters can only be set on the Menu property " + "of a Dropdown Menu Control.",
       );
     }
-    if (!Array.isArray(items) || !py_bool(items)) {
+    if (!Array.isArray(items) || !items?.length) {
       throw new ValueError("items must be a non-empty list of strings.");
     }
     const seen = new Set<string>();
@@ -1977,8 +1977,8 @@ export class Property extends PropertyBase {
     items = [...items];
     this._write_dropdown_items(items);
     this._property_parameters = items;
-    this.nb_options = len(items);
-    this._max_value_fallback = len(items);
+    this.nb_options = items.length;
+    this._max_value_fallback = items.length;
   }
 
   /**
@@ -2038,7 +2038,7 @@ export class Property extends PropertyBase {
         } else if (current === this.match_name) {
           if (chunk instanceof EnumPardChunk) {
             // AE keeps the default choice unchanged.
-            chunk.nb_options = len(items);
+            chunk.nb_options = items.length;
           } else if (chunk.chunk_type === "pdnm") {
             const utf8 = find_by_type((chunk as ContainerChunk).chunks, "Utf8");
             (utf8 as Utf8Chunk).value = joined;
@@ -2065,14 +2065,11 @@ export class Property extends PropertyBase {
       }
     }
     if (comp != null) {
-      const param_def = dict_get(
-        dict_get(comp._project._effect_param_defs, effect.match_name, new Map()),
-        this.match_name,
-      );
+      const param_def = dict_get(comp._project._effect_param_defs, effect.match_name, new Map()).get(this.match_name);
       if (param_def != null) {
         param_def.set("property_parameters", [...items]);
-        param_def.set("nb_options", len(items));
-        param_def.set("max_value", len(items));
+        param_def.set("nb_options", items.length);
+        param_def.set("max_value", items.length);
       }
     }
   }
@@ -2095,7 +2092,7 @@ export class Property extends PropertyBase {
     if (this._can_vary_over_time != null) return this._can_vary_over_time;
     // NO_VALUE properties always report canVaryOverTime=True in AE,
     // even though the binary byte says otherwise.
-    return py_bool(py_or(this._tdb4.can_vary_over_time, this._no_value));
+    return !!(this._tdb4.can_vary_over_time || this._no_value);
   }
 
   /**
@@ -2114,7 +2111,7 @@ export class Property extends PropertyBase {
       // accepts the write, and reads back true with the position intact.
       //
       py_assert(this._tdsb != null);
-      return py_bool(this._tdsb.dimensions_separated);
+      return !!this._tdsb.dimensions_separated;
     }
     return false;
   }
@@ -2140,7 +2137,7 @@ export class Property extends PropertyBase {
       throw new ValueError(`${repr(this.match_name)} has no separation followers to transfer to`);
     }
     const live = followers as Property[];
-    const animated = py_bool(this.keyframes) || live.some((follower) => py_bool(follower.keyframes));
+    const animated = this.keyframes?.length > 0 || live.some((follower) => follower.keyframes?.length > 0);
     if (value) {
       if (animated) {
         this._separate_animated(live);
@@ -2183,7 +2180,7 @@ export class Property extends PropertyBase {
     const default_ = this.default_value as number[];
     this._set_separated_flags(true);
     const three_d = this._containing_layer.is_3d;
-    for (const [dimension, follower] of enumerate(followers)) {
+    for (const [dimension, follower] of followers.entries()) {
       if (dimension === 2 && !three_d) continue;
       follower.value = components[dimension];
     }
@@ -2207,8 +2204,8 @@ export class Property extends PropertyBase {
 
   /** Incoming and outgoing segment durations for each keyframe. */
   static _segment_spans(times: number[]): [number[], number[]] {
-    const incoming = [0.0, ...Array.from(range(1, len(times)), (i) => times[i] - times[i - 1])];
-    const outgoing = [...Array.from(range(len(times) - 1), (i) => times[i + 1] - times[i]), 0.0];
+    const incoming = [0.0, ...Array.from(range(1, times.length), (i) => times[i] - times[i - 1])];
+    const outgoing = [...Array.from(range(times.length - 1), (i) => times[i + 1] - times[i]), 0.0];
     return [incoming, outgoing];
   }
 
@@ -2231,8 +2228,8 @@ export class Property extends PropertyBase {
     const keyframes = [...this.keyframes];
     const times = keyframes.map((keyframe) => keyframe.time);
     const values = keyframes.map((keyframe) => keyframe.value as number[]);
-    const in_tangents = keyframes.map((keyframe) => py_or(keyframe.in_spatial_tangent, []));
-    const out_tangents = keyframes.map((keyframe) => py_or(keyframe.out_spatial_tangent, []));
+    const in_tangents = keyframes.map((keyframe) => keyframe.in_spatial_tangent?.length > 0 ? keyframe.in_spatial_tangent : []);
+    const out_tangents = keyframes.map((keyframe) => keyframe.out_spatial_tangent?.length > 0 ? keyframe.out_spatial_tangent : []);
     const interpolation = keyframes.map(
       (keyframe) => [keyframe.in_interpolation_type, keyframe.out_interpolation_type] as const,
     );
@@ -2243,9 +2240,9 @@ export class Property extends PropertyBase {
     this._set_own_value([...(this.default_value as number[])]);
 
     const three_d = this._containing_layer.is_3d;
-    for (const [dimension, follower] of enumerate(followers)) {
+    for (const [dimension, follower] of followers.entries()) {
       if (dimension === 2 && !three_d) continue;
-      for (const [index, time] of enumerate(times)) {
+      for (const [index, time] of times.entries()) {
         const added = follower._add_key(time, values[index][dimension]);
         const keyframe = follower.keyframes[added];
         keyframe.in_interpolation_type = interpolation[index][0];
@@ -2260,7 +2257,7 @@ export class Property extends PropertyBase {
         ] as const) {
           const span = spans[index];
           const tangent = tangents[index];
-          if (span <= 0 || dimension >= len(tangent)) {
+          if (span <= 0 || dimension >= tangent.length) {
             // An outer side has no segment to ease along; AE
             // parks it on zero speed and the default influence.
             keyframe._apply_ease([new KeyframeEase(0.0, _DEFAULT_INFLUENCE)], direction);
@@ -2293,7 +2290,7 @@ export class Property extends PropertyBase {
    * value there, and no tangent.
    */
   _recombine_animated(followers: Property[]): void {
-    if (!followers.some((follower) => py_bool(follower.keyframes))) {
+    if (!followers.some((follower) => follower.keyframes?.length > 0)) {
       this._recombine_static(followers);
       return;
     }
@@ -2302,7 +2299,7 @@ export class Property extends PropertyBase {
     );
     const times = sorted([...new Set(keys_at.flatMap((per_dimension) => [...per_dimension.keys()]))]);
     const [incoming, outgoing] = (this.constructor as typeof Property)._segment_spans(times);
-    const dimensions = len(followers);
+    const dimensions = followers.length;
     const composed = times.map(() => list_mul([0.0], dimensions));
     const in_tangents = times.map(() => list_mul([0.0], dimensions));
     const out_tangents = times.map(() => list_mul([0.0], dimensions));
@@ -2318,9 +2315,9 @@ export class Property extends PropertyBase {
       return [KeyframeInterpolationType.LINEAR, KeyframeInterpolationType.LINEAR] as const;
     });
 
-    for (const [dimension, follower] of enumerate(followers)) {
-      for (const [index, time] of enumerate(times)) {
-        const keyframe = dict_get(keys_at[dimension], time);
+    for (const [dimension, follower] of followers.entries()) {
+      for (const [index, time] of times.entries()) {
+        const keyframe = keys_at[dimension].get(time);
         if (keyframe == null) {
           const sampled = follower.value_at_time(time);
           composed[index][dimension] = typeof sampled === "number" ? float(sampled) : 0.0;
@@ -2334,7 +2331,7 @@ export class Property extends PropertyBase {
           const span = spans[index];
           if (span <= 0) continue;
           const ease = direction === "in" ? keyframe.in_temporal_ease : keyframe.out_temporal_ease;
-          if (!py_bool(ease)) continue;
+          if (!ease?.length) continue;
           const magnitude = ease[0].speed * (ease[0].influence / 100.0) * span;
           target[index][dimension] = direction === "in" ? -magnitude : magnitude;
         }
@@ -2344,18 +2341,18 @@ export class Property extends PropertyBase {
     for (const follower of followers) _deactivate_follower(follower);
 
     this._set_separated_flags(false);
-    for (const [index, time] of enumerate(times)) {
+    for (const [index, time] of times.entries()) {
       this._add_key(time, composed[index]);
     }
-    for (const [index, keyframe] of enumerate(this.keyframes)) {
-      if (index >= len(times)) break;
+    for (const [index, keyframe] of this.keyframes.entries()) {
+      if (index >= times.length) break;
       keyframe.in_interpolation_type = interpolation[index][0];
       keyframe.out_interpolation_type = interpolation[index][1];
       if (keyframe.in_spatial_tangent != null) {
-        keyframe.in_spatial_tangent = in_tangents[index].slice(0, len(keyframe.in_spatial_tangent));
+        keyframe.in_spatial_tangent = in_tangents[index].slice(0, keyframe.in_spatial_tangent.length);
       }
       if (keyframe.out_spatial_tangent != null) {
-        keyframe.out_spatial_tangent = out_tangents[index].slice(0, len(keyframe.out_spatial_tangent));
+        keyframe.out_spatial_tangent = out_tangents[index].slice(0, keyframe.out_spatial_tangent.length);
       }
     }
   }
@@ -2386,13 +2383,13 @@ export class Property extends PropertyBase {
   }
 
   set expression(value: string) {
-    if (py_bool(value) && !this.can_set_expression) {
+    if (value && !this.can_set_expression) {
       throw new AttributeError(`expression cannot be set on property ${repr(this.match_name)}`);
     }
     // A NUL ends the expression for AE 2026, which keeps only the text
     // before it, both when a script sets it and when it reads the file.
     validate_text(value);
-    if (!py_bool(value)) {
+    if (!value) {
       // Empty string clears the expression (chunk + tdb4 markers).
       this._clear_expression();
       return;
@@ -2435,7 +2432,7 @@ export class Property extends PropertyBase {
   get expression_enabled(): boolean {
     if (this._expression_enabled != null) return this._expression_enabled;
     const disabled = getattr(this._tdb4, "expression_disabled", true);
-    return !disabled && py_bool(this.expression);
+    return !disabled && !!this.expression;
   }
 
   set expression_enabled(value: boolean) {
@@ -2448,7 +2445,7 @@ export class Property extends PropertyBase {
       // rejects.
       throw new ValueError(`property ${repr(this.match_name)} cannot take an expression`);
     }
-    if (value && !py_bool(this.expression)) {
+    if (value && !this.expression) {
       // AE silently no-ops here, leaving expressionEnabled false. Doing
       // the same would clear the tdb4 disabled bit for an expression
       // that does not exist - a byte AE never writes, which the getter
@@ -2456,7 +2453,7 @@ export class Property extends PropertyBase {
       // mirroring the no-op keeps the caller's mistake visible.
       throw new ValueError(`property ${repr(this.match_name)} has no expression to enable`);
     }
-    if (!value && !py_bool(this.expression) && this._unstored_mask_path()) {
+    if (!value && !this.expression && this._unstored_mask_path()) {
       // Nothing to disable: AE 2026 saves a fresh mask given
       // `expressionEnabled = false` as the bare atom, with no path.
       return;
@@ -2636,8 +2633,8 @@ export class Property extends PropertyBase {
     if (!this.is_separation_leader) return null;
     const parent = this.parent_property;
     if (parent == null || !hasattr(parent, "properties")) return null;
-    if (dim < 0 || dim >= len(_SEPARATION_FOLLOWERS)) {
-      throw new ValueError(`dim must be in range [0, ${len(_SEPARATION_FOLLOWERS) - 1}], got ${dim}`);
+    if (dim < 0 || dim >= _SEPARATION_FOLLOWERS.length) {
+      throw new ValueError(`dim must be in range [0, ${_SEPARATION_FOLLOWERS.length - 1}], got ${dim}`);
     }
     const match_name = _SEPARATION_FOLLOWERS[dim];
     try {
@@ -2659,7 +2656,7 @@ export class Property extends PropertyBase {
    * of the composition is 0.
    */
   nearest_key_index(time: number): number {
-    return min(Array.from(range(len(this.keyframes))), (i: number) => Math.abs(this.keyframes[i].time - time));
+    return min(Array.from(range(this.keyframes.length)), (i: number) => Math.abs(this.keyframes[i].time - time));
   }
 
   /**
@@ -2683,7 +2680,7 @@ export class Property extends PropertyBase {
    */
   get is_modified(): boolean {
     if (this._animated) return true;
-    if (py_bool(this.expression)) return true;
+    if (this.expression) return true;
     // A separation follower of an UNSEPARATED leader (e.g. Z Position
     // while Position is not dimension-separated) is an inactive
     // placeholder whose stored value is a meaningless 0. AE still reports
@@ -2726,7 +2723,7 @@ export class Property extends PropertyBase {
       const default_ = CurvesArbpChunk.from_arbp(this._default_arbp);
       return !curves._same_curves(Curves._from_binary(default_));
     }
-    if (contains(_ALWAYS_MODIFIED, this.match_name)) return true;
+    if (_ALWAYS_MODIFIED.has(this.match_name)) return true;
     if (this.default_value != null) return !_values_equal(this.value, this.default_value);
     // Effect properties with no known default are considered modified
     // when they have a value - ExtendScript treats the absence of a
@@ -2763,7 +2760,7 @@ export class Property extends PropertyBase {
    */
   get alternate_source(): AVItem | null {
     if (this._blsi == null || this._blsi.value === 0 || this._composition == null) return null;
-    return dict_get(this._composition._project.items, this._blsi.value) as AVItem | null;
+    return (this._composition._project.items.get(this._blsi.value) ?? null) as AVItem | null;
   }
 
   /**
@@ -2927,7 +2924,7 @@ export class Property extends PropertyBase {
    * between keys at Z 40 and -30 stores Z 5.0005).
    */
   _stored_value_at(time: number): any {
-    if (!py_bool(this.keyframes)) {
+    if (!this.keyframes?.length) {
       const separated = this._separated_value(time);
       if (separated != null) return separated;
       return this._stored_static_value();
@@ -2943,7 +2940,7 @@ export class Property extends PropertyBase {
       this._inert_dimensions(),
       kind,
       has_motion_path ? this._arc_metric : new ArcMetric(),
-      py_bool(this._color),
+      !!this._color,
     );
     return this._clamp_to_range(result);
   }
@@ -2960,7 +2957,7 @@ export class Property extends PropertyBase {
   _mask_inert_z(value: any): any {
     if (
       Array.isArray(value) &&
-      len(value) === 3 &&
+      value.length === 3 &&
       (this.match_name === "ADBE Position" || this.match_name === "ADBE Anchor Point") &&
       !getattr(this._containing_layer, "three_d_layer", true)
     ) {
@@ -3094,7 +3091,7 @@ export class Property extends PropertyBase {
 
   /** The frame rate keyframe times convert with. */
   _keyframe_frame_rate(): number {
-    if (py_bool(this.keyframes)) return this.keyframes[0]._frame_rate;
+    if (this.keyframes?.length > 0) return this.keyframes[0]._frame_rate;
     let comp = this._composition;
     if (comp == null) comp = this._containing_layer.containing_comp;
     return comp.frame_rate;
@@ -3120,10 +3117,10 @@ export class Property extends PropertyBase {
       // `_materialize_parallel_container` can adopt an arbitrary
       // sibling LIST as the wrapper, so an unknown type falls through
       // to the match name rather than deciding the answer is None.
-      const kind = dict_get(_WRAPPER_KINDS, wrapper.list_type);
+      const kind = _WRAPPER_KINDS.get(wrapper.list_type) ?? null;
       if (kind != null) return kind;
     }
-    return dict_get(_SYNTHESIZED_KINDS, this.match_name);
+    return _SYNTHESIZED_KINDS.get(this.match_name) ?? null;
   }
 
   /** The `LdatItemType` for this property's keyframe header data. */
@@ -3170,7 +3167,7 @@ export class Property extends PropertyBase {
     // transition (verified against the variable_font_axis_animated
     // AE 2026 fixture).
     const preserved = this._is_vf_axis ? [t._value_hint_flag, t._cvot_flags, t._time_base] : null;
-    tdb4_apply_animated_template(t, { color: py_bool(this._color), spatial: this._has_motion_path });
+    tdb4_apply_animated_template(t, { color: !!this._color, spatial: this._has_motion_path });
     // The template cannot know the comp's timebase or pixel aspect.
     // `_ensure_materialized` stamps them, but only for a synthesized
     // property - one parsed from a real file returns early there, so
@@ -3224,12 +3221,12 @@ export class Property extends PropertyBase {
    * sub-frame keyframes inside one frame stay distinct.
    */
   _keyframe_insert_index(time_units: number): [number, boolean] {
-    for (const [i, kf] of enumerate(this.keyframes)) {
+    for (const [i, kf] of this.keyframes.entries()) {
       const units = kf.time_units;
       if (units === time_units) return [i, true];
       if (units > time_units) return [i, false];
     }
-    return [len(this.keyframes), false];
+    return [this.keyframes.length, false];
   }
 
   /**
@@ -3373,7 +3370,7 @@ export class Property extends PropertyBase {
     const [lhd3, ldat] = this._ensure_animated();
     ldat.items.splice(idx, 0, ldat_item);
     this.keyframes.splice(idx, 0, kf);
-    set_lhd3_count(lhd3, len(this.keyframes), LHD3_BLOCK_KEYFRAMES);
+    set_lhd3_count(lhd3, this.keyframes.length, LHD3_BLOCK_KEYFRAMES);
     this._link_inserted_key(idx);
     this._preserve_curve_on_insert(idx, value !== _USE_VALUE);
     this._redistribute_roving_keyframes();
@@ -3419,7 +3416,7 @@ export class Property extends PropertyBase {
    * blank (0 / 0) ease, where `addKey` writes the slope (AE 2026).
    */
   _preserve_curve_on_insert(idx: number, set_value = false): void {
-    if (idx <= 0 || idx >= len(this.keyframes) - 1) {
+    if (idx <= 0 || idx >= this.keyframes.length - 1) {
       // Outside the keyed range there is no segment to preserve.
       return;
     }
@@ -3472,7 +3469,7 @@ export class Property extends PropertyBase {
 
     // A spatial property stores ONE ease for the whole vector (its speed
     // is along the path), where a plain vector stores one per dimension.
-    const n_ease = Math.min(len(prev_out), len(next_in)) || 1;
+    const n_ease = Math.min(prev_out.length, next_in.length) || 1;
     const spatial = n_ease === 1 && dims > 1;
     let split_at: number | null = null;
     if (this._color) {
@@ -3489,10 +3486,10 @@ export class Property extends PropertyBase {
       split_at = this._motion_path_parameter(idx, t);
     }
 
-    for (const d of range(n_ease)) {
-      const [v0, v1] = d < len(pairs) ? pairs[d] : pairs[0];
-      let o_ease = d < len(prev_out) ? prev_out[d] : prev_out[0];
-      let i_ease = d < len(next_in) ? next_in[d] : next_in[0];
+    for (let d = 0; d < n_ease; d++) {
+      const [v0, v1] = d < pairs.length ? pairs[d] : pairs[0];
+      let o_ease = d < prev_out.length ? prev_out[d] : prev_out[0];
+      let i_ease = d < next_in.length ? next_in[d] : next_in[0];
       if (mixed) {
         // The LINEAR side as the BEZIER handle it is: the slope of
         // the whole segment (not of its first half - the new key is
@@ -3554,9 +3551,9 @@ export class Property extends PropertyBase {
     const v0 = prev_kf._stored_value;
     const v1 = next_kf._stored_value;
     if (!Array.isArray(v0) || !Array.isArray(v1)) return 0.0;
-    const ndim = len(v0);
-    const out_tangent = py_or(prev_kf.out_spatial_tangent, list_mul([0.0], ndim));
-    const in_tangent = py_or(next_kf.in_spatial_tangent, list_mul([0.0], ndim));
+    const ndim = v0.length;
+    const out_tangent = prev_kf.out_spatial_tangent?.length > 0 ? prev_kf.out_spatial_tangent : list_mul([0.0], ndim);
+    const in_tangent = next_kf.in_spatial_tangent?.length > 0 ? next_kf.in_spatial_tangent : list_mul([0.0], ndim);
     return motion_path_length(v0, v1, out_tangent, in_tangent, this._arc_metric);
   }
 
@@ -3590,9 +3587,9 @@ export class Property extends PropertyBase {
     const v0 = prev_kf._stored_value;
     const v1 = next_kf._stored_value;
     if (!Array.isArray(v0) || !Array.isArray(v1)) return;
-    const ndim = len(v0);
-    const out_tangent = py_or(prev_kf.out_spatial_tangent, list_mul([0.0], ndim));
-    const in_tangent = py_or(next_kf.in_spatial_tangent, list_mul([0.0], ndim));
+    const ndim = v0.length;
+    const out_tangent = prev_kf.out_spatial_tangent?.length > 0 ? prev_kf.out_spatial_tangent : list_mul([0.0], ndim);
+    const in_tangent = next_kf.in_spatial_tangent?.length > 0 ? next_kf.in_spatial_tangent : list_mul([0.0], ndim);
     if (_tangents_are_zero(out_tangent) && _tangents_are_zero(in_tangent)) return;
     const [left_out, new_in, _split, new_out, right_in] = split_spatial_path(v0, v1, out_tangent, in_tangent, u);
     prev_kf.out_spatial_tangent = left_out;
@@ -3618,11 +3615,11 @@ export class Property extends PropertyBase {
    */
   remove_key(key_index: number): void {
     this._reject_curves_write();
-    if (!py_bool(this.keyframes)) throw new IndexError("property has no keyframes");
-    _validate_number({ integer: true, min: 0, max: len(this.keyframes) - 1 })(key_index);
+    if (!this.keyframes?.length) throw new IndexError("property has no keyframes");
+    _validate_number({ integer: true, min: 0, max: this.keyframes.length - 1 })(key_index);
     const kind = this._parallel_kind();
     if (kind != null) {
-      if (len(this.keyframes) === 1) {
+      if (this.keyframes.length === 1) {
         this._deanimate_parallel(kind);
         return;
       }
@@ -3635,9 +3632,9 @@ export class Property extends PropertyBase {
     const removed_value = removed._stored_value;
     ldat.items.splice(key_index, 1);
     this.keyframes.splice(key_index, 1);
-    set_lhd3_count(lhd3, len(this.keyframes), LHD3_BLOCK_KEYFRAMES);
+    set_lhd3_count(lhd3, this.keyframes.length, LHD3_BLOCK_KEYFRAMES);
     this._link_keyframes();
-    if (!py_bool(this.keyframes)) {
+    if (!this.keyframes?.length) {
       this._deanimate(removed_value, removed._ldat_item);
       return;
     }
@@ -3655,12 +3652,12 @@ export class Property extends PropertyBase {
    * no-op when the property has no keyframes.
    */
   remove_all_keys(): void {
-    if (py_bool(this.keyframes)) this._reject_curves_write();
+    if (this.keyframes?.length > 0) this._reject_curves_write();
     if (this._parallel_kind() != null) {
-      while (py_bool(this.keyframes)) this.remove_key(len(this.keyframes) - 1);
+      while (this.keyframes?.length > 0) this.remove_key(this.keyframes.length - 1);
       return;
     }
-    if (!py_bool(this.keyframes)) return;
+    if (!this.keyframes?.length) return;
     // Bulk path: clearing key-by-key would re-link the remaining
     // keyframes after every removal (quadratic) and decode values
     // that are thrown away.
@@ -3706,7 +3703,7 @@ export class Property extends PropertyBase {
     // stream flags have bit 1 (spatial and colour streams), 5 otherwise
     // - the layout of every static numeric stream in the samples.
     const per_dim = this._tdb4._spatial_static_flags & 0x02 ? 3 : 5;
-    raw_vals.push(...list_mul([0.0], this._tdb4.dimensions * per_dim - len(raw_vals)));
+    raw_vals.push(...list_mul([0.0], this._tdb4.dimensions * per_dim - raw_vals.length));
     const cdat = new CdatChunk({ values: raw_vals });
     if (inner != null) {
       chunks[index_by_identity(chunks, inner)] = cdat;
@@ -3725,7 +3722,7 @@ export class Property extends PropertyBase {
    * `expression_enabled` `False`. A no-op when no expression is set.
    */
   _clear_expression(): void {
-    if (this._expression_utf8 == null && !py_bool(this._expression)) return;
+    if (this._expression_utf8 == null && !this._expression) return;
     if (this._expression_utf8 != null) {
       const kept = this._tdbs.chunks.filter((c) => c !== this._expression_utf8);
       this._tdbs.chunks.splice(0, this._tdbs.chunks.length, ...kept);
@@ -3764,7 +3761,7 @@ export class Property extends PropertyBase {
    * not). A mask path keeps the value's feather points.
    */
   _build_shap_chunk(shape: Shape): Chunk {
-    const points = py_or(shape._points, []).map((p: any) => new ShapePoint({ x: p.x, y: p.y }));
+    const points = (shape._points?.length > 0 ? shape._points : []).map((p: any) => new ShapePoint({ x: p.x, y: p.y }));
     const src = shape._shph;
     let bbox: number[];
     if (src != null) {
@@ -3797,8 +3794,8 @@ export class Property extends PropertyBase {
     if (is_mask_path && mask != null && mask._is_mask) {
       if ((mask as MaskPropertyGroup).roto_bezier) {
         const own = shape._own_tensions();
-        const count = floordiv(len(points), 3);
-        tensions = len(own) === count ? own : list_mul([1.0], count);
+        const count = floordiv(points.length, 3);
+        tensions = own.length === count ? own : list_mul([1.0], count);
       }
     }
     const shap = build_shap([bbox[0], bbox[1], bbox[2], bbox[3]], {
@@ -3889,7 +3886,7 @@ export class Property extends PropertyBase {
    * they are left untouched.
    */
   _add_text_key(time: number, value: any = _USE_VALUE): number {
-    if (this._keyframe_inner() == null || !py_bool(this.keyframes)) {
+    if (this._keyframe_inner() == null || !this.keyframes?.length) {
       return this._animate_static_text(time, value);
     }
     const [lhd3, ldat] = this._ensure_animated();
@@ -3923,7 +3920,7 @@ export class Property extends PropertyBase {
       // no text was supplied, propagate the structural insert ourselves.
       td._propagate_cos();
     }
-    set_lhd3_count(lhd3, len(this.keyframes), LHD3_BLOCK_KEYFRAMES);
+    set_lhd3_count(lhd3, this.keyframes.length, LHD3_BLOCK_KEYFRAMES);
     this._link_inserted_key(idx);
     return idx;
   }
@@ -3945,7 +3942,7 @@ export class Property extends PropertyBase {
     ldat.items.splice(key_index, 1);
     if (key_index < len(doc_array)) doc_array.splice(key_index, 1);
     this.keyframes.splice(key_index, 1);
-    set_lhd3_count(lhd3, len(this.keyframes), LHD3_BLOCK_KEYFRAMES);
+    set_lhd3_count(lhd3, this.keyframes.length, LHD3_BLOCK_KEYFRAMES);
     removed._propagate_cos();
     this._link_keyframes();
   }
@@ -4036,19 +4033,19 @@ export class Property extends PropertyBase {
     kf._set_time_units(units);
     const [idx, exists] = this._keyframe_insert_index(kf.time_units);
     if (exists) return idx;
-    const was_static = !py_bool(this.keyframes);
+    const was_static = !this.keyframes?.length;
     this._ensure_materialized();
     const [lhd3, ldat] = this._ensure_animated();
     ldat.items.splice(idx, 0, ldat_item);
     this.keyframes.splice(idx, 0, kf);
-    if (was_static && py_bool(container.chunks)) {
+    if (was_static && container.chunks?.length > 0) {
       // A static property's container already holds its single value
       // chunk; the first keyframe takes its place.
       container.chunks[0] = value_chunk;
     } else {
       container.chunks.splice(idx, 0, value_chunk);
     }
-    set_lhd3_count(lhd3, len(this.keyframes), LHD3_BLOCK_KEYFRAMES);
+    set_lhd3_count(lhd3, this.keyframes.length, LHD3_BLOCK_KEYFRAMES);
     // The header item already carries the value (`build_header_item`) and
     // the container chunk is inserted above, so set the shadow directly:
     // the public `kf.value` setter would re-route complex kinds back into
@@ -4119,10 +4116,10 @@ export class Property extends PropertyBase {
     this._ensure_materialized();
     ldat.items.splice(key_index, 1);
     this.keyframes.splice(key_index, 1);
-    if (container != null && key_index < len(container.chunks)) {
+    if (container != null && key_index < container.chunks.length) {
       container.chunks.splice(key_index, 1);
     }
-    set_lhd3_count(lhd3, len(this.keyframes), LHD3_BLOCK_KEYFRAMES);
+    set_lhd3_count(lhd3, this.keyframes.length, LHD3_BLOCK_KEYFRAMES);
     this._link_keyframes();
   }
 
@@ -4147,7 +4144,7 @@ export class Property extends PropertyBase {
     this.keyframes.splice(0, 1);
     this._link_keyframes();
     const container = this._kf_value_container;
-    if (!kind.keeps_value_on_revert && container != null && py_bool(container.chunks)) {
+    if (!kind.keeps_value_on_revert && container != null && container.chunks?.length > 0) {
       container.chunks.splice(0, 1);
     }
     const cdat = kind.static_cdat(removed_value);
@@ -4253,7 +4250,7 @@ export class Property extends PropertyBase {
         if (!(e instanceof ValueError)) throw e;
         i = -1;
       }
-      if (0 <= i && i < len(container.chunks)) {
+      if (0 <= i && i < container.chunks.length) {
         const value_chunk = kind.build_value_chunk(this, value);
         container.chunks[i] = value_chunk;
         // Re-bind the keyframe's model to the chunk actually
@@ -4286,7 +4283,7 @@ export class Property extends PropertyBase {
    * ValueError: If `times` and `new_values` differ in length.
    */
   set_values_at_times(times: number[], new_values: any[]): void {
-    if (len(times) !== len(new_values)) {
+    if (times.length !== new_values.length) {
       throw new ValueError("times and new_values must have the same length");
     }
     // Every entry is checked before the first is applied, so a bad one
@@ -4383,8 +4380,8 @@ export class Property extends PropertyBase {
     const scale = this._effect_scale;
     if (scale == null) return [...values];
     const result: number[] = [];
-    for (const [index, component] of enumerate(values)) {
-      const factor = index < len(scale) ? scale[index] : null;
+    for (const [index, component] of values.entries()) {
+      const factor = index < scale.length ? scale[index] : null;
       if (factor == null) {
         result.push(component);
       } else if (invert) {
@@ -4463,7 +4460,7 @@ export class Property extends PropertyBase {
   }
 
   set _effect_scale(value: number[] | null) {
-    if (value != null && (!Array.isArray(value) || len(value) < 2)) {
+    if (value != null && (!Array.isArray(value) || value.length < 2)) {
       throw new ValueError("_effect_scale must be a list of at least 2 floats");
     }
     this._effect_scale_dict = { value };
@@ -4505,9 +4502,9 @@ export function _segment_components(prev_kf: Keyframe, next_kf: Keyframe): [numb
   if ((typeof v0 === "number" || typeof v0 === "boolean") && (typeof v1 === "number" || typeof v1 === "boolean")) {
     return [[[float(v0), float(v1)]], 1];
   }
-  if (Array.isArray(v0) && Array.isArray(v1) && len(v0) === len(v1)) {
+  if (Array.isArray(v0) && Array.isArray(v1) && v0.length === v1.length) {
     if (![...v0, ...v1].every((x) => typeof x === "number" || typeof x === "boolean")) return null;
-    return [zip(v0, v1).map(([a, b]) => [float(a), float(b)]), len(v0)];
+    return [zip(v0, v1).map(([a, b]) => [float(a), float(b)]), v0.length];
   }
   return null;
 }
@@ -4628,7 +4625,7 @@ export class _EssentialOverrideProperty extends Property {
   }
 
   set _effect_scale(value: number[] | null) {
-    if (value != null && (!Array.isArray(value) || len(value) < 2)) {
+    if (value != null && (!Array.isArray(value) || value.length < 2)) {
       throw new ValueError("_effect_scale must be a list of at least 2 floats");
     }
     this._effect_scale_dict = { value };

@@ -3,7 +3,7 @@ import { LHD3_BLOCK_SINGLE, set_lhd3_count, type LdatChunk, type Lhd3Chunk } fro
 import { build_rq_settings_list } from "../../binary/mutations.ts";
 import { RhedChunk } from "../../binary/project_chunks.ts";
 import { ArsiChunk, RoutChunk } from "../../binary/render_chunks.ts";
-import { deferred, getattr, len, TypeError_ } from "../../../pyrt/index.ts";
+import { deferred, getattr, TypeError_ } from "../../../pyrt/index.ts";
 import type { CompItem } from "../items/composition.ts";
 import type { Project } from "../project.ts";
 import type { RenderQueueItem } from "./render_queue_item.ts";
@@ -144,7 +144,7 @@ export class RenderQueue {
    *     Equivalent to `len(render_queue.items)`
    */
   get num_items(): number {
-    return len(this.items);
+    return this.items.length;
   }
 
   /**
@@ -183,7 +183,7 @@ export class RenderQueue {
     for (const ri of rqi._rout_items) {
       this._rout.items.push(ri);
     }
-    this._rout.count = len(this._rout.items);
+    this._rout.count = this._rout.items.length;
 
     // Insert OM metadata and OM container into LItm
     this._litm.chunks.push(rqi._list_chunk);

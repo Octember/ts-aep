@@ -18,7 +18,7 @@
  *   parameter (see `_ArcSpline`).
  */
 
-import { ZeroDivisionError, at, float, floordiv, getitem, int, max, min, mod, py_bool, py_or, radians, range, sorted, sum, tkey, zip } from "../../pyrt/index.ts";
+import { ZeroDivisionError, at, float, floordiv, getitem, int, max, min, mod, radians, range, sorted, sum, tkey, zip } from "../../pyrt/index.ts";
 import { KeyframeInterpolationType } from "../enums/index.ts";
 import { ORIENTATION_KIND, SHAPE_KIND, type ParallelKind } from "../models/properties/parallel.ts";
 import { Shape } from "../models/properties/shape.ts";
@@ -1189,7 +1189,7 @@ export function _spatial_tangents(keyframes: Keyframe[], first: number, last: nu
       continue;
     }
     const zero = new Array<number>((kf._stored_value as number[]).length).fill(0.0);
-    result.set(i, [py_or(kf.out_spatial_tangent, zero), py_or(kf.in_spatial_tangent, zero)]);
+    result.set(i, [kf.out_spatial_tangent?.length > 0 ? kf.out_spatial_tangent : zero, kf.in_spatial_tangent?.length > 0 ? kf.in_spatial_tangent : zero]);
   }
   return result;
 }
@@ -1446,8 +1446,8 @@ export function _single_progress(
   const out_ease = kf_left.out_temporal_ease;
   const in_ease = kf_right.in_temporal_ease;
   const easing = _progress_easing(
-    py_bool(out_ease) ? out_ease[0] : null,
-    py_bool(in_ease) ? in_ease[0] : null,
+    out_ease?.length > 0 ? out_ease[0] : null,
+    in_ease?.length > 0 ? in_ease[0] : null,
     {
       out_linear: kf_left.out_interpolation_type === KeyframeInterpolationType.LINEAR,
       in_linear: kf_right.in_interpolation_type === KeyframeInterpolationType.LINEAR,
@@ -1723,7 +1723,7 @@ export function interpolate_shapes(start: Shape, end: Shape, progress: number): 
   let verts_b = end.vertices;
   let in_b = end._stored_tangents(-1);
   let out_b = end._stored_tangents(1);
-  if (!py_bool(verts_a) || !py_bool(verts_b)) return null;
+  if (!verts_a?.length || !verts_b?.length) return null;
   // A RotoBezier mask draws the in-between with the keyframes' tensions
   // blended at the same progress (measured on AE 2026); each key's come
   // from its handles as stored, before any resampling.
@@ -1877,7 +1877,7 @@ export function interpolate_keyframes(
   metric: ArcMetric = _DEFAULT_ARC_METRIC,
   is_color = false,
 ): number[] | number | Shape | null {
-  if (!py_bool(keyframes)) return null;
+  if (!keyframes?.length) return null;
 
   const n = keyframes.length;
 
@@ -2010,9 +2010,9 @@ export function interpolate_keyframes(
     }
 
     if (typeof v0 === "number" && typeof v1 === "number") {
-      const out_e_1d = py_bool(kf_left.out_temporal_ease) ? kf_left.out_temporal_ease[0] : null;
-      const in_e_1d = py_bool(kf_right.in_temporal_ease) ? kf_right.in_temporal_ease[0] : null;
-      if (py_bool(out_e_1d) && py_bool(in_e_1d)) {
+      const out_e_1d = kf_left.out_temporal_ease?.length > 0 ? kf_left.out_temporal_ease[0] : null;
+      const in_e_1d = kf_right.in_temporal_ease?.length > 0 ? kf_right.in_temporal_ease[0] : null;
+      if (out_e_1d != null && in_e_1d != null) {
         return _interpolate_bezier_1d(time, t0, t1, float(v0), float(v1), out_e_1d, in_e_1d);
       }
       const ratio = (time - t0) / (t1 - t0);

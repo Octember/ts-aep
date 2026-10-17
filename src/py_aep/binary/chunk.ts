@@ -26,8 +26,6 @@ import {
   floordiv,
   getattr,
   hasattr,
-  len,
-  py_bool,
   py_eq,
   py_or,
   repr,
@@ -77,7 +75,7 @@ export class Chunk extends AttrsBase {
       simple,
       expected,
     ] = info;
-    const mixed_endian = py_bool(endians);
+    const mixed_endian = endians?.size > 0;
 
     if (simple && size >= expected) {
       // Fast path: no string encodings, endian overrides, optional
@@ -107,7 +105,7 @@ export class Chunk extends AttrsBase {
       values = [];
       let remaining_me = size;
       for (const [i, f] of data_fields.entries()) {
-        const fe = dict_get(endians, i, ">");
+        const fe = endians.get(i) ?? ">";
         const ff = f.metadata["fmt"];
         const f_size = struct.calcsize(fe + ff);
         if (remaining_me >= f_size) {
@@ -194,7 +192,7 @@ export class Chunk extends AttrsBase {
       _simple,
       _expected,
     ] = info;
-    const mixed_endian = py_bool(endians);
+    const mixed_endian = endians?.size > 0;
 
     // Find last non-None optional field to determine write boundary
     let last_idx = data_fields.length;
@@ -214,7 +212,7 @@ export class Chunk extends AttrsBase {
       written = 0;
       for (let i = 0; i < last_idx; i++) {
         const f = data_fields[i];
-        const fe = dict_get(endians, i, ">");
+        const fe = endians.get(i) ?? ">";
         let value = getattr(this, f.name);
         value = _encode_value(value, i, encodings, coerces, fe, f.metadata["fmt"]);
         written += write_bytes(fp, struct.pack(fe + f.metadata["fmt"], value));
@@ -241,14 +239,14 @@ export class Chunk extends AttrsBase {
         written += write_bytes(fp, item.tobytes());
       }
     }
-    if (py_bool(this._trailing)) written += write_bytes(fp, this._trailing);
+    if (this._trailing?.length > 0) written += write_bytes(fp, this._trailing);
     return written;
   }
 
   static frombytes(data: Uint8Array, kwargs: Record<string, any> = {}): Chunk {
     /** Parse a chunk body from raw bytes. */
     const f = new BytesIO(data);
-    return (this as any).read(f, len(data), kwargs);
+    return (this as any).read(f, data.length, kwargs);
   }
 
   tobytes(): Uint8Array {
@@ -311,7 +309,7 @@ export class ListChunk extends Chunk {
     }
     const parent_result = kwargs.parent_result ?? null;
     const child_ctx = new ReadContext(list_type, ctx.parent_list_type, parent_result);
-    if (py_bool(defer_list_types) && defer_list_types!.has(list_type)) {
+    if (defer_list_types?.size > 0 && defer_list_types!.has(list_type)) {
       const raw_body = fp.read(size - 4);
       return new DeferredListChunk({
         chunk_type,
@@ -336,7 +334,7 @@ export class ListChunk extends Chunk {
   }
 
   __len__(): number {
-    return len(this.chunks);
+    return this.chunks.length;
   }
 
   write(fp: IO): number {
@@ -426,7 +424,7 @@ Object.defineProperty(DeferredListChunk.prototype, "chunks", {
     if (parsed == null) {
       const body = this._raw_body;
       const ctx = this._raw_ctx || EMPTY_CTX;
-      parsed = read_chunks(new BytesIO(body), len(body), { ctx });
+      parsed = read_chunks(new BytesIO(body), body.length, { ctx });
       this._parsed_chunks = parsed;
       this._raw_body = b("");
       this._raw_ctx = null;
@@ -512,11 +510,11 @@ export class ContainerChunk extends Chunk {
   }
 
   __len__(): number {
-    return len(this.chunks);
+    return this.chunks.length;
   }
 
   write(fp: IO): number {
-    if (py_bool(this.data) || (_legacy_names.get() && _LEGACY_NAME_TYPES.has(this.chunk_type))) {
+    if (this.data?.length > 0 || (_legacy_names.get() && _LEGACY_NAME_TYPES.has(this.chunk_type))) {
       return write_bytes(fp, this._legacy_body());
     }
     let written = 0;
@@ -543,15 +541,15 @@ export class ContainerChunk extends Chunk {
     const cls = this.constructor as typeof ContainerChunk;
     const utf8 = this.chunks.find((c) => c.chunk_type === "Utf8") ?? null;
     const value: string = py_or(getattr(utf8, "value", null), "");
-    if (py_bool(this.data) && value === cls._legacy_value(_legacy_text(this.data))) {
+    if (this.data?.length > 0 && value === cls._legacy_value(_legacy_text(this.data))) {
       return this.data;
     }
     const encoded = encode(cls._legacy_string(value), "UTF-8", "surrogateescape");
-    const size = py_or(len(this.data), dict_get(_LEGACY_FIXED_BUFFERS, this.chunk_type));
+    const size = py_or(this.data.length, _LEGACY_FIXED_BUFFERS.get(this.chunk_type) ?? null);
     if (!_LEGACY_FIXED_BUFFERS.has(this.chunk_type) || size == null) {
       return bytes_.concat(encoded, b("\x00"));
     }
-    if (len(encoded) + 1 > size) {
+    if (encoded.length + 1 > size) {
       throw new ValueError(
         `${repr(value)} does not fit this project's ${size}-byte ` +
           `${this.chunk_type} (at most ${size - 1} UTF-8 bytes)`,
@@ -661,7 +659,7 @@ export function _resolve_ldat_context(siblings: Chunk[], ctx: ReadContext): Reco
   // Registry lookup instead of a deferred import: ldat_chunks subclasses Chunk,
   // so a top-level import would be circular.
   const Lhd3Chunk = CHUNK_TYPES.get("lhd3")!;
-  if (!py_bool(siblings)) return {};
+  if (!siblings?.length) return {};
   const lhd3_sibling: any = siblings[0];
   if (!(lhd3_sibling instanceof Lhd3Chunk)) return {};
   const lhd3: any = lhd3_sibling;

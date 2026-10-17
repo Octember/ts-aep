@@ -7,7 +7,7 @@
  * each equal to an `EssentialGraphicsController.uuid` on the source composition.
  */
 
-import { KeyError, dict_get, deferred, len, py_bool } from "../../pyrt/index.ts";
+import { KeyError, deferred } from "../../pyrt/index.ts";
 import { PropertyType } from "../enums/general.ts";
 import type { CompItem } from "../models/items/composition.ts";
 import type { AVLayer } from "../models/layers/av_layer.ts";
@@ -35,7 +35,7 @@ export const _MEDIA_REPLACEMENT_CONTROLLER_TYPE = 14;
  */
 export function resolve_essential_property_controllers(layer: AVLayer): EssentialGraphicsController[] {
   const uuids = layer.essential_property_uuids;
-  if (!py_bool(uuids)) return [];
+  if (!uuids?.length) return [];
   const source = layer.source;
   if (!(source instanceof _composition().CompItem)) return [];
   const by_uuid = new Map(source.motion_graphics_controllers.map((c) => [c.uuid, c] as const));
@@ -51,9 +51,9 @@ export function resolve_essential_property_controllers(layer: AVLayer): Essentia
  */
 export function _resolve_controller_source_layer(project: Project, controller: EssentialGraphicsController): AVLayer | null {
   if (controller.source_comp_id == null || controller.source_layer_id == null) return null;
-  const comp = dict_get(project.items, controller.source_comp_id);
+  const comp = project.items.get(controller.source_comp_id) ?? null;
   if (!(comp instanceof _composition().CompItem)) return null;
-  const layer = dict_get(comp.layers_by_id, controller.source_layer_id);
+  const layer = comp.layers_by_id.get(controller.source_layer_id) ?? null;
   return layer instanceof _av_layer().AVLayer ? layer : null;
 }
 
@@ -73,11 +73,11 @@ export function _resolve_controller_source_layer(project: Project, controller: E
 export function _resolve_indexed_child(group: PropertyGroup, ref: SourcePropertyRef, project: Project): Property | PropertyGroup | null {
   if (ref.prop_index == null) return null;
   if (group.is_effect) {
-    const defs = dict_get(project._effect_param_defs, group.match_name);
-    if (py_bool(defs)) {
+    const defs = project._effect_param_defs.get(group.match_name);
+    if (defs?.size > 0) {
       const keys = [...defs.keys()];
       const pos = ref.prop_index - 1;
-      if (0 <= pos && pos < len(keys) && keys[pos] === ref.match_name) {
+      if (0 <= pos && pos < keys.length && keys[pos] === ref.match_name) {
         try {
           return group.property(ref.match_name);
         } catch (e) {
@@ -90,7 +90,7 @@ export function _resolve_indexed_child(group: PropertyGroup, ref: SourceProperty
   }
   if (group.property_type === PropertyType.INDEXED_GROUP) {
     const children = group.properties;
-    if (0 <= ref.prop_index && ref.prop_index < len(children)) {
+    if (0 <= ref.prop_index && ref.prop_index < children.length) {
       const child = children[ref.prop_index];
       if (child.match_name === ref.match_name) return child;
     }
@@ -174,7 +174,7 @@ export function resolve_essential_property_controller(prop: Property): Essential
   const idx = _preorder_index(root, prop);
   if (idx == null) return null;
   const uuids = layer.essential_property_uuids;
-  if (idx >= len(uuids)) return null;
+  if (idx >= uuids.length) return null;
   const source = layer.source;
   if (!(source instanceof _composition().CompItem)) return null;
   return source.motion_graphics_controllers.find((c) => c.uuid === uuids[idx]) ?? null;
@@ -202,6 +202,6 @@ export function resolve_essential_property_source(prop: Property): Property | Pr
   if (controller.controller_type === _MEDIA_REPLACEMENT_CONTROLLER_TYPE) return source_layer;
   // Property-source controller: the exposed leaf is the tail of the
   // controlled-property path, resolved by match name from the source layer.
-  if (!py_bool(controller.source_property_path)) return null;
+  if (!controller.source_property_path?.length) return null;
   return _walk_source_property(source_layer, controller.source_property_path);
 }

@@ -18,7 +18,7 @@ import type { Property } from "../models/properties/property.ts";
 import { parse_gradient_xml } from "./gradient.ts";
 import { parse_property } from "./property_value.ts";
 import { parse_btdk_cos } from "./text.ts";
-import { BytesIO, OverflowError, ValueError, py_bool, warn, zip, instance_dict } from "../../pyrt/index.ts";
+import { BytesIO, OverflowError, ValueError, warn, zip, instance_dict } from "../../pyrt/index.ts";
 
 // `logging.getLogger(__name__)`: only the warning path is wired to pyrt `warn`.
 export const logger = {
@@ -302,8 +302,8 @@ export function parse_text_document(
     doc._head = project_head;
     doc._preferences = project_preferences;
   }
-  if (py_bool(text_documents)) {
-    if (py_bool(prop.keyframes)) {
+  if (text_documents?.length > 0) {
+    if (prop.keyframes?.length > 0) {
       for (const [kf, doc] of zip(prop.keyframes, text_documents)) {
         kf._cache_value(doc);
       }
@@ -359,7 +359,7 @@ export function parse_gradient(
   }
 
   if (gradient_values.length) {
-    if (py_bool(prop.keyframes)) {
+    if (prop.keyframes?.length > 0) {
       for (const [kf, gdata] of zip(prop.keyframes, gradient_values)) {
         kf._cache_value(gdata);
       }

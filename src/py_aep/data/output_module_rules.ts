@@ -31,7 +31,7 @@
  */
 
 import { AudioBitDepth, AudioChannels, AudioCodec, FormatKind, MPEGAudioFormat, MPEGAudioLayer, MPEGMultiplexer, OutputAudio, OutputChannels, OutputColorDepth, OutputColorMode, OutputFormat, VideoCodec } from "../enums/index.ts";
-import { contains, dict_get, getitem, py_bool, py_eq, setdefault } from "../../pyrt/index.ts";
+import { contains, dict_get, getitem, py_eq, setdefault } from "../../pyrt/index.ts";
 
 /**
  * One conditional rule: (conditions, constraints). Every condition must
@@ -586,15 +586,15 @@ getitem(_CONDITIONAL_RULES, OutputFormat.H264).push(..._aac_bitrate_rows());
 // codec-specific Depth rows still win the general->specific merge.
 export const _PLUS_DEPTHS: ReadonlySet<any> = new Set([_MILLIONS_PLUS, _TRILLIONS_PLUS, _FLOAT_PLUS]);
 for (const [_fmt, _fmt_rules] of _FORMAT_RULES) {
-  const _depths = dict_get(_fmt_rules, "Depth");
+  const _depths = _fmt_rules.get("Depth") ?? null;
   if (_depths == null) continue;
   const _rows = setdefault(_CONDITIONAL_RULES, _fmt, [] as Rule[]);
   const _rgba_depths = new Set([..._depths].filter((d) => _PLUS_DEPTHS.has(d)));
-  if (py_bool(_rgba_depths)) {
+  if (_rgba_depths.size > 0) {
     _rows.unshift([new Map<string, any>([["Channels", OutputChannels.RGBA]]), new Map<string, ReadonlySet<any>>([["Depth", _rgba_depths]])]);
   }
   const _base_depths = new Set([..._depths].filter((d) => !_PLUS_DEPTHS.has(d)));
-  if (py_bool(_base_depths)) {
+  if (_base_depths.size > 0) {
     _rows.unshift([
       new Map<string, any>([["Channels", [OutputChannels.RGB, OutputChannels.ALPHA]]]),
       new Map<string, ReadonlySet<any>>([["Depth", _base_depths]]),
@@ -626,7 +626,7 @@ export const CLAMP_DEPENDENTS: Map<string, readonly string[]> = new Map<string, 
  */
 export function _conditions_match(conditions: Map<string, any>, context: Map<string, any>): boolean {
   for (const [key, expected] of conditions) {
-    const actual = dict_get(context, key);
+    const actual = context.get(key) ?? null;
     if (actual == null) return false;
     if (Array.isArray(expected)) {
       if (!contains(expected, actual)) return false;
@@ -680,5 +680,5 @@ export function allowed_values(
       for (const [k, v] of constraints) rules.set(k, v);
     }
   }
-  return dict_get(rules, key);
+  return rules.get(key) ?? null;
 }

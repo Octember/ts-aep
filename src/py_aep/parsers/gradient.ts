@@ -3,11 +3,7 @@
 import { Element, ParseError, fromstring } from "../../pyrt/etree.ts";
 import {
   ValueError,
-  dict_get,
   float,
-  py_bool,
-  py_or,
-  range,
   warn,
 } from "../../pyrt/index.ts";
 import { Gradient, GradientAlphaStop, GradientColorStop } from "../models/properties/gradient.ts";
@@ -33,7 +29,7 @@ export { Element, ParseError, fromstring };
 export function parse_gradient_xml(utf8: Utf8Chunk): Gradient | null {
   // String(): the value may be a `_NulTailStr` (String object), whose truthiness py_bool cannot see.
   const xml_text = String(utf8.value);
-  if (!py_bool(xml_text)) return null;
+  if (!xml_text) return null;
   let root: Element;
   try {
     root = fromstring(xml_text);
@@ -48,19 +44,19 @@ export function parse_gradient_xml(utf8: Utf8Chunk): Gradient | null {
   if (prop_list == null) return null;
 
   const pairs = _get_pairs(prop_list);
-  const gradient_data = dict_get(pairs, "Gradient Color Data");
-  const version_str = _get_string_value(dict_get(pairs, "Gradient Colors"));
+  const gradient_data = pairs.get("Gradient Color Data") ?? null;
+  const version_str = _get_string_value(pairs.get("Gradient Colors") ?? null);
 
   if (gradient_data == null) return null;
 
   const data_pairs = _get_pairs(gradient_data);
-  const color_stops = _parse_color_stops(dict_get(data_pairs, "Color Stops"));
-  const alpha_stops = _parse_alpha_stops(dict_get(data_pairs, "Alpha Stops"));
+  const color_stops = _parse_color_stops(data_pairs.get("Color Stops") ?? null);
+  const alpha_stops = _parse_alpha_stops(data_pairs.get("Alpha Stops") ?? null);
 
   return Gradient._from_binary({
     color_stops,
     alpha_stops,
-    version: py_or(version_str, "1.0"),
+    version: version_str || "1.0",
     _utf8: utf8,
   });
 }
@@ -97,18 +93,18 @@ export function _parse_color_stops(color_stops_elem: Element | null): GradientCo
   if (color_stops_elem == null) return [];
 
   const pairs = _get_pairs(color_stops_elem);
-  const stops_list_elem = dict_get(pairs, "Stops List");
+  const stops_list_elem = pairs.get("Stops List") ?? null;
   if (stops_list_elem == null) return [];
 
   const stops: GradientColorStop[] = [];
   // Each stop is a prop.pair with key "Stop-N"
   const stop_pairs = _get_pairs(stops_list_elem);
-  for (const i of range(stop_pairs.size)) {
+  for (let i = 0, n = stop_pairs.size; i < n; i++) {
     const key = `Stop-${i}`;
-    const stop_elem = dict_get(stop_pairs, key);
+    const stop_elem = stop_pairs.get(key) ?? null;
     if (stop_elem == null) break;
     const stop_inner = _get_pairs(stop_elem);
-    const array_elem = dict_get(stop_inner, "Stops Color");
+    const array_elem = stop_inner.get("Stops Color") ?? null;
     if (array_elem == null) continue;
     const floats = _parse_float_array(array_elem);
     if (floats.length >= 5) {
@@ -125,17 +121,17 @@ export function _parse_alpha_stops(alpha_stops_elem: Element | null): GradientAl
   if (alpha_stops_elem == null) return [];
 
   const pairs = _get_pairs(alpha_stops_elem);
-  const stops_list_elem = dict_get(pairs, "Stops List");
+  const stops_list_elem = pairs.get("Stops List") ?? null;
   if (stops_list_elem == null) return [];
 
   const stops: GradientAlphaStop[] = [];
   const stop_pairs = _get_pairs(stops_list_elem);
-  for (const i of range(stop_pairs.size)) {
+  for (let i = 0, n = stop_pairs.size; i < n; i++) {
     const key = `Stop-${i}`;
-    const stop_elem = dict_get(stop_pairs, key);
+    const stop_elem = stop_pairs.get(key) ?? null;
     if (stop_elem == null) break;
     const stop_inner = _get_pairs(stop_elem);
-    const array_elem = dict_get(stop_inner, "Stops Alpha");
+    const array_elem = stop_inner.get("Stops Alpha") ?? null;
     if (array_elem == null) continue;
     const floats = _parse_float_array(array_elem);
     if (floats.length >= 3) {

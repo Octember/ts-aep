@@ -36,7 +36,6 @@ import {
   py_bool,
   py_eq,
   py_or,
-  range,
   repr,
   round,
   rshift,
@@ -221,7 +220,7 @@ export function _image_depth(has_alpha: boolean, bits: number, kw: { gray?: bool
   const { gray = false, indexed = false } = kw;
   if (has_alpha || !(gray || indexed)) return _color_depth(has_alpha, bits);
   if (indexed) return bits;
-  return bits === 1 ? 0 : dict_get(_GRAY_DEPTHS, bits, 0);
+  return bits === 1 ? 0 : _GRAY_DEPTHS.get(bits) ?? 0;
 }
 
 export class _BoundedReader {
@@ -293,7 +292,7 @@ export function read_bounded(fp: IO, size: number): Uint8Array {
  */
 export function probe_media(file: Path, data: Uint8Array | null = null): MediaInfo {
   const suffix = file.suffix.toLowerCase();
-  const parser = dict_get(_PARSERS, suffix);
+  const parser = _PARSERS.get(suffix);
   if (parser == null) {
     throw new NotImplementedError(
       `Media-header probing is not implemented for ${repr(suffix)}. ` +
@@ -342,7 +341,7 @@ export function _probe_png(fp: IO): MediaInfo {
   // AE keeps grayscale gray and expands a palette to RGBA at any bit depth;
   // a `tRNS` chunk adds alpha without changing the depth (AE 2026).
   let depth: number;
-  if (color_type === 0) depth = dict_get(_GRAY_DEPTHS, bit_depth, 0);
+  if (color_type === 0) depth = _GRAY_DEPTHS.get(bit_depth) ?? 0;
   else if (color_type === 3) depth = _color_depth(true, 8);
   else depth = _color_depth(has_alpha, bit_depth);
   return new MediaInfo({
@@ -531,7 +530,7 @@ export function _probe_exr(fp: IO): MediaInfo {
   const has_alpha = first_list.some((c) => c === "A" || c === "a");
   const channel_names = parts.flatMap((part) =>
     (dict_get(part, "channels", []) as string[]).map((c) => {
-      const part_name = dict_get(part, "name");
+      const part_name = part.get("name") ?? null;
       return py_bool(part_name) ? `${part_name}.${c}` : c;
     }),
   );
@@ -728,7 +727,7 @@ export function _tiff_media_info(
     bits = 8;
   }
   const layered = photoshop_layers != null;
-  const base = dict_get(_TIFF_BASE_CHANNELS, photometric, 3);
+  const base = _TIFF_BASE_CHANNELS.get(photometric) ?? 3;
   const has_alpha = samples > base || layered;
   const depth = _image_depth(has_alpha, bits, { gray: photometric === 0 || photometric === 1, indexed: photometric === 3 });
   // A palette image's alpha sample is not counted in the opti channels,
@@ -744,7 +743,7 @@ export function _tiff_media_info(
     depth,
     bit_depth: bits,
     layer_count: py_or(photoshop_layers, counted_alpha ? 1 : 0) as number,
-    color_mode: bits === 1 ? 0 : dict_get(_TIFF_COLOR_MODES, photometric, 3),
+    color_mode: bits === 1 ? 0 : _TIFF_COLOR_MODES.get(photometric) ?? 3,
     pixel_channels: counted_alpha || layered ? base + 1 : base,
   });
 }
@@ -767,7 +766,7 @@ export function _probe_bigtiff(fp: IO, en: string): MediaInfo {
   let bits_offset: number | null = null;
   let icc_span: [number, number] | null = null;
   let photoshop_span: [number, number] | null = null;
-  for (const _ of range(Number(struct.unpack(en + "Q", fp.read(8))[0]))) {
+  for (let i = 0, n = Number(struct.unpack(en + "Q", fp.read(8))[0]); i < n; i++) {
     const entry = fp.read(20);
     if (entry.length < 20) break;
     const [tag, typ] = struct.unpack(en + "HH", entry.slice(0, 4));
@@ -780,7 +779,7 @@ export function _probe_bigtiff(fp: IO, en: string): MediaInfo {
       photoshop_span = [Number(struct.unpack_from(en + "Q", entry, 12)[0]), length];
       continue;
     }
-    const fmt = dict_get(_BIGTIFF_VALUE_FMT, typ);
+    const fmt = _BIGTIFF_VALUE_FMT.get(typ) ?? null;
     if (fmt == null) continue;
     // A value of 8 bytes or fewer is stored inline in the value field.
     const val = Number(struct.unpack_from(en + fmt, entry, 12)[0]);
@@ -823,7 +822,7 @@ export function _probe_tiff(fp: IO): MediaInfo {
   let bits_offset: number | null = null;
   let icc_span: [number, number] | null = null;
   let photoshop_span: [number, number] | null = null;
-  for (const _ of range(count)) {
+  for (let i = 0; i < count; i++) {
     const entry = fp.read(12);
     const [tag, typ] = struct.unpack(en + "HH", entry.slice(0, 4));
     const length = struct.unpack(en + "I", entry.slice(4, 8))[0];
@@ -915,7 +914,7 @@ export function _probe_tga(fp: IO): MediaInfo {
   const has_alpha = bits_per_pixel === 32;
   let depth: number;
   if (image_type === 1 || image_type === 9) depth = bits_per_pixel;
-  else if (image_type === 3 || image_type === 11) depth = dict_get(_GRAY_DEPTHS, bits_per_pixel, 0);
+  else if (image_type === 3 || image_type === 11) depth = _GRAY_DEPTHS.get(bits_per_pixel) ?? 0;
   else depth = _color_depth(has_alpha, 8);
   return new MediaInfo({ width, height, has_alpha, depth });
 }
@@ -1212,7 +1211,7 @@ export function _probe_psd(fp: IO): MediaInfo {
   // an alpha channel (AE 2026: psd_rgb8_bg_layer.psd imports opaque,
   // flattened_rgb_comp.aep writes alpha_mode 3 = no alpha).
   const bottom_transparent = layer_count > 0 && _psd_record_has_transparency(fp, version === 2);
-  const base_channels = dict_get(_PSD_BASE_CHANNELS, color_mode, 3);
+  const base_channels = _PSD_BASE_CHANNELS.get(color_mode) ?? 3;
   const has_alpha = bottom_transparent || channels > base_channels;
   // Without alpha a bitmap document has depth 0 and an indexed one stays
   // indexed, as for TIFF (AE 2026, photoshop_modes.aep).
@@ -1239,7 +1238,7 @@ export function _psd_record_has_transparency(fp: IO, is_psb: boolean): boolean {
   const count = struct.unpack(">H", fp.read(2))[0];
   const entry = 2 + (is_psb ? 8 : 4); // channel id + data length
   const ids = fp.read(count * entry);
-  for (const i of range(count)) {
+  for (let i = 0; i < count; i++) {
     if (struct.unpack_from(">h", ids, i * entry)[0] === -1) return true;
   }
   return false;
@@ -1265,7 +1264,7 @@ export function psd_layer_depth(info: MediaInfo, has_transparency: boolean): num
  * layer 2).
  */
 export function psd_layer_channels(info: MediaInfo, has_transparency: boolean): number {
-  const colour = dict_get(_PSD_BASE_CHANNELS, info.color_mode, 3);
+  const colour = _PSD_BASE_CHANNELS.get(info.color_mode) ?? 3;
   return colour + (has_transparency ? 1 : 0);
 }
 
@@ -1380,7 +1379,7 @@ export function _tkhd_axes_swapped(data: Uint8Array, end: number): boolean {
 export function _stts_totals(data: Uint8Array, body: number, end: number): [number, number] {
   let samples = 0;
   let ticks = 0;
-  for (const i of range(_u(data, body + 4, 4))) {
+  for (let i = 0, n = _u(data, body + 4, 4); i < n; i++) {
     const off = body + 8 + 8 * i;
     if (off + 8 > end) break;
     const count = _u(data, off, 4);
@@ -1432,7 +1431,7 @@ export function _fragment_totals(fp: IO, track_id: number): [number, number] {
           if (flags & _TRUN_FIRST_SAMPLE_FLAGS) off += 4;
           const row = 4 * _TRUN_SAMPLE_FIELDS.filter((f) => flags & f).length;
           if (flags & _TRUN_SAMPLE_FIELDS[0]) {
-            for (const i of range(count)) {
+            for (let i = 0; i < count; i++) {
               if (off + row * i + 4 > e2) break;
               ticks += _u(moof, off + row * i, 4);
             }
@@ -2107,7 +2106,7 @@ export function _probe_swf(fp: IO): MediaInfo {
   const bits = Array.from(bytes_.slice(body, 0, rect_bytes), (x) => x.toString(2).padStart(8, "0")).join("");
   const vals: number[] = [];
   let pos = 5;
-  for (const _ of range(4)) {
+  for (let i = 0; i < 4; i++) {
     vals.push(int(bits.slice(pos, pos + nbits), 2));
     pos += nbits;
   }
@@ -2246,10 +2245,10 @@ export function _probe_mpeg(fp: IO): MediaInfo {
   const val = Number(struct.unpack_from(">I", video, seq + 4)[0]);
   const width = (val >>> 20) & 0xfff;
   const height = (val >>> 8) & 0xfff;
-  const fps = dict_get(_MPEG_FR, val & 0xf, 0.0);
+  const fps = _MPEG_FR.get(val & 0xf) ?? 0.0;
   const frames = bytes_.count(video, b("\x00\x00\x01\x00"));
   const duration = fps ? frames / fps : 0.0;
-  const pixel_aspect = dict_get(_MPEG_D1_PIXEL_ASPECT, tkey(width, height, (val >>> 4) & 0xf), 1.0);
+  const pixel_aspect = _MPEG_D1_PIXEL_ASPECT.get(tkey(width, height, (val >>> 4) & 0xf)) ?? 1.0;
   return new MediaInfo({
     width,
     height,
@@ -2335,7 +2334,7 @@ export function _ciff_record(data: Uint8Array, order: string, start: number, end
   const [table_rel] = struct.unpack(order + "I", bytes_.slice(data, end - 4, end));
   const table = table_rel + start;
   const [count] = struct.unpack(order + "H", bytes_.slice(data, table, table + 2));
-  for (const i of range(count)) {
+  for (let i = 0, n = count; i < n; i++) {
     const entry = table + 2 + i * 10;
     const [tag, size, offset] = struct.unpack(order + "HII", bytes_.slice(data, entry, entry + 10));
     if (tag & 0xc000) continue; // value stored in the entry itself: not a heap
@@ -2477,14 +2476,14 @@ export function _asf_metadata(body: Uint8Array, start: number, end: number): Map
   const out = new Map<string, number>();
   if (start + 2 > end) return out;
   let pos = start + 2;
-  for (const _ of range(struct.unpack_from("<H", body, start)[0])) {
+  for (let i = 0, n = struct.unpack_from("<H", body, start)[0]; i < n; i++) {
     if (pos + 12 > end) break;
     const [, stream, name_len, value_type] = struct.unpack_from("<4H", body, pos);
     const value_len = struct.unpack_from("<I", body, pos + 8)[0];
     const name_at = pos + 12;
     const value_at = name_at + name_len;
     if (value_at + value_len > end) break;
-    const fmt = dict_get(_ASF_INT_TYPES, value_type);
+    const fmt = _ASF_INT_TYPES.get(value_type) ?? null;
     if (fmt != null && value_len >= struct.calcsize(fmt)) {
       const name = rstrip(decode(bytes_.slice(body, name_at, value_at), "utf-16-le", "replace"), "\x00");
       out.set(tkey(stream, name), Number(struct.unpack_from(fmt, body, value_at)[0]));
@@ -2541,16 +2540,16 @@ export function _probe_wmv(fp: IO): MediaInfo {
   // Average Time Per Frame (100 ns units) is authoritative for AE: a 25 fps
   // file whose header claims 29.97 imports at 29.97. Without it, invert AE's
   // own duration rule below against the Metadata Object's frame count.
-  const avg = dict_get(avg_frame_time, video_stream, 0);
-  const frames = dict_get(metadata, tkey(video_stream, "NumberOfFrames"), 0);
+  const avg = avg_frame_time.get(video_stream) ?? 0;
+  const frames = metadata.get(tkey(video_stream, "NumberOfFrames")) ?? 0;
   if (avg) {
     frame_rate = round(1e7 / avg, 3);
   } else if (frames > 1 && send_duration) {
     frame_rate = round((frames - 1) / send_duration, 3);
   }
 
-  const aspect_x = dict_get(metadata, tkey(video_stream, "AspectRatioX"), 0);
-  const aspect_y = dict_get(metadata, tkey(video_stream, "AspectRatioY"), 0);
+  const aspect_x = metadata.get(tkey(video_stream, "AspectRatioX")) ?? 0;
+  const aspect_y = metadata.get(tkey(video_stream, "AspectRatioY")) ?? 0;
   const pixel_aspect = aspect_x && aspect_y ? round(aspect_x / aspect_y, 5) : 1.0;
 
   // AE reports the Send Duration rounded out to a whole frame, plus one:
@@ -2602,7 +2601,7 @@ export function _probe_dpx_cineon(fp: IO): MediaInfo {
     const [width, height] = struct.unpack(endian + "II", bytes_.slice(header, 772, 780));
     let has_alpha = false;
     let bit_depth = 8;
-    for (const i of range(Math.min(n_elem, 8))) {
+    for (let i = 0, n = Math.min(n_elem, 8); i < n; i++) {
       const offset = 780 + i * 72;
       if (offset + 24 > header.length) break;
       const [desc, , , bits] = struct.unpack("BBBB", bytes_.slice(header, offset + 20, offset + 24));
@@ -2628,7 +2627,7 @@ export function _probe_dpx_cineon(fp: IO): MediaInfo {
     let bit_depth = 8;
     let width = 0;
     let height = 0;
-    for (const i of range(Math.min(n_elem, 8))) {
+    for (let i = 0, n = Math.min(n_elem, 8); i < n; i++) {
       const offset = 196 + i * 28;
       if (offset + 12 > header.length) break;
       const [, , bits] = struct.unpack("BBBB", bytes_.slice(header, offset, offset + 4));
@@ -2674,7 +2673,7 @@ export function _probe_heif(fp: IO): MediaInfo {
   }
   const major = bytes_.slice(data, 8, 12);
   const compat = new Set<string>();
-  for (const i of range(16, ftyp_size, 4)) compat.add(bytes_.hex(bytes_.slice(data, i, i + 4)));
+  for (let i = 16; i < ftyp_size; i += 4) compat.add(bytes_.hex(bytes_.slice(data, i, i + 4)));
   const compat_brand = [...compat].some((c) => _HEIF_BRANDS.has(c));
   if (!_HEIF_BRANDS.has(bytes_.hex(major)) && !compat_brand) {
     throw new ValueError("Not a valid HEIF file (no HEIF brand in ftyp)");

@@ -13,9 +13,7 @@ import * as host from "../../pyrt/host.ts";
 import {
   Path,
   dict_get,
-  enumerate,
   py_bool,
-  py_or,
   setdefault,
   split,
   str,
@@ -101,7 +99,7 @@ export function _font_dirs(): Path[] {
     const windir = host.env.WINDIR ?? "C:\\Windows";
     dirs.push(new Path(windir).div("Fonts"));
     const local = host.env.LOCALAPPDATA;
-    if (py_bool(local)) {
+    if (local) {
       dirs.push(new Path(local).div("Microsoft", "Windows", "Fonts"));
     }
   } else if (host.platform === "darwin") {
@@ -168,7 +166,7 @@ export function _adobe_font_dirs(): Path[] {
   const dirs: Path[] = [];
   if (host.platform === "win32") {
     const appdata = host.env.APPDATA;
-    if (py_bool(appdata)) {
+    if (appdata) {
       dirs.push(
         new Path(appdata).div("Adobe", "CoreSync", "plugins", "livetype", "r"),
       );
@@ -216,7 +214,7 @@ export function* _iter_faces(path: Path): Generator<[number, any]> {
     return;
   }
   try {
-    yield* enumerate(fonts);
+    yield* fonts.entries();
   } finally {
     // NOTE(port): fontkit has no close(); it reads the whole file eagerly, so
     // no handle is left open and `font.close()` has nothing to release.
@@ -229,11 +227,11 @@ export function _index_postscript(
 ): void {
   for (const [face, font] of _iter_faces(path)) {
     const ps_name = _name(font, 6);
-    if (!py_bool(ps_name)) {
+    if (!ps_name) {
       continue;
     }
     const key = ps_name.toLowerCase();
-    const existing = dict_get(idx, key);
+    const existing = idx.get(key);
     if (existing == null) {
       idx.set(key, [path, face, _name(font, 5)]);
     } else if (existing[2] == null) {
@@ -241,7 +239,7 @@ export function _index_postscript(
       // duplicate can still supply the version string it lacked
       // (the pre-index code only ever stored truthy versions).
       const version = _name(font, 5);
-      if (py_bool(version)) {
+      if (version) {
         idx.set(key, [existing[0], existing[1], version]);
       }
     }
@@ -298,10 +296,7 @@ export function _postscript_index(): Map<string, [Path, number, string | null]> 
 export function resolve_postscript(
   post_script_name: string,
 ): [Path, number] | null {
-  const entry = dict_get(
-    _postscript_index(),
-    strip(post_script_name).toLowerCase(),
-  );
+  const entry = _postscript_index().get(strip(post_script_name).toLowerCase());
   if (entry == null) {
     return null;
   }
@@ -318,10 +313,7 @@ export function resolve_postscript(
  * byte-identical to AE's output on the same machine.
  */
 export function font_version_string(post_script_name: string): string | null {
-  const entry = dict_get(
-    _postscript_index(),
-    strip(post_script_name).toLowerCase(),
-  );
+  const entry = _postscript_index().get(strip(post_script_name).toLowerCase());
   if (entry == null) {
     return null;
   }
@@ -339,8 +331,8 @@ export function _index_file(
     // Typographic family (16) preferred over the legacy family (1); same
     // for the subfamily (17 over 2).
     const family = _name(font, 16, 1);
-    const subfamily = py_or(_name(font, 17, 2), "Regular");
-    if (py_bool(family)) {
+    const subfamily = _name(font, 17, 2) || "Regular";
+    if (family) {
       setdefault(
         setdefault(idx, family.toLowerCase(), new Map<string, [Path, number]>()),
         subfamily.toLowerCase(),
@@ -395,11 +387,8 @@ export function resolve_font_exact(family: string): [Path, number] | null {
   if (_index == null) {
     _index = _build_index();
   }
-  const styles = dict_get(
-    _index,
-    strip(strip(family), "'\"").toLowerCase(),
-  );
-  if (!py_bool(styles)) {
+  const styles = _index.get(strip(strip(family), "'\"").toLowerCase()) ?? null;
+  if (!styles?.size) {
     return null;
   }
   return _pick(styles, false, false);
@@ -424,11 +413,11 @@ export function resolve_font(
   let generic: string | null = null;
   for (const raw of split(family, ",")) {
     const name = strip(strip(raw), "'\"").toLowerCase();
-    if (!py_bool(name)) {
+    if (!name) {
       continue;
     }
-    const styles = dict_get(_index, name);
-    if (py_bool(styles)) {
+    const styles = _index.get(name) ?? null;
+    if (styles?.size > 0) {
       return _pick(styles, bold, italic);
     }
     if (generic == null && _GENERIC_FALLBACKS.has(name)) {
@@ -439,11 +428,11 @@ export function resolve_font(
   // requested generic, or sans-serif for an unknown family).
   for (const candidate of dict_get(
     _GENERIC_FALLBACKS,
-    py_or(generic, "sans-serif"),
+    generic || "sans-serif",
     [] as readonly string[],
   )) {
-    const styles = dict_get(_index, candidate);
-    if (py_bool(styles)) {
+    const styles = _index.get(candidate) ?? null;
+    if (styles?.size > 0) {
       return _pick(styles, bold, italic);
     }
   }

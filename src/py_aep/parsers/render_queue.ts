@@ -1,4 +1,4 @@
-import { at, dict_get, getattr, getitem, py_or, sorted } from "../../pyrt/index.ts";
+import { at, getattr, getitem, py_or, sorted } from "../../pyrt/index.ts";
 import { ContainerChunk, ListChunk } from "../binary/chunk.ts";
 import type { Chunk } from "../binary/chunk.ts";
 import { LdatChunk } from "../binary/ldat_chunks.ts";
@@ -115,7 +115,7 @@ export function parse_render_queue(root_chunks: Chunk[], project: Project): Rend
       0,
       lrdr_child_chunks.length,
       ...sorted(lrdr_child_chunks, (c) =>
-        dict_get(_canon, py_or(getattr(c, "list_type", null), c.chunk_type), _canon.size),
+        _canon.get(py_or(getattr(c, "list_type", null), c.chunk_type)) ?? _canon.size,
       ),
     );
   }

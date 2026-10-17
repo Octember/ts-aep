@@ -18,7 +18,7 @@
  * type, the comp renderer) and stay stale once saved.
  */
 
-import { dict_get, getattr, py_bool } from "../../pyrt/index.ts";
+import { getattr, py_bool } from "../../pyrt/index.ts";
 import { LayerType, PropertyControlType, PropertyValueType } from "../enums/index.ts";
 import { _CAMERA_NO_EXPRESSION, _CANSETEXPR_2D_ONLY, _CANSETEXPR_3D_ONLY, _CANSETEXPR_EXTRUSION_DEPTHS, _CANSETEXPR_FALSE_OVERRIDES, _CANSETEXPR_RENDERER_3D_ONLY, _LIGHT_AMBIENT_NO_EXPRESSION, _LIGHT_ENVIRONMENT_NO_EXPRESSION, _LIGHT_NO_EXPRESSION, _LIGHT_PARALLEL_NO_EXPRESSION, _LIGHT_POINT_NO_EXPRESSION, _LIGHT_SPOT_NO_EXPRESSION, _MODEL_LAYER_HIDDEN_MATERIALS, _PARAMETRIC_MESH_CHECKBOX_STREAMS, _PARAMETRIC_MESH_GROUP_TYPE, _PARAMETRIC_MESH_NO_EXPRESSION } from "../models/properties/overrides.ts";
 import type { Property } from "../models/properties/property.ts";
@@ -152,7 +152,7 @@ export function resolve_can_set_expression(prop: Property): boolean {
     // leaves the POI inactive (probed AE 2026). poi_auto_orient is the
     // ldta bit set for the two-node rig.
     if (mn === "ADBE Anchor Point") {
-      return py_bool(layer._ldta.poi_auto_orient);
+      return !!layer._ldta.poi_auto_orient;
     }
     return !_CAMERA_NO_EXPRESSION.has(mn);
   }
@@ -162,7 +162,7 @@ export function resolve_can_set_expression(prop: Property): boolean {
     return _can_set_expression_light(layer, mn);
   }
 
-  const three_d = py_bool(layer._ldta.three_d_layer);
+  const three_d = !!layer._ldta.three_d_layer;
   const renderer = layer.containing_comp.renderer;
 
   if (
@@ -188,7 +188,7 @@ export function resolve_can_set_expression(prop: Property): boolean {
     return true;
   }
 
-  const only_under = dict_get(_CANSETEXPR_RENDERER_3D_ONLY, mn);
+  const only_under = _CANSETEXPR_RENDERER_3D_ONLY.get(mn) ?? null;
   if (only_under != null) {
     return three_d && renderer === only_under;
   }
@@ -264,12 +264,12 @@ export function _can_set_expression_parametric_mesh(
   }
   const parent = prop.parent_property;
   const group_mn = parent != null ? parent.match_name : "";
-  const group_type = dict_get(_PARAMETRIC_MESH_GROUP_TYPE, group_mn);
+  const group_type = _PARAMETRIC_MESH_GROUP_TYPE.get(group_mn) ?? null;
   if (group_type != null) {
     if (_PARAMETRIC_MESH_CHECKBOX_STREAMS.has(mn)) {
       return true;
     }
-    return py_bool(group_type === layer._ldta.light_and_mesh_type);
+    return !!(group_type === layer._ldta.light_and_mesh_type);
   }
   return null;
 }

@@ -43,7 +43,6 @@ import {
   getattr,
   getitem,
   int,
-  len,
   py_bool,
   py_or,
   repr,
@@ -164,7 +163,7 @@ export function _ai_layer_count(path: Path, data: Uint8Array | null = null): num
    * footage, which imports without it.
    */
   try {
-    return len(read_ai_layer_ocgs(path, data));
+    return read_ai_layer_ocgs(path, data).length;
   } catch (e) {
     if (!(e instanceof UnsupportedAiLayersError)) throw e;
     return 0;
@@ -381,7 +380,7 @@ export function _catalogued_profile(name: string): Uint8Array | null {
 }
 
 export function _profile_record(blob: Uint8Array): ColorProfileRecord {
-  const name = py_or(icc_profile_description(blob), "");
+  const name = icc_profile_description(blob) || "";
   return new ColorProfileRecord(icc_profile_id(blob), build_icc_envelope(name, blob));
 }
 
@@ -404,7 +403,7 @@ export function named_media_profile(source_format: string, info: MediaInfo): str
     // RGB rule until it is measured.
     return source_format === "TIF " ? _LINEAR_GRAY_PROFILE_NAME : null;
   }
-  return dict_get(_MODE_PROFILE_NAMES, info.color_mode);
+  return _MODE_PROFILE_NAMES.get(info.color_mode) ?? null;
 }
 
 export function ai_document_profile(
@@ -468,7 +467,7 @@ export function _media_profile_records(
     blob != null &&
     (_CATALOGUED_PROFILE_FORMATS.has(source_format) || source_format === "TEXT")
   ) {
-    const catalogued = _catalogued_profile(py_or(icc_profile_description(blob), ""));
+    const catalogued = _catalogued_profile(icc_profile_description(blob) || "");
     if (catalogued != null && bytes_eq(icc_profile_id(catalogued), icc_profile_id(blob))) {
       blob = catalogued;
     }
@@ -652,7 +651,7 @@ export class FileSource extends FootageSource {
     return (
       this._target_is_folder &&
       this._sspc.start_frame === UNDEFINED_FRAME &&
-      py_bool(this._file_names)
+      this._file_names?.length > 0
     );
   }
 
@@ -758,7 +757,7 @@ export class FileSource extends FootageSource {
   }
 
   _derived_frame(stored: number, index: number): number {
-    if (stored !== UNDEFINED_FRAME || !py_bool(this._file_names)) return stored;
+    if (stored !== UNDEFINED_FRAME || !this._file_names?.length) return stored;
     const match = /(\d+)\D*$/.exec(at(this._file_names, index));
     return match != null ? int(match[1]) : stored;
   }
@@ -790,7 +789,7 @@ export class FileSource extends FootageSource {
     // Derive file path and target_is_folder from Als2/alas JSON
     const alas_data = parse_alas_data(pin_chunks);
     this._target_is_folder = dict_get(alas_data, "target_is_folder", false);
-    if (py_bool(this._file_names)) {
+    if (this._file_names?.length > 0) {
       this._file = _join_sequence_frame(
         dict_get(alas_data, "fullpath", ""),
         this._file_names[0],
@@ -803,7 +802,7 @@ export class FileSource extends FootageSource {
     // filenames for image sequences.  Construct the first-frame path
     // from the Utf8 prefix/extension chunks stored before opti.
     if (
-      !py_bool(this._file_names) &&
+      !this._file_names?.length &&
       _sspc.frame_padding > 0 &&
       _sspc.start_frame !== UNDEFINED_FRAME
     ) {
@@ -817,7 +816,7 @@ export class FileSource extends FootageSource {
       if (utf8_before_opti.length >= 2) {
         const prefix = (utf8_before_opti.at(-2) as Utf8Chunk).value;
         const extension = (utf8_before_opti.at(-1) as Utf8Chunk).value;
-        if (py_bool(prefix) || py_bool(extension)) {
+        if (prefix || extension) {
           const first_frame =
             `${prefix}${format(_sspc.start_frame, `0${_sspc.frame_padding}d`)}` +
             `${extension}`;
@@ -830,7 +829,7 @@ export class FileSource extends FootageSource {
       const psd_opti = _opti as unknown as PsdOptiChunk;
       this._file_attributes = new Map<string, number | string>([
         ["psd_layer_index", psd_opti.psd_layer_index],
-        ["psd_group_name", py_or(psd_opti.psd_group_name, "")],
+        ["psd_group_name", psd_opti.psd_group_name || ""],
         ["psd_layer_count", psd_opti.psd_layer_count],
         ["psd_canvas_width", psd_opti.psd_canvas_width],
         ["psd_canvas_height", psd_opti.psd_canvas_height],
@@ -1030,7 +1029,7 @@ export class FileSource extends FootageSource {
       // Byte 0xB8 marks zero-padded frame numbers: 0 for p410.png
       // or s1.png ... s12.png, 1 for z_0410.png or frame_001.png.
       sspc._reserved_a8 = b("\x00\x00\x00\x02");
-      const zero_padded = len(str(start_frame)) < frame_padding;
+      const zero_padded = str(start_frame).length < frame_padding;
       sspc._reserved_b8 = zero_padded ? b("\x01") : b("\x00");
       sspc._reserved_ba = b("\x01\x01");
     }
@@ -1042,7 +1041,7 @@ export class FileSource extends FootageSource {
     // 8BPS -> PsdOptiChunk) is stored as its typed subclass and exposes
     // file_attributes immediately, not just after a save/reparse.
     let opti: OptiChunk;
-    if (py_bool(opti_data)) {
+    if (opti_data?.length > 0) {
       opti = OptiChunk.read(new BytesIO(opti_data), opti_data.length, { chunk_type: "opti" });
     } else {
       opti = new OptiChunk({ chunk_type: "opti" });
@@ -1055,8 +1054,8 @@ export class FileSource extends FootageSource {
     if (sequence_files != null) {
       path_chunks.push(build_stvc_list(sequence_files));
     } else if (is_sequence) {
-      path_chunks.push(new Utf8Chunk({ value: py_or(sequence_prefix, "") }));
-      path_chunks.push(new Utf8Chunk({ value: py_or(sequence_ext, "") }));
+      path_chunks.push(new Utf8Chunk({ value: sequence_prefix || "" }));
+      path_chunks.push(new Utf8Chunk({ value: sequence_ext || "" }));
     }
 
     const [embedded, assigned] = _media_profile_records(
@@ -1179,13 +1178,10 @@ export class FileSource extends FootageSource {
     // Merged PSD footage: AE writes kind 0x0003. An AI/EPS/PDF file
     // imported whole takes the file-footage 0x0002 (footage_depth.aep),
     // not the 0x0000 of an Illustrator composition's layers.
-    const reserved_c8 = dict_get(
-      new Map<string, Uint8Array>([
+    const reserved_c8 = (new Map<string, Uint8Array>([
         ["psd", b("\x00\x03")],
         ["text", b("\x00\x02")],
-      ]),
-      fmt.opti,
-    );
+      ])).get(fmt.opti) ?? null;
     const data_size = _still_data_size(fmt, info, path);
     return this._new(path, {
       source_format: fmt.source_format,
@@ -1434,16 +1430,16 @@ export class FileSource extends FootageSource {
         const stem = sibling.stem;
         const sm = _FRAME_NUMBER_RE.exec(stem);
         if (sm != null && stem.slice(0, sm.index).toLowerCase() === prefix_key) {
-          frames.push([int(sm[1]), sibling.name, len(sm[1]), stem.slice(0, sm.index)]);
+          frames.push([int(sm[1]), sibling.name, sm[1].length, stem.slice(0, sm.index)]);
         }
       }
-      if (!py_bool(frames)) {
-        frames = [[int(m[1]), file.name, len(m[1]), prefix]];
+      if (!frames?.length) {
+        frames = [[int(m[1]), file.name, m[1].length, prefix]];
       }
 
       if (has_range) {
         frames = frames.filter((fr) => range_start <= fr[0] && fr[0] <= range_end);
-        if (!py_bool(frames)) {
+        if (!frames?.length) {
           throw new ValueError(
             `no sequence frames numbered within [${range_start}, ` + `${range_end}]`,
           );
@@ -1618,7 +1614,7 @@ export class FileSource extends FootageSource {
         this._file_names = fresh._file_names;
         this._file = fresh._file;
       }
-    } else if (py_bool(this.layer_name)) {
+    } else if (this.layer_name) {
       // A single layer of a layered file: re-measure that layer, not the
       // merged document. AE 2026 keeps the binding, its Document/Layer
       // Size choice and its Layer Options across a reload (cropped PSD
@@ -1653,7 +1649,7 @@ export class FileSource extends FootageSource {
       sspc.data_size = _still_data_size(fmt, info, path);
       const opti_data = _opti_data(fmt, info, path, { sequence: false, data });
       let new_opti: OptiChunk;
-      if (py_bool(opti_data)) {
+      if (opti_data?.length > 0) {
         new_opti = OptiChunk.read(new BytesIO(opti_data), opti_data.length, { chunk_type: "opti" });
       } else {
         new_opti = new OptiChunk({ chunk_type: "opti" });
@@ -1778,8 +1774,8 @@ export class FileSource extends FootageSource {
    * value is whatever the byte says.
    */
   get layer_styles(): string | null {
-    if (this._sspc.source_format_type !== "8BPS" || !py_bool(this.layer_name)) return null;
-    return dict_get(_C9_TO_LAYER_STYLES, this._sspc._reserved_c8[1]);
+    if (this._sspc.source_format_type !== "8BPS" || !this.layer_name) return null;
+    return _C9_TO_LAYER_STYLES.get(this._sspc._reserved_c8[1]) ?? null;
   }
 
   /**
@@ -1795,16 +1791,16 @@ export class FileSource extends FootageSource {
   _resolve_name(raw_name: string): string {
     let item_name = raw_name;
 
-    if (!py_bool(item_name)) {
+    if (!item_name) {
       if (this._duration !== 0 && this._target_is_folder) {
         item_name = this._build_sequence_name();
       }
-      if (!py_bool(item_name)) {
+      if (!item_name) {
         // PureWindowsPath handles both / and \ separators,
         // unlike PurePosixPath which only splits on /.
         const basename = new PureWindowsPath(this._file).name;
         const layer = this.layer_name;
-        if (py_bool(layer)) {
+        if (layer) {
           item_name = `${layer}/${basename}`;
         } else {
           item_name = basename;
@@ -1843,7 +1839,7 @@ export class FileSource extends FootageSource {
     const prefix = (utf8_before_opti.at(-2) as Utf8Chunk).value;
     const extension = (utf8_before_opti.at(-1) as Utf8Chunk).value;
 
-    if (!py_bool(prefix) && !py_bool(extension)) return "";
+    if (!prefix && !extension) return "";
 
     const frame_padding = this._sspc.frame_padding;
     const frame_range =

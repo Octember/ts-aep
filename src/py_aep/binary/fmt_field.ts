@@ -15,9 +15,7 @@ import {
   concat,
   deferred,
   decode,
-  dict_get,
   encode,
-  enumerate,
   field,
   fields,
   getattr,
@@ -72,7 +70,7 @@ export function _decode_fixed_str(value: Uint8Array, encoding: string): string |
   // non-UTF-8 bytes in old files.
   if (nul < 0) return decode(value, encoding, "surrogateescape");
   const text = decode(value.slice(0, nul), encoding, "surrogateescape");
-  if (!py_bool(bytes_.strip(value.slice(nul), b("\x00")))) return text;
+  if (!bytes_.strip(value.slice(nul), b("\x00"))?.length) return text;
   const tailed = new _NulTailStr(text);
   tailed.raw = value;
   return tailed;
@@ -302,12 +300,12 @@ export function _struct_info_uncached(cls: Function): _StructInfo | null {
     }
   }
 
-  if (!py_bool(fmt_parts) && items_info == null) return null;
+  if (fmt_parts.length === 0 && items_info == null) return null;
 
   if (optional_start == null) optional_start = data_fields.length;
 
   let combined = "";
-  if (py_bool(fmt_parts)) {
+  if (fmt_parts.length > 0) {
     // Validate format/field count match at cache time
     combined = fmt_parts.join("");
     const n_values = struct
@@ -325,11 +323,11 @@ export function _struct_info_uncached(cls: Function): _StructInfo | null {
   // Simple chunks have no string encodings, endian overrides, optional
   // fields, or items. Coerces are handled inline in the fast path.
   const simple =
-    !py_bool(encodings) &&
-    !py_bool(endians) &&
+    encodings.size === 0 &&
+    endians.size === 0 &&
     items_info == null &&
     optional_start === data_fields.length;
-  const expected_size = py_bool(combined) ? struct.calcsize(">" + combined) : 0;
+  const expected_size = combined ? struct.calcsize(">" + combined) : 0;
 
   return [
     combined,
@@ -375,11 +373,11 @@ export function _decode_fields(
   // NOTE(port): kwargs dict is a plain object: keys are init-name identifiers
   // passed straight to `cls(**kw)`, never iterated for numeric-looking keys.
   const kw: Record<string, any> = {};
-  for (const [i, [fld, raw]] of enumerate(zip([...data_fields], values))) {
+  for (const [i, [fld, raw]] of zip([...data_fields], values).entries()) {
     let value = raw;
-    const enc = dict_get(encodings, i);
+    const enc = encodings.get(i) ?? null;
     if (enc != null && value != null) value = _decode_fixed_str(value, enc);
-    const crc = dict_get(coerces, i);
+    const crc = coerces.get(i);
     if (crc != null && value != null) value = crc(value);
     kw[init_names != null ? init_names[i] : _init_name(fld.name)] = value;
   }
@@ -400,7 +398,7 @@ export function _encode_value(
   endian: string,
   fmt_str: string,
 ): any {
-  const enc = dict_get(encodings, idx);
+  const enc = encodings.get(idx) ?? null;
   if (enc != null) {
     const field_size = struct.calcsize(endian + fmt_str);
     if (value instanceof _NulTailStr && value.raw.length === field_size) return value.raw;
@@ -431,11 +429,11 @@ export class FmtItem extends AttrsBase {
       expected,
     ] = info;
     let values: any[];
-    if (py_bool(endians)) {
+    if (endians?.size > 0) {
       values = [];
       let pos = 0;
-      for (const [i, f] of enumerate(data_fields)) {
-        const fe = dict_get(endians, i, ">");
+      for (const [i, f] of data_fields.entries()) {
+        const fe = endians.get(i) ?? ">";
         const ff = f.metadata["fmt"];
         const f_size = struct.calcsize(fe + ff);
         const [v] = struct.unpack(fe + ff, data.slice(pos, pos + f_size));
@@ -478,10 +476,10 @@ export class FmtItem extends AttrsBase {
       _simple,
       _expected,
     ] = info;
-    if (py_bool(endians)) {
+    if (endians?.size > 0) {
       const parts: Uint8Array[] = [];
-      for (const [i, f] of enumerate(data_fields)) {
-        const fe = dict_get(endians, i, ">");
+      for (const [i, f] of data_fields.entries()) {
+        const fe = endians.get(i) ?? ">";
         let value = getattr(this, f.name);
         value = _encode_value(value, i, encodings, coerces, fe, f.metadata["fmt"]);
         parts.push(struct.pack(fe + f.metadata["fmt"], value));
@@ -489,7 +487,7 @@ export class FmtItem extends AttrsBase {
       return bytes_.join(parts);
     }
     const values: any[] = [];
-    for (const [i, f] of enumerate(data_fields)) {
+    for (const [i, f] of data_fields.entries()) {
       let value = getattr(this, f.name);
       value = _encode_value(value, i, encodings, coerces, ">", f.metadata["fmt"]);
       values.push(value);

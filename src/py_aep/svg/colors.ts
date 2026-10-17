@@ -6,7 +6,7 @@
  * `transparent` and `currentColor`.
  */
 
-import { dict_get, float, int, len, mod, py_bool, rstrip, strip, ValueError, pattern_findall, pattern_match, py_re, re_flags } from "../../pyrt/index.ts";
+import { float, int, mod, rstrip, strip, ValueError, pattern_findall, pattern_match, py_re, re_flags } from "../../pyrt/index.ts";
 import { NUMBER_PCT_RE, clamp01 } from "./_util.ts";
 
 // Python: `if TYPE_CHECKING: Rgba = tuple[float, float, float, float]`.
@@ -187,7 +187,7 @@ export function _component(token: string, scale: number = 255.0): number {
  *     RGBA tuple, or `None` for `none`/`transparent`/unparseable/empty.
  */
 export function parse_color(value: string | null, current: Rgba = [0.0, 0.0, 0.0, 1.0]): Rgba | null {
-  if (!py_bool(value)) return null;
+  if (!value) return null;
   const v = strip(value).toLowerCase();
   if (v === "none" || v === "transparent") return null;
   if (v === "currentcolor") return current;
@@ -196,18 +196,18 @@ export function parse_color(value: string | null, current: Rgba = [0.0, 0.0, 0.0
     const m = pattern_match(_RGB_RE, v);
     if (m) {
       const parts = pattern_findall(NUMBER_PCT_RE, m[1]);
-      if (len(parts) >= 3) {
+      if (parts.length >= 3) {
         const r = _component(parts[0]);
         const g = _component(parts[1]);
         const b = _component(parts[2]);
-        const a = len(parts) > 3 ? float(rstrip(parts[3], "%")) / (parts[3].includes("%") ? 100.0 : 1.0) : 1.0;
+        const a = parts.length > 3 ? float(rstrip(parts[3], "%")) / (parts[3].includes("%") ? 100.0 : 1.0) : 1.0;
         return [clamp01(r), clamp01(g), clamp01(b), clamp01(a)];
       }
     }
     return null;
   }
   if (v.startsWith("hsl")) return _parse_hsl(v);
-  const rgb = dict_get(_NAMED, v);
+  const rgb = _NAMED.get(v);
   if (rgb != null) return [rgb[0] / 255.0, rgb[1] / 255.0, rgb[2] / 255.0, 1.0];
   return null;
 }
@@ -215,9 +215,9 @@ export function parse_color(value: string | null, current: Rgba = [0.0, 0.0, 0.0
 export function _parse_hex(h: string): Rgba | null {
   // Python `len` and `h[i:j]` count code points, so work on code points here.
   let cps = Array.from(h);
-  if (len(cps) === 3 || len(cps) === 4) cps = cps.flatMap((c) => [c, c]);
-  if (len(cps) === 6) cps = [...cps, "f", "f"];
-  if (len(cps) !== 8) return null;
+  if (cps.length === 3 || cps.length === 4) cps = cps.flatMap((c) => [c, c]);
+  if (cps.length === 6) cps = [...cps, "f", "f"];
+  if (cps.length !== 8) return null;
   let r: number;
   let g: number;
   let b: number;
@@ -238,13 +238,13 @@ export function _parse_hsl(v: string): Rgba | null {
   const m = pattern_match(_HSL_RE, v);
   if (!m) return null;
   const parts = pattern_findall(NUMBER_PCT_RE, m[1]);
-  if (len(parts) < 3) return null;
+  if (parts.length < 3) return null;
   const h = mod(float(rstrip(parts[0], "%")), 360.0) / 360.0;
   // CSS clamps saturation and lightness to [0, 100 %] before converting
   // (hsl(400, 150%, -5%) is black), not the converted channels.
   const s = clamp01(float(rstrip(parts[1], "%")) / 100.0);
   const light = clamp01(float(rstrip(parts[2], "%")) / 100.0);
-  const a = len(parts) > 3 ? float(rstrip(parts[3], "%")) / (parts[3].includes("%") ? 100.0 : 1.0) : 1.0;
+  const a = parts.length > 3 ? float(rstrip(parts[3], "%")) / (parts[3].includes("%") ? 100.0 : 1.0) : 1.0;
 
   function hue(p: number, q: number, t: number): number {
     if (t < 0) t += 1;

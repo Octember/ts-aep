@@ -20,11 +20,8 @@ import { Affine } from "./transform.ts";
 import type { Subpath } from "./types.ts";
 import {
   type Path,
-  dict_get,
   fspath,
-  py_bool,
   py_eq,
-  py_or,
   range,
   sum,
   zip,
@@ -81,7 +78,7 @@ export class TextRun {
 
 export function _load_font(path: Path, font_number = 0): any {
   const key = `${fspath(path)}#${font_number}`;
-  let font = dict_get(_font_cache, key);
+  let font = _font_cache.get(key) ?? null;
   if (font == null) {
     // NOTE(port): lazy=True only defers table parsing (no result difference); a .ttc resolves its face through `.fonts`.
     const opened: any = fontkit.create(host.fs.readFileSync(fspath(path)) as any);
@@ -153,7 +150,7 @@ export class _CubicContourPen {
       const [x1, y1] = this._start;
       this._segs.push([x0, y0, x0, y0, x1, y1, x1, y1]);
     }
-    if (py_bool(this._segs)) {
+    if (this._segs?.length > 0) {
       this.contours.push(new RawSubpath(this._segs, true));
     }
     this._segs = [];
@@ -161,7 +158,7 @@ export class _CubicContourPen {
 
   _endPath(): void {
     // NOTE(port): fontkit never emits an end-path (glyf and CFF contours always close), so this is unreachable, as in fontTools for glyf/CFF.
-    if (py_bool(this._segs)) {
+    if (this._segs?.length > 0) {
       this.contours.push(new RawSubpath(this._segs, false));
     }
     this._segs = [];
@@ -292,7 +289,7 @@ export function outline_runs(
     while (j < n && runs[j].abs_x == null) j += 1;
     const first = runs[i];
     const chunk_advance = sum(Array.from(range(i, j), (k) => widths[k] + runs[k].dx));
-    const chunk_anchor = py_or(first.anchor, anchor);
+    const chunk_anchor = first.anchor || anchor;
     const shift =
       chunk_anchor === "middle"
         ? chunk_advance / 2.0
@@ -335,7 +332,7 @@ export function _flatten_cubic(seg: CubicSeg, steps = 16): [number, number][] {
 /** Flatten a raw subpath's cubics into a polyline (path-local coords). */
 export function _polyline(raw: RawSubpath): [number, number][] {
   const segs = raw.segments;
-  if (!py_bool(segs)) return [];
+  if (!segs?.length) return [];
   const pts: [number, number][] = [[segs[0][0], segs[0][1]]];
   for (const seg of segs) {
     pts.push(..._flatten_cubic(seg));
@@ -398,7 +395,7 @@ export function outline_text_path(
     start_offset_frac = null,
     letter_spacing = 0.0,
   } = kw;
-  if (!py_bool(path)) return [];
+  if (!path?.length) return [];
   const pts = _polyline(path[0]);
   if (pts.length < 2) return [];
   const cum = _arc_lengths(pts);

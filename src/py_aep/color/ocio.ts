@@ -149,14 +149,14 @@ export function list_config_color_spaces(config_path: Path): string[] {
   if (doc == null) return [];
   const names: string[] = [];
   for (const key of ["colorspaces", "display_colorspaces"]) {
-    for (const entry of py_or(dict_get(doc, key), [])) {
+    for (const entry of py_or(doc.get(key), [])) {
       if (entry instanceof Map) {
-        const name = dict_get(entry, "name");
+        const name = entry.get("name") ?? null;
         if (typeof name === "string") names.push(name);
       }
     }
   }
-  const inactive = new Set(py_or(dict_get(doc, "inactive_colorspaces"), []));
+  const inactive = new Set(py_or(doc.get("inactive_colorspaces"), []));
   // A name may appear in both `colorspaces` and `display_colorspaces`;
   // getColorSpaceNames() returns a unique set, so de-duplicate (order kept).
   const seen = new Set<string>();
@@ -180,14 +180,14 @@ export function list_config_color_spaces(config_path: Path): string[] {
  * @returns The resolved `.ocio` path, or `None` if it cannot be located.
  */
 export function resolve_ocio_config(config: string): Path | null {
-  if (!py_bool(config)) return null;
+  if (!config) return null;
   const direct = new Path(config);
   if (direct.is_file()) return direct;
   for (const root of _builtin_config_roots()) {
     const config_dir = root.div(config);
     if (config_dir.is_dir()) {
       const ocio_files = sorted(config_dir.glob("*.ocio"), (p: Path) => p.path);
-      if (py_bool(ocio_files)) return ocio_files[0];
+      if (ocio_files?.length > 0) return ocio_files[0];
     }
   }
   return null;
@@ -316,30 +316,30 @@ export const _config_index_cached = lru_cache(
     const families = new Map<string, string>();
     const aliases = new Map<string, string>();
     for (const key of ["colorspaces", "display_colorspaces"]) {
-      for (const cs of py_or(dict_get(doc, key), [])) {
-        if (cs instanceof Map && typeof dict_get(cs, "name") === "string") {
-          const family = py_or(dict_get(cs, "family"), "");
-          families.set(dict_get(cs, "name"), family);
-          for (const alias of py_or(dict_get(cs, "aliases"), [])) {
+      for (const cs of py_or(doc.get(key), [])) {
+        if (cs instanceof Map && typeof cs.get("name") === "string") {
+          const family = py_or(cs.get("family"), "");
+          families.set(cs.get("name") ?? null, family);
+          for (const alias of py_or(cs.get("aliases"), [])) {
             if (typeof alias === "string") aliases.set(alias, family);
           }
         }
       }
     }
     const roles = new Map<string, string>();
-    for (const [r, t] of py_or(dict_get(doc, "roles"), new Map())) {
+    for (const [r, t] of py_or(doc.get("roles"), new Map())) {
       if (typeof t === "string") roles.set(r, t);
     }
     const displays = new Map<string, string[]>();
-    for (const [display, items] of py_or(dict_get(doc, "displays"), new Map())) {
+    for (const [display, items] of py_or(doc.get("displays"), new Map())) {
       const views: string[] = [];
       for (const item of py_or(items, [])) {
         // `!<Views> [name, ..]` (shared views) or `!<View> {name: ..}`; the
         // OCIO loader strips the tags to a list or a dict respectively.
         if (Array.isArray(item)) {
           for (const v of item) if (typeof v === "string") views.push(v);
-        } else if (item instanceof Map && typeof dict_get(item, "name") === "string") {
-          views.push(dict_get(item, "name"));
+        } else if (item instanceof Map && typeof item.get("name") === "string") {
+          views.push(item.get("name") ?? null);
         }
       }
       displays.set(display, views);
@@ -367,7 +367,7 @@ export const _config_index_cached = lru_cache(
 export function _output_envelope(index: _ConfigIndex, color_space: string): [string, string] {
   if (index.families.has(color_space)) {
     const family = index.families.get(color_space)!;
-    const name = py_bool(family) ? `${family}/${color_space}` : color_space;
+    const name = family ? `${family}/${color_space}` : color_space;
     return [name, _compact({ colorSpace1: color_space })];
   }
   if (index.roles.has(color_space)) {
@@ -445,7 +445,7 @@ export function ocio_color_space_for_profile_id(
 ): string | null {
   const stamp = _config_stamp(config_path);
   if (stamp == null) return null;
-  return dict_get(_guid_table_cached(config_path.path, stamp[0], stamp[1]), tkey(profile_id));
+  return _guid_table_cached(config_path.path, stamp[0], stamp[1]).get(tkey(profile_id)) ?? null;
 }
 
 /**
@@ -484,7 +484,7 @@ export function ocio_color_profile_envelope(config_path: Path, color_space: stri
     const i = color_space.lastIndexOf("/");
     const family = i >= 0 ? color_space.slice(0, i) : "";
     const bare = i >= 0 ? color_space.slice(i + 1) : color_space;
-    if (!py_bool(family) || dict_get(index.families, bare) !== family) throw e;
+    if (!family || (index.families.get(bare) ?? null) !== family) throw e;
     [name, data] = _output_envelope(index, bare);
   }
   return build_ocio_envelope(name, data);
@@ -514,13 +514,13 @@ export function ocio_output_profile_id(config_path: Path, color_space: string): 
  * (the extension case-insensitively).
  */
 export function _rule_matches(rule: Map<string, any>, file_path: string): boolean {
-  if (dict_get(rule, "name") === "Default") return true;
-  const regex = dict_get(rule, "regex");
+  if ((rule.get("name") ?? null) === "Default") return true;
+  const regex = rule.get("regex") ?? null;
   if (typeof regex === "string") {
     return re_search(regex, file_path) != null;
   }
-  const pattern = dict_get(rule, "pattern");
-  const extension = dict_get(rule, "extension");
+  const pattern = rule.get("pattern") ?? null;
+  const extension = rule.get("extension");
   if (typeof pattern === "string" && typeof extension === "string") {
     // `stem, dot, ext = file_path.rpartition(".")`: no "." gives ("", "", whole).
     const i = file_path.lastIndexOf(".");
@@ -528,7 +528,7 @@ export function _rule_matches(rule: Map<string, any>, file_path: string): boolea
     const dot = i >= 0 ? "." : "";
     const ext = i >= 0 ? file_path.slice(i + 1) : file_path;
     return (
-      py_bool(dot) &&
+      !!dot &&
       fnmatchcase(stem, pattern) &&
       fnmatchcase(ext.toLowerCase(), extension.toLowerCase())
     );
@@ -623,18 +623,15 @@ export function ocio_input_envelope(config_path: Path, file_path: string): strin
   const doc = _load_config(config_path);
   if (doc == null) return null;
   const index = _config_index(config_path);
-  const rules = dict_get(doc, "file_rules");
+  const rules = doc.get("file_rules") ?? null;
   if (py_bool(rules)) {
     for (const rule of rules as any[]) {
       if (!(rule instanceof Map) || !_rule_matches(rule, file_path)) continue;
-      const color_space = dict_get(rule, "colorspace");
+      const color_space = rule.get("colorspace") ?? null;
       if (typeof color_space !== "string") return null;
-      const target = dict_get(index.roles, color_space, color_space);
-      const family = py_or(
-        py_or(dict_get(index.families, target), dict_get(index.aliases, target)),
-        "",
-      );
-      const name = py_bool(family) ? `${family}/${color_space}` : color_space;
+      const target = index.roles.get(color_space) ?? color_space;
+      const family = (index.families.get(target) || (index.aliases.get(target) ?? null)) || "";
+      const name = family ? `${family}/${color_space}` : color_space;
       return build_ocio_envelope(name, _compact({ colorSpace1: color_space }));
     }
     return null;

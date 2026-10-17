@@ -24,7 +24,7 @@
  *   (`psd_styles.merged_styles_bounds`).
  */
 
-import { and, bytes_, max, min, mod, OverflowError, py_bool, struct, ValueError } from "../../pyrt/index.ts";
+import { and, bytes_, max, min, mod, OverflowError, struct, ValueError } from "../../pyrt/index.ts";
 import { parse_vector_mask } from "./psd_paths.ts";
 import { merged_styles_bounds } from "./psd_styles.ts";
 import { cubic_range } from "./shape_bounds.ts";
@@ -116,7 +116,7 @@ export function _path_box(layer: PsdLayer, canvas_w: number, canvas_h: number): 
       ys.push(...cubic_range(p0[1], p1[1], p2[1], p3[1]));
     }
   }
-  if (!py_bool(xs)) {
+  if (xs.length === 0) {
     return null;
   }
   return [

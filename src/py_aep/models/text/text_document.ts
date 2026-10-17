@@ -13,7 +13,6 @@ import {
   py_assert,
   py_bool,
   py_eq,
-  py_or,
   rstrip,
   setdefault,
   sorted,
@@ -179,7 +178,7 @@ export class TextDocument {
      * Runs before the mutation lands so each sibling still calibrates
      * against its own clean cache + text.
      */
-    for (const doc of py_or(this._siblings, [this])) {
+    for (const doc of (this._siblings?.length > 0 ? this._siblings : [this])) {
       doc._mark_layout_dirty();
     }
   }
@@ -435,7 +434,7 @@ export class TextDocument {
     this._fonts = fonts;
     this._cos_data = cos;
     this._btdk_body = btdk;
-    if (py_bool(text)) this.text = text;
+    if (text) this.text = text;
     if (box_size != null) this.box_text_size = box_size;
     if (line_orientation != null) this.line_orientation = line_orientation;
   }
@@ -512,7 +511,7 @@ export class TextDocument {
      * Set by `_from_binary` fallback kwargs and by setters when the
      * backing style dict is `None`. Returns `None` when absent.
      */
-    return dict_get(this.__dict__, name);
+    return this.__dict__.get(name) ?? null;
   }
 
   _set_override(name: string, value: any): void {
@@ -776,7 +775,7 @@ export class TextDocument {
       if (is_real(raw)) {
         // When auto-leading is on, AE stores a sentinel in key "5"
         // and displays font_size * auto_leading_factor (para "7").
-        if (py_bool(this.auto_leading) && this._para_style != null) {
+        if (this.auto_leading && this._para_style != null) {
           const factor = dict_get(this._para_style, "7", 1.2);
           const fs = this.font_size;
           if (fs != null) return fs * float(factor);

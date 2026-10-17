@@ -36,7 +36,6 @@ import {
   float,
   getitem,
   int,
-  py_bool,
   rstrip,
   setdefault,
   sorted,
@@ -65,7 +64,7 @@ export const _KEY_RE = /^\t"([^\n]+?)" = ([^\n]*)$/;
 export function find_prefs_file(prefs_dir: Path, pref_type: PREFType): Path | null {
   // Path ordering in Python compares parts; all matches share one parent, so the string form orders the same.
   const matches = sorted(prefs_dir.glob(getitem(_PREF_FILE_GLOBS, pref_type)), (p) => p.toString());
-  return py_bool(matches) ? matches[0] : null;
+  return matches?.length > 0 ? matches[0] : null;
 }
 
 /**
@@ -80,9 +79,9 @@ export function collapse_continuation_lines(text: string): string[] {
   const result: string[] = [];
   for (const line of lines) {
     const stripped = rstrip(line);
-    if (!py_bool(stripped)) continue;
+    if (!stripped) continue;
     // Continuation lines start with tab and contain hex data
-    if (py_bool(result) && stripped.startsWith("\t") && !stripped.startsWith('\t"')) {
+    if (result.length > 0 && stripped.startsWith("\t") && !stripped.startsWith('\t"')) {
       result[result.length - 1] += strip(stripped);
     } else {
       result.push(stripped);
@@ -197,7 +196,7 @@ export class PrefsFile {
 
   /** Return the raw text value for `section`/`key`, or None. */
   get_raw(section: string, key: string): string | null {
-    return dict_get(dict_get(this._sections, section, new Map<string, string>()), key);
+    return dict_get(this._sections, section, new Map<string, string>()).get(key) ?? null;
   }
 
   /**

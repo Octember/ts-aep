@@ -1,4 +1,4 @@
-import { getitem, KeyError, py_bool, warn } from "../../pyrt/index.ts";
+import { getitem, KeyError, warn } from "../../pyrt/index.ts";
 import type { Chunk, ListChunk } from "../binary/chunk.ts";
 import type { CmtaChunk } from "../binary/item_chunks.ts";
 import type { LdtaChunk } from "../binary/layer_chunks.ts";
@@ -48,7 +48,7 @@ export function _parse_ovg2_uuids(tdgp_chunks: Chunk[]): string[] {
   for (const ovg2_list of filter_by_list_type(tdgp_chunks, "OvG2")) {
     for (const cprp of filter_by_list_type(ovg2_list.chunks, "CPrp")) {
       const utf8_chunks = filter_by_type(cprp.chunks, "Utf8");
-      if (py_bool(utf8_chunks)) {
+      if (utf8_chunks?.length > 0) {
         uuids.push((utf8_chunks[0] as Utf8Chunk).value);
       }
     }

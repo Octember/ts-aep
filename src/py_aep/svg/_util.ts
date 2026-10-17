@@ -2,7 +2,7 @@
  * Shared low-level helpers for the SVG reader package.
  */
 
-import { dict_get, float, py_bool, strip, hypot, pattern_match, py_re } from "../../pyrt/index.ts";
+import { float, strip, hypot, pattern_match, py_re } from "../../pyrt/index.ts";
 
 /** An SVG/CSS number token: optional sign, decimal or integer, optional exponent. */
 export const NUMBER_RE = py_re(String.raw`[-+]?(?:\d*\.\d+|\d+\.?)(?:[eE][-+]?\d+)?`);
@@ -74,7 +74,7 @@ export function clamp01(value: number): number {
  * `"40px"` -> `40.0`); `default` when absent or non-numeric.
  */
 export function parse_number(text: string | null, default_: number = 0.0): number {
-  if (!py_bool(text)) return default_;
+  if (!text) return default_;
   const m = pattern_match(NUMBER_RE, strip(text!));
   return m ? float(m[0]) : default_;
 }
@@ -91,7 +91,7 @@ export function parse_length(
   percent_of: number | null = null,
   font_size: number = DEFAULT_FONT_SIZE,
 ): number {
-  if (!py_bool(text)) return default_;
+  if (!text) return default_;
   const m = pattern_match(_LENGTH_RE, strip(text!));
   if (m == null) return default_;
   const value = float(m[1]);
@@ -105,7 +105,7 @@ export function parse_length(
   if (unit === "ex") {
     return (value * font_size) / 2.0;
   }
-  return value * dict_get(_ABSOLUTE_UNITS, unit, 1.0);
+  return value * (_ABSOLUTE_UNITS.get(unit) ?? 1.0);
 }
 
 /**

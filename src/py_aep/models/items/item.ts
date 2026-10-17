@@ -16,7 +16,6 @@ import {
   format,
   getattr,
   py_assert,
-  py_bool,
   py_eq,
 } from "../../../pyrt/index.ts";
 import { ChunkField } from "../descriptors.ts";
@@ -135,7 +134,7 @@ export class Item {
     validate_string(value);
     if (this._cmta != null) {
       this._cmta.value = value;
-    } else if (py_bool(value)) {
+    } else if (value) {
       const chunk = new CmtaChunk({});
       chunk.value = value;
       this._item_list.chunks.push(chunk);

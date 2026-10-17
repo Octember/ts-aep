@@ -3,11 +3,9 @@
 import {
   ValueError,
   descriptor,
-  dict_get,
   float_repr,
   format,
   getattr,
-  len,
   object_getattr,
   object_setattr,
   py_eq,
@@ -52,7 +50,7 @@ export class _GradientField<T = any> {
   }
 
   __set__(obj: any, value: T): void {
-    const validator = dict_get((this.constructor as typeof _GradientField)._VALIDATORS, this._name);
+    const validator = (this.constructor as typeof _GradientField)._VALIDATORS.get(this._name);
     if (validator != null) validator(value, null);
     object_setattr(obj, this._slot, value);
     const gradient = getattr(obj, "_gradient", obj);
@@ -292,10 +290,10 @@ export class Gradient {
   /** Remove a color stop by index. */
   remove_color_stop(stop: number): void {
     validate_positive_int(stop);
-    if (stop >= len(this._color_stops)) {
+    if (stop >= this._color_stops.length) {
       throw new ValueError(
         `color stop index ${stop} out of range ` +
-          `(gradient has ${len(this._color_stops)} color stops)`,
+          `(gradient has ${this._color_stops.length} color stops)`,
       );
     }
     this._color_stops[stop]._gradient = null;
@@ -314,10 +312,10 @@ export class Gradient {
   /** Remove an alpha stop by index. */
   remove_alpha_stop(stop: number): void {
     validate_positive_int(stop);
-    if (stop >= len(this._alpha_stops)) {
+    if (stop >= this._alpha_stops.length) {
       throw new ValueError(
         `alpha stop index ${stop} out of range ` +
-          `(gradient has ${len(this._alpha_stops)} alpha stops)`,
+          `(gradient has ${this._alpha_stops.length} alpha stops)`,
       );
     }
     this._alpha_stops[stop]._gradient = null;
@@ -369,8 +367,8 @@ export class Gradient {
 
   __repr__(): string {
     return (
-      `Gradient(color_stops=${len(this.color_stops)}, ` +
-      `alpha_stops=${len(this.alpha_stops)}, version=${repr(this.version)})`
+      `Gradient(color_stops=${this.color_stops.length}, ` +
+      `alpha_stops=${this.alpha_stops.length}, version=${repr(this.version)})`
     );
   }
 
@@ -411,7 +409,7 @@ export function _stops_lines(kind: string, stops: number[][]): string[] {
   // LEXICOGRAPHIC key order (Stop-0, Stop-1, Stop-10, ..., Stop-15,
   // Stop-2, ...), not numeric order. Match that so gradients with >9
   // stops are byte-identical (identical for <=10 stops).
-  for (const i of sorted(range(len(stops)), (n: number) => str(n))) {
+  for (const i of sorted(range(stops.length), (n: number) => str(n))) {
     const values = stops[i];
     lines.push(
       "<prop.pair>",
@@ -430,7 +428,7 @@ export function _stops_lines(kind: string, stops: number[][]): string[] {
     "</prop.pair>",
     "<prop.pair>",
     "<key>Stops Size</key>",
-    `<int type='unsigned' size='32'>${len(stops)}</int>`,
+    `<int type='unsigned' size='32'>${stops.length}</int>`,
     "</prop.pair>",
     "</prop.list>",
     "</prop.pair>",

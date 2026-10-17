@@ -331,7 +331,7 @@ export class _Document {
         value = this._cache.get(number);
         break;
       }
-      const offset = dict_get(this._offsets, number);
+      const offset = this._offsets.get(number) ?? null;
       if (offset == null) return null;
       const resolved = _parse_object_at(this._data, offset);
       this._cache.set(number, resolved);
@@ -397,7 +397,7 @@ export class _Document {
   }
 
   _raw_stream(number: number, info: any): Uint8Array | null {
-    const offset = dict_get(this._offsets, number);
+    const offset = this._offsets.get(number) ?? null;
     if (offset == null) return null;
     let start = bytes_.find(this._data, b("stream"), offset);
     if (start < 0) return null;
@@ -783,11 +783,11 @@ export function _base_encoding(doc: _Document, font: Map<string, any>): string {
 
 /** The advances After Effects supplies for a font with no `/Widths`. */
 export function _builtin_widths(doc: _Document, font: Map<string, any>, base: string): Map<number, number> {
-  const table = dict_get(STD14_WIDTHS, base);
+  const table = STD14_WIDTHS.get(base);
   if (table == null) return new Map();
   const widths = new Map<number, number>();
   for (const [i, w] of table.entries()) widths.set(STD14_FIRST_CODE + i, float(w));
-  const quotes = dict_get(STD14_STANDARD_QUOTES, base);
+  const quotes = STD14_STANDARD_QUOTES.get(base);
   if (quotes != null && !_ASCII_QUOTE_ENCODINGS.has(_base_encoding(doc, font))) {
     widths.set(39, float(quotes[0]));
     widths.set(96, float(quotes[1]));
@@ -807,7 +807,7 @@ export function _font_metrics(doc: _Document, font: Map<string, any> | null): Me
   if (!(font instanceof Map)) return _NO_FONT_METRICS;
   const subtype = str(doc.get(font, "Subtype", ""));
   if (subtype === "Type0") return _type0_metrics(doc, font);
-  const first = int(doc.number(dict_get(font, "FirstChar"), 0.0));
+  const first = int(doc.number(font.get("FirstChar") ?? null, 0.0));
   const raw_widths = doc.get(font, "Widths");
   let widths = new Map<number, number>();
   if (Array.isArray(raw_widths)) {
@@ -819,7 +819,7 @@ export function _font_metrics(doc: _Document, font: Map<string, any> | null): Me
   const base = _base_font(str(doc.get(font, "BaseFont", "")));
   const default_ = doc.number(doc.get(descriptor, "MissingWidth"), 0.0);
   if (widths.size === 0) widths = _builtin_widths(doc, font, base);
-  const [y_min, y_max] = _vertical_extent(doc, descriptor, dict_get(STD14_EXTENT, base));
+  const [y_min, y_max] = _vertical_extent(doc, descriptor, STD14_EXTENT.get(base) ?? null);
   return [widths, py_or(default_, _DEFAULT_WIDTH), y_min, y_max, false];
 }
 
@@ -911,7 +911,7 @@ export class _Measurer {
   _resource_ref(resources: any, category: string, name: any): any {
     const table = _as_dict(this._doc.resolve(this._doc.get(resources, category)));
     if (table == null) return null;
-    return dict_get(table, _operand_str(name));
+    return table.get(_operand_str(name)) ?? null;
   }
 
   run(content: Uint8Array, resources: any): void {
@@ -1182,7 +1182,7 @@ export class _Measurer {
         codes = Array.from(item);
       }
       for (const code of codes) {
-        const width = dict_get(widths, code, default_) / 1000.0;
+        const width = (widths.get(code) ?? default_) / 1000.0;
         let spacing = gs.char_spacing;
         if (code === 32 && !two_byte) spacing += gs.word_spacing;
         const advance = (width * gs.size + spacing) * scale;

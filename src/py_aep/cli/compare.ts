@@ -27,7 +27,6 @@ import {
   bytes_eq,
   deepcopy,
   dict_get,
-  enumerate,
   float,
   format,
   getattr,
@@ -37,7 +36,6 @@ import {
   max,
   py_bool,
   py_eq,
-  py_or,
   range,
   repr,
   sorted,
@@ -227,7 +225,7 @@ export function _chunk_floats(chunk: any): number[] | null {
   const ct = getattr(chunk, "chunk_type", null);
   if (ct === "cdat") {
     const values = [...chunk.values];
-    return py_or(values, null);
+    return values.length > 0 ? values : null;
   }
   if (ct === "shph") {
     return [chunk.top_left_x, chunk.top_left_y, chunk.bottom_right_x, chunk.bottom_right_y];
@@ -250,7 +248,7 @@ export function _with_floats(chunk: any, floats: number[]): any {
   } else if (ct === "shph") {
     [clone.top_left_x, clone.top_left_y, clone.bottom_right_x, clone.bottom_right_y] = floats;
   } else if (ct === "ldat") {
-    for (const [idx, item] of enumerate(clone.items as any[])) {
+    for (const [idx, item] of (clone.items as any[]).entries()) {
       item.x = floats[2 * idx];
       item.y = floats[2 * idx + 1];
     }
@@ -326,11 +324,11 @@ export function _only_float_diff(c1: any, c2: any): boolean {
  * byte-identical to the reference do not count as a difference.
  */
 export function _multi_only_float_diff(all_typed: Map<string, any>[], present: number[], path: string): boolean {
-  const ref = dict_get(all_typed[present[0]], path);
+  const ref = all_typed[present[0]].get(path) ?? null;
   if (ref == null) return false;
   const ref_bytes = ref.tobytes();
   for (const i of present.slice(1)) {
-    const other = dict_get(all_typed[i], path);
+    const other = all_typed[i].get(path) ?? null;
     if (other == null) return false;
     if (bytes_eq(other.tobytes(), ref_bytes)) continue;
     if (!_only_float_diff(ref, other)) return false;
@@ -395,7 +393,7 @@ export function _compare_chunk_dicts(
     }
     const byte_diffs = [...compare_binary_data(bytes1, bytes2, path)];
 
-    if (py_bool(byte_diffs) || bytes1.length !== bytes2.length) {
+    if (byte_diffs.length > 0 || bytes1.length !== bytes2.length) {
       differences.push(new ChunkDifference(path, byte_diffs, bytes1.length, bytes2.length));
     }
   }
@@ -426,7 +424,7 @@ export class StructuralDifference {
 export function _compare_structure_recursive(c1: Chunk, c2: Chunk, path: string, diffs: StructuralDifference[]): void {
   const label1 = chunk_label(c1);
   const label2 = chunk_label(c2);
-  const current = py_bool(path) ? `${path}/${label1}` : label1;
+  const current = path ? `${path}/${label1}` : label1;
 
   if (label1 !== label2) {
     diffs.push(new StructuralDifference(current, -1, -1, [label1], [label2]));
@@ -503,7 +501,7 @@ export function compare_multi_aep_files(
 
   for (const path of sorted(all_paths)) {
     const present: number[] = [];
-    for (const [i, d] of enumerate(all_data)) {
+    for (const [i, d] of all_data.entries()) {
       if (d.has(path)) present.push(i);
     }
     if (present.length < files.length) {
@@ -516,9 +514,9 @@ export function compare_multi_aep_files(
     const max_len = max(sizes);
 
     const chunk_diffs: MultiFileDifference[] = [];
-    for (const offset of range(max_len)) {
+    for (let offset = 0; offset < max_len; offset++) {
       const values: number[] = [];
-      for (const i of range(files.length)) {
+      for (let i = 0, n = files.length; i < n; i++) {
         if (offset < data_list[i].length) {
           values.push(data_list[i][offset]);
         } else {
@@ -532,7 +530,7 @@ export function compare_multi_aep_files(
       }
     }
 
-    if (py_bool(chunk_diffs)) {
+    if (chunk_diffs.length > 0) {
       // Suppress float-precision-only differences (matching two-file mode).
       if (!exact && _multi_only_float_diff(all_typed, present, path)) {
         suppressed.push(path);
@@ -563,7 +561,7 @@ export function _format_context_line(label: string, data: Uint8Array, offset: nu
   const start = Math.max(0, offset - context);
   const end = Math.min(data.length, offset + context + 1);
   const parts: string[] = [];
-  for (const j of range(start, end)) {
+  for (let j = start; j < end; j++) {
     if (j === offset) {
       parts.push(`[${format(data[j], "02X")}]`);
     } else {
@@ -592,14 +590,14 @@ export function print_results(
   print(`${"=".repeat(80)}\n`);
 
   const has_any =
-    py_bool(differences) || py_bool(only_in_file1) || py_bool(only_in_file2) || py_bool(structural_diffs);
+    differences?.length > 0 || only_in_file1?.length > 0 || only_in_file2?.length > 0 || structural_diffs?.length > 0;
   if (!has_any) {
     print("No differences found!");
     return;
   }
 
   // Print structural differences
-  if (py_bool(structural_diffs)) {
+  if (structural_diffs?.length > 0) {
     print(`\n${"─".repeat(40)}`);
     print(`Structural differences (${structural_diffs.length}):`);
     print(`${"─".repeat(40)}`);
@@ -609,7 +607,7 @@ export function print_results(
       } else {
         print(`\n[${sd.path}] child count: ${sd.count1} vs ${sd.count2}`);
         const max_len = max([sd.children1.length, sd.children2.length]);
-        for (const i of range(max_len)) {
+        for (let i = 0; i < max_len; i++) {
           const c1 = i < sd.children1.length ? sd.children1[i] : "<missing>";
           const c2 = i < sd.children2.length ? sd.children2[i] : "<missing>";
           const marker = c1 === c2 ? "  " : "!!";
@@ -620,7 +618,7 @@ export function print_results(
   }
 
   // Print chunks only in file1
-  if (py_bool(only_in_file1)) {
+  if (only_in_file1?.length > 0) {
     print(`\n${"─".repeat(40)}`);
     print(`Chunks only in File 1 (${only_in_file1.length}):`);
     print(`${"─".repeat(40)}`);
@@ -630,7 +628,7 @@ export function print_results(
   }
 
   // Print chunks only in file2
-  if (py_bool(only_in_file2)) {
+  if (only_in_file2?.length > 0) {
     print(`\n${"─".repeat(40)}`);
     print(`Chunks only in File 2 (${only_in_file2.length}):`);
     print(`${"─".repeat(40)}`);
@@ -640,7 +638,7 @@ export function print_results(
   }
 
   // Print byte differences
-  if (py_bool(differences)) {
+  if (differences?.length > 0) {
     print(`\n${"─".repeat(40)}`);
     print(`Byte differences (${differences.length} chunks):`);
     print(`${"─".repeat(40)}`);
@@ -672,10 +670,10 @@ export function print_results(
         if (context > 0 && data1 != null && data2 != null) {
           const d1 = dict_get(data1, diff.path, b(""));
           const d2 = dict_get(data2, diff.path, b(""));
-          if (py_bool(d1)) {
+          if (d1?.length > 0) {
             print(_format_context_line("File 1", d1, byte_diff.offset, context));
           }
-          if (py_bool(d2)) {
+          if (d2?.length > 0) {
             print(_format_context_line("File 2", d2, byte_diff.offset, context));
           }
         }
@@ -687,7 +685,7 @@ export function print_results(
   const total_byte_diffs = sum(differences.map((d) => d.byte_diffs.length));
   print(`\n${"=".repeat(80)}`);
   print("Summary:");
-  if (py_bool(structural_diffs)) {
+  if (structural_diffs?.length > 0) {
     print(`  Structural differences: ${structural_diffs.length}`);
   }
   print(`  Chunks with differences: ${differences.length}`);
@@ -708,19 +706,19 @@ export function print_multi_results(
   // Header
   print(`\n${"=".repeat(80)}`);
   print(`Comparing ${files.length} files:`);
-  for (const [i, f] of enumerate(files)) {
+  for (const [i, f] of files.entries()) {
     const label = i === 0 ? "ref" : str(i);
     print(`  [${label}] ${f.name}`);
   }
   print(`${"=".repeat(80)}\n`);
 
-  if (!py_bool(differences) && !py_bool(missing_chunks)) {
+  if (!differences?.length && !missing_chunks?.length) {
     print("No differences found!");
     return;
   }
 
   // Chunks not in all files
-  if (py_bool(missing_chunks)) {
+  if (missing_chunks?.length > 0) {
     print(`${"─".repeat(40)}`);
     print(`Chunks not in all files (${missing_chunks.length}):`);
     print(`${"─".repeat(40)}`);
@@ -731,7 +729,7 @@ export function print_multi_results(
   }
 
   // Byte differences
-  if (py_bool(differences)) {
+  if (differences?.length > 0) {
     print(`\n${"─".repeat(40)}`);
     print(`Byte differences (${differences.length} chunks):`);
     print(`${"─".repeat(40)}`);
@@ -741,7 +739,7 @@ export function print_multi_results(
 
       const unique_sizes = new Set(chunk_diff.sizes);
       if (unique_sizes.size > 1) {
-        const size_parts = [...enumerate(chunk_diff.sizes)].map(([i, s]) => `${i === 0 ? "ref" : str(i)}=${s}`);
+        const size_parts = [...chunk_diff.sizes.entries()].map(([i, s]) => `${i === 0 ? "ref" : str(i)}=${s}`);
         print(`  Size: ${size_parts.join(", ")}`);
       }
 
@@ -762,11 +760,11 @@ export function print_multi_results(
         );
 
         // Context display
-        if (context > 0 && py_bool(all_data)) {
-          for (const i of range(files.length)) {
+        if (context > 0 && all_data?.length > 0) {
+          for (let i = 0, n = files.length; i < n; i++) {
             const label = i === 0 ? "ref" : `[${i}]`;
             const data = dict_get(all_data[i], chunk_diff.path, b(""));
-            if (!py_bool(data)) continue;
+            if (!data?.length) continue;
             print(_format_context_line(label, data, diff.offset, context));
           }
         }
@@ -1030,7 +1028,7 @@ export function main(): number {
   if (files.length > 2) {
     let [multi_diffs, missing, all_data, suppressed] = compare_multi_aep_files(files, args.exact);
 
-    if (py_bool(args.filter)) {
+    if (args.filter) {
       const pattern = args.filter.toLowerCase();
       multi_diffs = multi_diffs.filter((d) => d.path.toLowerCase().includes(pattern));
       missing = missing.filter(([p]) => p.toLowerCase().includes(pattern));
@@ -1039,7 +1037,7 @@ export function main(): number {
 
     print_multi_results(files, multi_diffs, missing, args.context, all_data);
     _report_suppressed(suppressed.length, args.exact);
-    return !py_bool(multi_diffs) && !py_bool(missing) ? 0 : 1;
+    return !multi_diffs?.length && !missing?.length ? 0 : 1;
   }
 
   // ── Two-file comparison ────────────────────────────────────────────
@@ -1056,7 +1054,7 @@ export function main(): number {
   const ctx2 = args.context > 0 ? data2 : null;
 
   // Apply filter
-  if (py_bool(args.filter)) {
+  if (args.filter) {
     [diffs, only1, only2] = filter_differences(diffs, only1, only2, args.filter);
     const pattern = args.filter.toLowerCase();
     suppressed = suppressed.filter((p) => p.toLowerCase().includes(pattern));
@@ -1071,7 +1069,7 @@ export function main(): number {
   }
   _report_suppressed(suppressed.length, args.exact);
 
-  return !py_bool(diffs) && !py_bool(only1) && !py_bool(only2) ? 0 : 1;
+  return !diffs?.length && !only1?.length && !only2?.length ? 0 : 1;
 }
 
 // `if __name__ == "__main__": sys.exit(main())`

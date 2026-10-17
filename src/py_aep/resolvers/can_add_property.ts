@@ -5,7 +5,7 @@
  * can be added to a specific indexed group.
  */
 
-import { dict_get, py_bool, py_enum, type EnumValue } from "../../pyrt/index.ts";
+import { py_bool, py_enum, type EnumValue } from "../../pyrt/index.ts";
 import { EXPRESSION_CONTROLS } from "../data/effect_controls.ts";
 import { MATCH_NAME_TO_AUTO_NAME } from "../data/match_names.ts";
 import { TEXT_ANIMATOR_POOL } from "../data/text_animator_pool.ts";
@@ -98,7 +98,7 @@ for (const _mn of new Set([
   ..._ADDABLE_TEXT_SELECTOR_MATCH_NAMES,
   ..._ADDABLE_SHAPE_MATCH_NAMES,
 ])) {
-  const _auto = dict_get(MATCH_NAME_TO_AUTO_NAME, _mn);
+  const _auto = MATCH_NAME_TO_AUTO_NAME.get(_mn) ?? null;
   if (_auto != null) _ADDABLE_DISPLAY_TO_MATCH.set(_auto, _mn);
 }
 
@@ -143,7 +143,7 @@ export function resolve_addable(
   property_type: PropertyType,
   name: string,
 ): [string, AddableKind] | null {
-  if (!py_bool(name)) return null;
+  if (!name) return null;
   // Most addable groups are indexed; the text-animator Properties group
   // is the NAMED-group exception (see _NAMED_ADDABLE_GROUPS).
   if (property_type !== PropertyType.INDEXED_GROUP && !_NAMED_ADDABLE_GROUPS.has(match_name)) {
@@ -153,14 +153,14 @@ export function resolve_addable(
   if (match_name === "ADBE Effect Parade") {
     const resolved = _ADDABLE_EFFECT_MATCH_NAMES.has(name)
       ? name
-      : dict_get(_EFFECT_DISPLAY_TO_MATCH, name);
+      : _EFFECT_DISPLAY_TO_MATCH.get(name) ?? null;
     if (resolved == null) return null;
     const kind =
       resolved === "ADBE Dropdown Control" ? AddableKind.DROPDOWN : AddableKind.EXPRESSION_CONTROL;
     return [resolved, kind];
   }
 
-  const entry = dict_get(_ADDABLE_BY_GROUP, match_name);
+  const entry = _ADDABLE_BY_GROUP.get(match_name) ?? null;
   if (entry == null) return null;
   const [allowed, kind] = entry;
   if (allowed.has(name)) return [name, kind];
@@ -168,8 +168,8 @@ export function resolve_addable(
   // animator Properties group, since their registry names diverge).
   const resolved =
     kind === AddableKind.ANIMATOR_PROPERTY
-      ? dict_get(_ANIMATOR_PROPERTY_DISPLAY_TO_MATCH, name)
-      : dict_get(_ADDABLE_DISPLAY_TO_MATCH, name);
+      ? _ANIMATOR_PROPERTY_DISPLAY_TO_MATCH.get(name) ?? null
+      : _ADDABLE_DISPLAY_TO_MATCH.get(name) ?? null;
   if (resolved != null && allowed.has(resolved)) return [resolved, kind];
   return null;
 }

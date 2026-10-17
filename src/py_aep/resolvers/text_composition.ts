@@ -40,11 +40,9 @@ import {
   at,
   contains,
   dict_get,
-  enumerate,
   float,
   int,
   islower,
-  len,
   max,
   OSError,
   py_bool,
@@ -366,7 +364,7 @@ export function _check_envelope(doc: TextDocument, raw: string): void {
     }
   }
   for (const [_start, _end, style] of run_spans(doc._doc, "6", "6")) {
-    if (py_bool(dict_get(style, "18"))) {
+    if (py_bool(style.get("18"))) {
       throw new CompositionUnsupported("ligatures enabled");
     }
     if (float(dict_get(style, "36", 0.0)) !== 0.0) {
@@ -382,7 +380,7 @@ export function _check_envelope(doc: TextDocument, raw: string): void {
       // for text AE lays out unkerned.
       throw new CompositionUnsupported("auto kerning disabled");
     }
-    if (py_bool(dict_get(style, "52"))) {
+    if (py_bool(style.get("52"))) {
       throw new CompositionUnsupported("no-break attribute");
     }
     if (float(dict_get(style, "9", 0.0)) !== 0.0) {
@@ -393,7 +391,7 @@ export function _check_envelope(doc: TextDocument, raw: string): void {
     }
   }
   for (const [_start, _end, style] of run_spans(doc._doc, "5", "5")) {
-    if (py_bool(dict_get(style, "29"))) {
+    if (py_bool(style.get("29"))) {
       throw new CompositionUnsupported("every-line composer");
     }
     // NOTE auto-hyphenate (para key "9") is AE's DEFAULT and is inert
@@ -418,8 +416,8 @@ export function _char_styles(doc: TextDocument, raw: string): _CharStyle[] {
   const fonts = doc._fonts.map((f) => f.post_script_name);
   const out: _CharStyle[] = [];
   for (const [start, end, style] of run_spans(doc._doc, "6", "6")) {
-    const index = dict_get(style, "0");
-    if (!(typeof index === "number" && Number.isInteger(index)) || !(0 <= index && index < len(fonts))) {
+    const index = style.get("0") ?? null;
+    if (!(typeof index === "number" && Number.isInteger(index)) || !(0 <= index && index < fonts.length)) {
       throw new CompositionUnsupported("unresolvable font reference");
     }
     const char_style = new _CharStyle(fonts[index], style);
@@ -427,7 +425,7 @@ export function _char_styles(doc: TextDocument, raw: string): _CharStyle[] {
       out.push(char_style);
     }
   }
-  if (len(out) !== len(raw)) {
+  if (out.length !== raw.length) {
     throw new CompositionUnsupported("style runs do not cover the text");
   }
   return out;
@@ -440,7 +438,7 @@ export function _char_styles(doc: TextDocument, raw: string): _CharStyle[] {
 export function _shape_glyphs(text: string, style: _CharStyle): [any, number] {
   const [font, upem] = _hb_font(style.font);
   const shaped_text = style.caps === 1 || style.caps === 2 ? text.toUpperCase() : text;
-  if (len(shaped_text) !== len(text)) {
+  if (shaped_text.length !== text.length) {
     // e.g. eszett -> "SS": clusters no longer map 1:1 onto the
     // source characters, so per-character advances are undefined.
     throw new CompositionUnsupported("case mapping changes the text length");
@@ -469,12 +467,12 @@ export function _shape_stretch(text: string, style: _CharStyle): number[] {
 export function _glyph_advances(text: string, style: _CharStyle, buf: any, scale: number): number[] {
   // Text here is BMP-only (`_check_envelope` refuses astral characters
   // first), so UTF-16 indexing matches Python's code-point indexing.
-  const per_cluster: number[] = new Array<number>(len(text)).fill(0.0);
+  const per_cluster: number[] = new Array<number>(text.length).fill(0.0);
   for (const [info, pos] of zip<[any[], any[]]>(buf.glyph_infos, buf.glyph_positions)) {
     per_cluster[info.cluster] += pos.x_advance * scale;
   }
   const advances: number[] = [];
-  for (let [i, advance] of enumerate(per_cluster)) {
+  for (let [i, advance] of per_cluster.entries()) {
     if (style.fauxbold) {
       advance += _FAUX_BOLD_ADVANCE * style.size;
     }
@@ -490,10 +488,10 @@ export function _glyph_advances(text: string, style: _CharStyle, buf: any, scale
 export function _advances(text: string, styles: _CharStyle[], offset: number): number[] {
   const out: number[] = [];
   let i = 0;
-  while (i < len(text)) {
+  while (i < text.length) {
     const key = styles[offset + i].stretch_key();
     let j = i;
-    while (j < len(text) && styles[offset + j].stretch_key() === key) {
+    while (j < text.length && styles[offset + j].stretch_key() === key) {
       j += 1;
     }
     for (const advance of _shape_stretch(text.slice(i, j), styles[offset + i])) {
@@ -526,7 +524,7 @@ export function _break_paragraph(
   limit: number,
   first_limit: number,
 ): number[] {
-  if (!py_bool(paragraph)) {
+  if (!paragraph) {
     // An empty paragraph still composes to one (empty) line; the
     // caller extends it over the paragraph's `\r`.
     return [0];
@@ -535,16 +533,16 @@ export function _break_paragraph(
   let rest = paragraph;
   let rest_offset = offset;
   let current_limit = first_limit;
-  while (py_bool(rest)) {
+  while (rest) {
     let take = 0;
-    while (take < len(rest)) {
+    while (take < rest.length) {
       const next_space = rest.indexOf(" ", take);
-      let candidate_end = next_space === -1 ? len(rest) : next_space;
+      let candidate_end = next_space === -1 ? rest.length : next_space;
       const candidate = rstrip(rest.slice(0, candidate_end), " ");
       if (_width(candidate, styles, rest_offset) > current_limit) {
         break;
       }
-      while (candidate_end < len(rest) && rest[candidate_end] === " ") {
+      while (candidate_end < rest.length && rest[candidate_end] === " ") {
         candidate_end += 1;
       }
       take = candidate_end;
@@ -556,7 +554,7 @@ export function _break_paragraph(
       // Token wider than the line: wrap at the character level.
       take = 1;
       while (
-        take < len(rest) &&
+        take < rest.length &&
         rest[take] !== " " &&
         _width(rest.slice(0, take + 1), styles, rest_offset) <= current_limit
       ) {
@@ -602,7 +600,7 @@ export function compose_lines(doc: TextDocument): ComposedLines {
 
   const body = raw.endsWith("\r") ? raw.slice(0, -1) : raw;
   const paragraphs = split(body, "\r");
-  if (len(para_geo) !== len(paragraphs)) {
+  if (para_geo.length !== paragraphs.length) {
     // AE stores exactly one paragraph run per paragraph (and
     // _splice_text preserves that); a mismatch means a malformed
     // document whose geometry we must not guess.
@@ -611,12 +609,12 @@ export function compose_lines(doc: TextDocument): ComposedLines {
 
   const spans: [number, number][] = [];
   let offset = 0;
-  for (const [index, paragraph] of enumerate(paragraphs)) {
+  for (const [index, paragraph] of paragraphs.entries()) {
     const [limit, first_limit] = para_geo[index];
     const lengths = _break_paragraph(paragraph, styles, offset, limit, first_limit);
-    for (const [line_no, length] of enumerate(lengths)) {
+    for (const [line_no, length] of lengths.entries()) {
       let end = offset + length;
-      if (line_no === len(lengths) - 1) {
+      if (line_no === lengths.length - 1) {
         end += 1; // the paragraph's \r (or the raw terminator)
       }
       spans.push([offset, end]);
@@ -629,8 +627,8 @@ export function compose_lines(doc: TextDocument): ComposedLines {
   // its advance bump (probed M_FAUXB).
   const baselines: number[] = [];
   let y = 0.0;
-  for (const [line_no, [start, end]] of enumerate(spans)) {
-    const line_styles = py_or(styles.slice(start, Math.min(end, len(styles))), [at(styles, -1)]);
+  for (const [line_no, [start, end]] of spans.entries()) {
+    const line_styles = py_or(styles.slice(start, Math.min(end, styles.length)), [at(styles, -1)]);
     if (line_no === 0) {
       y += max(
         line_styles.map(
@@ -644,7 +642,7 @@ export function compose_lines(doc: TextDocument): ComposedLines {
   }
 
   const kept = sum(baselines.map((b) => (b <= height ? 1 : 0)));
-  return new ComposedLines(spans.slice(0, kept), baselines.slice(0, kept), kept < len(spans));
+  return new ComposedLines(spans.slice(0, kept), baselines.slice(0, kept), kept < spans.length);
 }
 
 /**

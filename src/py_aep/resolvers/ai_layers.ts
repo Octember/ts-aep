@@ -19,11 +19,8 @@ import {
   b,
   bytes_,
   bytes_eq,
-  dict_get,
   getitem,
   int,
-  len,
-  py_bool,
   type PathLike,
 } from "../../pyrt/index.ts";
 import { CosParser, IndirectObject, IndirectReference, decode_pdf_text_string } from "../cos/index.ts";
@@ -123,7 +120,7 @@ export function _parse_object_at(data: Uint8Array, offset: number): any {
 /** Follow an indirect reference to its object; pass other values through. */
 export function _resolve(value: any, data: Uint8Array, offsets: Map<number, number>): any {
   if (value instanceof IndirectReference) {
-    const offset = dict_get(offsets, value.object_number);
+    const offset = offsets.get(value.object_number) ?? null;
     return offset == null ? null : _parse_object_at(data, offset);
   }
   return value;
@@ -188,28 +185,28 @@ export function read_ai_layer_ocgs(
   // cannot be read, which callers handle as this module's own error.
   try {
     const parser = new CosParser(
-      new BytesIO(bytes_.slice(data, marker + len(b("/OCProperties")))),
+      new BytesIO(bytes_.slice(data, marker + b("/OCProperties").length)),
     );
     parser.lex();
     const oc_properties = _resolve(parser.parse_value(), data, offsets);
     if (!(oc_properties instanceof Map)) {
       throw new UnsupportedAiLayersError(`${name}: unreadable /OCProperties.`);
     }
-    const config_ref = _resolve(dict_get(oc_properties, "D"), data, offsets);
+    const config_ref = _resolve(oc_properties.get("D") ?? null, data, offsets);
     const config = config_ref instanceof Map ? config_ref : new Map<string, any>();
     const order = _order_object_numbers(
-      _resolve(dict_get(config, "Order"), data, offsets),
+      _resolve(config.get("Order") ?? null, data, offsets),
       [],
     );
     const hidden = new Set(
-      _order_object_numbers(_resolve(dict_get(config, "OFF"), data, offsets), []),
+      _order_object_numbers(_resolve(config.get("OFF") ?? null, data, offsets), []),
     );
-    const ocgs = _resolve(dict_get(oc_properties, "OCGs"), data, offsets);
+    const ocgs = _resolve(oc_properties.get("OCGs") ?? null, data, offsets);
     const listed = new Map<number, IndirectReference>();
     for (const ref of Array.isArray(ocgs) ? ocgs : []) {
       if (ref instanceof IndirectReference) listed.set(ref.object_number, ref);
     }
-    const refs: IndirectReference[] = py_bool(order)
+    const refs: IndirectReference[] = order?.length > 0
       ? [...order]
           .reverse()
           .filter((n) => listed.has(n))
@@ -217,7 +214,7 @@ export function read_ai_layer_ocgs(
       : [...listed.values()];
     for (const ref of refs) {
       const ocg = _resolve(ref, data, offsets);
-      if (ocg instanceof Map && is_str_or_bytes(dict_get(ocg, "Name"))) {
+      if (ocg instanceof Map && is_str_or_bytes(ocg.get("Name") ?? null)) {
         layers.push(
           new AiLayer(
             ref.object_number,
@@ -234,7 +231,7 @@ export function read_ai_layer_ocgs(
       { cause: exc },
     );
   }
-  if (!py_bool(layers)) {
+  if (layers.length === 0) {
     throw new UnsupportedAiLayersError(`${name}: no named layers found.`);
   }
   return layers;
@@ -289,7 +286,7 @@ export function _find_ai_icc(file: PathLike, data: Uint8Array | null = null): Ui
     if (body.length > 8_000_000) continue;
     const profile = inflate_or_null(body);
     if (profile == null) continue;
-    if (len(profile) >= 132 && bytes_eq(bytes_.slice(profile, 36, 40), b("acsp"))) {
+    if (profile.length >= 132 && bytes_eq(bytes_.slice(profile, 36, 40), b("acsp"))) {
       return profile;
     }
   }

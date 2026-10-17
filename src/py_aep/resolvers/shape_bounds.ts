@@ -40,11 +40,9 @@ import {
   float_repr,
   getitem,
   int,
-  len,
   max,
   min,
   mod,
-  py_bool,
   radians,
   repr,
 } from "../../pyrt/index.ts";
@@ -161,7 +159,7 @@ export function _closed_path(
   outs: _Point[],
   closed: boolean,
 ): _Path {
-  const count = len(vertices);
+  const count = vertices.length;
   const path: _Path = [];
   const n = closed ? count : count - 1;
   for (let i = 0; i < n; i++) {
@@ -291,7 +289,7 @@ export function _bezier_path(item: PropertyGroup, time: number): _Path {
     time,
   ) as Shape;
   const vertices: _Point[] = shape.vertices.map((v): _Point => [v[0], v[1]]);
-  if (!py_bool(vertices)) {
+  if (vertices.length === 0) {
     return [];
   }
   return _closed_path(
@@ -404,16 +402,16 @@ export function _walk(
         ? _stroke_reach(item as PropertyGroup, time)
         : null;
       for (const path of pending.slice(painted)) {
-        if (py_bool(path)) {
+        if (path?.length > 0) {
           geometry.add_box(_path_box(_map_path(to_layer, path)));
         }
       }
-      painted = len(pending);
+      painted = pending.length;
       if (reach == null) {
         continue;
       }
       for (const path of pending) {
-        if (py_bool(path)) {
+        if (path?.length > 0) {
           const local_box = _path_box(path);
           const corners: _Point[] = [
             [local_box.left - reach, local_box.top - reach],

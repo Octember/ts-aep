@@ -7,7 +7,7 @@
 
 import { b64decode } from "../../pyrt/base64.ts";
 import { gzip_decompress } from "../../pyrt/zlib.ts";
-import { BytesIO, bytes_, len, py_assert } from "../../pyrt/index.ts";
+import { BytesIO, bytes_, py_assert } from "../../pyrt/index.ts";
 import { CosParser } from "./cos.ts";
 
 export let _COS_TEMPLATE_CACHE: any | null = null;
@@ -19,7 +19,7 @@ export function get_cos_template(): any {
   }
 
   const raw = bytes_.lstrip(gzip_decompress(b64decode(POINT_TEXT_COS_TEMPLATE)));
-  const parser = new CosParser(new BytesIO(raw), len(raw));
+  const parser = new CosParser(new BytesIO(raw), raw.length);
   const result = parser.parse();
   py_assert(result instanceof Map);
   _COS_TEMPLATE_CACHE = result;

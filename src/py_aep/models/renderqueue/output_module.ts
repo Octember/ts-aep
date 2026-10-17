@@ -1059,7 +1059,7 @@ export class OutputModule {
       [w, h] = [this._roou.width, this._roou.height];
     }
 
-    if (this._om_ldat.use_region_of_interest && py_bool(comp._viewer) && py_bool(comp._viewer.views)) {
+    if (this._om_ldat.use_region_of_interest && comp._viewer != null && comp._viewer.views?.length > 0) {
       const viewer = comp._viewer;
       const opts = at(viewer.views, viewer.active_view_index).options;
       w = opts.roi_right - opts.roi_left;
@@ -1168,7 +1168,7 @@ export class OutputModule {
         }
       }
     }
-    return py_or(this._output_color_space, "");
+    return this._output_color_space || "";
   }
 
   set output_color_space(value: string) {
@@ -1266,11 +1266,11 @@ export class OutputModule {
    *     The complete file template path.
    */
   static _build_file_template(folder_path: string, file_name_template: string, is_folder: boolean): string {
-    if (!py_bool(folder_path)) {
+    if (!folder_path) {
       return "";
     }
 
-    if (!py_bool(file_name_template)) {
+    if (!file_name_template) {
       return folder_path;
     }
 
@@ -1289,7 +1289,7 @@ export class OutputModule {
       return new Map();
     }
     const text = this._alas_utf8.value;
-    if (!py_bool(text)) {
+    if (!text) {
       return new Map();
     }
     const data = json_loads(text);
@@ -1303,7 +1303,7 @@ export class OutputModule {
 
   /** The four-character video codec identifier. */
   get _video_codec(): string | null {
-    return py_or(this._roou.video_codec, null);
+    return this._roou.video_codec || null;
   }
 
   /** Derive file extension from format_id, with Cineon special case. */
@@ -1316,7 +1316,7 @@ export class OutputModule {
       }
       return "dpx";
     }
-    return dict_get(FORMAT_ID_EXTENSIONS, format_id, null);
+    return FORMAT_ID_EXTENSIONS.get(format_id) ?? null;
   }
 
   /** The output folder path from the alas chunk. */
@@ -1423,7 +1423,7 @@ export class OutputModule {
     const extension = this._resolve_extension;
     const om_channels = this.settings.__getitem__("Channels");
     const om_depth = this.settings.__getitem__("Depth");
-    const compressor = py_bool(this._video_codec) ? dict_get(VIDEO_CODEC_NAMES, this._video_codec, this._video_codec) : null;
+    const compressor = this._video_codec ? VIDEO_CODEC_NAMES.get(this._video_codec) ?? this._video_codec : null;
 
     const [effective_width, effective_height] = this._effective_dimensions;
     const effective_frame_rate = this._effective_frame_rate;
@@ -1436,7 +1436,7 @@ export class OutputModule {
     const time_span = resolve_time_span(comp, rq_settings_map, effective_frame_rate);
 
     const project = this._project;
-    const project_name = py_bool(project.file) ? new Path(project.file).stem : "Untitled Project";
+    const project_name = project.file ? new Path(project.file).stem : "Untitled Project";
 
     return resolve_output_filename(
       this.file_template,

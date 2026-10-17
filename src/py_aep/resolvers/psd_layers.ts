@@ -20,11 +20,9 @@ import {
   bytes_,
   bytes_eq,
   decode,
-  dict_get,
   floordiv,
   IndexError,
   mod,
-  py_bool,
   py_eq,
   py_slice,
   range,
@@ -610,8 +608,8 @@ export function read_psd_layers(file: PathLike, kw: { mask_boxes?: boolean } = {
       if (area > _MAX_INFLATION * source) {
         throw new UnsupportedPsdLayersError(`${name}: layer ${repr(rec.name)} is larger than its pixel data.`);
       }
-      const alpha = rec.is_fill ? null : dict_get(spans, -1);
-      const mask_span = dict_get(spans, mask.channel_id);
+      const alpha = rec.is_fill ? null : spans.get(-1) ?? null;
+      const mask_span = spans.get(mask.channel_id);
       records[index] = rec._replace({
         mask_box: _visible_box(
           region,
@@ -983,7 +981,7 @@ export function _parse_layer_extra(
   // only a user deviation counts: Fill away from 100% (`iOpa` present),
   // Blend Interior checked, or a channel restriction.
   const has_blend_data =
-    fill_opacity != null || py_bool(blend_interior) || py_bool(channel_restrictions);
+    fill_opacity != null || !!blend_interior || channel_restrictions?.length > 0;
   const style_blocks =
     effects != null || has_blend_data
       ? new PsdStyleBlocks(effects, fill_opacity, blend_interior, channel_restrictions)
