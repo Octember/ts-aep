@@ -49,6 +49,7 @@ import {
   ValueError,
   NotImplementedError,
   json_loads,
+  type ClassAttributes,
 } from "../../../pyrt/index.ts";
 
 // NOTE(port): Python's `isinstance(x, bool) or isinstance(x, int)` accepts bools as ints.
@@ -255,6 +256,7 @@ export const OM_SETTINGS = new Map<string, [string, any]>([
  * @see https://ae-scripting.docsforadobe.dev/renderqueue/outputmodule/
  */
 export class OutputModule {
+  declare ["constructor"]: ClassAttributes<typeof OutputModule>;
   /**
    * When `true`, writes all source footage XMP metadata to the output file.
    * Read / Write.
@@ -731,7 +733,7 @@ export class OutputModule {
         continue;
       }
       const forced = [...allowed][0];
-      const [getter, setter] = getitem((this.constructor as typeof OutputModule)._CLAMP_ACCESSORS, key);
+      const [getter, setter] = getitem(this.constructor._CLAMP_ACCESSORS, key);
       let current: RuleValue;
       try {
         current = getter(this) as RuleValue;
@@ -757,7 +759,7 @@ export class OutputModule {
    * fallbacks from out-of-enum stored bytes (the binary is trusted).
    */
   validate_state(): [string, RuleValue, ReadonlySet<unknown>][] {
-    const cls = this.constructor as typeof OutputModule;
+    const cls = this.constructor;
     const violations: [string, RuleValue, ReadonlySet<unknown>][] = [];
     const fmt = this._format;
     if (!OutputFormat.has(fmt)) {
@@ -1339,7 +1341,7 @@ export class OutputModule {
    * the project's platform (see {@link py_aep.parse | parse}).
    */
   get file_template(): string {
-    return (this.constructor as typeof OutputModule)._build_file_template(this._folder_path, this._file_name_template, this._is_folder);
+    return this.constructor._build_file_template(this._folder_path, this._file_name_template, this._is_folder);
   }
 
   set file_template(value: string) {

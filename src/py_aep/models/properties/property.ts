@@ -24,7 +24,7 @@ import type { Project } from "../project.ts";
 import { Curves } from "./curves.ts";
 import type { Gradient } from "./gradient.ts";
 import { Keyframe, _check_time_units, _timebase_units } from "./keyframe.ts";
-import type { _ValueType } from "./keyframe.ts";
+import type { KeyframeValue, PropertyValue, _ValueType } from "./keyframe.ts";
 import { KeyframeEase } from "./keyframe_ease.ts";
 import type { MarkerValue } from "./marker.ts";
 import { _ALWAYS_MODIFIED, _CANVARY_OVERRIDES, _ISSPATIAL_OVERRIDES, _NAME_OVERRIDES, _PLACEHOLDER_UNBOUNDED, _UNBOUNDED_MATCH_NAMES } from "./overrides.ts";
@@ -33,7 +33,7 @@ import { PropertyBase } from "./property_base.ts";
 import { Shape } from "./shape.ts";
 import type { PropertyGroup } from "./property_group.ts";
 import { type MaskPropertyGroup } from "./mask_property_group.ts";
-import { deferred, deepcopy, dict_get, getitem, isclose, py_bool, py_eq, sorted, warn, int, round, floordiv, TypeError_, ValueError, KeyError, IndexError, AttributeError, NotImplementedError, py_assert, repr, hasattr, getattr, min, max, range, zip, len, float, lshift, rshift, and, or, b, descriptor, list_mul, type_name } from "../../../pyrt/index.ts";
+import { deferred, deepcopy, dict_get, getitem, isclose, py_bool, py_eq, sorted, warn, int, round, floordiv, TypeError_, ValueError, KeyError, IndexError, AttributeError, NotImplementedError, py_assert, repr, hasattr, getattr, min, max, range, zip, len, float, lshift, rshift, and, or, b, descriptor, list_mul, type_name, type ClassAttributes } from "../../../pyrt/index.ts";
 
 const _property_group = deferred<typeof import("./property_group.ts")>("py_aep/models/properties/property_group");
 import { AVItem } from "../items/av_item.ts";
@@ -234,12 +234,16 @@ export function _values_equal(a: unknown, b: unknown): boolean {
  * `Property` is a subclass of {@link PropertyBase}. All methods and attributes
  * of {@link PropertyBase} are available when working with `Property`.
  *
+ * @typeParam V - The type of {@link Property.value | value}. A well-known match
+ *   name looked up on a group gives it (`"ADBE Position"` is `Property<number[]>`);
+ *   a property of unknown kind is `Property`, whose value is dynamic.
  * @example
  * @see https://ae-scripting.docsforadobe.dev/property/property/
  */
-export class Property extends PropertyBase {
+export class Property<V extends PropertyValue = any> extends PropertyBase {
+  declare ["constructor"]: ClassAttributes<typeof Property>;
   /** The list of keyframes for this property. Read-only. */
-  declare keyframes: Keyframe[];
+  declare keyframes: Keyframe<KeyframeValue<V>>[];
 
   /** The number of dimensions in the property value (1, 2, 3, or 4). Read-only. */
   declare dimensions: number;
@@ -567,7 +571,7 @@ export class Property extends PropertyBase {
     match_name: string;
     property_depth: number;
     auto_name?: string | null;
-    keyframes: Keyframe[];
+    keyframes: Keyframe<KeyframeValue<NoInfer<V>>>[];
     value: unknown;
     expression_enabled?: boolean | null;
     expression?: string | null;
@@ -1103,7 +1107,7 @@ export class Property extends PropertyBase {
     // ENUM / LAYER. This bypasses the can_vary / fallback gating below,
     // which only governs layer/shape props.
     const effect_bounded =
-      this._is_in_effect() && (this.constructor as typeof Property)._EFFECT_BOUNDED_CONTROL_TYPES.has(this._property_control_type);
+      this._is_in_effect() && this.constructor._EFFECT_BOUNDED_CONTROL_TYPES.has(this._property_control_type);
     if (!effect_bounded) {
       // AE writes [0.0] bounds only on ANIMATABLE bounded leaves; it omits
       // them on bounded menu/dropdown leaves (Line Cap, Fill Rule, Grad
@@ -1204,7 +1208,7 @@ export class Property extends PropertyBase {
       }
       return;
     }
-    if (!(this.constructor as typeof Property)._NUMERIC_PVTS.has(this.property_value_type)) return;
+    if (!this.constructor._NUMERIC_PVTS.has(this.property_value_type)) return;
     if (this._tdb4.no_value) {
       // No-value properties (e.g. Layer Source Alternate) carry a
       // 4-zero-byte empty cdat; a padded double block makes AE fail
@@ -1499,11 +1503,11 @@ export class Property extends PropertyBase {
    * the leader, so the leader is briefly separated with nothing to
    * drive.
    */
-  _separation_followers(): Property[] | null {
+  _separation_followers(): Property<number>[] | null {
     if (!this.is_separation_leader || !this.dimensions_separated) return null;
     const followers = Array.from(range(3), (dim) => this.get_separation_follower(dim));
     if (followers.some((follower) => follower == null)) return null;
-    return followers as Property[];
+    return followers as Property<number>[];
   }
 
   /** The Curves effect's static curves, decoded from its aRbp. */
@@ -1625,7 +1629,7 @@ export class Property extends PropertyBase {
    * // prop.value = text_doc; // unnecessary - same object
    * ```
    */
-  get value(): any {
+  get value(): V {
     return this._mask_inert_z(this._stored_static_value());
   }
 
@@ -1688,7 +1692,7 @@ export class Property extends PropertyBase {
    * untouched Z follower synthetic on a 2D layer (as AE does) and
    * avoids materializing it for nothing.
    */
-  _set_separated_value(value: unknown, followers: Property[]): void {
+  _set_separated_value(value: unknown, followers: Property<number>[]): void {
     _validate_value(this, value);
     if (!Array.isArray(value)) {
       throw new ValueError(
@@ -1867,7 +1871,7 @@ export class Property extends PropertyBase {
     if (this._min_value_fallback !== _UNSET) return this._min_value_fallback;
     if (this._tdum != null) {
       if (this._is_placeholder_bound(this._tdum)) return null;
-      return (this.constructor as typeof Property)._read_tdum(this._tdum);
+      return this.constructor._read_tdum(this._tdum);
     }
     return null;
   }
@@ -1881,7 +1885,7 @@ export class Property extends PropertyBase {
     if (this._max_value_fallback !== _UNSET) return this._max_value_fallback;
     if (this._tduM != null) {
       if (this._is_placeholder_bound(this._tduM)) return null;
-      return (this.constructor as typeof Property)._read_tdum(this._tduM);
+      return this.constructor._read_tdum(this._tduM);
     }
     return null;
   }
@@ -2137,7 +2141,7 @@ export class Property extends PropertyBase {
     if (followers.some((follower) => follower == null)) {
       throw new ValueError(`${repr(this.match_name)} has no separation followers to transfer to`);
     }
-    const live = followers as Property[];
+    const live = followers as Property<number>[];
     const animated = this.keyframes?.length > 0 || live.some((follower) => follower.keyframes?.length > 0);
     if (value) {
       if (animated) {
@@ -2176,7 +2180,7 @@ export class Property extends PropertyBase {
    * only on a 3D layer, matching AE (`transform_separated.aep` leaves it
    * synthetic on a 2D one).
    */
-  _separate_static(followers: Property[]): void {
+  _separate_static(followers: Property<number>[]): void {
     const components = this.value as number[];
     const default_ = this.default_value as number[];
     this._set_separated_flags(true);
@@ -2196,8 +2200,8 @@ export class Property extends PropertyBase {
    * AE writes the composed value onto the leader and reverts the
    * followers to their dead, unserialized state.
    */
-  _recombine_static(followers: Property[]): void {
-    const composed = followers.map((follower) => float(follower.value as number));
+  _recombine_static(followers: Property<number>[]): void {
+    const composed = followers.map((follower) => float(follower.value));
     this._set_separated_flags(false);
     this.value = composed;
     for (const follower of followers) _deactivate_follower(follower);
@@ -2225,7 +2229,7 @@ export class Property extends PropertyBase {
    * HOLD keyframe to LINEAR here, and this project prefers not to mirror
    * that loss.
    */
-  _separate_animated(followers: Property[]): void {
+  _separate_animated(followers: Property<number>[]): void {
     const keyframes = [...this.keyframes];
     const times = keyframes.map((keyframe) => keyframe.time);
     const values = keyframes.map((keyframe) => keyframe.value as number[]);
@@ -2234,7 +2238,7 @@ export class Property extends PropertyBase {
     const interpolation = keyframes.map(
       (keyframe) => [keyframe.in_interpolation_type, keyframe.out_interpolation_type] as const,
     );
-    const [incoming, outgoing] = (this.constructor as typeof Property)._segment_spans(times);
+    const [incoming, outgoing] = this.constructor._segment_spans(times);
 
     this.remove_all_keys();
     this._set_separated_flags(true);
@@ -2290,16 +2294,16 @@ export class Property extends PropertyBase {
    * no keyframe of its own at a given time contributes its interpolated
    * value there, and no tangent.
    */
-  _recombine_animated(followers: Property[]): void {
+  _recombine_animated(followers: Property<number>[]): void {
     if (!followers.some((follower) => follower.keyframes?.length > 0)) {
       this._recombine_static(followers);
       return;
     }
-    const keys_at: Map<number, Keyframe>[] = followers.map(
+    const keys_at: Map<number, Keyframe<number>>[] = followers.map(
       (follower) => new Map(follower.keyframes.map((kf) => [kf.time, kf] as const)),
     );
     const times = sorted([...new Set(keys_at.flatMap((per_dimension) => [...per_dimension.keys()]))]);
-    const [incoming, outgoing] = (this.constructor as typeof Property)._segment_spans(times);
+    const [incoming, outgoing] = this.constructor._segment_spans(times);
     const dimensions = followers.length;
     const composed = times.map(() => list_mul([0.0], dimensions));
     const in_tangents = times.map(() => list_mul([0.0], dimensions));
@@ -2324,7 +2328,7 @@ export class Property extends PropertyBase {
           composed[index][dimension] = typeof sampled === "number" ? float(sampled) : 0.0;
           continue;
         }
-        composed[index][dimension] = float(keyframe.value as number);
+        composed[index][dimension] = float(keyframe.value);
         for (const [direction, target, spans] of [
           ["in", in_tangents, incoming],
           ["out", out_tangents, outgoing],
@@ -2613,11 +2617,11 @@ export class Property extends PropertyBase {
    * Returns `null` when this property is not a follower or the
    * leader cannot be found.
    */
-  get separation_leader(): Property | null {
+  get separation_leader(): Property<number[]> | null {
     if (!_SEPARATION_FOLLOWERS.includes(this.match_name)) return null;
     const parent = this.parent_property;
     if (parent == null || !hasattr(parent, "properties")) return null;
-    return parent.property(_SEPARATION_LEADER) as Property | null;
+    return parent.property(_SEPARATION_LEADER);
   }
 
   /**
@@ -2629,7 +2633,7 @@ export class Property extends PropertyBase {
    *
    * dim: The dimension number (starting at 0).
    */
-  get_separation_follower(dim: number): Property | null {
+  get_separation_follower(dim: number): Property<number> | null {
     if (!this.is_separation_leader) return null;
     const parent = this.parent_property;
     if (parent == null || !hasattr(parent, "properties")) return null;
@@ -2638,7 +2642,7 @@ export class Property extends PropertyBase {
     }
     const match_name = _SEPARATION_FOLLOWERS[dim];
     try {
-      return parent.property(match_name) as Property | null;
+      return parent.property(match_name) as Property<number> | null;
     } catch (e) {
       // `property()` reaches `PropertyGroup.__getitem__`, which
       // raises rather than returning None. A separated leader on a
@@ -2664,7 +2668,7 @@ export class Property extends PropertyBase {
    * time: The time in seconds; a floating-point value. The beginning
    * of the composition is 0.
    */
-  nearest_key(time: number): Keyframe {
+  nearest_key(time: number): Keyframe<KeyframeValue<V>> {
     const index = this.nearest_key_index(time);
     return this.keyframes[index];
   }
@@ -2898,7 +2902,7 @@ export class Property extends PropertyBase {
    * NotImplementedError: If `pre_expression` is `false`,
    * because the parser cannot evaluate expressions.
    */
-  value_at_time(time: number, pre_expression = true): any {
+  value_at_time(time: number, pre_expression = true): V {
     if (!pre_expression) {
       throw new NotImplementedError("Expression evaluation is not supported by the parser.");
     }
@@ -3332,7 +3336,7 @@ export class Property extends PropertyBase {
     const kf_data = build_kf_data(item_type, this.dimensions);
     const ldat_item = build_ldat_item(kf_data, { spatial: this._has_motion_path });
 
-    const kf = new Keyframe({
+    const kf = new Keyframe<KeyframeValue<V>>({
       _ldat_item: ldat_item,
       _frame_rate: frame_rate,
     });
@@ -3844,7 +3848,7 @@ export class Property extends PropertyBase {
     this._ensure_materialized();
     const [lhd3, ldat] = this._ensure_animated();
     const ldat_item = build_parallel_ldat_item(this._keyframe_item_type());
-    const kf = new Keyframe({ _ldat_item: ldat_item, _frame_rate: frame_rate });
+    const kf = new Keyframe<KeyframeValue<V>>({ _ldat_item: ldat_item, _frame_rate: frame_rate });
     kf._bind_property(this);
     kf._set_time_units(this._keyframe_units_at(time));
     ldat.items.push(ldat_item);
@@ -3886,7 +3890,7 @@ export class Property extends PropertyBase {
     const new_doc = deepcopy(doc_array[nearest]);
 
     const ldat_item = build_parallel_ldat_item(this._keyframe_item_type());
-    const kf = new Keyframe({ _ldat_item: ldat_item, _frame_rate: frame_rate });
+    const kf = new Keyframe<KeyframeValue<V>>({ _ldat_item: ldat_item, _frame_rate: frame_rate });
     kf._bind_property(this);
     kf._set_time_units(this._keyframe_units_at(time));
     const [idx, exists] = this._keyframe_insert_index(kf.time_units);
@@ -4014,7 +4018,7 @@ export class Property extends PropertyBase {
     const ldat_item = kind.build_header_item(new_value);
     const value_chunk = kind.build_value_chunk(this, new_value);
 
-    const kf = new Keyframe({ _ldat_item: ldat_item, _frame_rate: frame_rate });
+    const kf = new Keyframe<KeyframeValue<V>>({ _ldat_item: ldat_item, _frame_rate: frame_rate });
     kf._bind_property(this);
     kf._set_time_units(units);
     const [idx, exists] = this._keyframe_insert_index(kf.time_units);
@@ -4155,6 +4159,7 @@ export class Property extends PropertyBase {
    * time: The composition time, in seconds.
    * new_value: The value to set at that time.
    */
+  set_value_at_time(time: number, new_value: PropertyValue | string): void;
   set_value_at_time(time: number, new_value: _ValueType): void {
     this._reject_curves_write();
     validate_number(time);
@@ -4265,6 +4270,7 @@ export class Property extends PropertyBase {
    *
    * ValueError: If `times` and `new_values` differ in length.
    */
+  set_values_at_times(times: number[], new_values: (PropertyValue | string)[]): void;
   set_values_at_times(times: number[], new_values: _ValueType[]): void {
     if (times.length !== new_values.length) {
       throw new ValueError("times and new_values must have the same length");

@@ -31,7 +31,6 @@ import type { Chunk } from "../../binary/chunk.ts";
 import type { CompItem } from "../items/composition.ts";
 import { Property } from "../properties/property.ts";
 import type { PropertyGroup } from "../properties/property_group.ts";
-import type { TextDocument } from "../text/text_document.ts";
 import { validate_bool, validate_enum, validate_name, validate_number, validate_vector2, validate_vector3 } from "../validators.ts";
 import { Layer } from "./layer.ts";
 import { AVItem } from "../items/av_item.ts";
@@ -803,7 +802,7 @@ export class AVLayer extends Layer {
       return this._text_ink_rect(comp_time);
     }
     if (layer_type === LayerType.SHAPE) {
-      const contents = this.__getitem__("ADBE Root Vectors Group") as PropertyGroup;
+      const contents = this.__getitem__("ADBE Root Vectors Group");
       return shape_layer_rect(contents, comp_time, extents);
     }
     return {
@@ -815,20 +814,20 @@ export class AVLayer extends Layer {
   }
 
   _text_ink_rect(time: number): { top: number; left: number; width: number; height: number } {
-    const text = this.__getitem__("ADBE Text Properties") as PropertyGroup;
-    const animators = text.__getitem__("ADBE Text Animators") as PropertyGroup;
+    const text = this.__getitem__("ADBE Text Properties");
+    const animators = text.__getitem__("ADBE Text Animators");
     if (animators.properties?.length > 0) {
       throw new NotImplementedError("source_rect_at_time does not model text animators");
     }
-    const path_options = text.__getitem__("ADBE Text Path Options") as PropertyGroup;
+    const path_options = text.__getitem__("ADBE Text Path Options");
     if (py_bool(path_options.__getitem__("ADBE Text Path").value)) {
       throw new NotImplementedError("source_rect_at_time does not model text on a path");
     }
     if (this._ldta.three_d_per_char) {
       throw new NotImplementedError("source_rect_at_time does not model per-character 3D text");
     }
-    const document = (text.__getitem__("ADBE Text Document") as Property).value_at_time(time);
-    return text_ink_rect(document as TextDocument) as { top: number; left: number; width: number; height: number };
+    const document = text.__getitem__("ADBE Text Document").value_at_time(time);
+    return text_ink_rect(document) as { top: number; left: number; width: number; height: number };
   }
 
   /**

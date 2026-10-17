@@ -10,6 +10,7 @@ import {
   getattr,
   round,
   str,
+  type ClassAttributes,
 } from "../../../pyrt/index.ts";
 import { ChunkField } from "../descriptors.ts";
 import { label_index } from "../preferences.ts";
@@ -220,6 +221,7 @@ export class ParaMeshField<T extends number | boolean = number> {
  *     This functionality was added in After Effects 26.0
  */
 export class ParametricMeshOptions {
+  declare ["constructor"]: ClassAttributes<typeof ParametricMeshOptions>;
   // Annotation-only in Python; each subclass sets its own value.
   static _match_name: string;
 
@@ -233,7 +235,7 @@ export class ParametricMeshOptions {
 
   _properties(name: string): Property {
     if (this._group == null) {
-      this._group = this._layer.property((this.constructor as typeof ParametricMeshOptions)._match_name) as PropertyGroup;
+      this._group = this._layer.property(this.constructor._match_name) as PropertyGroup;
     }
     return this._group.property(name) as Property;
   }

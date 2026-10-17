@@ -40,6 +40,7 @@ import {
   round,
   warn,
   deferred,
+  type ClassAttributes,
 } from "../../../pyrt/index.ts";
 
 const _synthesis_core = deferred<typeof import("../../synthesis/core.ts")>("py_aep/synthesis/core");
@@ -106,6 +107,11 @@ export function _list_remove(xs: unknown[], x: unknown): void {
   throw new ValueError("list.remove(x): x not in list");
 }
 
+/** A group holding a property whose left-out default follows other state (see `Layer._LIVE_DEFAULTS`). */
+export type LiveDefaultGroup = "ADBE Transform Group" | "ADBE Camera Options Group";
+/** A property whose left-out default follows other state (see `Layer._LIVE_DEFAULTS`). */
+export type LiveDefaultProperty = "ADBE Position" | "ADBE Camera Zoom" | "ADBE Camera Focus Distance";
+
 /**
  * The `Layer` object provides access to layers within compositions.
  *
@@ -123,6 +129,7 @@ export function _list_remove(xs: unknown[], x: unknown): void {
  * @see https://ae-scripting.docsforadobe.dev/layer/layer/
  */
 export class Layer extends PropertyGroup {
+  declare ["constructor"]: ClassAttributes<typeof Layer>;
   static _LAYER_MATCH_NAMES: Map<LayerType, string> = new Map<LayerType, string>([
     [LayerType.AV, "ADBE AV Layer"],
     [LayerType.LIGHT, "ADBE Light Layer"],
@@ -145,7 +152,7 @@ export class Layer extends PropertyGroup {
 
   // The (group, property) match names whose default follows other state,
   // which `_write_out_moved_defaults` writes once that state moves it.
-  static _LIVE_DEFAULTS: ReadonlyArray<readonly [string, string]> = [];
+  static _LIVE_DEFAULTS: ReadonlyArray<readonly [LiveDefaultGroup, LiveDefaultProperty]> = [];
 
   /**
    * When `true`, the layer is enabled. Overrides `PropertyBase.enabled`
@@ -503,7 +510,7 @@ export class Layer extends PropertyGroup {
    * `"ParametricMeshLayer"`, or `"Layer"`. Read-only.
    */
   get layer_type(): string {
-    return (this.constructor as typeof Layer)._LAYER_TYPE_NAMES.get(LayerType.of(this._ldta.layer_type)) ?? "AVLayer";
+    return this.constructor._LAYER_TYPE_NAMES.get(LayerType.of(this._ldta.layer_type)) ?? "AVLayer";
   }
 
   /**
@@ -692,7 +699,7 @@ export class Layer extends PropertyGroup {
    * `match_name="ADBE Marker"` whose keyframes hold marker values.
    * `null` when the layer has no markers.
    */
-  get marker(): Property | null {
+  get marker(): Property<MarkerValue | null> | null {
     let prop: Property | PropertyGroup;
     try {
       prop = this.__getitem__("ADBE Marker");
@@ -700,7 +707,7 @@ export class Layer extends PropertyGroup {
       if (!(e instanceof KeyError)) throw e;
       return null;
     }
-    return prop as Property;
+    return prop;
   }
 
   /**
@@ -722,7 +729,7 @@ export class Layer extends PropertyGroup {
    */
   get markers(): MarkerValue[] {
     if (this.marker == null) return [];
-    return this.marker.keyframes.map((kf) => kf.value) as MarkerValue[];
+    return this.marker.keyframes.map((kf) => kf.value);
   }
 
   /**
@@ -827,9 +834,9 @@ export class Layer extends PropertyGroup {
    * Run on save, so every way of changing the state is covered.
    */
   _write_out_moved_defaults(): void {
-    for (const [group_name, match_name] of (this.constructor as typeof Layer)._LIVE_DEFAULTS) {
-      const group = this.__getitem__(group_name) as PropertyGroup;
-      const prop = group.__getitem__(match_name) as Property;
+    for (const [group_name, match_name] of this.constructor._LIVE_DEFAULTS) {
+      const group = this.__getitem__(group_name);
+      const prop = group.__getitem__(match_name);
       if (prop._tdsb == null || !prop._tdsb.synthetic) continue;
       if (prop.is_modified) prop._ensure_materialized();
     }
@@ -960,13 +967,13 @@ export class Layer extends PropertyGroup {
 
     const transform = this.transform;
 
-    const current = (match_name: string): unknown => {
-      const prop = transform.__getitem__(match_name) as Property;
+    const current = (match_name: "ADBE Anchor Point" | "ADBE Orientation" | "ADBE Scale"): number[] => {
+      const prop = transform.__getitem__(match_name);
       return prop.keyframes?.length > 0 ? prop.value_at_time(time) : prop.value;
     };
 
     // Decompose into AE transform components, keeping anchor fixed.
-    const anchor = current("ADBE Anchor Point") as number[];
+    const anchor = current("ADBE Anchor Point");
     const square_anchor = [anchor[0] * own_aspect, ...anchor.slice(1)];
 
     // Position and scale come straight from the local matrix - neither
@@ -974,7 +981,7 @@ export class Layer extends PropertyGroup {
     // Rotate X/Y/Z. `new_rz` is only used on the 2D path below, where the
     // orientation is divided out of the 3x3 first so it cannot leak into
     // the rotation (a layer switched from 3D to 2D can still carry one).
-    const orientation = current("ADBE Orientation") as number[];
+    const orientation = current("ADBE Orientation");
     let new_pos = decompose_transform(new_local, square_anchor)[0];
     new_pos = [new_pos[0] / new_space, ...new_pos.slice(1)];
     let [, new_scale, new_rz] = decompose_transform(
@@ -992,17 +999,17 @@ export class Layer extends PropertyGroup {
       new_scale = new_scale.map((component) => -Math.abs(component));
     }
 
-    const write_compensation = (match_name: string, new_value: unknown): void => {
+    const write_compensation = (match_name: "ADBE Position" | "ADBE Scale" | "ADBE Rotate Z", new_value: number | number[]): void => {
       // Only write values that actually changed to avoid materializing
       // synthetic properties unnecessarily. Keyframed scale / rotation
       // values are left untouched, matching ExtendScript (the layer
       // may visually jump for those).
-      const prop = transform.__getitem__(match_name) as Property;
+      const prop = transform.__getitem__(match_name);
       if (prop.keyframes?.length > 0) return;
       if (!py_eq(prop.value, new_value)) prop.value = new_value;
     };
 
-    const remap_separated_keyframes = (leader: Property, followers: Property[]): void => {
+    const remap_separated_keyframes = (leader: Property<number[]>, followers: Property<number>[]): void => {
       // Remap an animated separated Position into the new parent's space.
       //
       // A separated leader holds no keyframes of its own, so the generic
@@ -1019,7 +1026,7 @@ export class Layer extends PropertyGroup {
           const time = keyframe.time;
           let point: number[] | null = remapped.get(time) ?? null;
           if (point == null) {
-            point = remap.transform_point(leader.value_at_time(time) as number[]);
+            point = remap.transform_point(leader.value_at_time(time));
             remapped.set(time, point);
           }
           updates.push([keyframe, point[dimension]]);
@@ -1034,9 +1041,9 @@ export class Layer extends PropertyGroup {
     // scaled to 50% each key doubles, and under one scaled
     // [200, 50, 100] each key is divided per axis. Skipping them left
     // the layer 25 px out at one time and 62 px at another.
-    const scale_prop = transform.__getitem__("ADBE Scale") as Property;
+    const scale_prop = transform.__getitem__("ADBE Scale");
     if (scale_prop.keyframes?.length > 0) {
-      const scale_now = current("ADBE Scale") as number[];
+      const scale_now = current("ADBE Scale");
       const factors = Array.from(range(new_scale.length), (axis) =>
         axis < scale_now.length && scale_now[axis] !== 0
           ? new_scale[axis] / scale_now[axis]
@@ -1046,7 +1053,7 @@ export class Layer extends PropertyGroup {
       // `write_compensation` gives: an unchanged value is not written.
       if (factors.some((factor) => factor !== 1.0)) {
         for (const keyframe of scale_prop.keyframes) {
-          const components = keyframe.value as number[];
+          const components = keyframe.value;
           keyframe.value = components.map((component, axis) =>
             axis < factors.length ? component * factors[axis] : component,
           );
@@ -1058,7 +1065,7 @@ export class Layer extends PropertyGroup {
 
     // ExtendScript remaps every POSITION keyframe into the new parent's
     // space (measured in AE 2026).
-    const pos = transform.__getitem__("ADBE Position") as Property;
+    const pos = transform.__getitem__("ADBE Position");
     const separated = pos._separation_followers();
     if (separated != null) {
       // AE refuses `setValue` on a separated leader, but compensates
@@ -1073,7 +1080,7 @@ export class Layer extends PropertyGroup {
     } else if (pos.keyframes?.length > 0) {
       const remap = parent_remap;
       for (const kf of pos.keyframes) {
-        const kf_value = kf.value as number[];
+        const kf_value = kf.value;
         const dims = kf_value.length;
         kf.value = remap.transform_point(kf_value).slice(0, dims);
         for (const tangent_attr of ["in_spatial_tangent", "out_spatial_tangent"]) {
@@ -1095,10 +1102,10 @@ export class Layer extends PropertyGroup {
       // Position (a two-node camera's POI [900, 500, 0] under a null at
       // [700, 400, -100] turned 30 degrees about Y became
       // [123.2, 100, 186.6]).
-      const poi = transform.__getitem__("ADBE Anchor Point") as Property;
+      const poi = transform.__getitem__("ADBE Anchor Point");
       if (poi.keyframes?.length > 0) {
         for (const kf of poi.keyframes) {
-          const kf_value = kf.value as number[];
+          const kf_value = kf.value;
           kf.value = parent_remap.transform_point(kf_value).slice(0, kf_value.length);
         }
       } else {
@@ -1125,7 +1132,7 @@ export class Layer extends PropertyGroup {
       // A 2D layer has no Orientation to use, so AE puts the rotation
       // into Rotate Z (measured: a 2D child under a 30-degree parent
       // gets rotZ = -30 and orientation stays [0,0,0]).
-      const rotation = transform.__getitem__("ADBE Rotate Z") as Property;
+      const rotation = transform.__getitem__("ADBE Rotate Z");
       if (rotation.keyframes?.length > 0) {
         // AE offsets every rotation keyframe rather than giving up on
         // an animated one - keys of 15 and 75 under a 30-degree
@@ -1136,7 +1143,7 @@ export class Layer extends PropertyGroup {
         const offset =
           mod(compose_orientation([0.0, 0.0, 0.0], rotation_delta)[2] + 180.0, 360.0) - 180.0;
         for (const keyframe of rotation.keyframes) {
-          keyframe.value = (keyframe.value as number) + offset;
+          keyframe.value = keyframe.value + offset;
         }
         return;
       }
@@ -1153,10 +1160,10 @@ export class Layer extends PropertyGroup {
     // keyframed properties: a child with a keyframed Rotate Z would get
     // its position compensated but not its rotation, and jump by 362 px
     // in a case where AE does not move it at all.
-    const orientation_prop = transform.__getitem__("ADBE Orientation") as Property;
+    const orientation_prop = transform.__getitem__("ADBE Orientation");
     if (orientation_prop.keyframes?.length > 0) {
       for (const keyframe of orientation_prop.keyframes) {
-        keyframe.value = compose_orientation(keyframe.value as number[], rotation_delta);
+        keyframe.value = compose_orientation(keyframe.value, rotation_delta);
       }
       return;
     }
@@ -1483,7 +1490,7 @@ export class Layer extends PropertyGroup {
     const src_transform = this.transform;
     const dst_transform = copy.transform;
     if (src_transform == null || dst_transform == null) return;
-    for (const match_name of (this.constructor as typeof Layer)._COMP_RELATIVE_TRANSFORM) {
+    for (const match_name of this.constructor._COMP_RELATIVE_TRANSFORM) {
       let src_prop: Property | PropertyGroup;
       let dst_prop: Property | PropertyGroup;
       try {

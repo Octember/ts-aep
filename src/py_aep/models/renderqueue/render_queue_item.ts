@@ -27,6 +27,7 @@ import {
   StopIteration,
   str,
   ValueError,
+  type ClassAttributes,
 } from "../../../pyrt/index.ts";
 import { OutputModule } from "./output_module.ts";
 import { parse_output_module } from "../../parsers/output_module.ts";
@@ -112,6 +113,7 @@ export const RENDER_SETTINGS: SettingsSpec = new Map([
  * @see https://ae-scripting.docsforadobe.dev/renderqueue/renderqueueitem/
  */
 export class RenderQueueItem {
+  declare ["constructor"]: ClassAttributes<typeof RenderQueueItem>;
   /**
    * The number of seconds that have elapsed in rendering this item.
    * Read-only.
@@ -353,7 +355,7 @@ export class RenderQueueItem {
    */
   _on_status_changed(): void {
     const status = this.status;
-    if ((this.constructor as typeof RenderQueueItem)._RESET_STATUSES.has(status)) {
+    if (this.constructor._RESET_STATUSES.has(status)) {
       this._ldat.start_time = 0;
       this._ldat.elapsed_seconds = 0;
     }

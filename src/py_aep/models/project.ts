@@ -46,7 +46,6 @@ import { Preferences, default_sequence_fps, psd_comp_layer_styles, psd_footage_d
 import { Gradient } from "./properties/gradient.ts";
 import { Property, _values_equal } from "./properties/property.ts";
 import { PropertyGroup } from "./properties/property_group.ts";
-import type { MaskPropertyGroup } from "./properties/mask_property_group.ts";
 import { Shape } from "./properties/shape.ts";
 import { RenderQueue } from "./renderqueue/render_queue.ts";
 import type { Layer } from "./layers/layer.ts";
@@ -94,6 +93,7 @@ import {
   json_dumps,
   json_loads,
   type_name,
+  type ClassAttributes,
 } from "../../pyrt/index.ts";
 import type { PathLike } from "../../pyrt/index.ts";
 import type { Element } from "../../pyrt/etree.ts";
@@ -236,6 +236,7 @@ export const _set_ocio_configuration_file = requires_version(24)(function ocio_c
  * @see https://ae-scripting.docsforadobe.dev/general/project/
  */
 export class Project {
+  declare ["constructor"]: ClassAttributes<typeof Project>;
   /**
    * The After Effects platform the project is for, `"windows"` or
    * `"macos"`, which picks a BMP/GIF sequence's importer code (see
@@ -449,7 +450,7 @@ export class Project {
     this._ae_preferences_dir = ae_preferences_dir;
     this._preferences = new Preferences(ae_preferences_dir);
     // Class attribute read through the instance until `_new` assigns one.
-    this._platform = (this.constructor as typeof Project)._platform;
+    this._platform = this.constructor._platform;
     // ICC profile discovery for Adobe-CMS working-space writes. `None`
     // dirs = auto-discover the standard Adobe Color directories.
     this._icc_profile_dirs = null;
@@ -1393,9 +1394,9 @@ export class Project {
     // py_aep does not model; the origin avoids that and renders the
     // same.)
     const transform = layer.transform;
-    (transform.__getitem__("ADBE Anchor Point") as Property).value = [0.0, 0.0, 0.0];
-    (transform.__getitem__("ADBE Position") as Property).value = [0.0, 0.0, 0.0];
-    const contents = layer.property("ADBE Root Vectors Group") as PropertyGroup;
+    transform.__getitem__("ADBE Anchor Point").value = [0.0, 0.0, 0.0];
+    transform.__getitem__("ADBE Position").value = [0.0, 0.0, 0.0];
+    const contents = layer.property("ADBE Root Vectors Group");
     build_shape_layer_contents(contents, doc.drawables);
     return comp;
   }
@@ -1546,18 +1547,18 @@ export class Project {
       if (spec.transform != null) {
         const [[anchor_x, anchor_y], [position_x, position_y]] = spec.transform;
         const transform = layer.transform;
-        (transform.__getitem__("ADBE Anchor Point") as Property).value = [anchor_x, anchor_y, 0.0];
-        (transform.__getitem__("ADBE Position") as Property).value = [position_x, position_y, 0.0];
+        transform.__getitem__("ADBE Anchor Point").value = [anchor_x, anchor_y, 0.0];
+        transform.__getitem__("ADBE Position").value = [position_x, position_y, 0.0];
       }
       if (spec.is_adjustment) layer.adjustment_layer = true;
       if (spec.preserve_transparency) layer.preserve_transparency = true;
       if (spec.masks?.length > 0) {
         // A PSD vector-mask/shape-layer path: AE creates one mask
         // per subpath (psd_vector_mask* fixtures).
-        const parade = layer.property("ADBE Mask Parade") as PropertyGroup;
+        const parade = layer.property("ADBE Mask Parade");
         for (const shape of spec.masks) {
-          const mask = parade.add_property("ADBE Mask Atom") as unknown as MaskPropertyGroup;
-          (mask.property("ADBE Mask Shape") as Property).value = shape;
+          const mask = parade.add_property("ADBE Mask Atom");
+          mask.property("ADBE Mask Shape").value = shape;
         }
       }
       _serialize_import_layer_styles(layer, spec.styles, file.name);
@@ -1858,7 +1859,7 @@ export class Project {
     return specs;
   }
 
-  *_iter_text_source_properties(): Generator<[Layer, Property]> {
+  *_iter_text_source_properties(): Generator<[Layer, Property<TextDocument>]> {
     /** Yield `(layer, source_text)` for every text layer in the project. */
     for (const comp of this.compositions) {
       for (const layer of comp.layers) {
@@ -1895,10 +1896,10 @@ export class Project {
       let entries: [TextDocument, number][];
       if (source_text.keyframes?.length > 0) {
         entries = source_text.keyframes.map(
-          (kf) => [kf.value as TextDocument, kf.time - layer.start_time] as [TextDocument, number],
+          (kf) => [kf.value, kf.time - layer.start_time] as [TextDocument, number],
         );
       } else {
-        entries = [[source_text.value as TextDocument, 0.0]];
+        entries = [[source_text.value, 0.0]];
       }
       for (const [doc, layer_time] of entries) {
         if (doc == null) continue;
@@ -1944,8 +1945,8 @@ export class Project {
 
     let changed = false;
     for (const [, source_text] of this._iter_text_source_properties()) {
-      let docs = source_text.keyframes.map((kf) => kf.value as TextDocument);
-      if (!docs?.length) docs = [source_text.value as TextDocument];
+      let docs = source_text.keyframes.map((kf) => kf.value);
+      if (!docs?.length) docs = [source_text.value];
       docs = docs.filter((doc) => doc != null);
       if (docs?.length > 0 && _replace_layer_font(docs, from_name, to_name)) changed = true;
     }
@@ -2321,11 +2322,11 @@ export class Project {
   _get_cms_settings(): Map<string, any> {
     if (this._cms_utf8 != null) {
       const cms_data = json_loads(this._cms_utf8.value);
-      const merged = new Map<string, any>(Object.entries((this.constructor as typeof Project)._CMS_DEFAULTS));
+      const merged = new Map<string, any>(Object.entries(this.constructor._CMS_DEFAULTS));
       for (const [k, v] of cms_data) merged.set(k, v);
       return merged;
     }
-    return new Map<string, any>(Object.entries((this.constructor as typeof Project)._CMS_DEFAULTS));
+    return new Map<string, any>(Object.entries(this.constructor._CMS_DEFAULTS));
   }
 
   /** Update a single key in the CMS settings JSON chunk. */
@@ -2335,7 +2336,7 @@ export class Project {
       data.set(key, value);
       this._cms_utf8.value = json_dumps(data);
     } else {
-      const data = new Map<string, any>(Object.entries((this.constructor as typeof Project)._CMS_DEFAULTS));
+      const data = new Map<string, any>(Object.entries(this.constructor._CMS_DEFAULTS));
       data.set(key, value);
       const chunk = new Utf8Chunk({ value: json_dumps(data) });
       this._rifx.chunks.push(chunk);
@@ -2617,7 +2618,7 @@ export function _style_leaf_map(group: PropertyGroup): Map<string, Property> {
  * 0x02 - functional bits, fixture-pinned).
  */
 export function _serialize_import_layer_styles(layer: Layer, styles: PsdLayerStyles | null, source_name: string): void {
-  const container = layer.__getitem__("ADBE Layer Styles") as PropertyGroup;
+  const container = layer.__getitem__("ADBE Layer Styles");
   // AE enables the container + Blend Options chain when any style is
   // enabled OR the layer carries blend-options data (a Photoshop Fill
   // slider away from 100% enables the chain with zero styles - the

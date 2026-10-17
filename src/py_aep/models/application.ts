@@ -7,7 +7,7 @@ import { ChunkField } from "./descriptors.ts";
 import { validate_ae_version, validate_u1 } from "./validators.ts";
 import type { Preferences } from "./preferences.ts";
 import type { Viewer } from "./viewer/viewer.ts";
-import { descriptor, int, repr, split, str, ValueError, type Path } from "../../pyrt/index.ts";
+import { descriptor, int, repr, split, str, ValueError, type Path, type ClassAttributes } from "../../pyrt/index.ts";
 import { Project } from "./project.ts";
 
 // Version-gated parts After Effects expects from the format version alone,
@@ -60,6 +60,7 @@ export function _validate_version(value: unknown, obj: Application): void {
  * @see https://ae-scripting.docsforadobe.dev/general/application/
  */
 export class Application {
+  declare ["constructor"]: ClassAttributes<typeof Application>;
   /**
    * The build number of After Effects that last saved the project.
    * Read / Write.
@@ -110,7 +111,7 @@ export class Application {
 
   /** Instance-level read of the class attribute (`app.app_name` in Python). */
   get app_name(): string {
-    return (this.constructor as typeof Application).app_name;
+    return this.constructor.app_name;
   }
 
   declare _head: HeadChunk;

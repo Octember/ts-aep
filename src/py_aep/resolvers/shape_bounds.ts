@@ -45,7 +45,6 @@ import {
 } from "../../pyrt/index.ts";
 import type { Property } from "../models/properties/property.ts";
 import type { PropertyGroup } from "../models/properties/property_group.ts";
-import type { Shape } from "../models/properties/shape.ts";
 
 export type _Point = [number, number];
 export type _Segment = [_Point, _Point, _Point, _Point];
@@ -282,9 +281,9 @@ export function _polystar_path(item: PropertyGroup, time: number): _Path {
 }
 
 export function _bezier_path(item: PropertyGroup, time: number): _Path {
-  const shape = (item.__getitem__("ADBE Vector Shape") as Property).value_at_time(
+  const shape = item.__getitem__("ADBE Vector Shape").value_at_time(
     time,
-  ) as Shape;
+  );
   const vertices: _Point[] = shape.vertices.map((v): _Point => [v[0], v[1]]);
   if (vertices.length === 0) {
     return [];
@@ -379,11 +378,11 @@ export function _walk(
     if (match_name === "ADBE Vector Group") {
       const group = item as PropertyGroup;
       const local = _group_matrix(
-        group.__getitem__("ADBE Vector Transform Group") as PropertyGroup,
+        group.__getitem__("ADBE Vector Transform Group"),
         time,
       );
       const children = _walk(
-        group.__getitem__("ADBE Vectors Group") as PropertyGroup,
+        group.__getitem__("ADBE Vectors Group"),
         time,
         to_layer.multiply(local),
         geometry,

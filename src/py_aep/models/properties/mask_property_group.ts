@@ -133,7 +133,7 @@ export class MaskPropertyGroup extends PropertyGroup {
     if (!!this._mask_shape_tdsb.roto_bezier === value) {
       return;
     }
-    const path = this.property("ADBE Mask Shape") as Property;
+    const path = this.property("ADBE Mask Shape");
     const shapes = (
       path.keyframes?.length > 0 ? path.keyframes.map((kf) => kf.value) : [path.value]
     );

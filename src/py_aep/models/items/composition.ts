@@ -36,6 +36,7 @@ import {
   str,
   ValueError,
   zip,
+  type ClassAttributes,
 } from "../../../pyrt/index.ts";
 import { ChunkField } from "../descriptors.ts";
 import { EssentialGraphicsController, SourcePropertyRef } from "../essential_graphics.ts";
@@ -489,6 +490,7 @@ export interface LayerTypeCache {
  * @see https://ae-scripting.docsforadobe.dev/item/compitem/
  */
 export class CompItem extends AVItem {
+  declare ["constructor"]: ClassAttributes<typeof CompItem>;
   static _auto_name: string = "Comp";
 
   /** The background color of the composition. The three array values specify
@@ -1051,7 +1053,7 @@ export class CompItem extends AVItem {
   declare _deferred_layers: [ListChunk[], Map<string, Map<string, Map<string, any>>>] | null;
   declare _layers_loaded: boolean;
   declare _deferred_child_chunks: Chunk[] | null;
-  declare _marker_property: Property | null;
+  declare _marker_property: Property<MarkerValue | null> | null;
   declare _eg_template_name_utf8: Utf8Chunk | null;
   declare _eg_controllers: EssentialGraphicsController[];
   declare _view_data: Chunk[];
@@ -1174,7 +1176,7 @@ export class CompItem extends AVItem {
     const [start, end] = block_slice(
       container,
       this._item_list,
-      (this.constructor as typeof CompItem)._ITEM_BOUNDARY_LIST_TYPES,
+      this.constructor._ITEM_BOUNDARY_LIST_TYPES,
     );
     const cloned_block = container.slice(start, end).map((c) => clone_chunk_tree(c));
     const cloned_item = cloned_block[0] as ListChunk;
@@ -1457,7 +1459,7 @@ export class CompItem extends AVItem {
   }
 
   /** The composition's marker property. Read-only. */
-  get marker_property(): Property | null {
+  get marker_property(): Property<MarkerValue | null> | null {
     this._ensure_comp_parsed();
     return this._marker_property;
   }
@@ -1828,7 +1830,7 @@ export class CompItem extends AVItem {
     if (this.marker_property == null) {
       return [];
     }
-    return this.marker_property.keyframes.map((kf) => kf.value as MarkerValue);
+    return this.marker_property.keyframes.map((kf) => kf.value);
   }
 
   remove_all_markers(): void {
@@ -2167,18 +2169,18 @@ export class CompItem extends AVItem {
     const zoom = round((this.width * this.pixel_aspect) / CameraLayer._zoom_dividend, 8);
 
     const transform = layer.transform;
-    const anchor_point = transform.__getitem__("ADBE Anchor Point") as Property;
+    const anchor_point = transform.__getitem__("ADBE Anchor Point");
     anchor_point.value = [center_point[0], center_point[1], 0.0];
     // ExtendScript reports a new two-node camera's position as
     // [0, 0, -zoom] (the point of interest carries the center).
-    const position = transform.__getitem__("ADBE Position") as Property;
+    const position = transform.__getitem__("ADBE Position");
     position.value = [0.0, 0.0, -zoom];
 
     // AE's new-camera Camera Zoom equals the same computed zoom. Without
     // this the property keeps its 0.0 spec placeholder, which violates its
     // own >= 1 minimum and makes keyframing the zoom raise ValueError.
-    const camera_options = layer.__getitem__("ADBE Camera Options Group") as PropertyGroup;
-    const zoom_prop = camera_options.__getitem__("ADBE Camera Zoom") as Property;
+    const camera_options = layer.__getitem__("ADBE Camera Options Group");
+    const zoom_prop = camera_options.__getitem__("ADBE Camera Zoom");
     zoom_prop.value = zoom;
 
     return layer;
@@ -2217,11 +2219,11 @@ export class CompItem extends AVItem {
     const zoom = round((this.width * this.pixel_aspect) / LightLayer._zoom_dividend, 8);
 
     const transform = layer.transform;
-    const anchor_point = transform.__getitem__("ADBE Anchor Point") as Property;
+    const anchor_point = transform.__getitem__("ADBE Anchor Point");
     anchor_point.value = [center_point[0], center_point[1], 0.0];
     // Like cameras, lights report position [0, 0, -zoom/2] with the
     // point of interest at the center.
-    const position = transform.__getitem__("ADBE Position") as Property;
+    const position = transform.__getitem__("ADBE Position");
     position.value = [0.0, 0.0, -zoom / 2];
 
     return layer;

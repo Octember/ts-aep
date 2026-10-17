@@ -45,6 +45,7 @@ import { _PROPERTY_MIN_MAX } from "./overrides.ts";
 import { Property, _values_equal, _vf_tag_from_str } from "./property.ts";
 import { _INDEXED_GROUP_MATCH_NAMES, PropertyBase } from "./property_base.ts";
 import type { MaskPropertyGroup } from "./mask_property_group.ts";
+import type { MatchNameTypes } from "./match_name_types.ts";
 
 const _mask_property_group = deferred<typeof import("./mask_property_group.ts")>("py_aep/models/properties/mask_property_group");
 const _effect = deferred<typeof import("../../parsers/effect.ts")>("py_aep/parsers/effect");
@@ -775,6 +776,8 @@ export class PropertyGroup extends PropertyBase {
     object_setattr(this, name, value);
   }
 
+  __getitem__<K extends keyof MatchNameTypes>(key: K): MatchNameTypes[K];
+  __getitem__(key: number | string): Property | PropertyGroup;
   __getitem__(key: number | string): Property | PropertyGroup {
     /**
      * Look up a child property by index or name.
@@ -784,10 +787,10 @@ export class PropertyGroup extends PropertyBase {
      *
      * @example
      * ```ts
-     * import { parse, type PropertyGroup } from "@bevyl-ai/ts-aep";
+     * import { parse } from "@bevyl-ai/ts-aep";
      * const layer = parse("project.aep").project.compositions[0].layers[0];
-     * (layer.__getitem__("ADBE Transform Group") as PropertyGroup).__getitem__("ADBE Position");
-     * (layer.__getitem__("ADBE Masks") as PropertyGroup).__getitem__(0);
+     * layer.__getitem__("ADBE Transform Group").__getitem__("ADBE Position");
+     * layer.__getitem__("ADBE Mask Parade").__getitem__(0);
      * layer.__getitem__(0);
      * ```
      * @param key - A `number` index or a `string` display name / match name.
@@ -1013,6 +1016,8 @@ export class PropertyGroup extends PropertyBase {
    * @param name - The display name or match name of the property to add.
    * @throws {@link ValueError} If a property with this name cannot be added to this group.
    */
+  add_property<K extends keyof MatchNameTypes>(name: K): MatchNameTypes[K];
+  add_property(name: string): Property | PropertyGroup;
   add_property(name: string): Property | PropertyGroup {
     const result = resolve_addable(this.match_name, this.property_type, name);
     if (result == null) {
@@ -1353,6 +1358,8 @@ export class PropertyGroup extends PropertyBase {
     return this._attach_group(tdmn, tdgp, match_name);
   }
 
+  property<K extends keyof MatchNameTypes>(key: K): MatchNameTypes[K];
+  property(key: number | string): Property | PropertyGroup;
   property(key: number | string): Property | PropertyGroup {
     /**
      * Look up a child property by index or name.

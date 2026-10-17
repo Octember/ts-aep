@@ -568,7 +568,7 @@ export function _auto_rotation(layer: Layer, time: number, position: number[]): 
   const mode = layer.auto_orient;
   const three_d = !!layer._ldta.three_d_layer;
   if (mode === AutoOrientType.ALONG_PATH) {
-    const prop = layer.transform.__getitem__("ADBE Position") as Property;
+    const prop = layer.transform.__getitem__("ADBE Position");
     if (prop.dimensions_separated) {
       throw new NotImplementedError(
         `layer ${repr(layer.name)} auto-orients along a path with separated ` +
@@ -1046,7 +1046,7 @@ export function camera_ray(
   const world = build_world_matrix(camera, time, undefined, { as_parent: true });
   const position = world.transform_point([0.0, 0.0, 0.0]);
 
-  const camera_options = camera.__getitem__("ADBE Camera Options Group") as PropertyGroup;
+  const camera_options = camera.__getitem__("ADBE Camera Options Group");
   const zoom = _prop_value(camera_options, "ADBE Camera Zoom", time);
 
   // The image plane is in square pixels; the rig matrix narrows the ray

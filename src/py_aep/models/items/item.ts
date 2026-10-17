@@ -17,6 +17,7 @@ import {
   getattr,
   py_assert,
   py_eq,
+  type ClassAttributes,
 } from "../../../pyrt/index.ts";
 import { ChunkField } from "../descriptors.ts";
 import { Guide } from "../guide.ts";
@@ -50,6 +51,7 @@ export interface Item {
   name: string;
 }
 export class Item {
+  declare ["constructor"]: ClassAttributes<typeof Item>;
   /**
    * The label color. Colors are represented by their number (0 for None,
    * or 1 to 16 for one of the preset colors in the Labels preferences).
@@ -352,7 +354,7 @@ export class Item {
     const [start, end] = block_slice(
       container,
       this._item_list,
-      (this.constructor as typeof Item)._ITEM_BOUNDARY_LIST_TYPES,
+      this.constructor._ITEM_BOUNDARY_LIST_TYPES,
     );
     const block = container.slice(start, end);
     container.splice(start, end - start);

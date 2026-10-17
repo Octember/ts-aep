@@ -26,8 +26,19 @@ import {
 
 const _property = deferred<typeof import("./property.ts")>("py_aep/models/properties/property");
 
+/**
+ * Any value a {@link Property} or {@link Keyframe} can hold; which one depends on
+ * the property's `property_value_type`. `Property<V>` narrows it per property.
+ */
 // TYPE_CHECKING: `_ValueType = Union[list[float], float, Curves, Gradient, MarkerValue, Shape, TextDocument, None]`
-export type _ValueType = number[] | number | Curves | Gradient | MarkerValue | Shape | TextDocument | null;
+export type PropertyValue = number[] | number | Curves | Gradient | MarkerValue | Shape | TextDocument | null;
+export type _ValueType = PropertyValue;
+
+/**
+ * The value a keyframe of a `Property<V>` holds: a stored key always has one,
+ * so `null` is dropped; a property of unknown kind keeps the full union.
+ */
+export type KeyframeValue<V> = 0 extends 1 & V ? PropertyValue : NonNullable<V>;
 
 /** sentinel: read value from _ldat_item */
 export const _VALUE_FROM_CHUNK: unique symbol = Symbol("_VALUE_FROM_CHUNK");
@@ -114,9 +125,11 @@ export function _validate_roving(value: boolean, keyframe: Keyframe): void {
  * **Warning:** `Keyframe` object does not exist in ExtendScript API. It has been added
  * for convenience.
  *
+ * @typeParam V - The type of {@link Keyframe.value | value}, from the owning `Property<V>`.
+ *
  * @example
  */
-export class Keyframe {
+export class Keyframe<V extends PropertyValue = PropertyValue> {
   /**
    * The "in" interpolation type for the keyframe. Read / Write.
    *
@@ -603,15 +616,15 @@ export class Keyframe {
    * For the Curves effect's curves, this is a {@link Curves}. For properties
    * that carry no value, this is `null`.
    */
-  get value(): _ValueType {
-    if (this._property == null) return this._stored_value;
+  get value(): V {
+    if (this._property == null) return this._stored_value as V;
     if (this._property._arbs != null) {
-      return this._property._keyframe_curves(this);
+      return this._property._keyframe_curves(this) as V;
     }
-    return this._property._mask_inert_z(this._stored_value) as _ValueType;
+    return this._property._mask_inert_z(this._stored_value);
   }
 
-  set value(value: _ValueType) {
+  set value(value: PropertyValue) {
     if (this._property != null) {
       this._property._reject_curves_write();
     }

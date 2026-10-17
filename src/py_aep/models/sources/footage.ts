@@ -10,6 +10,7 @@ import {
   py_cmp,
   repr,
   round,
+  type ClassAttributes,
 } from "../../../pyrt/index.ts";
 import { to_dividend_divisor } from "../../binary/bin_utils.ts";
 import { ChunkNotFoundError, find_by_type, find_chunks_after, toggle_flag_chunk } from "../../binary/utils.ts";
@@ -101,6 +102,7 @@ export function _store_frames_over_rate(sspc: SspcChunk, frames: number, rate: n
  * @see https://ae-scripting.docsforadobe.dev/sources/footagesource/
  */
 export class FootageSource {
+  declare ["constructor"]: ClassAttributes<typeof FootageSource>;
   /**
    * Whether the item display name lives in this source's own `opti` chunk.
    *

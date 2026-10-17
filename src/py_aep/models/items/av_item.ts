@@ -17,6 +17,7 @@ import {
   int,
   py_assert,
   type PathLike,
+  type ClassAttributes,
 } from "../../../pyrt/index.ts";
 import type { Project } from "../project.ts";
 import type { Viewer } from "../viewer/viewer.ts";
@@ -193,6 +194,7 @@ export interface AVItem {
   width: number;
 }
 export class AVItem extends Item {
+  declare ["constructor"]: ClassAttributes<typeof AVItem>;
   // Python: annotation-only attributes, with `"""…"""` attribute docstrings.
   // NOTE(port): subclasses (composition.ts, footage.ts) override some of these with accessors;
   // `declare` emits no runtime field, so the prototype accessors apply and tsc reports no TS2610.
@@ -547,7 +549,7 @@ export class AVItem extends Item {
   _set_proxy(source: FileSource | SolidSource | PlaceholderSource): void {
     this._replace_pin(
       this._proxy_pin_index,
-      (this.constructor as typeof AVItem)._pin_for_source(source),
+      this.constructor._pin_for_source(source),
     );
     this._proxy_source = source;
     source._join_project(this._project);

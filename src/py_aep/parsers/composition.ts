@@ -5,6 +5,7 @@ import { filter_by_list_type, find_by_list_type } from "../binary/utils.ts";
 import { CompItem } from "../models/items/composition.ts";
 import type { FolderItem } from "../models/items/folder.ts";
 import type { Project } from "../models/project.ts";
+import type { MarkerValue } from "../models/properties/marker.ts";
 import type { Property } from "../models/properties/property.ts";
 import type { ParamDef } from "./effect.ts";
 import { parse_layer } from "./layer.ts";
@@ -62,7 +63,7 @@ export function parse_composition(
  * @param child_chunks - child chunks of the composition LIST chunk.
  * @param composition - The parent composition.
  */
-export function _get_markers(child_chunks: Chunk[], composition: CompItem): Property | null {
+export function _get_markers(child_chunks: Chunk[], composition: CompItem): Property<MarkerValue | null> | null {
   const markers_layer_chunk = find_by_list_type(child_chunks, "SecL");
   const markers_layer = parse_layer(markers_layer_chunk, composition, new Map());
   if (markers_layer.marker == null) return null;

@@ -5,7 +5,6 @@ import { LayerType } from "../../enums/index.ts";
 import { label_index } from "../preferences.ts";
 import { AVLayer } from "./av_layer.ts";
 import type { CompItem } from "../items/composition.ts";
-import type { Layer } from "./layer.ts";
 import type { PropertyGroup } from "../properties/property_group.ts";
 
 /**
@@ -62,7 +61,7 @@ export class ShapeLayer extends AVLayer {
     layer._ldta.layer_type = LayerType.SHAPE;
     // The base factory named the layer from the AV type it started with.
     layer._match_name = getitem(
-      (layer.constructor as typeof Layer)._LAYER_MATCH_NAMES,
+      layer.constructor._LAYER_MATCH_NAMES,
       LayerType.SHAPE,
     );
     layer._ldta.label = label_index(

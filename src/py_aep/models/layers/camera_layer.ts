@@ -3,10 +3,8 @@ import { LdtaChunk } from "../../binary/layer_chunks.ts";
 import { LayerType } from "../../enums/index.ts";
 import { default_camera_zoom } from "../../resolvers/transform.ts";
 import { label_index } from "../preferences.ts";
-import { Layer } from "./layer.ts";
+import { Layer, type LiveDefaultGroup, type LiveDefaultProperty } from "./layer.ts";
 import type { CompItem } from "../items/composition.ts";
-import type { Property } from "../properties/property.ts";
-import type { PropertyGroup } from "../properties/property_group.ts";
 
 /**
  * The CameraLayer object represents a camera layer within a composition.
@@ -40,7 +38,7 @@ export class CameraLayer extends Layer {
     return true;
   }
 
-  static _LIVE_DEFAULTS: ReadonlyArray<readonly [string, string]> = [
+  static _LIVE_DEFAULTS: ReadonlyArray<readonly [LiveDefaultGroup, LiveDefaultProperty]> = [
     ["ADBE Transform Group", "ADBE Position"],
     ["ADBE Camera Options Group", "ADBE Camera Zoom"],
     ["ADBE Camera Options Group", "ADBE Camera Focus Distance"],
@@ -57,10 +55,10 @@ export class CameraLayer extends Layer {
    */
   _default_position(): number[] {
     const comp = this.containing_comp;
-    const options = this.__getitem__("ADBE Camera Options Group") as PropertyGroup;
-    const zoom = options.__getitem__("ADBE Camera Zoom") as Property;
+    const options = this.__getitem__("ADBE Camera Options Group");
+    const zoom = options.__getitem__("ADBE Camera Zoom");
     // The layer's time 0 is the comp time it starts at.
-    const z = float(zoom.value_at_time(this.start_time) as number);
+    const z = float(zoom.value_at_time(this.start_time));
     return [comp.width / 2.0, comp.height / 2.0, -z];
   }
 

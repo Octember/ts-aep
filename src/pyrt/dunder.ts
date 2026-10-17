@@ -22,6 +22,14 @@ export interface Descriptor {
   __delete__?(obj: any): void;
 }
 
+/**
+ * Python `type(self)`: the class attributes (statics) of `C` without its
+ * construct signature, so a subclass whose constructor takes other arguments
+ * can still narrow it. Declare it on a class that reads its own statics:
+ * `declare ["constructor"]: ClassAttributes<typeof Layer>;`
+ */
+export type ClassAttributes<C> = Function & Omit<C, "prototype">;
+
 const DESCRIPTORS = new WeakMap<Function, Map<string, Descriptor>>();
 
 /** A descriptor whose instance reads produce a `T` (class reads produce the descriptor). */
@@ -33,10 +41,11 @@ export interface TypedDescriptor<T> extends Descriptor {
  * Install `d` as class attribute `name` of `cls` (runs `__set_name__`).
  * `name` must be declared on the instance type, and `d` must read as the
  * declared type, which a generic descriptor such as `new ChunkField(...)`
- * then infers.
+ * then infers. `P` is read from `prototype` so a generic class infers its
+ * erased instance type (a generic construct signature infers nothing).
  */
 export function descriptor<P extends object, K extends string & keyof P>(
-  cls: abstract new (...args: never[]) => P,
+  cls: (abstract new (...args: never[]) => object) & { prototype: P },
   name: K,
   d: TypedDescriptor<P[K]>,
 ): TypedDescriptor<P[K]>;

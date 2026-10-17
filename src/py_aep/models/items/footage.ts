@@ -11,7 +11,6 @@ import { layer_index_for_stored } from "../../resolvers/source_layers.ts";
 import { CURRENT_VALUE, _CurrentValue } from "../import_options.ts";
 import { auto_name } from "../naming.ts";
 import { default_sequence_fps, label_index } from "../preferences.ts";
-import type { FootageSource } from "../sources/footage.ts";
 import { FileSource } from "../sources/file.ts";
 import { PlaceholderSource } from "../sources/placeholder.ts";
 import { SolidSource } from "../sources/solid.ts";
@@ -223,7 +222,7 @@ export class FootageItem extends AVItem {
     // back from. AE keeps a solid's or placeholder's name in the source
     // `opti` chunk and leaves the item-level Utf8 empty; only file
     // footage is named through the item chunk.
-    if ((this._main_source.constructor as typeof FootageSource)._owns_name) {
+    if (this._main_source.constructor._owns_name) {
       this._main_source._store_name(value);
       this._name_utf8.value = "";
     } else {
@@ -671,7 +670,7 @@ export class FootageItem extends AVItem {
     // A solid or placeholder carries its name in the new `opti` chunk
     // instead, so the Utf8 goes back to empty.
     py_assert(this._name_utf8 != null);
-    if ((source.constructor as typeof FootageSource)._owns_name) {
+    if (source.constructor._owns_name) {
       this._name_utf8.value = "";
     }
     this._name = source._resolve_name(this._name_utf8.value);
