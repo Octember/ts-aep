@@ -422,9 +422,9 @@ export function resolve_time_span(
     duration_frames = round(comp.duration * effective_frame_rate);
     first_rendered_frame = int(comp.display_start_time * effective_frame_rate);
   } else {
-    time_span_start = getitem(rq_settings, "Time Span Start");
-    duration_time = getitem(rq_settings, "Time Span Duration");
-    time_span_end = getitem(rq_settings, "Time Span End");
+    time_span_start = getitem(rq_settings, "Time Span Start") as number;
+    duration_time = getitem(rq_settings, "Time Span Duration") as number;
+    time_span_end = getitem(rq_settings, "Time Span End") as number;
     duration_frames = round(duration_time * effective_frame_rate);
     first_rendered_frame =
       int(comp.display_start_time * effective_frame_rate) +

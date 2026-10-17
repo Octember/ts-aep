@@ -15,9 +15,9 @@
       "casts": 36
     },
     "2 cos+color": {
-      "any": 1,
-      "unknown": 0,
-      "casts": 1
+      "any": 0,
+      "unknown": 6,
+      "casts": 6
     },
     "3 parsers+synthesis": {
       "any": 1,
@@ -26,13 +26,13 @@
     },
     "4 models": {
       "any": 2,
-      "unknown": 65,
-      "casts": 152
+      "unknown": 56,
+      "casts": 137
     },
     "5 resolvers+svg": {
       "any": 1,
       "unknown": 9,
-      "casts": 30
+      "casts": 33
     },
     "6 cli+entry": {
       "any": 4,

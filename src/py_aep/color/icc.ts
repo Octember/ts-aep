@@ -31,7 +31,6 @@ import {
   sorted,
 } from "../../pyrt/index.ts";
 import { profile_id_for_name } from "../enums/mappings.ts";
-import type { Dyn } from "./index.ts";
 
 /**
  * Compute the 16-byte ICC Profile ID per ISO 15076-1 7.2.18.
@@ -203,9 +202,9 @@ export class IccProfileLibrary {
           let data: Uint8Array;
           try {
             data = f.read_bytes();
-          } catch (e: Dyn) {
+          } catch (e: unknown) {
             // pyrt Path.read_bytes rethrows non-ENOENT Node errors (EACCES, EISDIR, ...) unwrapped.
-            if (!(e instanceof OSError || typeof e?.code === "string")) throw e;
+            if (!(e instanceof OSError || typeof (e as { code?: unknown })?.code === "string")) throw e;
             continue;
           }
           if (data.length < 132 || !bytes_eq(bytes_.slice(data, 36, 40), b("acsp"))) continue;
