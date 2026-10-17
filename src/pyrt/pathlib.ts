@@ -1,7 +1,7 @@
 // The `pathlib.Path` subset py_aep uses, over the host fs / path (pyrt/host).
 
 import { fs, homedir, path as nodepath, type HostStats } from "./host.ts";
-import { FileNotFoundError } from "./errors.ts";
+import { error_code, FileNotFoundError } from "./errors.ts";
 
 export class Path {
   readonly path: string;
@@ -81,7 +81,7 @@ export class Path {
     try {
       return new Uint8Array(fs.readFileSync(this.path));
     } catch (e: unknown) {
-      if ((e as NodeJS.ErrnoException | null)?.code === "ENOENT") throw new FileNotFoundError(`[Errno 2] No such file or directory: '${this.path}'`);
+      if (error_code(e) === "ENOENT") throw new FileNotFoundError(`[Errno 2] No such file or directory: '${this.path}'`);
       throw e;
     }
   }
@@ -91,8 +91,8 @@ export class Path {
     return data.length;
   }
 
-  read_text(encoding = "utf-8"): string {
-    return new TextDecoder(encoding as "utf-8").decode(this.read_bytes());
+  read_text(encoding: ConstructorParameters<typeof TextDecoder>[0] = "utf-8"): string {
+    return new TextDecoder(encoding).decode(this.read_bytes());
   }
 
   write_text(text: string): number {
@@ -204,10 +204,10 @@ function nt_join(path: string, ...paths: string[]): string {
       }
       result_drive = p_drive;
     }
-    if (result_path && !"\\/".includes(result_path.at(-1)!)) result_path += "\\";
+    if (result_path && !"\\/".includes(result_path.slice(-1))) result_path += "\\";
     result_path += p_path;
   }
-  if (result_path && !result_root && result_drive && !":\\/".includes(result_drive.at(-1)!)) {
+  if (result_path && !result_root && result_drive && !":\\/".includes(result_drive.slice(-1))) {
     return result_drive + "\\" + result_path;
   }
   return result_drive + result_root + result_path;

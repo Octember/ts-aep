@@ -119,7 +119,7 @@ export class TextDocument {
    *
    * const app = parse("project.aep");
    * const comp = app.project.compositions[0];
-   * const text_doc = comp.text_layers[0].text.property("ADBE Text Document").value;
+   * const text_doc = comp.text_layers[0].text.source_text.value;
    * console.log(text_doc.text);
    * ```
    *

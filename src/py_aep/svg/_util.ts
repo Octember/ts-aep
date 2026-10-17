@@ -5,9 +5,9 @@
 import { float, strip, hypot, pattern_match, py_re } from "../../pyrt/index.ts";
 
 /** An SVG/CSS number token: optional sign, decimal or integer, optional exponent. */
-export const NUMBER_RE = py_re(String.raw`[-+]?(?:\d*\.\d+|\d+\.?)(?:[eE][-+]?\d+)?`);
+export const NUMBER_RE = py_re(String.raw`[-+]?(?:\d*\.\d+|\d+\.?)(?:[eE][-+]?\d+)?`, 0, "g");
 /** The same token allowing a trailing `%` (CSS color / ratio values). */
-export const NUMBER_PCT_RE = py_re(String.raw`[-+]?(?:\d*\.\d+|\d+\.?)(?:[eE][-+]?\d+)?%?`);
+export const NUMBER_PCT_RE = py_re(String.raw`[-+]?(?:\d*\.\d+|\d+\.?)(?:[eE][-+]?\d+)?%?`, 0, "g");
 /** A length: a number and an optional unit or `%`. */
 export const _LENGTH_RE = py_re(String.raw`([-+]?(?:\d*\.\d+|\d+\.?)(?:[eE][-+]?\d+)?)\s*(%|[A-Za-z]+)?`);
 /** CSS absolute units in user units (px): CSS Values 3 fixes 1in = 96px. */
@@ -59,7 +59,8 @@ export class LengthContext {
  * Strip an XML namespace, e.g. `{http://...}rect` -\> `rect`.
  */
 export function local_name(tag: string): string {
-  return tag.split("}").at(-1)!;
+  const parts = tag.split("}");
+  return parts[parts.length - 1];
 }
 
 /**

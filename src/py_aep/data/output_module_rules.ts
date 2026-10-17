@@ -420,7 +420,7 @@ export const _CONDITIONAL_RULES = new Map<OutputFormat, Rule[]>([
     // columns were swapped wholesale relative to these binaries
     // (every mono probe matches the notes' "stereo" column, incl.
     // the 12000 Hz rows); the binaries won.
-    [
+    ([
       [
         AudioChannels.STEREO,
         [
@@ -467,12 +467,12 @@ export const _CONDITIONAL_RULES = new Map<OutputFormat, Rule[]>([
           [320, 44100],
         ],
       ],
-    ].flatMap(([channels, table]) =>
-      (table as number[][]).map(
+    ] satisfies [AudioChannels, [number, number][]][]).flatMap(([channels, table]) =>
+      table.map(
         ([kbps, rate]): Rule => [
           new Map<string, RuleValue | RuleValue[]>([
             ["BitRate", kbps],
-            ["Audio Channels", channels as number],
+            ["Audio Channels", channels],
           ]),
           new Map<string, ReadonlySet<RuleValue>>([["Audio Sample Rate", new Set([rate])]]),
         ],
@@ -589,7 +589,7 @@ export const _PLUS_DEPTHS: ReadonlySet<RuleValue> = new Set([_MILLIONS_PLUS, _TR
 for (const [_fmt, _fmt_rules] of _FORMAT_RULES) {
   const _depths = _fmt_rules.get("Depth") ?? null;
   if (_depths == null) continue;
-  const _rows = setdefault(_CONDITIONAL_RULES, _fmt, [] as Rule[]);
+  const _rows = setdefault(_CONDITIONAL_RULES, _fmt, []);
   const _rgba_depths = new Set([..._depths].filter((d) => _PLUS_DEPTHS.has(d)));
   if (_rgba_depths.size > 0) {
     _rows.unshift([new Map<string, RuleValue | RuleValue[]>([["Channels", OutputChannels.RGBA]]), new Map<string, ReadonlySet<RuleValue>>([["Depth", _rgba_depths]])]);
@@ -647,7 +647,7 @@ export function _conditions_match(conditions: Map<string, RuleValue | RuleValue[
 export function constrained_keys(fmt: OutputFormat): ReadonlySet<string> {
   const keys = new Set<string>(getitem(_KIND_RULES, OutputFormat.kind(fmt)).keys());
   for (const k of (_FORMAT_RULES.get(fmt) ?? new Map<string, ReadonlySet<RuleValue>>()).keys()) keys.add(k);
-  for (const [, constraints] of (_CONDITIONAL_RULES.get(fmt) ?? [] as Rule[])) {
+  for (const [, constraints] of (_CONDITIONAL_RULES.get(fmt) ?? [])) {
     for (const k of constraints.keys()) keys.add(k);
   }
   return new Set(keys);
@@ -667,12 +667,12 @@ export function allowed_values(
   fmt: OutputFormat,
   key: string,
   context: ReadonlyMap<string, RuleValue> | null = null,
-): ReadonlySet<unknown> | null {
+): ReadonlySet<RuleValue> | null {
   const rules = new Map<string, ReadonlySet<RuleValue>>();
   for (const [k, v] of getitem(_KIND_RULES, OutputFormat.kind(fmt))) rules.set(k, v);
   for (const [k, v] of (_FORMAT_RULES.get(fmt) ?? new Map<string, ReadonlySet<RuleValue>>())) rules.set(k, v);
   if (context == null) context = new Map<string, RuleValue>();
-  for (const [conditions, constraints] of (_CONDITIONAL_RULES.get(fmt) ?? [] as Rule[])) {
+  for (const [conditions, constraints] of (_CONDITIONAL_RULES.get(fmt) ?? [])) {
     if (_conditions_match(conditions, context)) {
       for (const [k, v] of constraints) rules.set(k, v);
     }

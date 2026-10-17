@@ -36,6 +36,8 @@ import {
   ValueError,
   zip,
   type ClassAttributes,
+  AttributeError,
+  type_name,
 } from "../../../pyrt/index.ts";
 import { ChunkField, type EffectParamDefs } from "../descriptors.ts";
 import { EssentialGraphicsController, SourcePropertyRef } from "../essential_graphics.ts";
@@ -248,9 +250,9 @@ export function _materialize_layer(layer: Layer): void {
   const ae_major = get_ae_version_major(layer);
   // Groups the project's release does not write for a new layer (they
   // stay synthesized, as when reading that release's own files).
-  const unwritten = new Set(
+  const unwritten = new Set<string>(
     _VERSION_GATED_GROUPS.filter(([, part]) => !ae_writes(part, ae_major)).map(
-      ([match_name]) => match_name as string,
+      ([match_name]) => match_name,
     ),
   );
 
@@ -334,7 +336,8 @@ export function _drop_essential_overrides(layer: Layer): void {
   layer.essential_property_uuids.length = 0;
   for (const child of layer.properties) {
     if (child.match_name === "ADBE Layer Overrides") {
-      (child as PropertyGroup)._properties.length = 0;
+      if (!(child instanceof PropertyGroup)) throw new AttributeError(`'${type_name(child)}' object has no attribute 'properties'`);
+      child._properties.length = 0;
       break;
     }
   }
@@ -368,14 +371,14 @@ export function _insert_layer_skeleton_extras(layer: Layer): void {
     }
   }
   for (const [i, ch] of chunks.entries()) {
+    const next = i + 1 < chunks.length ? chunks[i + 1] : null;
     if (
       ch instanceof TdmnChunk &&
       ch.value === "ADBE Source Options Group" &&
-      i + 1 < chunks.length &&
-      chunks[i + 1] instanceof ListChunk &&
-      (chunks[i + 1] as ListChunk).list_type === "tdgp"
+      next instanceof ListChunk &&
+      next.list_type === "tdgp"
     ) {
-      const inner = (chunks[i + 1] as ListChunk).chunks;
+      const inner = next.chunks;
       for (const [j, c] of inner.entries()) {
         if (
           c instanceof TdmnChunk &&
@@ -433,17 +436,14 @@ export function _rewrite_eg_identity(
       }
       const cprp = find_by_list_type_or_null(cctl.chunks, "CPrp");
       if (cprp === null) continue;
-      for (const chunk of cprp.chunks) {
-        if (chunk.chunk_type === "CCId") {
-          const ccid = chunk as U4Chunk;
-          if (ccid.value === old_comp_id) {
-            ccid.value = new_comp_id;
-          }
-        } else if (chunk.chunk_type === "CLId") {
-          const clid = chunk as U4Chunk;
-          if (id_map.has(clid.value)) {
-            clid.value = getitem(id_map, clid.value);
-          }
+      for (const ccid of filter_by_type(cprp.chunks, "CCId")) {
+        if (ccid.value === old_comp_id) {
+          ccid.value = new_comp_id;
+        }
+      }
+      for (const clid of filter_by_type(cprp.chunks, "CLId")) {
+        if (id_map.has(clid.value)) {
+          clid.value = getitem(id_map, clid.value);
         }
       }
     }
@@ -1168,8 +1168,9 @@ export class CompItem extends AVItem {
       this._item_list,
       this.constructor._ITEM_BOUNDARY_LIST_TYPES,
     );
-    const cloned_block = container.slice(start, end).map((c) => clone_chunk_tree(c));
-    const cloned_item = cloned_block[0] as ListChunk;
+    // The block starts at this comp's own LIST:Item.
+    const cloned_item = clone_chunk_tree(this._item_list);
+    const cloned_block = [cloned_item, ...container.slice(start + 1, end).map((c) => clone_chunk_tree(c))];
 
     const old_comp_id = this.id;
     const new_comp_id = project._allocate_id();
@@ -1195,17 +1196,18 @@ export class CompItem extends AVItem {
       }
       // matte_layer_id is absent (None) in pre-AE23 files.
       const matte = ldta.matte_layer_id;
-      if (matte != null && id_map.has(matte)) {
-        ldta.matte_layer_id = id_map.get(matte)!;
+      const new_matte = matte == null ? undefined : id_map.get(matte);
+      if (new_matte !== undefined) {
+        ldta.matte_layer_id = new_matte;
       }
     }
     // tdpi layer references: the effect owner (hidden -0000 param) and
     // effect layer parameters (e.g. Set Matte's source layer) - both
     // can only point at layers of this comp.
     for (const tdpi of recursive_find(cloned_item.chunks, "tdpi")) {
-      const value = tdpi.value;
-      if (id_map.has(value)) {
-        tdpi.value = id_map.get(value)!;
+      const new_value = id_map.get(tdpi.value);
+      if (new_value !== undefined) {
+        tdpi.value = new_value;
       }
     }
 
@@ -1224,7 +1226,9 @@ export class CompItem extends AVItem {
     // Insert right after the original's block, then build the model
     // through the normal parse path (registers it in project.items).
     container.splice(end, 0, ...cloned_block);
-    const new_comp = _item().parse_item(cloned_item, project, parent) as CompItem;
+    const new_comp = _item().parse_item(cloned_item, project, parent);
+    // The clone keeps this comp's idta item type.
+    py_assert(new_comp instanceof CompItem);
     parent.items.splice(parent.items.indexOf(this) + 1, 0, new_comp);
 
     // Register the duplicate on its layer sources' used_in if linking
@@ -1232,8 +1236,8 @@ export class CompItem extends AVItem {
     if (project._used_in_linked) {
       for (const source_id of new_comp._source_ids_for_linking()) {
         const source = project.items.get(source_id) ?? null;
-        if (source != null && "_used_in" in source) {
-          (source as AVItem)._used_in.add(new_comp);
+        if (source instanceof AVItem) {
+          source._used_in.add(new_comp);
         }
       }
     }
@@ -1549,7 +1553,7 @@ export class CompItem extends AVItem {
       return build_slider_cctl(
         name,
         uuid_str,
-        prop.value as number,
+        prop.value,
         min_v != null ? float_bound(min_v) : 0.0,
         max_v != null ? float_bound(max_v) : 100.0,
         comp_id,
@@ -1568,7 +1572,7 @@ export class CompItem extends AVItem {
       );
     }
     if (plan.controller_type === CONTROLLER_COLOR) {
-      let rgba = (prop.value as number[]);
+      let rgba: number[] = prop.value;
       rgba = [...rgba, 1.0, 1.0, 1.0, 1.0].slice(0, 4);
       return build_color_cctl(name, uuid_str, rgba, comp_id, layer_id, plan.path_json);
     }
@@ -1599,19 +1603,17 @@ export class CompItem extends AVItem {
     if (!containers?.length) {
       return null;
     }
-    let model_name_utf8: Utf8Chunk | null = null;
-    let model_ctyp: U4Chunk | null = null;
+    let model: [Utf8Chunk, U4Chunk] | null = null;
     for (const cif of containers) {
       const [cctl, name_utf8, ctyp] = build();
       cif.chunks.push(cctl);
       const ccct = find_by_type(cif.chunks, "CcCt");
       ccct.value += 1;
-      if (cif.list_type === "CIF3" || model_name_utf8 == null) {
-        model_name_utf8 = name_utf8;
-        model_ctyp = ctyp;
+      if (cif.list_type === "CIF3" || model == null) {
+        model = [name_utf8, ctyp];
       }
     }
-    return [model_name_utf8 as Utf8Chunk, model_ctyp as U4Chunk];
+    return model;
   }
 
   _register_controller(
@@ -1877,12 +1879,12 @@ export class CompItem extends AVItem {
       throw new ValueError(`Layer with name '${name}' not found`);
     } else if (index != null) {
       return at(this.layers, index);
-    } else if (py_bool(other_layer) && rel_index != null && rel_index !== 0) {
-      const other_idx = this.layers.indexOf(other_layer!);
+    } else if (other_layer != null && py_bool(other_layer) && rel_index != null && rel_index !== 0) {
+      const other_idx = this.layers.indexOf(other_layer);
       if (other_idx < 0) {
         throw new ValueError(`${repr(other_layer)} is not in list`);
       }
-      return at(this.layers, other_idx + rel_index!);
+      return at(this.layers, other_idx + rel_index);
     }
     throw new ValueError("Must specify one of name, index, or other_layer and rel_index");
   }
@@ -2430,10 +2432,11 @@ export class CompItem extends AVItem {
 
     // Detach the moved layers' chunk blocks (top-down keeps their
     // relative stacking order).
-    const blocks: Chunk[][] = [];
+    // Each block starts at its layer's own LIST:Layr.
+    const blocks: [ListChunk, ...Chunk[]][] = [];
     for (const ly of moved) {
       const [start, end] = this._layer_block_slice(ly);
-      blocks.push(this._item_list.chunks.slice(start, end));
+      blocks.push([ly._layer_list, ...this._item_list.chunks.slice(start + 1, end)]);
       this._item_list.chunks.splice(start, end - start);
       const at_layer = this._layers.indexOf(ly);
       if (at_layer < 0) {
@@ -2461,7 +2464,7 @@ export class CompItem extends AVItem {
     // AE brings the referenced layer along rather than leaving an id
     // the new comp cannot resolve, which it refuses to open.
     const matte_map: Map<number, number> = new Map();
-    const final_blocks: Chunk[][] = [];
+    const final_blocks: [ListChunk, ...Chunk[]][] = [];
     for (const [ly, block] of zip(moved, blocks)) {
       final_blocks.push(block);
       const referenced: number[] = [ly._ldta.matte_layer_id || 0];
@@ -2473,10 +2476,11 @@ export class CompItem extends AVItem {
         const matte_layer = this.layers_by_id.get(matte_id) ?? null;
         if (matte_layer != null) {
           const [m_start, m_end] = this._layer_block_slice(matte_layer);
-          const m_block = this._item_list.chunks
-            .slice(m_start, m_end)
-            .map((c) => clone_chunk_tree(c));
-          const m_list = m_block[0] as ListChunk;
+          const m_list = clone_chunk_tree(matte_layer._layer_list);
+          const m_block: [ListChunk, ...Chunk[]] = [
+            m_list,
+            ...this._item_list.chunks.slice(m_start + 1, m_end).map((c) => clone_chunk_tree(c)),
+          ];
           const m_ldta = find_by_type(m_list.chunks, "ldta");
           const copy_id = project._allocate_id();
           m_ldta.layer_id = copy_id;
@@ -2531,7 +2535,7 @@ export class CompItem extends AVItem {
     for (const block of final_blocks) {
       new_comp._item_list.chunks.splice(insert_at, 0, ...block);
       insert_at += block.length;
-      const new_layer = parse_layer(block[0] as ListChunk, new_comp, effect_defs);
+      const new_layer = parse_layer(block[0], new_comp, effect_defs);
       new_comp._layers.push(new_layer);
     }
     new_comp._invalidate_layer_cache();
@@ -2944,12 +2948,14 @@ descriptor(
 // `@requires_version(24)` on the vertical text methods. Python applies these
 // decorators while the class body runs; here they wrap the finished class.
 {
-  const d = Object.getOwnPropertyDescriptor(CompItem.prototype, "motion_graphics_template_name")!;
+  const d = Object.getOwnPropertyDescriptor(CompItem.prototype, "motion_graphics_template_name");
+  const set = d?.set;
+  py_assert(set !== undefined);
   // A setter's own name is "set <prop>"; Python's error names the method.
-  Object.defineProperty(d.set!, "name", { value: "motion_graphics_template_name" });
+  Object.defineProperty(set, "name", { value: "motion_graphics_template_name" });
   Object.defineProperty(CompItem.prototype, "motion_graphics_template_name", {
     ...d,
-    set: requires_version(15)(d.set!),
+    set: requires_version(15)(set),
   });
 }
 CompItem.prototype.add_vertical_text = requires_version(24)(CompItem.prototype.add_vertical_text);

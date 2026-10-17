@@ -21,9 +21,9 @@ export function _int_digits(tail: string): bigint {
   const cps = Array.from(tail);
   let out = "";
   for (const ch of cps) {
-    if (!_ND_RE.test(ch)) throw new ValueError(`invalid literal for int() with base 10: '${tail}'`);
+    const cp = ch.codePointAt(0);
+    if (cp === undefined || !_ND_RE.test(ch)) throw new ValueError(`invalid literal for int() with base 10: '${tail}'`);
     // Nd digits come in contiguous 0-9 runs starting at a zero.
-    const cp = ch.codePointAt(0)!;
     let start = cp;
     while (_ND_RE.test(String.fromCodePoint(start - 1))) start--;
     out += String((cp - start) % 10);

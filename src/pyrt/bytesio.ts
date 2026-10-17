@@ -2,7 +2,7 @@
 // `io.StringIO` and a read-only `open(path, "rb")`.
 
 import { fs } from "./host.ts";
-import { FileNotFoundError, OSError } from "./errors.ts";
+import { error_code, FileNotFoundError, OSError } from "./errors.ts";
 import type { PackValue, Struct, Unpacked } from "./struct.ts";
 
 const PACK_SCRATCH = new Uint8Array(64);
@@ -207,8 +207,9 @@ export class FileReader {
     try {
       this.fd = fs.openSync(path, "r");
     } catch (e: unknown) {
-      if ((e as NodeJS.ErrnoException | undefined)?.code === "ENOENT") throw new FileNotFoundError(`[Errno 2] No such file or directory: '${path}'`);
-      if (typeof (e as NodeJS.ErrnoException | undefined)?.code === "string") throw new OSError(`${(e as Error).message}`);
+      const code = error_code(e);
+      if (code === "ENOENT") throw new FileNotFoundError(`[Errno 2] No such file or directory: '${path}'`);
+      if (typeof code === "string" && e instanceof Error) throw new OSError(e.message);
       throw e;
     }
     this._size = fs.fstatSync(this.fd).size;

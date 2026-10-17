@@ -576,7 +576,7 @@ export class PardChunk extends Chunk {
   ): PardChunk {
     const { chunk_type = "" } = kw;
     if (this !== PardChunk) {
-      const result = super.read(fp, size, { chunk_type }) as PardChunk;
+      const result = super.read(fp, size, { chunk_type });
       py_assert(result instanceof PardChunk);
       return result;
     }

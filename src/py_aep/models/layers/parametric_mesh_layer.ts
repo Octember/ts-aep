@@ -4,6 +4,7 @@ import { LayerType, ParametricMeshType } from "../../enums/index.ts";
 import { _PARAMETRIC_MESH_ACTIVE_GROUPS } from "../../synthesis/property.ts";
 import {
   AttributeError,
+  type_name,
   descriptor,
   descriptors_of,
   getattr,
@@ -15,8 +16,8 @@ import { ChunkField, type EffectParamDefs } from "../descriptors.ts";
 import { label_index } from "../preferences.ts";
 import { AVLayer } from "./av_layer.ts";
 import type { CompItem } from "../items/composition.ts";
-import type { Property } from "../properties/property.ts";
-import type { PropertyGroup } from "../properties/property_group.ts";
+import { Property } from "../properties/property.ts";
+import { PropertyGroup } from "../properties/property_group.ts";
 
 /**
  * `type(None)` is NoneType, which is never `null` itself. Keeps the
@@ -83,13 +84,13 @@ export class ParametricMeshLayer extends AVLayer {
   static _new(...args: never[]): never;
   static _new(kw: ParametricMeshLayerNewKw): ParametricMeshLayer {
     const { name, layer_id, duration, containing_comp, mesh_type, effect_param_defs = null } = kw;
-    const layer = super._new({
+    const layer = super._new<ParametricMeshLayer>({
       name,
       layer_id,
       duration,
       containing_comp,
       effect_param_defs,
-    }) as ParametricMeshLayer;
+    });
     layer._ldta.layer_type = LayerType.PARAMETRIC_MESH;
     layer._ldta.label = label_index(containing_comp._project._preferences, "Parametrics Label Index", 9);
     layer._ldta.three_d_layer = true;
@@ -123,7 +124,7 @@ export class ParametricMeshLayer extends AVLayer {
     const old_options = getattr(this, "parametric_mesh_options", null);
     if (_type_of(old_options) !== options_cls) {
       try {
-        delete (this as { parametric_mesh_options?: unknown }).parametric_mesh_options;
+        Reflect.deleteProperty(this, "parametric_mesh_options");
       } catch (e) {
         if (!(e instanceof AttributeError)) throw e;
       }
@@ -136,7 +137,7 @@ export class ParametricMeshLayer extends AVLayer {
     const old_bevel = getattr(this, "parametric_bevel_options", null);
     if (_type_of(old_bevel) !== bevel_cls) {
       try {
-        delete (this as { parametric_bevel_options?: unknown }).parametric_bevel_options;
+        Reflect.deleteProperty(this, "parametric_bevel_options");
       } catch (e) {
         if (!(e instanceof AttributeError)) throw e;
       }
@@ -235,10 +236,15 @@ export class ParametricMeshOptions {
   }
 
   _properties(name: string): Property {
+    // Python casts both lookups; a wrong kind fails at its next attribute read.
     if (this._group == null) {
-      this._group = this._layer.property(this.constructor._match_name) as PropertyGroup;
+      const group = this._layer.property(this.constructor._match_name);
+      if (!(group instanceof PropertyGroup)) throw new AttributeError(`'${type_name(group)}' object has no attribute 'property'`);
+      this._group = group;
     }
-    return this._group.property(name) as Property;
+    const child = this._group.property(name);
+    if (!(child instanceof Property)) throw new AttributeError(`'${type_name(child)}' object has no attribute 'value'`);
+    return child;
   }
 
   __repr__(): string {

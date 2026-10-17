@@ -48,8 +48,8 @@ export const parse_output_module = _suppress_materialization().decorate(
     let name_utf8: Utf8Chunk | null;
     let file_name_utf8: Utf8Chunk | null;
     if (om_utf8.length >= 2) {
-      name_utf8 = om_utf8.at(-2)!;
-      file_name_utf8 = om_utf8.at(-1)!;
+      name_utf8 = om_utf8[om_utf8.length - 2];
+      file_name_utf8 = om_utf8[om_utf8.length - 1];
     } else {
       name_utf8 = null;
       file_name_utf8 = null;

@@ -355,10 +355,10 @@ export function apply_text_style_prefs(document: TextDocument, preferences: Pref
   }
 
   const fill = [number("Fill Red"), number("Fill Green"), number("Fill Blue")];
-  if (!fill.includes(null)) {
+  if (fill.every((n) => n !== null)) {
     const current_fill = py_or(document.fill_color, [0.0, 0.0, 0.0]);
-    if (zip(current_fill, fill as number[]).some(([c, n]) => differs(c, n!))) {
-      document.fill_color = fill.map((n) => n!);
+    if (zip(current_fill, fill).some(([c, n]) => differs(c, n))) {
+      document.fill_color = [...fill];
     }
   }
 
@@ -394,10 +394,10 @@ export function apply_text_style_prefs(document: TextDocument, preferences: Pref
         document.stroke_width = stroke_width;
       }
       const stroke = [number("Stroke Red"), number("Stroke Green"), number("Stroke Blue")];
-      if (!stroke.includes(null)) {
+      if (stroke.every((n) => n !== null)) {
         const current = py_or(document.stroke_color, [0.0, 0.0, 0.0]);
-        if (zip(current, stroke as number[]).some(([c, n]) => differs(c, n!))) {
-          document.stroke_color = stroke.map((n) => n!);
+        if (zip(current, stroke).some(([c, n]) => differs(c, n))) {
+          document.stroke_color = [...stroke];
         }
       }
     }

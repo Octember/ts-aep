@@ -13,6 +13,7 @@ import {
   descriptor,
   dict_get,
   encode,
+  getitem,
   int,
   isdigit,
   repr,
@@ -237,7 +238,7 @@ export class ParamsDict extends Map<string, string> {
 
   setdefault(key: string, default_: string = ""): string {
     if (!this.has(key)) this.set(key, default_);
-    return this.get(key) as string;
+    return getitem(this, key);
   }
 
   pop(key: string, ...default_: string[]): string {
@@ -245,7 +246,7 @@ export class ParamsDict extends Map<string, string> {
       if (default_.length > 0) return default_[0];
       throw new KeyError(repr(key));
     }
-    const value = this.get(key) as string;
+    const value = getitem(this, key);
     this.delete(key);
     return value;
   }
@@ -254,7 +255,7 @@ export class ParamsDict extends Map<string, string> {
     const keys = [...this.keys()];
     if (keys.length === 0) throw new KeyError(repr("popitem(): dictionary is empty"));
     const key = keys[keys.length - 1];
-    const value = this.get(key) as string;
+    const value = getitem(this, key);
     super.delete(key);
     if (this._owner != null) this._owner._on_param_removed(key);
     return [key, value];
@@ -476,7 +477,7 @@ export class XmlFormatOptions extends FormatOptionsBase {
   _clamp_after_param(param_key: string): void {
     const rule_key = _PARAM_RULE_KEYS.get(param_key) ?? null;
     if (rule_key == null) return;
-    this._require_om()._apply_singleton_clamps((CLAMP_DEPENDENTS.get(rule_key) ?? []) as string[]);
+    this._require_om()._apply_singleton_clamps(CLAMP_DEPENDENTS.get(rule_key) ?? []);
   }
 
   /**

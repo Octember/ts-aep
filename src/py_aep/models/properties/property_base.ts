@@ -27,6 +27,8 @@ import type { MaskPropertyGroup } from "./mask_property_group.ts";
 import type { Property } from "./property.ts";
 import type { PropertyGroup } from "./property_group.ts";
 
+const _layer = deferred<typeof import("../layers/layer.ts")>("py_aep/models/layers/layer");
+const _mask_property_group = deferred<typeof import("./mask_property_group.ts")>("py_aep/models/properties/mask_property_group");
 const _property_group = deferred<typeof import("./property_group.ts")>("py_aep/models/properties/property_group");
 const _property = deferred<typeof import("../../parsers/property.ts")>("py_aep/parsers/property");
 const _property_value = deferred<typeof import("../../parsers/property_value.ts")>("py_aep/parsers/property_value");
@@ -100,14 +102,14 @@ export function _renumber_mask_auto_names(parent: PropertyGroup): void {
  */
 export function _assign_duplicate_mask_identity(
   source: PropertyBase,
-  new_mask: PropertyBase,
+  new_mask: MaskPropertyGroup,
   parent: PropertyGroup,
 ): void {
-  const siblings: MaskPropertyGroup[] = parent._properties
+  const siblings = parent._properties
     .filter((m) => m._is_mask && m !== new_mask)
-    .map((m) => m as MaskPropertyGroup);
+    .filter((m) => m instanceof _mask_property_group().MaskPropertyGroup);
   const new_id = max(siblings.map((m) => m._mkif.mask_id), null, 0) + 1;
-  (new_mask as MaskPropertyGroup)._mkif.mask_id = new_id;
+  new_mask._mkif.mask_id = new_id;
   // Python `$` also matches before a trailing newline; the lookahead mirrors that.
   const base = source.name.replace(/ \p{Nd}+(?=\n?$)/u, "");
   new_mask.name = `${base} ${new_id}`;
@@ -224,7 +226,7 @@ export class PropertyBase {
     const chunks = tdgp.chunks;
     if (!chunks.some((c) => c === tdmn) || !chunks.some((c) => c === body)) return;
     const siblings = parent._properties;
-    const idx = siblings.findIndex((s) => (s as unknown) === this);
+    const idx = siblings.findIndex((s: PropertyBase) => s === this);
     if (idx < 0) return;
     chunks.splice(0, chunks.length, ...chunks.filter((c) => c !== tdmn && c !== body));
 
@@ -437,7 +439,7 @@ export class PropertyBase {
         "ADBE Vector Materials Group",
       ].includes(mn)
     ) {
-      return [PropertyType.NAMED_GROUP, PropertyType.INDEXED_GROUP].includes(this.property_type as 6213 | 6214);
+      return this.property_type === PropertyType.NAMED_GROUP || this.property_type === PropertyType.INDEXED_GROUP;
     }
     return false;
   }
@@ -451,7 +453,7 @@ export class PropertyBase {
   get _containing_layer(): Layer {
     let node: PropertyBase | null = this.parent_property;
     while (node != null) {
-      if ("_ldta" in node) return node as Layer;
+      if ("_ldta" in node && node instanceof _layer().Layer) return node;
       node = node.parent_property;
     }
     throw new ValueError("Property is not attached to a layer");
@@ -623,9 +625,9 @@ export class PropertyBase {
 
     // Insert in model list after original
     const model_idx = list_index(parent.properties, this);
-    parent.properties.splice(model_idx + 1, 0, new_prop as Property | PropertyGroup);
+    parent.properties.splice(model_idx + 1, 0, new_prop);
 
-    if (this._is_mask) {
+    if (this._is_mask && new_prop instanceof _mask_property_group().MaskPropertyGroup) {
       _assign_duplicate_mask_identity(this, new_prop, parent);
       _renumber_mask_auto_names(parent);
     }
@@ -642,7 +644,7 @@ export class PropertyBase {
    *   auxiliary chunks (e.g. `mkif`) in between.
    * @param parent - The parent group of the clone.
    */
-  _parse_clone(cloned: Chunk[], parent: PropertyGroup): PropertyBase {
+  _parse_clone(cloned: Chunk[], parent: PropertyGroup): Property | PropertyGroup {
     // Determine the composition context
     const layer = this._containing_layer;
     const comp = layer.containing_comp;
@@ -655,8 +657,8 @@ export class PropertyBase {
     }
 
     const tdmn = cloned[0] as TdmnChunk;
-    const list_chunk = cloned.at(-1)! as ListChunk;
-    let result: PropertyBase;
+    const list_chunk = cloned.at(-1) as ListChunk;
+    let result: Property | PropertyGroup;
     if (this._is_mask) {
       const mkif = find_by_type(cloned, "mkif");
       result = _property()._parse_mask_atom(

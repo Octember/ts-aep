@@ -1,8 +1,11 @@
 /** Shape value model for mask and shape path properties. */
 
 import {
+  AttributeError,
   ValueError,
   TypeError_,
+  deferred,
+  mod,
   py_assert,
   floordiv,
   min,
@@ -17,10 +20,11 @@ import type { FeatherPointItem, OmtnChunk } from "../../binary/misc_chunks.ts";
 import { DEFAULT_TENSION, roto_bezier_tangents } from "../../resolvers/roto_bezier.ts";
 import { ChunkField } from "../descriptors.ts";
 import { validate_bool, validate_f4_point, validate_normalized_float, validate_positive_int } from "../validators.ts";
-import type { AVLayer } from "../layers/av_layer.ts";
 import type { Layer } from "../layers/layer.ts";
-import type { MaskPropertyGroup } from "./mask_property_group.ts";
 import type { Property } from "./property.ts";
+
+const _av_layer = deferred<typeof import("../layers/av_layer.ts")>("py_aep/models/layers/av_layer");
+const _mask_property_group = deferred<typeof import("./mask_property_group.ts")>("py_aep/models/properties/mask_property_group");
 
 export function _interp_transform(raw: number): number {
   /** Map binary interpolation (0=non-Hold, 2=Hold) to ExtendScript (0/1). */
@@ -335,7 +339,7 @@ export class Shape {
     const prop = this._mask_path;
     if (prop == null || prop._tdb4 == null) return false;
     const mask = prop._parent_property;
-    return mask != null && mask._is_mask && (mask as MaskPropertyGroup).roto_bezier;
+    return mask != null && mask._is_mask && mask instanceof _mask_property_group().MaskPropertyGroup && mask.roto_bezier;
   }
 
   _roto_tangents(): [number[][], number[][]] | null {
@@ -343,9 +347,11 @@ export class Shape {
      * The tangents AE draws the path with when its mask is RotoBezier
      * (`resolvers.roto_bezier`), or `null` for any other shape.
      */
-    if (!this._is_roto_bezier()) return null;
-    const prop = this._mask_path!;
-    const [width, height] = (prop._containing_layer as AVLayer)._mask_scale;
+    const prop = this._mask_path;
+    if (prop == null || !this._is_roto_bezier()) return null;
+    const layer = prop._containing_layer;
+    if (!(layer instanceof _av_layer().AVLayer)) throw new AttributeError("_mask_scale");
+    const [width, height] = layer._mask_scale;
     const vertices = this.vertices;
     let tensions = this._tensions;
     if (tensions == null || tensions.length !== vertices.length) {
@@ -387,7 +393,8 @@ export class Shape {
    */
   get _comp_size(): [number, number] | null {
     if (this._layer == null) return null;
-    return (this._layer as AVLayer)._mask_scale;
+    if (!(this._layer instanceof _av_layer().AVLayer)) throw new AttributeError("_mask_scale");
+    return this._layer._mask_scale;
   }
 
   _denormalize_point(pt: ShapePoint): number[] {
@@ -490,7 +497,7 @@ export class Shape {
     let result: number[][] = [];
     for (let i = 0; i < this._points.length; i += 3) {
       const v = this._denormalize_point(this._points[i]);
-      const t = this._denormalize_point(this._points.at((i + offset) % this._points.length)!);
+      const t = this._denormalize_point(this._points[mod(i + offset, this._points.length)]);
       result.push([t[0] - v[0], t[1] - v[1]]);
     }
     const mask_size = this._is_mask ? this._comp_size : null;

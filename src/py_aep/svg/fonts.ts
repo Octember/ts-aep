@@ -14,6 +14,7 @@ import {
   Path,
   setdefault,
   split,
+  StopIteration,
   strip,
 } from "../../pyrt/index.ts";
 
@@ -146,7 +147,11 @@ export function _name(font: fontkit.Font, ...ids: number[]): string | null {
     return null;
   }
   for (const nid of ids) {
-    const value = font.getName(NAME_KEYS.get(nid)!);
+    const name_key = NAME_KEYS.get(nid);
+    if (name_key === undefined) {
+      continue;
+    }
+    const value = font.getName(name_key);
     if (value) {
       return value;
     }
@@ -203,7 +208,10 @@ export function* _iter_faces(path: Path): Generator<[number, fontkit.Font]> {
       host.fs.readFileSync(path.toString()),
     );
     if (path.suffix.toLowerCase() === ".ttc") {
-      fonts = [...opened.fonts!];
+      if (opened.fonts == null) {
+        return;
+      }
+      fonts = [...opened.fonts];
     } else {
       // NOTE(port): TTFont(fontNumber=0) on a non-.ttc file; fontkit returns a
       // collection (with `.fonts`) only for collection files, so take face 0.
@@ -366,11 +374,16 @@ export function _pick(
     order = ["regular", "book", "roman"];
   }
   for (const key of order) {
-    if (styles.has(key)) {
-      return styles.get(key)!;
+    const face = styles.get(key);
+    if (face !== undefined) {
+      return face;
     }
   }
-  return styles.values().next().value as [Path, number];
+  const first = styles.values().next();
+  if (first.done) {
+    throw new StopIteration();
+  }
+  return first.value;
 }
 
 /**

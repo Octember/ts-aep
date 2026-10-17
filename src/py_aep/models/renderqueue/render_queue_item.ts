@@ -868,11 +868,8 @@ export class RenderQueueItem {
 
     // status holds the raw binary value (ExtendScript value minus 3013),
     // so compare and assign in that encoding via to_binary().
-    if (
-      ([RQItemStatus.DONE, RQItemStatus.ERR_STOPPED] as number[]).includes(
-        RQItemStatus.from_binary(new_rsi.status),
-      )
-    ) {
+    const status = RQItemStatus.from_binary(new_rsi.status);
+    if (status === RQItemStatus.DONE || status === RQItemStatus.ERR_STOPPED) {
       new_rsi.status = RQItemStatus.to_binary(RQItemStatus.QUEUED);
     }
     new_rsi.item_id = _next_item_id(rq);

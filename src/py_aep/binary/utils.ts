@@ -416,7 +416,7 @@ export function toggle_flag_chunk(
       after_types.includes(c.chunk_type) ? [i] : [],
     );
     if (anchors.length > 0) {
-      container.chunks.splice(anchors.at(-1)! + 1, 0, new_chunk);
+      container.chunks.splice(anchors[anchors.length - 1] + 1, 0, new_chunk);
     } else {
       container.chunks.push(new_chunk);
     }

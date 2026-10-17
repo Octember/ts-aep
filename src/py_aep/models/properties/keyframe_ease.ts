@@ -1,8 +1,5 @@
-import { float, getattr } from "../../../pyrt/index.ts";
+import { float, getattr, setattr } from "../../../pyrt/index.ts";
 import { _validate_number, validate_f8 } from "../validators.ts";
-
-/** Backing keyframe-data chunk body: per-direction speed/influence fields. */
-type KeyframeData = Record<string, number | number[]>;
 
 /**
  * The `KeyframeEase` object encapsulates the keyframe ease settings of a
@@ -91,8 +88,8 @@ export class KeyframeEase {
       getattr(this._kf_data, `${this._direction}_speed`)[this._dimension_index] = raw_speed;
       getattr(this._kf_data, `${this._direction}_influence`)[this._dimension_index] = raw_influence;
     } else {
-      (this._kf_data as KeyframeData)[`${this._direction}_speed`] = raw_speed;
-      (this._kf_data as KeyframeData)[`${this._direction}_influence`] = raw_influence;
+      setattr(this._kf_data, `${this._direction}_speed`, raw_speed);
+      setattr(this._kf_data, `${this._direction}_influence`, raw_influence);
     }
   }
 
@@ -128,7 +125,7 @@ export class KeyframeEase {
     if (this._is_array()) {
       getattr(this._kf_data, field_name)[this._dimension_index] = binary_value;
     } else {
-      (this._kf_data as KeyframeData)[field_name] = binary_value;
+      setattr(this._kf_data, field_name, binary_value);
     }
   }
 
@@ -164,7 +161,7 @@ export class KeyframeEase {
     if (this._is_array()) {
       getattr(this._kf_data, field_name)[this._dimension_index] = binary_value;
     } else {
-      (this._kf_data as KeyframeData)[field_name] = binary_value;
+      setattr(this._kf_data, field_name, binary_value);
     }
   }
 }

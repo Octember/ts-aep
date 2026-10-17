@@ -1,5 +1,5 @@
 import type { Chunk, ListChunk } from "../binary/chunk.ts";
-import type { TdmnChunk } from "../binary/property_chunks.ts";
+import { TdmnChunk } from "../binary/property_chunks.ts";
 import { at, py_bool, setdefault } from "../../pyrt/index.ts";
 
 export const _SKIP_CHUNK_TYPES: readonly string[] = ["engv", "aRbs"];
@@ -19,8 +19,8 @@ export function get_match_name_runs(root_chunk: ListChunk): [string, Chunk[]][] 
   if (py_bool(root_chunk)) {
     let skip_to_next_tdmn_flag = true;
     for (const chunk of root_chunk.chunks) {
-      if (chunk.chunk_type === "tdmn") {
-        const match_name = (chunk as TdmnChunk).value;
+      if (chunk.chunk_type === "tdmn" && chunk instanceof TdmnChunk) {
+        const match_name = chunk.value;
         if (match_name === "ADBE Group End") {
           skip_to_next_tdmn_flag = true;
           continue;

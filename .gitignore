@@ -10,3 +10,4 @@ dist/
 .gate/
 __pycache__/
 .doccheck/
+.survey

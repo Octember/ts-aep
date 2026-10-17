@@ -96,7 +96,7 @@ export function _label_or_name(key: string | null, v: RuleValue): string {
   const E = key == null ? null : _KEY_ENUM.get(key);
   if (E != null && E.has(v)) {
     const label = typeof E.label === "function" ? E.label(v) : null;
-    if (label) return label!;
+    if (label) return label;
     return E.name_of(v);
   }
   return str(v);
@@ -191,7 +191,10 @@ export function _validate_for_format(
 // Reading/writing through the module keeps _CLAMP_ACCESSORS free of
 // isinstance lambdas; every writer is a raw write (validation bypass).
 
-export function _xml_options_of(om: OutputModule, attr: string): unknown {
+export function _xml_options_of<K extends "audio_bitrate" | "audio_codec" | "bitrate" | "mpeg_audio_format" | "mpeg_multiplexer" | "video_codec">(
+  om: OutputModule,
+  attr: K,
+): XmlFormatOptions[K] | null {
   const fo = om._format_options;
   if (fo instanceof XmlFormatOptions) {
     return getattr(fo, attr);
@@ -345,7 +348,7 @@ export class OutputModule {
    * clamp can never recurse into validation. Table invariants in
    * tests/unit/test_output_module_rules.py prove clamped values are
    * always inside the format's own allowed sets. */
-  static _CLAMP_ACCESSORS = new Map<string, [(om: OutputModule) => unknown, (om: OutputModule, v: RuleValue) => void]>([
+  static _CLAMP_ACCESSORS = new Map<string, [(om: OutputModule) => RuleValue | null, (om: OutputModule, v: RuleValue) => void]>([
     [
       "Color",
       [
@@ -407,7 +410,7 @@ export class OutputModule {
    * reads can raise on out-of-enum stored bytes; `validate_state`
    * treats that (and raw fallbacks) as "unclean context -\> skip". 
    */
-  static _STATE_GETTERS = new Map<string, (om: OutputModule) => unknown>([
+  static _STATE_GETTERS = new Map<string, (om: OutputModule) => RuleValue | null>([
     ["Video Output", (om) => om._video_output],
     ["Output Audio", (om) => om._output_audio],
     ["Channels", (om) => om._channels],
@@ -562,7 +565,7 @@ export class OutputModule {
    */
   get post_render_target_comp(): CompItem {
     const comp_id = this._om_ldat.post_render_target_comp_id || null;
-    if (comp_id == null || ([PostRenderAction.NONE, PostRenderAction.IMPORT] as number[]).includes(this.post_render_action)) {
+    if (comp_id == null || this.post_render_action === PostRenderAction.NONE || this.post_render_action === PostRenderAction.IMPORT) {
       return this._parent_rqi.comp;
     }
     return getitem(this._project.items, comp_id) as CompItem;
@@ -731,7 +734,7 @@ export class OutputModule {
     }
     // `label` (output-module enums) > `name` (plain IntEnums, which
     // str() to their bare value on 3.11+) > str (ints, strings).
-    const labels = sorted(allowed as Iterable<RuleValue>, (v) => [typeof v === "string", v])
+    const labels = sorted(allowed, (v) => [typeof v === "string", v])
       .map((v) => _label_or_name(key, v))
       .join(", ");
     throw new ValueError(
@@ -750,7 +753,7 @@ export class OutputModule {
    * per key so an earlier clamp (e.g. GSM forcing mono) feeds the
    * later ones.
    */
-  _apply_singleton_clamps(keys: string[]): void {
+  _apply_singleton_clamps(keys: readonly string[]): void {
     if (this._batch_depth) {
       return; // deferred to the batch_edit exit validation
     }
@@ -765,15 +768,15 @@ export class OutputModule {
       }
       const forced = [...allowed][0];
       const [getter, setter] = getitem(this.constructor._CLAMP_ACCESSORS, key);
-      let current: RuleValue;
+      let current: RuleValue | null;
       try {
-        current = getter(this) as RuleValue;
+        current = getter(this);
       } catch (e) {
         if (!(e instanceof ValueError)) throw e;
         continue; // out-of-enum stored byte: leave it alone
       }
       if (current !== forced) {
-        setter(this, forced as RuleValue);
+        setter(this, forced);
       }
     }
   }
@@ -789,9 +792,9 @@ export class OutputModule {
    * audio/video stream, absent format-option params, and raw
    * fallbacks from out-of-enum stored bytes (the binary is trusted).
    */
-  validate_state(): [string, RuleValue, ReadonlySet<unknown>][] {
+  validate_state(): [string, RuleValue, ReadonlySet<RuleValue>][] {
     const cls = this.constructor;
-    const violations: [string, RuleValue, ReadonlySet<unknown>][] = [];
+    const violations: [string, RuleValue, ReadonlySet<RuleValue>][] = [];
     const fmt = this._format;
     if (!OutputFormat.has(fmt)) {
       return violations;
@@ -810,9 +813,9 @@ export class OutputModule {
       if (allowed == null) {
         continue;
       }
-      let value: RuleValue;
+      let value: RuleValue | null;
       try {
-        value = getitem(cls._STATE_GETTERS, key)(this) as RuleValue;
+        value = getitem(cls._STATE_GETTERS, key)(this);
       } catch (e) {
         if (!(e instanceof ValueError)) throw e;
         continue; // out-of-enum stored byte: unclean, skip
@@ -995,8 +998,9 @@ export class OutputModule {
     const depth_val = int(this._depth);
     const is_rgba = this._om_ldat.channels === int(OutputChannels.RGBA);
     const target = is_rgba ? _DEPTH_PLUS : _DEPTH_MINUS;
-    if (target.has(depth_val)) {
-      this._roou.depth = target.get(depth_val)!;
+    const paired = target.get(depth_val);
+    if (paired !== undefined) {
+      this._roou.depth = paired;
     }
   }
 
@@ -1069,8 +1073,11 @@ export class OutputModule {
         roou.audio_bit_depth = int(AudioBitDepth.SIXTEEN_BIT);
       }
       roou.audio_encoding = roou.audio_bit_depth === 4 ? 3 : 2;
-    } else if (_AUDIO_ENCODINGS.has(roou.audio_bit_depth)) {
-      roou.audio_encoding = _AUDIO_ENCODINGS.get(roou.audio_bit_depth)!;
+    } else {
+      const encoding = _AUDIO_ENCODINGS.get(roou.audio_bit_depth);
+      if (encoding !== undefined) {
+        roou.audio_encoding = encoding;
+      }
     }
   }
 
@@ -1428,7 +1435,7 @@ export class OutputModule {
       position = this._block_span(lom_chunks)[1];
     }
     lom_chunks.splice(position, 0, als2);
-    const alas = (this._alas_utf8 = als2.chunks[0] as Utf8Chunk);
+    const alas = (this._alas_utf8 = find_by_type(als2.chunks, "alas"));
     this._om_ldat.has_output_file = true;
     if (this._parent_rqi.status === RQItemStatus.NEEDS_OUTPUT) {
       this._parent_rqi.status = RQItemStatus.QUEUED;

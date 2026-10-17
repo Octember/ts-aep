@@ -24,7 +24,6 @@ import {
   py_slice,
   strip,
   zip,
-  pattern_findall,
 } from "../../pyrt/index.ts";
 
 // Control-point distance for a 90-degree circular arc as a cubic bezier.
@@ -210,7 +209,7 @@ export function _ellipse(
 }
 
 export function _poly(attrs: Map<string, string>, closed: boolean): RawSubpath[] {
-  const nums = pattern_findall(NUMBER_RE, attrs.get("points") ?? "").map((n) => float(n as string));
+  const nums = Array.from((attrs.get("points") ?? "").matchAll(NUMBER_RE), (n) => float(n[0]));
   const pts = zip(py_slice(nums, 0, null, 2), py_slice(nums, 1, null, 2));
   if (pts.length < 2) {
     return [];
@@ -222,7 +221,7 @@ export function _poly(attrs: Map<string, string>, closed: boolean): RawSubpath[]
     segs.push([p0[0], p0[1], p0[0], p0[1], p3[0], p3[1], p3[0], p3[1]]);
   }
   if (closed) {
-    const p0 = pts.at(-1)!;
+    const p0 = pts[pts.length - 1];
     const p3 = pts[0];
     if (!py_eq(p0, p3)) {
       segs.push([p0[0], p0[1], p0[0], p0[1], p3[0], p3[1], p3[0], p3[1]]);
@@ -262,7 +261,7 @@ export function cubics_to_subpath(raw: RawSubpath, transform: Affine): Subpath |
       const vy = tsegs[i][1];
       vertices.push([vx, vy]);
       out_t.push([tsegs[i][2] - vx, tsegs[i][3] - vy]);
-      const prev = tsegs.at(i - 1)!;
+      const prev = tsegs[i === 0 ? n - 1 : i - 1];
       in_t.push([prev[4] - vx, prev[5] - vy]);
     }
   } else {

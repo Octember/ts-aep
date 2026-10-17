@@ -60,7 +60,7 @@ export const RenderQuality = int_enum(
     },
 
     /** Convert binary value to RenderQuality (0xFFFF = CURRENT_SETTINGS). */
-    from_binary(value: number): number {
+    from_binary(value: number) {
       return value === 0xffff ? this.CURRENT_SETTINGS : this.of(value);
     },
 
@@ -167,7 +167,7 @@ export const MotionBlurSetting = int_enum(
     },
 
     /** Convert binary value (0xFFFF = CURRENT_SETTINGS). */
-    from_binary(value: number): number {
+    from_binary(value: number) {
       return value === 0xffff ? this.CURRENT_SETTINGS : this.of(value);
     },
   },
@@ -202,7 +202,7 @@ export const FrameBlendingSetting = int_enum(
     },
 
     /** Convert binary value (0xFFFF = CURRENT_SETTINGS). */
-    from_binary(value: number): number {
+    from_binary(value: number) {
       return value === 0xffff ? this.CURRENT_SETTINGS : this.of(value);
     },
   },
@@ -237,7 +237,7 @@ export const EffectsSetting = int_enum(
     },
 
     /** Convert binary value (0xFFFF = CURRENT_SETTINGS). */
-    from_binary(value: number): number {
+    from_binary(value: number) {
       return value === 0xffff ? this.CURRENT_SETTINGS : this.of(value);
     },
   },
@@ -273,7 +273,7 @@ export const ProxyUseSetting = int_enum(
     },
 
     /** Convert binary value (0xFFFF = CURRENT_SETTINGS). */
-    from_binary(value: number): number {
+    from_binary(value: number) {
       return value === 0xffff ? this.CURRENT_SETTINGS : this.of(value);
     },
   },
@@ -308,7 +308,7 @@ export const SoloSwitchesSetting = int_enum(
     },
 
     /** Convert binary value (0xFFFF = CURRENT_SETTINGS). */
-    from_binary(value: number): number {
+    from_binary(value: number) {
       return value === 0xffff ? this.CURRENT_SETTINGS : this.of(value);
     },
   },
@@ -341,7 +341,7 @@ export const GuideLayers = int_enum(
     },
 
     /** Convert binary value (0xFFFF = CURRENT_SETTINGS). */
-    from_binary(value: number): number {
+    from_binary(value: number) {
       return value === 0xffff ? this.CURRENT_SETTINGS : this.of(value);
     },
   },
@@ -374,7 +374,7 @@ export const DiskCacheSetting = int_enum(
     },
 
     /** Convert binary value (0xFFFF = CURRENT_SETTINGS). */
-    from_binary(value: number): number {
+    from_binary(value: number) {
       return value === 0xffff ? this.CURRENT_SETTINGS : this.of(value);
     },
   },
@@ -409,7 +409,7 @@ export const ColorDepthSetting = int_enum(
     },
 
     /** Convert binary value (0xFFFF = CURRENT_SETTINGS). */
-    from_binary(value: number): number {
+    from_binary(value: number) {
       return value === 0xffff ? this.CURRENT_SETTINGS : this.of(value);
     },
 
@@ -450,7 +450,7 @@ export const TimeSpanSource = int_enum(
     },
 
     /** Convert binary value (0xFFFF = CUSTOM). */
-    from_binary(value: number): number {
+    from_binary(value: number) {
       return value === 0xffff ? this.CUSTOM : this.of(value);
     },
   },

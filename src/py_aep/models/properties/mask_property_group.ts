@@ -11,13 +11,14 @@ import { validate_bool, validate_rgb_color } from "../validators.ts";
 // NOTE(port): property_group.ts reaches this module only through `deferred(...)` (the
 // port of Python's in-method import), so `extends PropertyGroup` evaluates after it.
 import { PropertyGroup, _insert_before_group_end } from "./property_group.ts";
-import { deferred, descriptor, py_assert, zip, instance_dict } from "../../../pyrt/index.ts";
+import { AttributeError, deferred, descriptor, mod, py_assert, zip, instance_dict } from "../../../pyrt/index.ts";
 import type { Utf8Chunk } from "../../binary/scalar_chunks.ts";
-import type { AVLayer } from "../layers/av_layer.ts";
 import type { Property } from "./property.ts";
 import type { Shape } from "./shape.ts";
 
 const _property = deferred<typeof import("../../parsers/property.ts")>("py_aep/parsers/property");
+const _property_model = deferred<typeof import("./property.ts")>("py_aep/models/properties/property");
+const _av_layer = deferred<typeof import("../layers/av_layer.ts")>("py_aep/models/layers/av_layer");
 
 // Mask outline colors cycled by creation index for new masks. AE picks
 // from the label colors via an app-global counter that persists across
@@ -192,7 +193,7 @@ export class MaskPropertyGroup extends PropertyGroup {
     kw: { name: string; mask_id: number },
   ): MaskPropertyGroup {
     const { name, mask_id } = kw;
-    const color = _MASK_COLOR_CYCLE.at((mask_id - 1) % _MASK_COLOR_CYCLE.length)!;
+    const color = _MASK_COLOR_CYCLE[mod(mask_id - 1, _MASK_COLOR_CYCLE.length)];
     const _tdmn = new TdmnChunk({ value: "ADBE Mask Atom" });
     const _mkif = new MkifChunk({
       mode: 1, // binary PF_MaskMode for MaskMode.ADD
@@ -286,8 +287,9 @@ export class MaskPropertyGroup extends PropertyGroup {
     this._ensure_materialized();
     this._ensure_children_synthesized();
     py_assert(this._tdgp != null);
-    const layer = this._containing_layer as AVLayer;
+    const layer = this._containing_layer;
     const comp = layer.containing_comp;
+    if (!(layer instanceof _av_layer().AVLayer)) throw new AttributeError("_mask_scale");
     const [width, height] = layer._mask_scale;
     const source = layer.source;
     // AE stamps the mask space's display aspect, so a non-square source
@@ -343,7 +345,8 @@ export class MaskPropertyGroup extends PropertyGroup {
       // `instance_dict` Map (non-enumerable, so Object.assign alone would skip it).
       Object.assign(existing, mask_path);
       for (const [k, v] of instance_dict(mask_path)) instance_dict(existing).set(k, v);
-      (existing as Property)._link_keyframes();
+      if (!(existing instanceof _property_model().Property)) throw new AttributeError("_link_keyframes");
+      existing._link_keyframes();
     } else {
       this._properties.splice(0, 0, mask_path);
     }

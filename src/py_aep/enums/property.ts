@@ -75,7 +75,7 @@ export const KeyframeInterpolationType = int_enum("KeyframeInterpolationType", {
   HOLD: 6614,
 }, {
   /** Convert binary value to KeyframeInterpolationType. */
-  from_binary(value: number): number {
+  from_binary(value: number) {
     return this.of_or_null(value + 6611) ?? this.LINEAR;
   },
   /** Convert KeyframeInterpolationType to binary value. */

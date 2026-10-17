@@ -57,7 +57,7 @@ export function roto_bezier_tangents(
   const loop_stop = closed ? count : count - 1;
   for (let i = loop_start; i < loop_stop; i++) {
     const [vx, vy] = points[i];
-    const [px, py] = points.at(i - 1)!;
+    const [px, py] = points[(i + count - 1) % count];
     const [nx, ny] = points[(i + 1) % count];
     const chord = hypot(nx - px, ny - py);
     if (chord < 1e-12) {
@@ -71,11 +71,11 @@ export function roto_bezier_tangents(
     outs[i] = [ux * after, uy * after];
   }
   if (!closed && count >= 2) {
-    const [lx, ly] = points.at(-1)!;
-    const [bx, by] = points.at(-2)!;
+    const [lx, ly] = points[count - 1];
+    const [bx, by] = points[count - 2];
     ins[count - 1] = [
-      (bx + outs.at(-2)![0] - lx) * ks.at(-1)!,
-      (by + outs.at(-2)![1] - ly) * ks.at(-1)!,
+      (bx + outs[count - 2][0] - lx) * ks[ks.length - 1],
+      (by + outs[count - 2][1] - ly) * ks[ks.length - 1],
     ];
     const [fx, fy] = points[0];
     const [sx, sy] = points[1];

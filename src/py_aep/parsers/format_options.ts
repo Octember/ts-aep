@@ -1,7 +1,7 @@
 /** Parsers for format-specific render options (Ropt chunk). */
 
 import type { Chunk } from "../binary/chunk.ts";
-import type { OpenExrRoptChunk, PngRoptChunk } from "../binary/render_chunks.ts";
+import { OpenExrRoptChunk, PngRoptChunk } from "../binary/render_chunks.ts";
 import { find_by_type_or_null } from "../binary/utils.ts";
 import { CineonFormatOptions, JpegFormatOptions, OpenExrFormatOptions, PngFormatOptions, TargaFormatOptions, TiffFormatOptions, XmlFormatOptions } from "../models/renderqueue/format_options/index.ts";
 
@@ -42,13 +42,13 @@ export function parse_format_options(chunks: Chunk[]): FormatOptions | null {
   if (format_code === "TIF ") {
     return new TiffFormatOptions({ _body: ropt_chunk });
   }
-  if (format_code === "oEXR") {
-    return new OpenExrFormatOptions({ _body: ropt_chunk as OpenExrRoptChunk });
+  if (format_code === "oEXR" && ropt_chunk instanceof OpenExrRoptChunk) {
+    return new OpenExrFormatOptions({ _body: ropt_chunk });
   }
-  if (format_code === "png!") {
+  if (format_code === "png!" && ropt_chunk instanceof PngRoptChunk) {
     const hdr10_utf8 = find_by_type_or_null(chunks, "Utf8");
     return new PngFormatOptions({
-      _body: ropt_chunk as PngRoptChunk,
+      _body: ropt_chunk,
       _hdr10_utf8: hdr10_utf8,
     });
   }

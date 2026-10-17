@@ -48,7 +48,7 @@ export class ShapeLayer extends AVLayer {
       containing_comp,
       effect_param_defs = null,
     } = kw;
-    const layer = super._new({
+    const layer = super._new<ShapeLayer>({
       name,
       layer_id,
       duration,

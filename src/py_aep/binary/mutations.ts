@@ -15,6 +15,7 @@ import {
   rstrip,
   struct,
   ValueError,
+  py_assert,
   py_or,
 } from "../../pyrt/index.ts";
 import { ae_writes } from "../ae_version.ts";
@@ -29,7 +30,7 @@ import type { FeatherPointItem } from "./misc_chunks.ts";
 import { TDSN_SENTINEL, CdatChunk, Tdb4Chunk, TdmnChunk, TdsbChunk, TdsnChunk } from "./property_chunks.ts";
 import { RoutItem } from "./render_chunks.ts";
 import { F8Chunk, S4Chunk, U4Chunk, U4LeChunk, Utf8Chunk } from "./scalar_chunks.ts";
-import { recursive_find } from "./utils.ts";
+import { filter_by_type, recursive_find } from "./utils.ts";
 
 // Keyframe ldat items always use raw type 4; the effective LdatItemType is
 // disambiguated by item_size (and spatial context on re-read).
@@ -117,16 +118,15 @@ export function rewrite_owner_tdpi(chunk: Chunk, layer_id: number): void {
   if (!(chunk instanceof ListChunk)) return;
   const chunks = chunk.chunks;
   for (const [i, c] of chunks.entries()) {
+    const next = chunks[i + 1];
     if (
       c.chunk_type === "tdmn" &&
       (c as TdmnChunk).value.endsWith("-0000") &&
       i + 1 < chunks.length &&
-      chunks[i + 1] instanceof ListChunk
+      next instanceof ListChunk
     ) {
-      for (const inner of (chunks[i + 1] as ListChunk).chunks) {
-        if (inner.chunk_type === "tdpi") {
-          (inner as S4Chunk).value = layer_id;
-        }
+      for (const tdpi of filter_by_type(next.chunks, "tdpi")) {
+        tdpi.value = layer_id;
       }
     } else if (c instanceof ListChunk) {
       rewrite_owner_tdpi(c, layer_id);
@@ -144,15 +144,16 @@ export function collect_layer_ref_tdpi_ids(chunk: Chunk, out: Set<number> | null
   if (!(chunk instanceof ListChunk)) return out;
   const chunks = chunk.chunks;
   for (const [i, c] of chunks.entries()) {
+    const next = chunks[i + 1];
     if (
       c.chunk_type === "tdmn" &&
       i + 1 < chunks.length &&
-      chunks[i + 1] instanceof ListChunk &&
+      next instanceof ListChunk &&
       !(c as TdmnChunk).value.endsWith("-0000")
     ) {
-      for (const inner of (chunks[i + 1] as ListChunk).chunks) {
-        if (inner.chunk_type === "tdpi" && (inner as S4Chunk).value) {
-          out.add((inner as S4Chunk).value);
+      for (const tdpi of filter_by_type(next.chunks, "tdpi")) {
+        if (tdpi.value) {
+          out.add(tdpi.value);
         }
       }
     }
@@ -179,15 +180,14 @@ export function remap_layer_ref_tdpi(chunk: Chunk, id_map: Map<number, number>):
   if (!(chunk instanceof ListChunk)) return;
   const chunks = chunk.chunks;
   for (const [i, c] of chunks.entries()) {
+    const next = chunks[i + 1];
     if (
       c.chunk_type === "tdmn" &&
       i + 1 < chunks.length &&
-      chunks[i + 1] instanceof ListChunk
+      next instanceof ListChunk
     ) {
       if ((c as TdmnChunk).value.endsWith("-0000")) continue;
-      for (const inner of (chunks[i + 1] as ListChunk).chunks) {
-        if (inner.chunk_type !== "tdpi") continue;
-        const tdpi = inner as S4Chunk;
+      for (const tdpi of filter_by_type(next.chunks, "tdpi")) {
         if (tdpi.value) {
           tdpi.value = id_map.get(tdpi.value) ?? 0;
         }
@@ -309,7 +309,7 @@ export function build_kf_data(item_type: LdatItemType, num_value: number): KfCol
   if (item_type === LdatItemType.color) {
     return new KfColor();
   }
-  if (([LdatItemType.two_d_spatial, LdatItemType.three_d_spatial] as number[]).includes(item_type)) {
+  if (item_type === LdatItemType.two_d_spatial || item_type === LdatItemType.three_d_spatial) {
     return new KfPosition({
       value: zeros_list(num_value),
       in_spatial_tangents: zeros_list(num_value),
@@ -368,7 +368,7 @@ export function build_parallel_ldat_item(
   let kf_data: KfNoValue | Uint8Array;
   let interp: number;
   let flags: number;
-  if (([LdatItemType.orientation, LdatItemType.no_value] as number[]).includes(item_type)) {
+  if (item_type === LdatItemType.orientation || item_type === LdatItemType.no_value) {
     kf_data = new KfNoValue();
     interp = 1;
     flags = 1;
@@ -924,8 +924,10 @@ export function build_default_mask_shape(
 ): [TdmnChunk, ListChunk] {
   const { aspect, roto_bezier = false } = kw;
   const raw = bytes_.fromhex(_DEFAULT_ROTO_MASK_SHAPE_OMS);
-  const oms = read_chunks(new BytesIO(raw), raw.length)[0] as ListChunk;
-  const tdbs = oms.chunks[0] as ListChunk;
+  const oms = read_chunks(new BytesIO(raw), raw.length)[0];
+  py_assert(oms instanceof ListChunk);
+  const tdbs = oms.chunks[0];
+  py_assert(tdbs instanceof ListChunk);
   for (const c of tdbs.chunks) {
     if (c instanceof Tdb4Chunk) {
       c._time_base = time_base;
@@ -958,7 +960,7 @@ export function build_vector_element(
   match_name: string,
   name: string,
   kw: {
-    subgroups?: [string, number, number][];
+    subgroups?: ReadonlyArray<readonly [string, number, number]>;
     path_time_base?: number | null;
   } = {},
 ): [TdmnChunk, ListChunk] {

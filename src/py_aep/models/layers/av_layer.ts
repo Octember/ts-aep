@@ -60,8 +60,7 @@ export function _would_create_cycle(target_comp: CompItem, new_source: AVItem): 
   // Python tracks visited comps by id(); object identity in a Set is the same check.
   const visited = new Set<CompItem>();
   const stack: CompItem[] = [target_comp];
-  while (stack.length) {
-    const comp = stack.pop()!;
+  for (let comp = stack.pop(); comp !== undefined; comp = stack.pop()) {
     if (comp === new_source) return true;
     if (visited.has(comp)) continue;
     visited.add(comp);
@@ -249,9 +248,9 @@ export class AVLayer extends Layer {
   /** The resolved source item; unset until first read (see `source`). */
   declare _source?: AVItem | null;
 
-  static _new(kw: AVLayerNewKw): AVLayer;
+  static _new<T extends AVLayer>(this: new (kw: ConstructorParameters<typeof Layer>[0]) => T, kw: AVLayerNewKw): T;
   static _new(...args: never[]): never;
-  static _new(kw: AVLayerNewKw): AVLayer {
+  static _new<T extends AVLayer>(this: new (kw: ConstructorParameters<typeof Layer>[0]) => T, kw: AVLayerNewKw): T {
     const {
       name,
       layer_id,
@@ -281,13 +280,13 @@ export class AVLayer extends Layer {
     // AE writes _reserved_3b=1 (and _reserved_3c=0) for every AV layer
     // (verified across 237/238 AE-native AV layers); cameras/lights use 0/0.
     ldta._reserved_3b = 1;
-    return super._new({
+    return super._new<T>({
       ldta,
       name,
       containing_comp,
       root_tdgp_extra,
       effect_param_defs,
-    }) as AVLayer;
+    });
   }
 
   /** The blending mode of the layer. Read / Write. */
@@ -296,7 +295,7 @@ export class AVLayer extends Layer {
     if (mode === BlendingMode.DISSOLVE && this._ldta.dancing_dissolve) {
       return BlendingMode.DANCING_DISSOLVE;
     }
-    return mode as BlendingMode;
+    return mode;
   }
 
   set blending_mode(value: BlendingMode) {
@@ -327,7 +326,7 @@ export class AVLayer extends Layer {
    * Read / Write.
    */
   get track_matte_type(): TrackMatteType {
-    return TrackMatteType.from_binary(this._ldta.track_matte_type) as TrackMatteType;
+    return TrackMatteType.from_binary(this._ldta.track_matte_type);
   }
 
   set track_matte_type(value: TrackMatteType | number) {
@@ -382,7 +381,7 @@ export class AVLayer extends Layer {
     if (source == null) {
       return false;
     }
-    if (hasattr(source, "main_source") && (source as FootageItem).main_source.is_still) {
+    if (source instanceof FootageItem && source.main_source.is_still) {
       return false;
     }
     if (this.time_remap_enabled) {
@@ -826,7 +825,7 @@ export class AVLayer extends Layer {
       throw new NotImplementedError("source_rect_at_time does not model per-character 3D text");
     }
     const document = text.__getitem__("ADBE Text Document").value_at_time(time);
-    return text_ink_rect(document) as { top: number; left: number; width: number; height: number };
+    return text_ink_rect(document);
   }
 
   /**

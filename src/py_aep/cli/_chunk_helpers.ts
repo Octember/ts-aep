@@ -45,10 +45,11 @@ export function build_chunk_path(
 ): string {
   const counter_key = parent_path ? parent_path + "/" + identifier : identifier;
 
-  if (!counters.has(counter_key)) {
+  const count = counters.get(counter_key);
+  if (count === undefined) {
     counters.set(counter_key, 0);
   } else {
-    counters.set(counter_key, counters.get(counter_key)! + 1);
+    counters.set(counter_key, count + 1);
   }
 
   if (getitem(counters, counter_key) > 0) {

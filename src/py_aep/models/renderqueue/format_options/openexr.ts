@@ -61,7 +61,7 @@ export class OpenExrFormatOptions extends FormatOptionsBase {
    * `45.0`. Read / Write.
    */
   get dwa_compression_level(): number | null {
-    if (([OpenExrCompression.DWAA, OpenExrCompression.DWAB] as (OpenExrCompression | number)[]).includes(this.compression)) {
+    if (this.compression === OpenExrCompression.DWAA || this.compression === OpenExrCompression.DWAB) {
       return this._body.dwa_compression_level;
     }
     return null;

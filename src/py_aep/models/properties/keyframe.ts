@@ -9,7 +9,7 @@ import { KeyframeEase } from "./keyframe_ease.ts";
 import { MarkerValue } from "./marker.ts";
 import { TEXT_KIND } from "./parallel.ts";
 import { Shape } from "./shape.ts";
-import type { KfPosition, LdatItem } from "../../binary/ldat_chunks.ts";
+import { KfMultiDimensional, KfPosition, type LdatItem } from "../../binary/ldat_chunks.ts";
 import type { Curves } from "./curves.ts";
 import type { Property } from "./property.ts";
 import {
@@ -399,11 +399,11 @@ export class Keyframe<V extends PropertyValue = PropertyValue> {
 
     let in_ease: KeyframeEase[];
     let out_ease: KeyframeEase[];
-    if (Array.isArray(kf_data.in_speed)) {
+    if (kf_data instanceof KfMultiDimensional) {
       in_ease = Array.from({ length: kf_data.in_speed.length }, (_, i) =>
         KeyframeEase._from_binary(kf_data, i, "in", factor),
       );
-      out_ease = Array.from({ length: (kf_data.out_speed as number[]).length }, (_, i) =>
+      out_ease = Array.from({ length: kf_data.out_speed.length }, (_, i) =>
         KeyframeEase._from_binary(kf_data, i, "out", factor),
       );
     } else {
@@ -497,8 +497,8 @@ export class Keyframe<V extends PropertyValue = PropertyValue> {
    */
   _leave_spatial_auto_bezier(): void {
     // Only a spatial keyframe's KfPosition carries the flag.
-    const kf_data = this._ldat_item.kf_data as KfPosition;
-    if (!("spatial_auto_bezier" in kf_data ? kf_data.spatial_auto_bezier : false)) return;
+    const kf_data = this._ldat_item.kf_data;
+    if (!(kf_data instanceof KfPosition && kf_data.spatial_auto_bezier)) return;
     const derived = this._auto_spatial_tangents();
     if (derived != null) {
       [kf_data.out_spatial_tangents, kf_data.in_spatial_tangents] = derived;
@@ -592,7 +592,7 @@ export class Keyframe<V extends PropertyValue = PropertyValue> {
     const as_vector = (keyframe: Keyframe): number[] | null => {
       const value = keyframe.value;
       const is_num = (x: unknown): boolean => typeof x === "number" || typeof x === "boolean";
-      if (is_num(value)) return [value as number];
+      if (typeof value === "number" || typeof value === "boolean") return [value];
       if (Array.isArray(value) && value.every(is_num)) {
         return value;
       }
@@ -601,9 +601,9 @@ export class Keyframe<V extends PropertyValue = PropertyValue> {
 
     const [window, index] = this._neighbour_window();
     const values = window.map((kf) => as_vector(kf));
-    if (values.some((value) => value == null)) return null;
+    if (!values.every((value) => value != null)) return null;
     const times = window.map((kf) => kf._layer_time);
-    return auto_temporal_speeds(values as number[][], times, index);
+    return auto_temporal_speeds(values, times, index);
   }
 
   /**
@@ -685,7 +685,7 @@ export class Keyframe<V extends PropertyValue = PropertyValue> {
       }
     }
     if (prop != null && (typeof value === "number" || Array.isArray(value))) {
-      const raw = prop._unresolve_value(value) as number | number[];
+      const raw = prop._unresolve_value(value);
       this._write_kf_value(raw);
       this._value = raw;
       prop._redistribute_roving_keyframes();
@@ -723,7 +723,7 @@ export class Keyframe<V extends PropertyValue = PropertyValue> {
   _cache_value(value: _ValueType): void {
     const prop = this._property;
     if (prop != null && (typeof value === "number" || Array.isArray(value))) {
-      const raw = prop._unresolve_value(value) as number | number[];
+      const raw = prop._unresolve_value(value);
       this._write_kf_value(raw);
       this._value = raw;
     } else {
@@ -1004,8 +1004,8 @@ export class Keyframe<V extends PropertyValue = PropertyValue> {
     if (direction === "out") {
       adjacent_interp = other.in_interpolation_type;
     } else {
-      while (adjacent._is_roving_run_key) {
-        adjacent = adjacent._prev as Keyframe;
+      while (adjacent._is_roving_run_key && adjacent._prev != null) {
+        adjacent = adjacent._prev;
       }
       adjacent_interp = adjacent.out_interpolation_type;
     }
@@ -1022,7 +1022,8 @@ export class Keyframe<V extends PropertyValue = PropertyValue> {
       // rotation and duration, and on a mask path: always 1.
       // Reporting only - `_single_progress` forces the LINEAR
       // control points and never reads the speed back.
-      return raw_ease.map(() => new KeyframeEase(kind.linear_ease_speed!, _DEFAULT_INFLUENCE));
+      const linear_speed = kind.linear_ease_speed;
+      return raw_ease.map(() => new KeyframeEase(linear_speed, _DEFAULT_INFLUENCE));
     }
     const [left, right] = direction === "out" ? [this, other] : [other, this];
     if (prop != null && prop._color) {

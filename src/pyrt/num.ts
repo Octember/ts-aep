@@ -1,6 +1,7 @@
 // Python numeric semantics that differ from JS operators.
 
 import { OverflowError, ValueError, ZeroDivisionError } from "./errors.ts";
+import { ord } from "./codecs.ts";
 
 /**
  * A Python `float` whose float-ness must survive in data that is later
@@ -122,7 +123,7 @@ function nd_value(cp: number): number {
 function to_ascii_number(s: string): string {
   let out = "";
   for (const ch of s) {
-    const cp = ch.codePointAt(0)!;
+    const cp = ord(ch);
     if (cp < 128) out += PY_SPACE.test(ch) ? " " : ch;
     else if (PY_SPACE.test(ch)) out += " ";
     else if (ND.test(ch)) out += String(nd_value(cp));

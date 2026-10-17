@@ -42,10 +42,8 @@ export class SourcePropertyRef {
 
   /** NamedTuple `_replace(**kw)`: a copy with the given fields changed. */
   _replace(kw: { match_name?: string; prop_index?: number | null } = {}): SourcePropertyRef {
-    return new SourcePropertyRef(
-      "match_name" in kw ? (kw.match_name as string) : this.match_name,
-      "prop_index" in kw ? (kw.prop_index as number | null) : this.prop_index,
-    );
+    const f = { match_name: this.match_name, prop_index: this.prop_index, ...kw };
+    return new SourcePropertyRef(f.match_name, f.prop_index);
   }
 
   /** NamedTuple equality: elementwise over the fields (also against a plain tuple). */

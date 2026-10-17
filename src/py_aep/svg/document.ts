@@ -1,6 +1,6 @@
 /** SVG root parsing: canvas size and the viewBox origin transform. */
 
-import { float, min, max, py_eq, split, pattern_findall } from "../../pyrt/index.ts";
+import { float, min, max, py_eq, split } from "../../pyrt/index.ts";
 import { NUMBER_RE, parse_length } from "./_util.ts";
 import { Affine } from "./transform.ts";
 
@@ -17,7 +17,7 @@ export type ViewBox = readonly [number, number, number, number];
  */
 export function _view_box(value: string | null): ViewBox | null {
   if (!value) return null;
-  const nums = (pattern_findall(NUMBER_RE, value) as string[]).map((n) => float(n));
+  const nums = Array.from(value.matchAll(NUMBER_RE), (n) => float(n[0]));
   if (nums.length !== 4 || !nums.every((n) => Number.isFinite(n))) return null;
   if (nums[2] <= 0 || nums[3] <= 0) return null;
   return [nums[0], nums[1], nums[2], nums[3]];

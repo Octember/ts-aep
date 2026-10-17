@@ -31,7 +31,7 @@ export const LogType = int_enum("LogType", {
   ERRORS_AND_PER_FRAME_INFO: 3214,
 }, {
   /** Convert binary value to LogType. */
-  from_binary(value: number): number {
+  from_binary(value: number) {
     return this.of_or_null(value + 3212) ?? this.ERRORS_ONLY;
   },
 
@@ -58,7 +58,7 @@ export const RQItemStatus = int_enum("RQItemStatus", {
   DONE: 3019,
 }, {
   /** Convert binary value to RQItemStatus. */
-  from_binary(value: number): number {
+  from_binary(value: number) {
     return this.of_or_null(value + 3013) ?? this.UNQUEUED;
   },
 

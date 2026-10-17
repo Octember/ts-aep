@@ -71,7 +71,7 @@ export class TextLayer extends AVLayer {
       ],
     });
 
-    const layer = super._new({
+    const layer = super._new<TextLayer>({
       name,
       layer_id,
       duration,

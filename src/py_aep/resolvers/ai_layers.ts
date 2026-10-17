@@ -87,7 +87,7 @@ export function _object_offsets(data: Uint8Array): Map<number, number> {
   const offsets = new Map<number, number>();
   const text = latin1(data);
   for (const keyword of text.matchAll(_OBJ_KEYWORD_RE)) {
-    const end = keyword.index!;
+    const end = keyword.index;
     const window_start = Math.max(0, end - _OBJ_HEADER_WINDOW);
     // `search(data, pos, endpos)` with `\Z` at `endpos`: match within the slice.
     const header = _OBJ_HEADER_RE.exec(text.slice(window_start, end));

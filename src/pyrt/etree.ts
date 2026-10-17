@@ -14,7 +14,7 @@
 // External and parameter entities are ignored (expat without a resolver also skips them).
 
 import { latin1_bytes, latin1_str } from "./bytes.ts";
-import { decode } from "./codecs.ts";
+import { decode, ord } from "./codecs.ts";
 import { IndexError, KeyError, SyntaxError_, ValueError } from "./errors.ts";
 
 export class ParseError extends SyntaxError_ {
@@ -641,7 +641,7 @@ export function tostring(
   if (lower === "us-ascii" || lower === "ascii") {
     let s = "";
     for (const ch of text) {
-      const cp = ch.codePointAt(0)!;
+      const cp = ord(ch);
       s += cp < 128 ? ch : `&#${cp};`;
     }
     return latin1_bytes(s);
@@ -940,7 +940,6 @@ class _Parser {
 
   parse(): Element {
     const s = this.s;
-    let root: Element | null = null;
     // XML declaration
     if (/^<\?xml[ \t\r\n]/.test(s)) {
       const e = s.indexOf("?>");
@@ -990,7 +989,7 @@ class _Parser {
       return `{${uri}}${local}`;
     };
 
-    const start_tag = (): void => {
+    const start_tag = (): Element => {
       const tag_at = this.pos;
       this.pos++;
       const raw = this.read_name();
@@ -1046,19 +1045,14 @@ class _Parser {
       if (stack.length) {
         flush();
         stack[stack.length - 1].el._children.push(el);
-      } else {
-        root = el;
       }
-      if (self_close) {
-        if (!stack.length) return;
-        // an empty element: nothing pending belongs to it
-      } else {
-        stack.push({ el, raw, scope: sc });
-      }
+      // an empty element: nothing pending belongs to it
+      if (!self_close) stack.push({ el, raw, scope: sc });
+      return el;
     };
 
-    start_tag();
-    if (stack.length === 0) return this.epilog(root!);
+    const root = start_tag();
+    if (stack.length === 0) return this.epilog(root);
 
     while (stack.length) {
       if (this.pos >= s.length) this.err("no element found");
@@ -1103,7 +1097,7 @@ class _Parser {
         pending += chunk;
       }
     }
-    return this.epilog(root!);
+    return this.epilog(root);
   }
 
   epilog(root: Element): Element {
