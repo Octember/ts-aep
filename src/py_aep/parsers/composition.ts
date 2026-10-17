@@ -6,6 +6,7 @@ import { CompItem } from "../models/items/composition.ts";
 import type { FolderItem } from "../models/items/folder.ts";
 import type { Project } from "../models/project.ts";
 import type { Property } from "../models/properties/property.ts";
+import type { ParamDef } from "./effect.ts";
 import { parse_layer } from "./layer.ts";
 import { parse_source } from "./source.ts";
 
@@ -32,7 +33,7 @@ export function parse_composition(
   _gide: ListChunk | null,
   project: Project,
   parent_folder: FolderItem,
-  effect_param_defs: Map<string, Map<string, Map<string, unknown>>>,
+  effect_param_defs: Map<string, Map<string, ParamDef>>,
 ): CompItem {
   const pin_chunks = filter_by_list_type(child_chunks, "Pin ");
   const proxy_source = pin_chunks?.length > 0 ? parse_source(pin_chunks[0]) : null;

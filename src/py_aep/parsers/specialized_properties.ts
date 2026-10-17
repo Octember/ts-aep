@@ -6,13 +6,14 @@ import type { TdmnChunk } from "../binary/property_chunks.ts";
 import { ChunkNotFoundError, filter_by_list_type, filter_by_type, find_by_list_type, find_by_type } from "../binary/utils.ts";
 import { CosParser } from "../cos/index.ts";
 // Python's builtin `SyntaxError` as raised by `CosParser`.
-import { SyntaxError_ } from "../cos/cos.ts";
+import { type CosValue, SyntaxError_ } from "../cos/cos.ts";
 import { PropertyValueType } from "../enums/index.ts";
 import { ORIENTATION_KIND } from "../models/properties/parallel.ts";
 import { FeatherPoint, Shape } from "../models/properties/shape.ts";
 import type { CompItem } from "../models/items/composition.ts";
 import type { Layer } from "../models/layers/layer.ts";
 import type { Property } from "../models/properties/property.ts";
+import type { Gradient } from "../models/properties/gradient.ts";
 import { parse_gradient_xml } from "./gradient.ts";
 import { parse_property } from "./property_value.ts";
 import { parse_btdk_cos } from "./text.ts";
@@ -247,7 +248,7 @@ export function parse_text_document(
   prop._property_value_type = PropertyValueType.TEXT_DOCUMENT;
 
   let btdk_chunk: ListChunk;
-  let cos_data: unknown;
+  let cos_data: CosValue;
   try {
     btdk_chunk = find_by_list_type(btds_chunk.chunks, "btdk");
     // btdk is a ListChunk with list_type="btdk"; raw data stored in .data
@@ -331,7 +332,7 @@ export function parse_gradient(
 
   prop._kf_value_container = gcky_chunk;
   const utf8_chunks = filter_by_type(gcky_chunk.chunks, "Utf8");
-  const gradient_values = [];
+  const gradient_values: Gradient[] = [];
   for (const utf8 of utf8_chunks) {
     const gdata = parse_gradient_xml(utf8);
     if (gdata != null) {

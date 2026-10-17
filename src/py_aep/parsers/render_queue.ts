@@ -11,6 +11,7 @@ import type { CompItem } from "../models/items/composition.ts";
 import { RenderQueue } from "../models/renderqueue/render_queue.ts";
 import { RenderQueueItem } from "../models/renderqueue/render_queue_item.ts";
 import type { Project } from "../models/project.ts";
+import type { OutputModule } from "../models/renderqueue/output_module.ts";
 import { parse_output_module } from "./output_module.ts";
 
 /**
@@ -265,7 +266,7 @@ export function parse_render_queue_item(
     output_modules: [],
   });
 
-  const output_modules = [];
+  const output_modules: OutputModule[] = [];
   for (const [om_index, group] of om_groups.entries()) {
     const output_module = parse_output_module(
       group,

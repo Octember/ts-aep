@@ -75,7 +75,7 @@ export class PropSpec {
 
   /** NamedTuple `_replace(**kw)`: a copy with the given fields changed. */
   _replace(kw: Partial<PropSpec> = {}): PropSpec {
-    const f: any = { ...this, ...kw };
+    const f = { ...this, ...kw };
     return new PropSpec(
       f.match_name,
       f.auto_name,

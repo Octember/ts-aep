@@ -12,6 +12,7 @@ import { ShapeLayer } from "../models/layers/shape_layer.ts";
 import { TextLayer } from "../models/layers/text_layer.ts";
 import { ThreeDModelLayer } from "../models/layers/three_d_model_layer.ts";
 import { synthesize_layer_properties } from "../synthesis/core.ts";
+import type { ParamDef } from "./effect.ts";
 import { parse_properties } from "./property.ts";
 import { get_match_name_runs } from "./utils.ts";
 import type { CompItem } from "../models/items/composition.ts";
@@ -26,7 +27,7 @@ export const _LAYER_CLASSES: Map<number, typeof Layer> = new Map<number, typeof 
   [LayerType.SHAPE, ShapeLayer],
   [LayerType.THREE_D_MODEL, ThreeDModelLayer],
   [LayerType.PARAMETRIC_MESH, ParametricMeshLayer],
-] as Array<[number, typeof Layer]>);
+]);
 
 /**
  * Extract Essential Properties override UUIDs from LIST:OvG2 chunks.
@@ -66,7 +67,7 @@ export function _parse_ovg2_uuids(tdgp_chunks: Chunk[]): string[] {
 export const parse_layer = _suppress_materialization().decorate(function parse_layer(
   layer_chunk: ListChunk,
   composition: CompItem,
-  effect_param_defs: Map<string, Map<string, Map<string, unknown>>>,
+  effect_param_defs: Map<string, Map<string, ParamDef>>,
 ): Layer {
   const child_chunks = layer_chunk.chunks;
 

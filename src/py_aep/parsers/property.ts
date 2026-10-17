@@ -13,6 +13,7 @@ import { PropertyGroup } from "../models/properties/property_group.ts";
 import type { CompItem } from "../models/items/composition.ts";
 import type { Layer } from "../models/layers/layer.ts";
 import { parse_effect } from "./effect.ts";
+import type { ParamDef } from "./effect.ts";
 import { parse_markers } from "./marker.ts";
 import { parse_property } from "./property_value.ts";
 import { parse_gradient, parse_orientation, parse_shape, parse_text_document } from "./specialized_properties.ts";
@@ -45,7 +46,7 @@ export class _ParseContext {
 
   readonly child_depth: number;
 
-  readonly effect_param_defs: Map<string, Map<string, Map<string, unknown>>>;
+  readonly effect_param_defs: Map<string, Map<string, ParamDef>>;
 
   readonly composition: CompItem;
 
@@ -66,7 +67,7 @@ export class _ParseContext {
     chunks: Chunk[],
     first_chunk: ListChunk,
     child_depth: number,
-    effect_param_defs: Map<string, Map<string, Map<string, unknown>>>,
+    effect_param_defs: Map<string, Map<string, ParamDef>>,
     composition: CompItem,
     layer: Layer | null = null,
   ) {
@@ -79,7 +80,11 @@ export class _ParseContext {
     this.layer = layer;
   }
 
-  *[Symbol.iterator](): Generator<unknown> {
+  *[Symbol.iterator](): Generator<
+    _ParseContext[
+      "match_name" | "chunks" | "first_chunk" | "child_depth" | "effect_param_defs" | "composition" | "layer"
+    ]
+  > {
     yield this.match_name;
     yield this.chunks;
     yield this.first_chunk;
@@ -127,7 +132,7 @@ export function _property_parser(
 export function parse_properties(
   match_name_runs: [string, Chunk[]][],
   child_depth: number,
-  effect_param_defs: Map<string, Map<string, Map<string, unknown>>>,
+  effect_param_defs: Map<string, Map<string, ParamDef>>,
   composition: CompItem,
   layer: Layer | null = null,
 ): (Property | PropertyGroup)[] {
@@ -402,7 +407,7 @@ export const parse_property_group = _suppress_materialization().decorate(functio
   tdgp_chunk: ListChunk,
   group_match_name: string,
   property_depth: number,
-  effect_param_defs: Map<string, Map<string, Map<string, unknown>>>,
+  effect_param_defs: Map<string, Map<string, ParamDef>>,
   composition: CompItem,
   tdmn: TdmnChunk,
   layer: Layer | null = null,
@@ -467,7 +472,7 @@ export const _parse_mask_atom = _suppress_materialization().decorate(function _p
   tdgp_chunk: ListChunk,
   mkif_chunk: MkifChunk,
   property_depth: number,
-  effect_param_defs: Map<string, Map<string, Map<string, unknown>>>,
+  effect_param_defs: Map<string, Map<string, ParamDef>>,
   composition: CompItem,
   tdmn: TdmnChunk,
   layer: Layer | null = null,

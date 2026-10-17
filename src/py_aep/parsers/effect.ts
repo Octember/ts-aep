@@ -389,7 +389,7 @@ export function _parse_effect_properties(
       });
       if (
         synth instanceof Property &&
-        ([PropertyControlType.TWO_D, PropertyControlType.THREE_D] as number[]).includes(
+        ([PropertyControlType.TWO_D, PropertyControlType.THREE_D] as (number | null)[]).includes(
           synth._property_control_type,
         )
       ) {
@@ -465,7 +465,7 @@ export const parse_effect = _suppress_materialization().decorate(function parse_
   // is used more than once (AE doesn't duplicate the data).  Fall back
   // to previously cached or project-level EfdG definitions.
   if (!param_defs?.size && effect_param_defs.has(group_match_name)) {
-    param_defs = effect_param_defs.get(group_match_name);
+    param_defs = effect_param_defs.get(group_match_name)!;
   }
 
   // Cache successful parT parsing so later instances of the same

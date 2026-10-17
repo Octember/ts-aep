@@ -147,7 +147,20 @@ export class LayerSpec {
     return other instanceof LayerSpec && py_eq([...this], [...other]);
   }
 
-  *[Symbol.iterator](): Generator<unknown> {
+  *[Symbol.iterator](): Generator<
+    LayerSpec[
+      | 'name'
+      | 'opti_data'
+      | 'width'
+      | 'transform'
+      | 'full_frame'
+      | 'layer_id'
+      | 'reserved_c8'
+      | 'styles'
+      | 'masks'
+      | 'has_alpha'
+    ]
+  > {
     yield this.name;
     yield this.opti_data;
     yield this.width;
@@ -224,7 +237,9 @@ export class LayerGroupSpec {
     return other instanceof LayerGroupSpec && py_eq([...this], [...other]);
   }
 
-  *[Symbol.iterator](): Generator<unknown> {
+  *[Symbol.iterator](): Generator<
+    LayerGroupSpec['name' | 'children' | 'comp_name' | 'collapsed']
+  > {
     yield this.name;
     yield this.children;
     yield this.comp_name;

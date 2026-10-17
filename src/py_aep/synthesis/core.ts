@@ -92,7 +92,7 @@ export function _synthesize_missing_top_level_groups(layer: Layer, ae_major: num
   // Post-processing: Layer Sets elided flag and depth fixup.
   const canonical_mns = new Set<string>(specs.map((s) => s.match_name));
   for (const child of layer.properties) {
-    if (child.match_name === "ADBE Layer Sets") (child as PropertyGroup)._elided = true;
+    if (child.match_name === "ADBE Layer Sets") child._elided = true;
     if (child instanceof PropertyGroup && canonical_mns.has(child.match_name)) {
       child._property_depth = 1;
     }

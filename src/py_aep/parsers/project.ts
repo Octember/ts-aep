@@ -54,7 +54,7 @@ export function _nnhd_from_nhed(nhed: NhedChunk): NnhdChunk {
   const nnhd = new NnhdChunk({ synthetic: true });
   for (const name of _NHED_SETTINGS) {
     // setattr(nnhd, name, getattr(nhed, name)) with a computed name
-    (nnhd as unknown as Record<string, unknown>)[name] = getattr(nhed, name);
+    (nnhd as Record<(typeof _NHED_SETTINGS)[number], number | boolean>)[name] = getattr(nhed, name);
   }
   return nnhd;
 }

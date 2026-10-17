@@ -10,6 +10,8 @@ import { at, dict_get, getitem, int, json_loads, py_eq, sorted } from "../../pyr
 // AE stores 0xFFFFFFFF in a CPrp path node's `index` to mean "match by name".
 export const _BY_NAME_INDEX = 0xffffffff;
 
+type PathNode = Map<"index", number | undefined> & Map<"matchName", string>;
+
 /**
  * Parse a controller's `CPrp` path JSON into root-to-leaf refs.
  *
@@ -18,14 +20,14 @@ export const _BY_NAME_INDEX = 0xffffffff;
  * the source property the controller exposes.
  */
 export function _parse_source_property_path(raw: string): SourcePropertyRef[] {
-  const nodes: Map<string, Map<string, unknown>> = json_loads(raw);
+  const nodes: Map<string, PathNode> = json_loads(raw);
   const path: SourcePropertyRef[] = [];
   for (const key of sorted(nodes.keys(), int)) {
-    const node: Map<string, unknown> = getitem(nodes, key);
-    const index = node.get("index") as number | undefined ?? null;
+    const node = getitem(nodes, key);
+    const index = node.get("index") ?? null;
     path.push(
       new SourcePropertyRef(
-        dict_get(node, "matchName", "") as string,
+        dict_get(node, "matchName", ""),
         py_eq(index, _BY_NAME_INDEX) ? null : index,
       ),
     );

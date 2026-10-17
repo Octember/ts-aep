@@ -29,6 +29,7 @@
 
 import { py_bool, warn } from "../../pyrt/index.ts";
 import { cos_get } from "../cos/index.ts";
+import type { CosDict } from "../cos/cos.ts";
 import { FontObject } from "../models/text/font_object.ts";
 import { TextDocument } from "../models/text/text_document.ts";
 import type { ListChunk } from "../binary/chunk.ts";
@@ -59,7 +60,7 @@ export const logger = {
  * @returns Array of {@link FontObject} instances in the same order as the COS
  *   array (the index is referenced by character styles).
  */
-export function parse_fonts(cos_data: Map<string, unknown>): FontObject[] {
+export function parse_fonts(cos_data: CosDict): FontObject[] {
   const font_array = cos_get(cos_data, "0", "1", "0");
   if (!py_bool(font_array) || !Array.isArray(font_array)) {
     return [];
@@ -91,7 +92,7 @@ export function parse_fonts(cos_data: Map<string, unknown>): FontObject[] {
  *
  * Path: `doc["0"]["6"]["0"][0]["0"]["0"]["6"]`
  */
-export function _get_first_char_style(doc: Map<string, unknown>): Map<string, unknown> | null {
+export function _get_first_char_style(doc: CosDict): CosDict | null {
   const result = cos_get(doc, "0", "6", "0", 0, "0", "0", "6");
   if (result instanceof Map) {
     return result;
@@ -104,7 +105,7 @@ export function _get_first_char_style(doc: Map<string, unknown>): Map<string, un
  *
  * Path: `doc["0"]["5"]["0"][0]["0"]["0"]["5"]`
  */
-export function _get_first_para_style(doc: Map<string, unknown>): Map<string, unknown> | null {
+export function _get_first_para_style(doc: CosDict): CosDict | null {
   const result = cos_get(doc, "0", "5", "0", 0, "0", "0", "5");
   if (result instanceof Map) {
     return result;
@@ -126,7 +127,7 @@ export function _get_first_para_style(doc: Map<string, unknown>): Map<string, un
  * @returns Array of {@link TextDocument} instances (one per keyframe).
  */
 export function parse_text_documents(
-  cos_data: Map<string, unknown>,
+  cos_data: CosDict,
   fonts: FontObject[],
   btdk_body: ListChunk,
 ): TextDocument[] {
@@ -181,7 +182,7 @@ export function parse_text_documents(
  *   the array of {@link FontObject} referenced by the documents.
  */
 export function parse_btdk_cos(
-  cos_data: Map<string, unknown>,
+  cos_data: CosDict,
   btdk_body: ListChunk,
 ): [TextDocument[], FontObject[]] {
   const fonts = parse_fonts(cos_data);
