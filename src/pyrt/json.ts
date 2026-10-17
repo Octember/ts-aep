@@ -73,7 +73,6 @@ function detect_encoding(b: Uint8Array): string {
   return "utf-8";
 }
 
-const WS = new Set([" ", "\t", "\n", "\r"]);
 const ESC: Record<string, string> = { '"': '"', "\\": "\\", "/": "/", b: "\b", f: "\f", n: "\n", r: "\r", t: "\t" };
 
 /**
@@ -98,7 +97,7 @@ export function json_loads(s: string | Uint8Array, opts: LoadsOptions = {}): any
     throw new JSONDecodeError(msg, text, pos);
   };
   const skip = (i: number): number => {
-    while (i < n && WS.has(text[i])) i++;
+    for (let c = text.charCodeAt(i); c === 0x20 || c === 0x0a || c === 0x0d || c === 0x09; c = text.charCodeAt(++i));
     return i;
   };
 

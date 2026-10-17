@@ -50,7 +50,6 @@ import {
   float,
   getattr,
   int,
-  mod,
   num_str,
   py_or,
   py_eq,
@@ -986,7 +985,7 @@ export class _Measurer {
           [x, y + height],
         ];
         for (let index = 0; index < 4; index++) {
-          segments.push(["l", corners[index], corners[mod(index + 1, 4)]]);
+          segments.push(["l", corners[index], corners[(index + 1) % 4]]);
         }
         const origin: Pt = [x, y];
         current = start = origin;

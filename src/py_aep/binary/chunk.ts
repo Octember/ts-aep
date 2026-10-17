@@ -33,8 +33,8 @@ import {
   type Attribute,
   type IO,
 } from "../../pyrt/index.ts";
-import { _struct_for, read_bytes, read_fmt, read_pad, write_bytes, write_fmt, write_pad } from "./bin_utils.ts";
-import { _decode_fields, _encode_value, _struct_info, type FieldValue, type FmtItem, type InitKwargs } from "./fmt_field.ts";
+import { _struct_for, read_bytes, read_fmt, read_pad, write_bytes, write_pad } from "./bin_utils.ts";
+import { _decode_fields, _encode_value, _field_encoder, _struct_info, type Coerce, type FieldValue, type FmtItem, type InitKwargs } from "./fmt_field.ts";
 import { CHUNK_TYPES, register } from "./registry.ts";
 import type { HeadChunk } from "./item_chunks.ts";
 
@@ -45,6 +45,49 @@ function _prefix_struct(data_fields: readonly Attribute[], n: number): struct.St
   let by_n = _PREFIX_STRUCTS.get(data_fields);
   if (by_n === undefined) _PREFIX_STRUCTS.set(data_fields, (by_n = []));
   return (by_n[n] ??= _struct_for(data_fields.slice(0, n).map((f) => f.metadata["fmt"]).join("")));
+}
+
+/** The required-field format and each optional field's format and size. */
+type OptionalLayout = { req_fmt: string | null; req_size: number; optional: [fmt: string, size: number][] };
+const _OPTIONAL_LAYOUTS = new WeakMap<readonly Attribute[], OptionalLayout>();
+
+function _optional_layout(data_fields: readonly Attribute[], optional_start: number): OptionalLayout {
+  let layout = _OPTIONAL_LAYOUTS.get(data_fields);
+  if (layout === undefined) {
+    const req_parts = data_fields.slice(0, optional_start).map((f) => f.metadata["fmt"]);
+    const req_fmt = req_parts.length ? req_parts.join("") : null;
+    layout = {
+      req_fmt,
+      req_size: req_fmt !== null ? struct.calcsize(">" + req_fmt) : 0,
+      optional: data_fields.slice(optional_start).map((f) => [f.metadata["fmt"], struct.calcsize(">" + f.metadata["fmt"])]),
+    };
+    _OPTIONAL_LAYOUTS.set(data_fields, layout);
+  }
+  return layout;
+}
+
+type SimpleKw = (values: readonly FieldValue[], chunk_type: string) => InitKwargs;
+const _SIMPLE_KW = new WeakMap<Function, SimpleKw | null>();
+
+/**
+ * The simple-path `cls(**kw)` keywords as one object literal, so each class's
+ * kwargs keep a single shape. Null where `new Function` is refused (Workers,
+ * strict CSP) or the names don't map one-to-one onto keys.
+ */
+function _compile_simple_kw(init_names: readonly string[], coerces: ReadonlyMap<number, Coerce>): SimpleKw | null {
+  if (new Set(init_names).size !== init_names.length || init_names.includes("chunk_type")) return null;
+  const fns: Coerce[] = [];
+  const props = init_names.map((name, i) => {
+    const crc = coerces.get(i);
+    const key = JSON.stringify(name);
+    if (crc === undefined) return `${key}: v[${i}]`;
+    return `${key}: f[${fns.push(crc) - 1}](v[${i}])`;
+  });
+  try {
+    return new Function("f", `return (v, t) => ({ ${props.join(", ")}, chunk_type: t });`)(fns);
+  } catch {
+    return null;
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -90,14 +133,24 @@ export class Chunk extends AttrsBase {
       // Fast path: no string encodings, endian overrides, optional
       // fields, or items. dict(zip()) replaces the _decode_fields
       // Python loop. Coerces (e.g. bool_field) are handled inline.
-      const kw: InitKwargs = {};
       const values = read_fmt(fmt, fp);
-      const n = Math.min(init_names.length, values.length);
-      for (let i = 0; i < n; i++) kw[init_names[i]] = values[i];
-      kw.chunk_type = chunk_type;
-      for (const [i, crc] of coerces) {
-        const name = init_names[i];
-        kw[name] = crc(kw[name]);
+      let make = _SIMPLE_KW.get(cls);
+      if (make === undefined) {
+        make = values.length === init_names.length ? _compile_simple_kw(init_names, coerces) : null;
+        _SIMPLE_KW.set(cls, make);
+      }
+      let kw: InitKwargs;
+      if (make !== null) {
+        kw = make(values, chunk_type);
+      } else {
+        kw = {};
+        const n = Math.min(init_names.length, values.length);
+        for (let i = 0; i < n; i++) kw[init_names[i]] = values[i];
+        kw.chunk_type = chunk_type;
+        for (const [i, crc] of coerces) {
+          const name = init_names[i];
+          kw[name] = crc(kw[name]);
+        }
       }
       const trailing_size = size - expected;
       if (trailing_size > 0) {
@@ -139,22 +192,18 @@ export class Chunk extends AttrsBase {
       values = fmt ? [...read_fmt(fmt, fp)] : [];
       items_start = expected;
     } else {
-      // Build required-only format
-      const req_parts = data_fields.slice(0, optional_start).map((f) => f.metadata["fmt"]);
-      const req_fmt = req_parts.join("");
-      const req_size = req_parts.length ? struct.calcsize(">" + req_fmt) : 0;
+      const { req_fmt, req_size, optional } = _optional_layout(data_fields, optional_start);
       if (size < req_size) {
         throw new OSError(
           `${chunk_type} body too short: expected >= ${req_size} ` +
             `bytes, got ${size}`,
         );
       }
-      values = req_parts.length ? [...read_fmt(req_fmt, fp)] : [];
+      values = req_fmt !== null ? [...read_fmt(req_fmt, fp)] : [];
       let remaining = size - req_size;
-      for (const f of data_fields.slice(optional_start)) {
-        const f_size = struct.calcsize(">" + f.metadata["fmt"]);
+      for (const [f_fmt, f_size] of optional) {
         if (remaining >= f_size) {
-          values.push(...read_fmt(f.metadata["fmt"], fp));
+          values.push(...read_fmt(f_fmt, fp));
           remaining -= f_size;
         } else {
           break;
@@ -165,8 +214,8 @@ export class Chunk extends AttrsBase {
       items_start = size - remaining;
     }
 
-    const kw2: InitKwargs = { chunk_type };
-    Object.assign(kw2, _decode_fields(data_fields, values, encodings, coerces, init_names));
+    const kw2 = _decode_fields(data_fields, values, encodings, coerces, init_names);
+    kw2.chunk_type = chunk_type;
     let extra_trailing: Uint8Array | null = null;
     if (items_info != null) {
       const [items_name, item_cls, item_size] = items_info;
@@ -229,8 +278,9 @@ export class Chunk extends AttrsBase {
         written += write_bytes(fp, struct.pack(fe + f.metadata["fmt"], value));
       }
     } else {
-      const values: FieldValue[] = [];
-      for (let i = 0; i < last_idx; i++) {
+      const encode_fields = last_idx === data_fields.length ? _field_encoder(info) : null;
+      const values: FieldValue[] = encode_fields !== null ? encode_fields(this) : [];
+      for (let i = values.length; i < last_idx; i++) {
         const f = data_fields[i];
         let value = getattr(this, f.name);
         value = _encode_value(value, i, encodings, coerces, ">", f.metadata["fmt"]);
@@ -309,7 +359,7 @@ export class ListChunk extends Chunk {
     const { chunk_type = "LIST", defer_list_types = null } = kwargs;
     if (size < 4) throw new OSError(`${chunk_type} body too small: ${size}`);
     const ctx = kwargs.ctx ?? EMPTY_CTX;
-    const list_type = decode(read_fmt("4s", fp)[0], "ASCII");
+    const list_type = _type_name(read_fmt("I", fp)[0]);
     if (list_type === "btdk") {
       const data = read_bytes(fp, size - 4);
       return new this({ list_type, data, chunk_type });
@@ -736,6 +786,10 @@ const _HEADER_CODES = new struct.Struct(">II");
 /** Decoded chunk types by code; only codes that decode as ASCII get in. */
 const _TYPE_NAMES = new Map<number, string>();
 
+/** Encoded chunk types; `write_bytes` copies them out, never in. */
+const _TYPE_BYTES = new Map<string, Uint8Array>();
+const _LEN_BODY = new struct.Struct(">I");
+
 /** Read the 8-byte chunk header: (chunk_type, len_body). */
 export function read_header(fp: IO): [string, number] {
   const header = fp.unpack(_HEADER_CODES);
@@ -744,12 +798,17 @@ export function read_header(fp: IO): [string, number] {
     throw new OSError(`Short read on chunk header: expected 8 bytes, got ${got}`);
   }
   const [code, len_body] = header;
-  let chunk_type = _TYPE_NAMES.get(code);
-  if (chunk_type === undefined) {
-    chunk_type = decode(struct.pack(">I", code), "ASCII");
-    _TYPE_NAMES.set(code, chunk_type);
+  return [_type_name(code), len_body];
+}
+
+/** A four-character type read as its big-endian u32 code. */
+function _type_name(code: number): string {
+  let name = _TYPE_NAMES.get(code);
+  if (name === undefined) {
+    name = decode(struct.pack(">I", code), "ASCII");
+    _TYPE_NAMES.set(code, name);
   }
-  return [chunk_type, len_body];
+  return name;
 }
 
 /**
@@ -758,7 +817,9 @@ export function read_header(fp: IO): [string, number] {
  * Backpatches len_body after the body is written.
  */
 export function write_chunk(fp: IO, chunk: Chunk): number {
-  let written = write_bytes(fp, encode(chunk.chunk_type, "ASCII"));
+  let type_bytes = _TYPE_BYTES.get(chunk.chunk_type);
+  if (type_bytes === undefined) _TYPE_BYTES.set(chunk.chunk_type, (type_bytes = encode(chunk.chunk_type, "ASCII")));
+  let written = write_bytes(fp, type_bytes);
   const len_pos = fp.tell();
   fp.seek(4, 1); // skip 4 bytes for len_body placeholder
   written += 4;
@@ -769,7 +830,7 @@ export function write_chunk(fp: IO, chunk: Chunk): number {
   // Backpatch len_body
   const current = fp.tell();
   fp.seek(len_pos);
-  write_fmt(fp, "I", body_size);
+  fp.pack(_LEN_BODY, [body_size]);
   fp.seek(current);
 
   // Pad to even boundary

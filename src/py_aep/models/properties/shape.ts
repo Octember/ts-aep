@@ -5,7 +5,6 @@ import {
   TypeError_,
   py_assert,
   floordiv,
-  mod,
   min,
   max,
   zip,
@@ -284,7 +283,7 @@ export class Shape {
       const targets: [number, number[]][] = [
         [i, verts[j]],
         [i + 1, outs[j]],
-        [mod(i - 1, total), ins[j]],
+        [(i - 1 + total) % total, ins[j]],
       ];
       for (const [index, [x, y]] of targets) {
         const [nx, ny] = this._normalize_point(x, y);
@@ -491,7 +490,7 @@ export class Shape {
     let result: number[][] = [];
     for (let i = 0; i < this._points.length; i += 3) {
       const v = this._denormalize_point(this._points[i]);
-      const t = this._denormalize_point(this._points[mod(i + offset, this._points.length)]);
+      const t = this._denormalize_point(this._points.at((i + offset) % this._points.length)!);
       result.push([t[0] - v[0], t[1] - v[1]]);
     }
     const mask_size = this._is_mask ? this._comp_size : null;

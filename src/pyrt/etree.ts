@@ -110,7 +110,23 @@ export class Element {
   *iter(tag: string | null = null): Generator<Element> {
     if (tag === "*") tag = null;
     if (tag === null || this.tag === tag) yield this;
-    for (const e of this._children) yield* e.iter(tag);
+    // Depth-first with an explicit stack; each level keeps the children array
+    // it started on, as nested `for...of` loops would.
+    const lists: Element[][] = [this._children];
+    const at: number[] = [0];
+    while (lists.length) {
+      const top = lists.length - 1;
+      const kids = lists[top];
+      if (at[top] >= kids.length) {
+        lists.pop();
+        at.pop();
+        continue;
+      }
+      const e = kids[at[top]++];
+      if (tag === null || e.tag === tag) yield e;
+      lists.push(e._children);
+      at.push(0);
+    }
   }
 
   *itertext(): Generator<string> {
@@ -125,6 +141,10 @@ export class Element {
   }
 
   find(path: string, namespaces: NsMap = null): Element | null {
+    if (namespaces === null && PLAIN_TAG.test(path)) {
+      for (const e of this._children) if (e.tag === path) return e;
+      return null;
+    }
     const r = iterfind(this, path, namespaces).next();
     return r.done ? null : r.value;
   }
@@ -413,6 +433,9 @@ const ops: Record<string, (next: () => Token, token: Token) => Select> = {
 
 const _cache = new Map<string, Select[]>();
 
+// A path that selects children by one literal tag (`xpath_tokenizer` yields one tag token).
+const PLAIN_TAG = /^[A-Za-z_][\w.-]*$/;
+
 export function* iterfind(elem: Element, path: string, namespaces: NsMap = null): Generator<Element> {
   if (path.slice(-1) === "/") path = path + "*";
   const ns_key =
@@ -635,6 +658,15 @@ const NAME_START =
   ":A-Z_a-z\\u00C0-\\u00D6\\u00D8-\\u00F6\\u00F8-\\u02FF\\u0370-\\u037D\\u037F-\\u1FFF\\u200C-\\u200D\\u2070-\\u218F\\u2C00-\\u2FEF\\u3001-\\uD7FF\\uF900-\\uFDCF\\uFDF0-\\uFFFD\\u{10000}-\\u{EFFFF}";
 const NAME_CHAR = NAME_START + "\\-.0-9\\u00B7\\u0300-\\u036F\\u203F-\\u2040";
 const NAME_RE = new RegExp(`[${NAME_START}][${NAME_CHAR}]*`, "uy");
+// ASCII name characters: 1 = may start a name, 2 = may only continue one.
+const ASCII_NAME = new Uint8Array(128);
+for (let c = 0; c < 128; c++) {
+  const ch = String.fromCharCode(c);
+  if (/[:A-Z_a-z]/.test(ch)) ASCII_NAME[c] = 1;
+  else if (/[-.0-9]/.test(ch)) ASCII_NAME[c] = 2;
+}
+// Attribute-value characters that need the per-character path.
+const ATTR_SLOW_RE = /[<&\t\n]/;
 const BAD_CHAR_RE = /[^\t\n\r -퟿-�\u{10000}-\u{10FFFF}]/u;
 const PREDEFINED: Record<string, string> = { lt: "<", gt: ">", amp: "&", quot: '"', apos: "'" };
 const XML_NS = "http://www.w3.org/XML/1998/namespace";
@@ -642,6 +674,10 @@ const EXPANSION_LIMIT = 10_000_000;
 
 function is_ws(c: string): boolean {
   return c === " " || c === "\t" || c === "\n" || c === "\r";
+}
+
+function is_ws_code(c: number): boolean {
+  return c === 0x20 || c === 0x09 || c === 0x0a || c === 0x0d;
 }
 
 class _Parser {
@@ -665,11 +701,23 @@ class _Parser {
 
   skip_ws(): boolean {
     const start = this.pos;
-    while (this.pos < this.s.length && is_ws(this.s[this.pos])) this.pos++;
+    while (this.pos < this.s.length && is_ws_code(this.s.charCodeAt(this.pos))) this.pos++;
     return this.pos > start;
   }
 
   read_name(): string {
+    const s = this.s;
+    const start = this.pos;
+    if (ASCII_NAME[s.charCodeAt(start)] === 1) {
+      let p = start + 1;
+      let c = s.charCodeAt(p);
+      while (c < 0x80 && ASCII_NAME[c] !== 0) c = s.charCodeAt(++p);
+      // NaN past the end; a non-ASCII character goes to the full regex.
+      if (!(c >= 0x80)) {
+        this.pos = p;
+        return s.slice(start, p);
+      }
+    }
     NAME_RE.lastIndex = this.pos;
     const m = NAME_RE.exec(this.s);
     if (m === null) {
@@ -860,6 +908,15 @@ class _Parser {
   parse_attr_value(quote: string): string {
     const s = this.s;
     this.pos++;
+    const close = s.indexOf(quote, this.pos);
+    if (close >= 0) {
+      const value = s.slice(this.pos, close);
+      if (!ATTR_SLOW_RE.test(value)) {
+        this.check_chars(value, this.pos);
+        this.pos = close + 1;
+        return value;
+      }
+    }
     let out = "";
     for (;;) {
       if (this.pos >= s.length) this.err("unclosed token");
@@ -906,12 +963,11 @@ class _Parser {
     type Frame = { el: Element; raw: string; scope: Map<string, string> };
     const stack: Frame[] = [];
     let scope = new Map<string, string>([["xml", XML_NS]]);
-    let pending: string[] = [];
+    let pending = "";
     const flush = (): void => {
-      if (pending.length === 0) return;
-      const text = pending.join("");
-      pending = [];
-      if (!text) return;
+      if (!pending) return;
+      const text = pending;
+      pending = "";
       const top = stack[stack.length - 1].el;
       if (top._children.length === 0) top.text = text;
       else top._children[top._children.length - 1].tail = text;
@@ -939,7 +995,7 @@ class _Parser {
       this.pos++;
       const raw = this.read_name();
       const raw_attrs: [string, string][] = [];
-      const seen = new Set<string>();
+      let has_decls = false;
       let self_close = false;
       for (;;) {
         const had_ws = this.skip_ws();
@@ -968,15 +1024,16 @@ class _Parser {
         const q = s[this.pos];
         if (q !== '"' && q !== "'") this.err("not well-formed (invalid token)");
         const value = this.parse_attr_value(q);
-        if (seen.has(name)) this.err("duplicate attribute", at);
-        seen.add(name);
+        for (const [n] of raw_attrs) if (n === name) this.err("duplicate attribute", at);
+        if (name === "xmlns" || name.startsWith("xmlns:")) has_decls = true;
         raw_attrs.push([name, value]);
       }
       let sc = stack.length ? stack[stack.length - 1].scope : scope;
-      const decls = raw_attrs.filter(([n]) => n === "xmlns" || n.startsWith("xmlns:"));
-      if (decls.length) {
+      if (has_decls) {
         sc = new Map(sc);
-        for (const [n, v] of decls) sc.set(n === "xmlns" ? "" : n.slice(6), v);
+        for (const [n, v] of raw_attrs) {
+          if (n === "xmlns" || n.startsWith("xmlns:")) sc.set(n === "xmlns" ? "" : n.slice(6), v);
+        }
       }
       const tag = resolve(raw, false, sc, tag_at + 1);
       const el = new Element(tag);
@@ -1005,9 +1062,10 @@ class _Parser {
 
     while (stack.length) {
       if (this.pos >= s.length) this.err("no element found");
-      const c = s[this.pos];
-      if (c === "<") {
-        if (s.startsWith("</", this.pos)) {
+      const c = s.charCodeAt(this.pos);
+      if (c === 0x3c) {
+        const next = s.charCodeAt(this.pos + 1);
+        if (next === 0x2f) {
           this.pos += 2;
           const name = this.read_name();
           const at = this.pos;
@@ -1018,30 +1076,31 @@ class _Parser {
           this.pos++;
           flush();
           stack.pop();
-        } else if (s.startsWith("<![CDATA[", this.pos)) {
+        } else if (next === 0x21 && s.startsWith("<![CDATA[", this.pos)) {
           const e = s.indexOf("]]>", this.pos + 9);
           if (e < 0) this.err("unclosed CDATA section");
           const data = s.slice(this.pos + 9, e);
           this.check_chars(data, this.pos + 9);
-          pending.push(data);
+          pending += data;
           this.pos = e + 3;
-        } else if (s.startsWith("<!--", this.pos) || s.startsWith("<?", this.pos)) {
+        } else if (next === 0x3f || (next === 0x21 && s.startsWith("<!--", this.pos))) {
           this.skip_misc_token();
-        } else if (s.startsWith("<!", this.pos)) {
+        } else if (next === 0x21) {
           this.err("not well-formed (invalid token)");
         } else {
           start_tag();
         }
-      } else if (c === "&") {
-        pending.push(this.reference(0));
+      } else if (c === 0x26) {
+        pending += this.reference(0);
       } else {
         const start = this.pos;
-        while (this.pos < s.length && s[this.pos] !== "<" && s[this.pos] !== "&") this.pos++;
+        let c = s.charCodeAt(this.pos);
+        while (c !== 0x3c && c !== 0x26 && this.pos < s.length) c = s.charCodeAt(++this.pos);
         const chunk = s.slice(start, this.pos);
         this.check_chars(chunk, start);
         const cd = chunk.indexOf("]]>");
         if (cd >= 0) this.err("not well-formed (invalid token)", start + cd + 2);
-        pending.push(chunk);
+        pending += chunk;
       }
     }
     return this.epilog(root!);

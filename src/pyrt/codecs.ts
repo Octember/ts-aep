@@ -332,7 +332,7 @@ function encode_utf32(text: string, errors: Errors, le: boolean, name: string): 
 
 /** Python `data.decode(encoding, errors)`. */
 export function decode(data: Uint8Array, encoding = "utf-8", errors: Errors = "strict"): string {
-  switch (norm(encoding)) {
+  switch (encoding === "utf-8" ? encoding : norm(encoding)) {
     case "utf-8":
       return decode_utf8(data, errors);
     case "ascii":
@@ -369,7 +369,7 @@ export function decode(data: Uint8Array, encoding = "utf-8", errors: Errors = "s
 
 /** Python `text.encode(encoding, errors)`. */
 export function encode(text: string, encoding = "utf-8", errors: Errors = "strict"): Uint8Array {
-  switch (norm(encoding)) {
+  switch (encoding === "utf-8" ? encoding : norm(encoding)) {
     case "utf-8":
       return encode_utf8(text, errors);
     case "ascii":

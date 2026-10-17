@@ -83,7 +83,7 @@ export function _tokenize(d: string): string[] {
     const argc = _ARGC[cmd.toUpperCase()] ?? 0;
     // large-arc-flag (index 3) and sweep-flag (index 4) of each arc
     // repetition are single chars; peel one off so `11`/`110` split.
-    if (cmd.toUpperCase() === "A" && argc !== 0 && [3, 4].includes(mod(arg, argc)) && (c === "0" || c === "1")) {
+    if (cmd.toUpperCase() === "A" && argc !== 0 && [3, 4].includes(arg % argc) && (c === "0" || c === "1")) {
       tokens.push(c);
       arg += 1;
       i += c.length;
