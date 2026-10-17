@@ -151,6 +151,19 @@ export function get_sample_files(samples_dir: Path): string[] {
 }
 
 /** Get the first layer from the first composition that has layers. */
+/**
+ * `value` as an instance of `cls`, failing the test when it is not. Python
+ * tests read a subclass attribute straight off a `Layer` or a group child;
+ * here the read narrows first, so a wrong kind fails loudly instead of
+ * reading `undefined`.
+ */
+export function as_instance<T>(value: unknown, cls: abstract new (...args: never[]) => T): T {
+  if (!(value instanceof cls)) {
+    throw new AssertionError_(`expected a ${cls.name}, got ${value === null ? "null" : typeof value === "object" ? value.constructor.name : typeof value}`);
+  }
+  return value;
+}
+
 export function get_first_layer(project: Project): Layer {
   py_assert(len(project.compositions) >= 1);
   for (const comp of project.compositions) {
