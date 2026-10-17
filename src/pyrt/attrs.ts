@@ -139,8 +139,8 @@ function default_of(a: Attribute): unknown {
 }
 
 /** A generated `__init__`: sets every field and returns how many keys of `kw` it consumed. */
-type Kw = Record<string, any>;
-type Init = (self: Kw, kw: Kw) => number;
+type Kw = Record<string, unknown>;
+type Init = (self: object, kw: Kw) => number;
 const INITS = new WeakMap<Function, Init | null>();
 
 /**
@@ -179,7 +179,7 @@ function compile_init(cls: Function): Init | null {
  * count shows an unexpected one (or codegen is blocked), `attrs_init_slow`
  * runs to raise attrs' error.
  */
-export function attrs_init(self: Kw, cls: Function, kw: Kw): void {
+export function attrs_init(self: object, cls: Function, kw: Kw): void {
   let init = INITS.get(cls);
   if (init === undefined) INITS.set(cls, (init = compile_init(cls)));
   let n = 0;
@@ -187,13 +187,18 @@ export function attrs_init(self: Kw, cls: Function, kw: Kw): void {
   if (init === null || init(self, kw) !== n) attrs_init_slow(self, cls, kw);
 }
 
-function attrs_init_slow(self: Kw, cls: Function, kw: Kw): void {
+/** `self[name] = value` as module (strict) code runs it: a refused assignment throws. */
+function assign(self: object, name: string, value: unknown): void {
+  if (!Reflect.set(self, name, value)) throw new TypeError(`Cannot assign to read only property '${name}' of object`);
+}
+
+function attrs_init_slow(self: object, cls: Function, kw: Kw): void {
   const attrs = fields(cls);
   const seen = new Set<string>();
   for (const a of attrs) {
     if (!a.init) {
       const d = default_of(a);
-      if (d !== NOTHING) self[a.name] = d;
+      if (d !== NOTHING) assign(self, a.name, d);
       continue;
     }
     let v: unknown;
@@ -207,7 +212,7 @@ function attrs_init_slow(self: Kw, cls: Function, kw: Kw): void {
         throw new TypeError_(`${cls.name}.__init__() missing 1 required argument: '${a.alias}'`);
       }
     }
-    self[a.name] = v;
+    assign(self, a.name, v);
   }
   for (const k of Object.keys(kw)) {
     if (!seen.has(k)) throw new TypeError_(`${cls.name}.__init__() got an unexpected keyword argument '${k}'`);
@@ -222,11 +227,11 @@ export class AttrsBase {
 }
 
 /** The generated `__eq__`: same class and equal `eq=True` fields. */
-export function attrs_eq(a: any, b: any, eq: (x: any, y: any) => boolean): boolean {
+export function attrs_eq(a: object, b: unknown, eq: (x: unknown, y: unknown) => boolean): boolean {
   if (a === b) return true;
-  if (!a || !b || a.constructor !== b.constructor) return false;
+  if (!b || a.constructor !== Object(b).constructor) return false;
   for (const f of fields(a.constructor)) {
-    if (f.eq && !eq(a[f.name], b[f.name])) return false;
+    if (f.eq && !eq(Reflect.get(a, f.name), Reflect.get(Object(b), f.name, b))) return false;
   }
   return true;
 }
