@@ -7,9 +7,18 @@ import { LayerType } from "../../enums/index.ts";
 import { label_index } from "../preferences.ts";
 import { AVLayer } from "./av_layer.ts";
 import type { CompItem } from "../items/composition.ts";
-import type { PropertyGroup } from "../properties/property_group.ts";
-import type { EffectParamDefs, Dynamic } from "../descriptors.ts";
+import type { EffectParamDefs } from "../descriptors.ts";
 
+type TextLayerNewKw = {
+  name: string;
+  layer_id: number;
+  duration: number;
+  containing_comp: CompItem;
+  btds: ListChunk;
+  btgu: ListChunk;
+  tdmn: TdmnChunk;
+  effect_param_defs?: EffectParamDefs | null;
+};
 
 /**
  * The `TextLayer` object represents a text layer within a composition.
@@ -30,30 +39,13 @@ import type { EffectParamDefs, Dynamic } from "../descriptors.ts";
  * ```
  * @see https://ae-scripting.docsforadobe.dev/layer/textlayer/
  */
-type TextLayerNewKw = {
-  name: string;
-  layer_id: number;
-  duration: number;
-  containing_comp: CompItem;
-  btds: ListChunk;
-  btgu: ListChunk;
-  tdmn: TdmnChunk;
-  effect_param_defs?: EffectParamDefs | null;
-};
-
 export class TextLayer extends AVLayer {
   static _auto_name: string = "Text";
 
   // NOTE(port): Python has the same `# type: ignore[override]`; the keyword shape differs from AVLayer._new's in both.
-  static _new(
-    match_name: string,
-    auto_name: string,
-    property_depth: number,
-    kw?: unknown,
-  ): PropertyGroup;
   static _new(kw: TextLayerNewKw): TextLayer;
-  static _new(kw: unknown): AVLayer;
-  static _new(kw: Dynamic): unknown {
+  static _new(...args: never[]): never;
+  static _new(kw: TextLayerNewKw): TextLayer {
     const {
       name,
       layer_id,
