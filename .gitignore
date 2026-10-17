@@ -3,6 +3,7 @@ samples
 .upstream
 .sync/
 .diff/
+.fault/
 dist/
 *-E
 *.ts-e

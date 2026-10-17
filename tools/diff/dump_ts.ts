@@ -46,17 +46,17 @@ function is_container(obj: any): boolean {
   return typeof obj?.[Symbol.iterator] === "function" && typeof obj.__len__ === "function";
 }
 
-function err_name(e: any): string {
+export function err_name(e: any): string {
   const n: string = e?.constructor?.name ?? "Error";
   return n.endsWith("_") ? n.slice(0, -1) : n;
 }
 
-class Dumper {
+export class Dumper {
   seen = new Map<any, string>();
-  constructor(private fd: number) {}
+  constructor(private write: (line: string) => void) {}
 
   emit(path: string, value: any): void {
-    fs.writeSync(this.fd, JSON.stringify([path, value]) + "\n");
+    this.write(JSON.stringify([path, value]) + "\n");
   }
 
   walk(path: string, value: any, depth = 0): void {
@@ -129,21 +129,23 @@ class Dumper {
   }
 }
 
-const [out_dir, ...samples] = process.argv.slice(2);
-fs.mkdirSync(out_dir, { recursive: true });
-for (const sample of samples) {
-  const fd = fs.openSync(`${out_dir}/${sample.replaceAll("/", "__")}.jsonl`, "w");
-  const d = new Dumper(fd);
-  try {
-    let app: any;
+if (import.meta.main) {
+  const [out_dir, ...samples] = process.argv.slice(2);
+  fs.mkdirSync(out_dir, { recursive: true });
+  for (const sample of samples) {
+    const fd = fs.openSync(`${out_dir}/${sample.replaceAll("/", "__")}.jsonl`, "w");
+    const d = new Dumper((line) => fs.writeSync(fd, line));
     try {
-      app = py_aep.parse(sample);
-    } catch (e) {
-      d.emit("$parse", { $err: err_name(e) });
-      continue;
+      let app: any;
+      try {
+        app = py_aep.parse(sample);
+      } catch (e) {
+        d.emit("$parse", { $err: err_name(e) });
+        continue;
+      }
+      d.walk("app", app);
+    } finally {
+      fs.closeSync(fd);
     }
-    d.walk("app", app);
-  } finally {
-    fs.closeSync(fd);
   }
 }
