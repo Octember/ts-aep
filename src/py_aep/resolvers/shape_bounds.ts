@@ -43,8 +43,58 @@ import {
   radians,
   repr,
 } from "../../pyrt/index.ts";
+import type { MatchNameTypes } from "../models/properties/match_name_types.ts";
 import type { Property } from "../models/properties/property.ts";
 import type { PropertyGroup } from "../models/properties/property_group.ts";
+
+declare module "../models/properties/match_name_types.ts" {
+  interface MatchNameTypes {
+    "ADBE Vector Transform Group": PropertyGroup;
+    "ADBE Vector Anchor": Property<number[]>;
+    "ADBE Vector Position": Property<number[]>;
+    "ADBE Vector Scale": Property<number[]>;
+    "ADBE Vector Skew": Property<number>;
+    "ADBE Vector Skew Axis": Property<number>;
+    "ADBE Vector Rotation": Property<number>;
+    "ADBE Vector Rect Size": Property<number[]>;
+    "ADBE Vector Rect Position": Property<number[]>;
+    "ADBE Vector Rect Roundness": Property<number>;
+    "ADBE Vector Ellipse Size": Property<number[]>;
+    "ADBE Vector Ellipse Position": Property<number[]>;
+    "ADBE Vector Star Points": Property<number>;
+    "ADBE Vector Star Type": Property<number>;
+    "ADBE Vector Star Position": Property<number[]>;
+    "ADBE Vector Star Outer Radius": Property<number>;
+    "ADBE Vector Star Outer Roundess": Property<number>;
+    "ADBE Vector Star Inner Radius": Property<number>;
+    "ADBE Vector Star Inner Roundess": Property<number>;
+    "ADBE Vector Star Rotation": Property<number>;
+    "ADBE Vector Stroke Width": Property<number>;
+    "ADBE Vector Stroke Line Join": Property<number>;
+    "ADBE Vector Stroke Miter Limit": Property<number>;
+    "ADBE Vector Stroke Line Cap": Property<number>;
+    "ADBE Vector Shape - Rect": PropertyGroup;
+    "ADBE Vector Shape - Ellipse": PropertyGroup;
+    "ADBE Vector Shape - Star": PropertyGroup;
+    "ADBE Vector Graphic - Fill": PropertyGroup;
+    "ADBE Vector Graphic - Stroke": PropertyGroup;
+    "ADBE Vector Graphic - G-Fill": PropertyGroup;
+    "ADBE Vector Graphic - G-Stroke": PropertyGroup;
+    "ADBE Vector Fill Color": Property<number[]>;
+    "ADBE Vector Stroke Color": Property<number[]>;
+    "ADBE Vector Fill Opacity": Property<number>;
+    "ADBE Vector Stroke Opacity": Property<number>;
+    "ADBE Vector Grad Type": Property<number>;
+    "ADBE Vector Grad Start Pt": Property<number[]>;
+    "ADBE Vector Grad End Pt": Property<number[]>;
+    "ADBE Vector Grad Scale": Property<number[]>;
+    "ADBE Vector Grad Rotation": Property<number>;
+  }
+}
+
+type _VectorProp = {
+  [K in keyof MatchNameTypes]: MatchNameTypes[K] extends Property<infer V> ? (V extends number | number[] ? K : never) : never;
+}[keyof MatchNameTypes];
 
 export type _Point = [number, number];
 export type _Segment = [_Point, _Point, _Point, _Point];
@@ -106,8 +156,13 @@ export class BoxAccumulator {
   }
 }
 
-export function _value(group: PropertyGroup, match_name: string, time: number): any {
-  return (group.__getitem__(match_name) as Property).value_at_time(time);
+export function _value<K extends _VectorProp>(
+  group: PropertyGroup,
+  match_name: K,
+  time: number,
+): MatchNameTypes[K] extends Property<infer V> ? V : never;
+export function _value(group: PropertyGroup, match_name: _VectorProp, time: number) {
+  return group.__getitem__(match_name).value_at_time(time);
 }
 
 // ---------------------------------------------------------------------------
