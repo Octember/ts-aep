@@ -42,6 +42,7 @@ import {
   fspath,
   getitem,
   int,
+  json_float,
   py_bool,
   radians,
   range,
@@ -339,7 +340,7 @@ export function _enum(table: Map<string, number>): (value: _Value) => number {
   return function convert(value: _Value): number {
     // Map.get, not a plain-object lookup: descriptor strings such as
     // "constructor" must not reach Object.prototype.
-    const hit = table.get(value as string);
+    const hit = typeof value === "string" ? table.get(value) : undefined;
     if (hit === undefined) throw new UnsupportedStyleError(`unmapped enum value ${_repr(value)}`);
     return hit;
   };
@@ -639,11 +640,12 @@ export function _convert_style(
 ): Map<string, StyleValue> {
   const values = new Map<string, StyleValue>();
   for (const param of params) {
-    if (!instance.has(param.descriptor_key)) continue;
+    const value = instance.get(param.descriptor_key);
+    if (value === undefined) continue;
     try {
       values.set(
         `${prefix}/${param.suffix}`,
-        param.convert(instance.get(param.descriptor_key)!),
+        param.convert(value),
       );
     } catch (exc) {
       if (!(exc instanceof UnsupportedStyleError)) throw exc;
@@ -915,7 +917,7 @@ export function _pads(reach: number, anti_aliased: boolean, shift = 0.0): [numbe
 export function _bevel_pads(instance: Map<string, _Value>, name: string): [number, number] | null {
   const style = dict_get(instance, "bvlS", "InrB");
   if (style === "InrB") return null;
-  const size = dict_get(instance, "blur", 0) as number;
+  const size = json_float(dict_get(instance, "blur", 0));
   let height: number;
   if (style === "OtrB") {
     height = size;
@@ -934,7 +936,7 @@ export function _bevel_pads(instance: Map<string, _Value>, name: string): [numbe
   } else {
     reach = height + 4;
   }
-  const softening = dict_get(instance, "Sftn", 0) as number;
+  const softening = json_float(dict_get(instance, "Sftn", 0));
   if (softening > 0) {
     reach += Math.max(softening, 2) - 0.5;
   }
@@ -959,21 +961,21 @@ export function _instance_box(
   if (key === "DrSh" || key === "OrGl") {
     const precise = key === "OrGl" && (instance.get("GlwT") ?? null) === "PrBL";
     const reach = _blur_reach(
-      dict_get(instance, "blur", 0) as number,
-      dict_get(instance, "Ckmt", 0) as number,
+      json_float(dict_get(instance, "blur", 0)),
+      json_float(dict_get(instance, "Ckmt", 0)),
       precise,
     );
     [lead, trail] = _pads(reach, py_bool(dict_get(instance, "AntA", false)));
     if (key === "DrSh") {
       const angle = radians(
-        py_bool(instance.get("uglg")) ? global_angle : dict_get(instance, "lagl", 0) as number,
+        py_bool(instance.get("uglg")) ? global_angle : json_float(dict_get(instance, "lagl", 0)),
       );
-      const distance = dict_get(instance, "Dstn", 0) as number;
+      const distance = json_float(dict_get(instance, "Dstn", 0));
       dx = _round_away(-Math.cos(angle) * distance);
       dy = _round_away(Math.sin(angle) * distance);
     }
   } else if (key === "FrFX") {
-    const size = dict_get(instance, "Sz  ", 0) as number;
+    const size = json_float(dict_get(instance, "Sz  ", 0));
     const position = dict_get(instance, "Styl", "OutF");
     if (position === "InsF") return null;
     const reach = position === "OutF" ? size : Math.ceil(size / 2);

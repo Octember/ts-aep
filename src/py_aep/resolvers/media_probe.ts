@@ -1960,7 +1960,7 @@ export function _probe_mp3(fp: ProbeStream): MediaInfo {
   const mpeg_ver = (h >>> 19) & 0x3; // 3=MPEG1, 2=MPEG2, 0=MPEG2.5
   const sr_i = (h >>> 10) & 0x3;
   const mono = ((h >>> 6) & 0x3) === 3;
-  const sr = sr_i < 3 ? (_MP3_SR.get(mpeg_ver) ?? [0, 0, 0])![sr_i] : 0;
+  const sr = sr_i < 3 ? (_MP3_SR.get(mpeg_ver) ?? [0, 0, 0])[sr_i] : 0;
   const spf = mpeg_ver === 3 ? 1152 : 576;
   // A Xing/Info header (VBR) carries the exact frame count; else assume CBR.
   const side = mpeg_ver === 3 ? (mono ? 17 : 32) : mono ? 9 : 17;

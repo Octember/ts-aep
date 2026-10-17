@@ -402,7 +402,7 @@ export function build_world_matrix(
 
 /** Pixel aspect of a layer's own pixels: its source's, else square. */
 export function layer_source_aspect(layer: Layer): number {
-  const source = hasattr(layer, "source") ? (layer as AVLayer).source : null;
+  const source = _is_av_layer(layer) && hasattr(layer, "source") ? layer.source : null;
   const aspect = source != null && "pixel_aspect" in source ? source.pixel_aspect : null;
   return aspect != null && aspect !== 0 ? aspect : 1.0;
 }

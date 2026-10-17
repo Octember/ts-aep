@@ -34,6 +34,7 @@ import { Affine, IDENTITY } from "../svg/transform.ts";
 import {
   NotImplementedError,
   ZeroDivisionError,
+  deferred,
   float_repr,
   int,
   max,
@@ -44,6 +45,8 @@ import {
 import type { MatchNameTypes } from "../models/properties/match_name_types.ts";
 import type { Property } from "../models/properties/property.ts";
 import type { PropertyGroup } from "../models/properties/property_group.ts";
+
+const _property_group = deferred<typeof import("../models/properties/property_group.ts")>("py_aep/models/properties/property_group");
 
 declare module "../models/properties/match_name_types.ts" {
   interface MatchNameTypes {
@@ -425,8 +428,10 @@ export function _walk(
       continue;
     }
     const match_name = item.match_name;
-    if (match_name === "ADBE Vector Group") {
-      const group = item as PropertyGroup;
+    // Every match name dispatched below names a group (see MatchNameTypes).
+    const group = item instanceof _property_group().PropertyGroup ? item : null;
+    const path_builder = _PATH_BUILDERS.get(match_name);
+    if (match_name === "ADBE Vector Group" && group != null) {
       const local = _group_matrix(
         group.__getitem__("ADBE Vector Transform Group"),
         time,
@@ -441,11 +446,11 @@ export function _walk(
       for (const path of children) {
         pending.push(_map_path(local, path));
       }
-    } else if (_PATH_BUILDERS.has(match_name)) {
-      pending.push(_PATH_BUILDERS.get(match_name)!(item as PropertyGroup, time));
+    } else if (path_builder !== undefined && group != null) {
+      pending.push(path_builder(group, time));
     } else if (_FILLS.has(match_name) || _STROKES.has(match_name)) {
-      const reach = _STROKES.has(match_name)
-        ? _stroke_reach(item as PropertyGroup, time)
+      const reach = _STROKES.has(match_name) && group != null
+        ? _stroke_reach(group, time)
         : null;
       for (const path of pending.slice(painted)) {
         if (path?.length > 0) {

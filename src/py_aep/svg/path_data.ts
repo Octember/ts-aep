@@ -68,7 +68,7 @@ export function _tokenize(d: string): string[] {
   let cmd = "";
   let arg = 0;
   while (i < d.length) {
-    const c = String.fromCodePoint(d.codePointAt(i)!);
+    const c = String.fromCodePoint(d.codePointAt(i) ?? 0);
     if (c === "," || isspace(c)) {
       i += c.length;
       continue;

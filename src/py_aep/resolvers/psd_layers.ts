@@ -96,8 +96,8 @@ export class PsdStyleBlocks {
 
   /** `t._replace(field=...)`: a copy with the given fields replaced. */
   _replace(kw: Partial<PsdStyleBlocks>): PsdStyleBlocks {
-    const args = PsdStyleBlocks._fields.map((f) => (f in kw ? kw[f] : this[f]));
-    return new PsdStyleBlocks(...(args as ConstructorParameters<typeof PsdStyleBlocks>));
+    const f = { ...this, ...kw };
+    return new PsdStyleBlocks(f.effects, f.fill_opacity, f.blend_interior, f.channel_restrictions);
   }
 
   _asdict(): Record<string, PsdStyleBlocks[(typeof PsdStyleBlocks._fields)[number]]> {
@@ -233,8 +233,21 @@ export class PsdLayer {
 
   /** `t._replace(field=...)`: a copy with the given fields replaced. */
   _replace(kw: Partial<PsdLayer>): PsdLayer {
-    const args = PsdLayer._fields.map((f) => (f in kw ? kw[f] : this[f]));
-    return new PsdLayer(...(args as ConstructorParameters<typeof PsdLayer>));
+    const f = { ...this, ...kw };
+    return new PsdLayer(
+      f.name,
+      f.layer_id,
+      f.bounds,
+      f.record_index,
+      f.is_adjustment,
+      f.style_blocks,
+      f.vector_mask,
+      f.clipped,
+      f.is_fill,
+      f.mask_box,
+      f.has_transparency,
+      f.visible,
+    );
   }
 
   _asdict(): Record<string, PsdLayer[(typeof PsdLayer._fields)[number]]> {
@@ -299,8 +312,8 @@ export class PsdGroup {
 
   /** `t._replace(field=...)`: a copy with the given fields replaced. */
   _replace(kw: Partial<PsdGroup>): PsdGroup {
-    const args = PsdGroup._fields.map((f) => (f in kw ? kw[f] : this[f]));
-    return new PsdGroup(...(args as ConstructorParameters<typeof PsdGroup>));
+    const f = { ...this, ...kw };
+    return new PsdGroup(f.name, f.layer_id, f.children, f.style_blocks, f.visible);
   }
 
   _asdict(): Record<string, PsdGroup[(typeof PsdGroup._fields)[number]]> {
@@ -406,21 +419,21 @@ export class _Record {
 
   /** `rec._replace(field=...)`: a copy with the given fields replaced. */
   _replace(kw: Partial<_Record>): _Record {
-    const f = <K extends keyof _Record>(k: K): _Record[K] => (k in kw ? (kw[k] as _Record[K]) : this[k]);
+    const f = { ...this, ...kw };
     return new _Record(
-      f("name"),
-      f("layer_id"),
-      f("bounds"),
-      f("record_index"),
-      f("section_divider"),
-      f("is_adjustment"),
-      f("style_blocks"),
-      f("vector_mask"),
-      f("clipped"),
-      f("is_fill"),
-      f("mask_box"),
-      f("has_transparency"),
-      f("visible"),
+      f.name,
+      f.layer_id,
+      f.bounds,
+      f.record_index,
+      f.section_divider,
+      f.is_adjustment,
+      f.style_blocks,
+      f.vector_mask,
+      f.clipped,
+      f.is_fill,
+      f.mask_box,
+      f.has_transparency,
+      f.visible,
     );
   }
 
@@ -842,7 +855,7 @@ export function _build_layer_tree(records: _Record[]): PsdNode[] {
     if (rec.section_divider === 3) {
       stack.push([]);
     } else if (rec.section_divider === 1 || rec.section_divider === 2) {
-      const children = stack.length > 1 ? stack.pop()! : [];
+      const children = stack.length > 1 ? stack.splice(-1)[0] : [];
       stack[stack.length - 1].push(
         new PsdGroup(rec.name, rec.layer_id, children, rec.style_blocks, rec.visible),
       );
@@ -867,7 +880,7 @@ export function _build_layer_tree(records: _Record[]): PsdNode[] {
   }
   // Defensive: an unbalanced file leaves open scopes; surface their contents.
   while (stack.length > 1) {
-    const orphans = stack.pop()!;
+    const [orphans] = stack.splice(-1);
     for (const o of orphans) stack[stack.length - 1].push(o);
   }
   return root;

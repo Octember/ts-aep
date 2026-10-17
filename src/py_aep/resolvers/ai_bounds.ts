@@ -943,7 +943,8 @@ export class _Measurer {
       if (op === "q") {
         saved.push(gs.copy());
       } else if (op === "Q") {
-        if (saved.length > 0) gs = saved.pop()!;
+        const restored = saved.pop();
+        if (restored !== undefined) gs = restored;
       } else if (op === "cm" && operands.length >= 6) {
         // Python multiplies the raw operands: a non-number raises TypeError.
         gs.ctm = _mat_mul(operands.slice(-6).map(cos_num), gs.ctm);
@@ -1092,7 +1093,8 @@ export class _Measurer {
   _hull(gs: _GState, segments: Segment[]): Box | null {
     const acc = new _Acc();
     for (const segment of segments) {
-      for (const point of segment.slice(1) as Pt[]) {
+      const [, ...points] = segment;
+      for (const point of points) {
         acc.add(..._apply(gs.ctm, point[0], point[1]));
       }
     }
