@@ -95,17 +95,22 @@ export class Struct<F extends string = string> {
       size += SIZES[ch] * count;
     }
     this.size = size;
-  }
-
-  /** Number of values `unpack` yields. */
-  get n_values(): number {
     let n = 0;
     for (const c of this.codes) {
       if (c.ch === "x") continue;
       n += c.ch === "s" || c.ch === "p" ? 1 : c.count;
     }
-    return n;
+    this.n_values = n;
   }
+
+  /** Number of values `unpack` yields. */
+  readonly n_values: number;
+
+  /** Compiled `unpack_from` body; null where code generation is blocked (CSP, Workers). */
+  private unpacker: Unpacker | null | undefined;
+
+  /** Compiled `pack_to` body (after the arity check); null where code generation is blocked. */
+  private packer: Packer | null | undefined;
 
   unpack(data: Uint8Array): Unpacked<F>;
   unpack(data: Uint8Array): any[] {
@@ -120,7 +125,11 @@ export class Struct<F extends string = string> {
     if (data.length - offset < this.size) {
       throw new StructError(`unpack_from requires a buffer of at least ${this.size + offset} bytes`);
     }
-    const dv = new DataView(data.buffer, data.byteOffset, data.byteLength);
+    if (this.unpacker === undefined) this.unpacker = compile_unpack(this.codes, this.le);
+    if (this.unpacker !== null) return this.unpacker(data, offset);
+    // Integers are assembled from bytes and floats go through a scratch view:
+    // `data.buffer` would make JSC materialize a backing store per call.
+    const d = data;
     const le = this.le;
     const out: any[] = [];
     let p = offset;
@@ -130,25 +139,25 @@ export class Struct<F extends string = string> {
         continue;
       }
       if (ch === "s" || ch === "p") {
-        out.push(data.slice(p, p + count));
+        out.push(d.slice(p, p + count));
         p += count;
         continue;
       }
       for (let k = 0; k < count; k++) {
         switch (ch) {
-          case "c": out.push(data.slice(p, p + 1)); break;
-          case "b": out.push(dv.getInt8(p)); break;
-          case "B": out.push(dv.getUint8(p)); break;
-          case "?": out.push(dv.getUint8(p) !== 0); break;
-          case "h": out.push(dv.getInt16(p, le)); break;
-          case "H": out.push(dv.getUint16(p, le)); break;
-          case "i": case "l": out.push(dv.getInt32(p, le)); break;
-          case "I": case "L": out.push(dv.getUint32(p, le)); break;
-          case "q": out.push(dv.getBigInt64(p, le)); break;
-          case "Q": out.push(dv.getBigUint64(p, le)); break;
-          case "e": out.push(half_to_float(dv.getUint16(p, le))); break;
-          case "f": out.push(dv.getFloat32(p, le)); break;
-          case "d": out.push(dv.getFloat64(p, le)); break;
+          case "c": out.push(d.slice(p, p + 1)); break;
+          case "b": out.push((d[p] << 24) >> 24); break;
+          case "B": out.push(d[p]); break;
+          case "?": out.push(d[p] !== 0); break;
+          case "h": out.push((u16(d, p, le) << 16) >> 16); break;
+          case "H": out.push(u16(d, p, le)); break;
+          case "i": case "l": out.push(u32(d, p, le) | 0); break;
+          case "I": case "L": out.push(u32(d, p, le)); break;
+          case "q": out.push(scratch(d, p, 8).getBigInt64(0, le)); break;
+          case "Q": out.push(scratch(d, p, 8).getBigUint64(0, le)); break;
+          case "e": out.push(half_to_float(u16(d, p, le))); break;
+          case "f": out.push(scratch(d, p, 4).getFloat32(0, le)); break;
+          case "d": out.push(scratch(d, p, 8).getFloat64(0, le)); break;
         }
         p += SIZES[ch];
       }
@@ -157,85 +166,249 @@ export class Struct<F extends string = string> {
   }
 
   pack(...values: PackValue[]): Uint8Array {
+    const out = new Uint8Array(this.size);
+    this.pack_to(out, 0, values);
+    return out;
+  }
+
+  /**
+   * `pack(*values)` written into `out` at `offset`, which must have room for
+   * `size` bytes. Pad bytes are zeroed, so `out` need not be zero-filled; on a
+   * bad value, bytes before the failing field are already written.
+   */
+  pack_to(out: Uint8Array, offset: number, values: PackValue[]): void {
     if (values.length !== this.n_values) {
       throw new StructError(`pack expected ${this.n_values} items for packing (got ${values.length})`);
     }
-    const out = new Uint8Array(this.size);
-    const dv = new DataView(out.buffer);
+    if (this.packer === undefined) this.packer = compile_pack(this.codes, this.le);
+    if (this.packer !== null) return this.packer(out, offset, values);
     const le = this.le;
-    let p = 0;
+    let p = offset;
     let vi = 0;
     for (const { ch, count } of this.codes) {
       if (ch === "x") {
+        out.fill(0, p, p + count);
         p += count;
         continue;
       }
       if (ch === "s" || ch === "p") {
-        const v = values[vi++];
-        if (!(v instanceof Uint8Array)) throw new StructError("argument for 's' must be a bytes object");
-        out.set(v.subarray(0, count), p);
+        pack_s(out, p, values[vi++], count);
         p += count;
         continue;
       }
       for (let k = 0; k < count; k++) {
-        const v = values[vi++];
-        switch (ch) {
-          case "c":
-            if (!(v instanceof Uint8Array) || v.length !== 1) {
-              throw new StructError("char format requires a bytes object of length 1");
-            }
-            out[p] = v[0];
-            break;
-          case "?":
-            out[p] = v ? 1 : 0;
-            break;
-          case "q":
-          case "Q": {
-            const big = to_bigint(v);
-            if (ch === "Q") {
-              if (big < 0n || big > 0xffffffffffffffffn) throw new StructError("argument out of range");
-              dv.setBigUint64(p, big, le);
-            } else {
-              if (big < -0x8000000000000000n || big > 0x7fffffffffffffffn) throw new StructError("argument out of range");
-              dv.setBigInt64(p, big, le);
-            }
-            break;
-          }
-          case "e":
-            dv.setUint16(p, float_to_half(to_float(v)), le);
-            break;
-          case "f": {
-            const x = to_float(v);
-            if (Number.isFinite(x) && Math.abs(x) > FLOAT32_MAX && !Number.isFinite(Math.fround(x))) {
-              throw new OverflowError("float too large to pack with f format");
-            }
-            dv.setFloat32(p, x, le);
-            break;
-          }
-          case "d":
-            dv.setFloat64(p, to_float(v), le);
-            break;
-          default: {
-            const n = to_int(v);
-            const [lo, hi] = INT_RANGE[ch];
-            if (n < lo || n > hi) {
-              throw new StructError(`'${ch}' format requires ${lo} <= number <= ${hi}`);
-            }
-            switch (ch) {
-              case "b": dv.setInt8(p, n); break;
-              case "B": dv.setUint8(p, n); break;
-              case "h": dv.setInt16(p, n, le); break;
-              case "H": dv.setUint16(p, n, le); break;
-              case "i": case "l": dv.setInt32(p, n, le); break;
-              case "I": case "L": dv.setUint32(p, n, le); break;
-            }
-          }
-        }
+        pack_one(out, p, ch, values[vi++], le);
         p += SIZES[ch];
       }
     }
-    return out;
   }
+}
+
+/** Pack an `s`/`p` field: `v` truncated or zero-padded to `count` bytes. */
+function pack_s(out: Uint8Array, p: number, v: PackValue, count: number): void {
+  if (!(v instanceof Uint8Array)) throw new StructError("argument for 's' must be a bytes object");
+  const n = Math.min(v.length, count);
+  for (let i = 0; i < n; i++) out[p + i] = v[i];
+  if (n < count) out.fill(0, p + n, p + count);
+}
+
+function range_error(ch: string): StructError {
+  const range = INT_RANGE[ch];
+  return new StructError(`'${ch}' format requires ${range[0]} <= number <= ${range[1]}`);
+}
+
+/** Pack one value of a single-item code (anything but `x`, `s`, `p`) at `p`. */
+function pack_one(out: Uint8Array, p: number, ch: string, v: PackValue, le: boolean): void {
+  switch (ch) {
+    case "c":
+      if (!(v instanceof Uint8Array) || v.length !== 1) {
+        throw new StructError("char format requires a bytes object of length 1");
+      }
+      out[p] = v[0];
+      break;
+    case "?":
+      out[p] = v ? 1 : 0;
+      break;
+    case "q":
+    case "Q": {
+      const big = to_bigint(v);
+      if (ch === "Q") {
+        if (big < 0n || big > 0xffffffffffffffffn) throw new StructError("argument out of range");
+        SCRATCH_DV.setBigUint64(0, big, le);
+      } else {
+        if (big < -0x8000000000000000n || big > 0x7fffffffffffffffn) throw new StructError("argument out of range");
+        SCRATCH_DV.setBigInt64(0, big, le);
+      }
+      out.set(SCRATCH_U8, p);
+      break;
+    }
+    case "e":
+      put16(out, p, float_to_half(to_float(v)), le);
+      break;
+    case "f": {
+      const x = to_float(v);
+      if (Number.isFinite(x) && Math.abs(x) > FLOAT32_MAX && !Number.isFinite(Math.fround(x))) {
+        throw new OverflowError("float too large to pack with f format");
+      }
+      SCRATCH_DV.setFloat32(0, x, le);
+      out[p] = SCRATCH_U8[0];
+      out[p + 1] = SCRATCH_U8[1];
+      out[p + 2] = SCRATCH_U8[2];
+      out[p + 3] = SCRATCH_U8[3];
+      break;
+    }
+    case "d":
+      SCRATCH_DV.setFloat64(0, to_float(v), le);
+      out.set(SCRATCH_U8, p);
+      break;
+    default: {
+      const n = to_int(v);
+      const range = INT_RANGE[ch];
+      if (n < range[0] || n > range[1]) throw range_error(ch);
+      // Uint8Array stores take the low 8 bits, which covers negative values.
+      switch (ch) {
+        case "b": case "B": out[p] = n; break;
+        case "h": case "H": put16(out, p, n, le); break;
+        default: put32(out, p, n, le); break;
+      }
+    }
+  }
+}
+
+type Packer = (out: Uint8Array, p: number, v: PackValue[]) => void;
+
+/** Straight-line `pack_to` for `codes`: integers inline, other codes through `pack_one` in order. */
+function compile_pack(codes: Code[], le: boolean): Packer | null {
+  const body = ["let n;"];
+  let k = 0;
+  let vi = 0;
+  for (const { ch, count } of codes) {
+    if (ch === "x") {
+      body.push(`out.fill(0,p+${k},p+${k + count});`);
+      k += count;
+      continue;
+    }
+    if (ch === "s" || ch === "p") {
+      body.push(`pack_s(out,p+${k},v[${vi++}],${count});`);
+      k += count;
+      continue;
+    }
+    if (vi + count > 256) return null;
+    for (let i = 0; i < count; i++) {
+      const range = INT_RANGE[ch];
+      if (range === undefined) {
+        body.push(`pack_one(out,p+${k},${JSON.stringify(ch)},v[${vi++}],${le});`);
+      } else {
+        body.push(`n=to_int(v[${vi++}]);if(n<${range[0]}||n>${range[1]})throw range_error(${JSON.stringify(ch)});`);
+        const size = SIZES[ch];
+        const order = le ? [...Array(size).keys()] : [...Array(size).keys()].reverse();
+        for (let b = 0; b < size; b++) body.push(`out[p+${k + order[b]}]=n${b ? `>>>${8 * b}` : ""};`);
+      }
+      k += SIZES[ch];
+    }
+  }
+  try {
+    return new Function("to_int", "pack_one", "pack_s", "range_error", `return (out, p, v) => {${body.join("")}};`)(
+      to_int,
+      pack_one,
+      pack_s,
+      range_error,
+    );
+  } catch {
+    return null;
+  }
+}
+
+type Unpacker = (d: Uint8Array, p: number) => any[];
+
+/** Straight-line `unpack_from` for `codes`: one expression per value at a fixed offset. */
+function compile_unpack(codes: Code[], le: boolean): Unpacker | null {
+  const u16 = (k: number) => (le ? `(d[p+${k}]|d[p+${k + 1}]<<8)` : `(d[p+${k}]<<8|d[p+${k + 1}])`);
+  const u32 = (k: number) =>
+    le
+      ? `(d[p+${k}]|d[p+${k + 1}]<<8|d[p+${k + 2}]<<16|d[p+${k + 3}]<<24)`
+      : `(d[p+${k}]<<24|d[p+${k + 1}]<<16|d[p+${k + 2}]<<8|d[p+${k + 3}])`;
+  const exprs: string[] = [];
+  let k = 0;
+  for (const { ch, count } of codes) {
+    if (ch === "x") {
+      k += count;
+      continue;
+    }
+    if (ch === "s" || ch === "p") {
+      exprs.push(`d.slice(p+${k},p+${k + count})`);
+      k += count;
+      continue;
+    }
+    if (exprs.length + count > 256) return null;
+    for (let i = 0; i < count; i++) {
+      switch (ch) {
+        case "c": exprs.push(`d.slice(p+${k},p+${k + 1})`); break;
+        case "b": exprs.push(`d[p+${k}]<<24>>24`); break;
+        case "B": exprs.push(`d[p+${k}]`); break;
+        case "?": exprs.push(`d[p+${k}]!==0`); break;
+        case "h": exprs.push(`${u16(k)}<<16>>16`); break;
+        case "H": exprs.push(u16(k)); break;
+        case "i": case "l": exprs.push(`${u32(k)}|0`); break;
+        case "I": case "L": exprs.push(`${u32(k)}>>>0`); break;
+        case "q": exprs.push(`scratch(d,p+${k},8).getBigInt64(0,${le})`); break;
+        case "Q": exprs.push(`scratch(d,p+${k},8).getBigUint64(0,${le})`); break;
+        case "e": exprs.push(`half_to_float(${u16(k)})`); break;
+        case "f": exprs.push(`scratch(d,p+${k},4).getFloat32(0,${le})`); break;
+        case "d": exprs.push(`scratch(d,p+${k},8).getFloat64(0,${le})`); break;
+      }
+      k += SIZES[ch];
+    }
+  }
+  try {
+    return new Function("scratch", "half_to_float", `return (d, p) => [${exprs.join(",")}];`)(scratch, half_to_float);
+  } catch {
+    return null;
+  }
+}
+
+function put16(out: Uint8Array, p: number, n: number, le: boolean): void {
+  if (le) {
+    out[p] = n;
+    out[p + 1] = n >> 8;
+  } else {
+    out[p] = n >> 8;
+    out[p + 1] = n;
+  }
+}
+
+function put32(out: Uint8Array, p: number, n: number, le: boolean): void {
+  if (le) {
+    out[p] = n;
+    out[p + 1] = n >>> 8;
+    out[p + 2] = n >>> 16;
+    out[p + 3] = n >>> 24;
+  } else {
+    out[p] = n >>> 24;
+    out[p + 1] = n >>> 16;
+    out[p + 2] = n >>> 8;
+    out[p + 3] = n;
+  }
+}
+
+function u16(d: Uint8Array, p: number, le: boolean): number {
+  return le ? d[p] | (d[p + 1] << 8) : (d[p] << 8) | d[p + 1];
+}
+
+function u32(d: Uint8Array, p: number, le: boolean): number {
+  return (le
+    ? d[p] | (d[p + 1] << 8) | (d[p + 2] << 16) | (d[p + 3] << 24)
+    : (d[p] << 24) | (d[p + 1] << 16) | (d[p + 2] << 8) | d[p + 3]) >>> 0;
+}
+
+const SCRATCH = new ArrayBuffer(8);
+const SCRATCH_U8 = new Uint8Array(SCRATCH);
+const SCRATCH_DV = new DataView(SCRATCH);
+
+/** Copy `n` bytes at `p` into the scratch buffer and return its view (read at offset 0). */
+function scratch(d: Uint8Array, p: number, n: number): DataView {
+  for (let i = 0; i < n; i++) SCRATCH_U8[i] = d[p + i];
+  return SCRATCH_DV;
 }
 
 function to_int(v: PackValue): number {

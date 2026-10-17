@@ -8,7 +8,18 @@ import { CP1252, MAC_ROMAN } from "./codepages.ts";
 
 export type Errors = "strict" | "surrogateescape" | "ignore" | "replace";
 
+const NORM = new Map<string, string>();
+
 function norm(encoding: string): string {
+  let n = NORM.get(encoding);
+  if (n === undefined) {
+    n = norm_uncached(encoding);
+    NORM.set(encoding, n);
+  }
+  return n;
+}
+
+function norm_uncached(encoding: string): string {
   const e = encoding.toLowerCase().replace(/_/g, "-");
   if (e === "utf8" || e === "utf-8") return "utf-8";
   if (e === "ascii" || e === "us-ascii") return "ascii";
@@ -36,7 +47,35 @@ function bad_byte(out: string[], byte: number, errors: Errors, enc: string, pos:
   }
 }
 
+function is_ascii(data: Uint8Array): boolean {
+  for (let i = 0; i < data.length; i++) if (data[i] >= 0x80) return false;
+  return true;
+}
+
+/** Bytes below 0x100 as one char each (callers check the range). */
+function chars(data: Uint8Array): string {
+  if (data.length <= 0x2000) return String.fromCharCode.apply(null, data as unknown as number[]);
+  let s = "";
+  for (let i = 0; i < data.length; i += 0x2000) {
+    s += String.fromCharCode.apply(null, data.subarray(i, i + 0x2000) as unknown as number[]);
+  }
+  return s;
+}
+
+// WHATWG's fatal UTF-8 decoder rejects exactly what CPython's strict one does
+// (surrogates, overlongs, > U+10FFFF, truncation); on error the byte-wise
+// decoder below applies the error handler.
+const UTF8_FATAL = new TextDecoder("utf-8", { fatal: true, ignoreBOM: true });
+
 function decode_utf8(data: Uint8Array, errors: Errors): string {
+  try {
+    return UTF8_FATAL.decode(data);
+  } catch {
+    return decode_utf8_slow(data, errors);
+  }
+}
+
+function decode_utf8_slow(data: Uint8Array, errors: Errors): string {
   const out: string[] = [];
   const n = data.length;
   let i = 0;
@@ -107,7 +146,15 @@ function decode_utf8(data: Uint8Array, errors: Errors): string {
   return out.join("");
 }
 
+const UTF8_ENCODER = new TextEncoder();
+
 function encode_utf8(text: string, errors: Errors): Uint8Array {
+  // TextEncoder would turn a lone surrogate into U+FFFD; those go byte-wise.
+  if ((text as { isWellFormed?(): boolean }).isWellFormed?.()) return UTF8_ENCODER.encode(text);
+  return encode_utf8_slow(text, errors);
+}
+
+function encode_utf8_slow(text: string, errors: Errors): Uint8Array {
   const out: number[] = [];
   for (let i = 0; i < text.length; i++) {
     let c = text.charCodeAt(i);
@@ -142,6 +189,8 @@ function encode_utf8(text: string, errors: Errors): Uint8Array {
 }
 
 function decode_single_byte(data: Uint8Array, errors: Errors, limit: number, enc: string, table?: readonly number[]): string {
+  if (limit === 0x100) return chars(data);
+  if (is_ascii(data)) return UTF8_FATAL.decode(data);
   const out: string[] = [];
   for (let i = 0; i < data.length; i++) {
     const b = data[i];
@@ -153,6 +202,16 @@ function decode_single_byte(data: Uint8Array, errors: Errors, limit: number, enc
 }
 
 function encode_single_byte(text: string, errors: Errors, limit: number, enc: string, table?: readonly number[]): Uint8Array {
+  const out = new Uint8Array(text.length);
+  for (let i = 0; i < text.length; i++) {
+    const c = text.charCodeAt(i);
+    if (c >= limit) return encode_single_byte_slow(text, errors, limit, enc, table);
+    out[i] = c;
+  }
+  return out;
+}
+
+function encode_single_byte_slow(text: string, errors: Errors, limit: number, enc: string, table?: readonly number[]): Uint8Array {
   const out: number[] = [];
   for (let i = 0; i < text.length; i++) {
     const c = text.charCodeAt(i);

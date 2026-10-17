@@ -27,7 +27,7 @@ import {
 } from "../../pyrt/index.ts";
 import type { EnumHelpers } from "../../pyrt/enum.ts";
 import { get_ae_version_major } from "../ae_version.ts";
-import type { Validator } from "../models/validators.ts";
+import type { InstanceValidator } from "../models/validators.ts";
 import type { CosDict, CosNode } from "./cos.ts";
 import { cos_float, cos_int, cos_num } from "./kinds.ts";
 
@@ -80,7 +80,7 @@ export interface CosFieldOptions<T extends InstanceValue, O> {
   accepts: (v: InstanceValue) => v is T;
   reverse?: ((x: NonNullable<T>) => CosNode) | null;
   read_only?: boolean;
-  validate?: Validator<O> | null;
+  validate?: InstanceValidator<O> | null;
   default: T;
   min_version?: number | null;
 }
@@ -116,7 +116,7 @@ export class CosField<T extends InstanceValue, A extends string = string, O exte
   declare accepts: (v: InstanceValue) => v is T;
   declare reverse: ((x: NonNullable<T>) => CosNode) | null;
   declare read_only: boolean;
-  declare validate: Validator<O> | null;
+  declare validate: InstanceValidator<O> | null;
   declare default: T;
   declare min_version: number | null;
   declare public_name: string;

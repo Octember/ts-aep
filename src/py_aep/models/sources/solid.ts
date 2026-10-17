@@ -121,7 +121,7 @@ export class SolidSource extends FootageSource {
 descriptor(
   SolidSource,
   "color",
-  new ChunkField<number[]>("_opti", "color", {
+  new ChunkField("_opti", "color", {
     validate: validate_rgb_color,
   }),
 );

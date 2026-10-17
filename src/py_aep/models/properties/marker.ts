@@ -236,7 +236,7 @@ export class MarkerValue {
 }
 
 /** The marker's duration, in seconds. Read / Write. */
-descriptor(MarkerValue, "duration", new ChunkField<number>("_nmhd", "duration_seconds", { validate: validate_marker_duration }));
+descriptor(MarkerValue, "duration", new ChunkField("_nmhd", "duration_seconds", { validate: validate_marker_duration }));
 
 /**
  * The label color. Colors are represented by their number (0 for None, or 1
@@ -260,23 +260,23 @@ descriptor(MarkerValue, "protected_region", ChunkField.bool("_nmhd", "protected_
  * A text comment for this marker. This comment appears in the Timeline panel
  * next to the layer marker. Read / Write.
  */
-descriptor(MarkerValue, "comment", new ChunkField<string>("_comment_utf8", "value"));
+descriptor(MarkerValue, "comment", new ChunkField("_comment_utf8", "value"));
 
 /**
  * A text chapter link for this marker. Chapter links initiate a jump to a
  * chapter in a QuickTime movie or in other formats that support chapter
  * marks. Read / Write.
  */
-descriptor(MarkerValue, "chapter", new ChunkField<string>("_chapter_utf8", "value"));
+descriptor(MarkerValue, "chapter", new ChunkField("_chapter_utf8", "value"));
 
 /** A URL for this marker. This URL is an automatic link to a Web page. Read / Write. */
-descriptor(MarkerValue, "url", new ChunkField<string>("_url_utf8", "value"));
+descriptor(MarkerValue, "url", new ChunkField("_url_utf8", "value"));
 
 /**
  * A text frame target for this marker. Together with the URL value, this
  * targets a specific frame within a Web page. Read / Write.
  */
-descriptor(MarkerValue, "frame_target", new ChunkField<string>("_frame_target_utf8", "value"));
+descriptor(MarkerValue, "frame_target", new ChunkField("_frame_target_utf8", "value"));
 
 /** The Flash Video cue point name, as shown in the Marker dialog box. Read / Write. */
-descriptor(MarkerValue, "cue_point_name", new ChunkField<string>("_cue_point_name_utf8", "value"));
+descriptor(MarkerValue, "cue_point_name", new ChunkField("_cue_point_name_utf8", "value"));

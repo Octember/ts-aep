@@ -1083,7 +1083,7 @@ export const ViewerType = int_enum("ViewerType", {
    *
    * @throws {@link ValueError} If the label is not recognized.
    */
-  from_string(label: string | null): number {
+  from_string(label: string | null): ViewerType {
     if (!label) label = "";
     try {
       return getitem(_VIEWER_STRING_MAP, label);
@@ -1095,7 +1095,7 @@ export const ViewerType = int_enum("ViewerType", {
 });
 export type ViewerType = EnumValue<typeof ViewerType>;
 
-export const _VIEWER_STRING_MAP: Map<string, number> = new Map<string, number>([
+export const _VIEWER_STRING_MAP: Map<string, ViewerType> = new Map<string, ViewerType>([
   ["AE Composition", ViewerType.VIEWER_COMPOSITION],
   ["AE Layer", ViewerType.VIEWER_LAYER],
   ["AE Footage", ViewerType.VIEWER_FOOTAGE],

@@ -3,6 +3,9 @@
 
 import { fs } from "./host.ts";
 import { FileNotFoundError, OSError } from "./errors.ts";
+import type { PackValue, Struct, Unpacked } from "./struct.ts";
+
+const PACK_SCRATCH = new Uint8Array(64);
 
 export class BytesIO {
   private buf: Uint8Array;
@@ -22,6 +25,17 @@ export class BytesIO {
     return out;
   }
 
+  /**
+   * `s.unpack(fp.read(s.size))` without the intermediate copy. Returns null,
+   * leaving the position alone, when fewer than `s.size` bytes remain.
+   */
+  unpack<F extends string>(s: Struct<F>): Unpacked<F> | null {
+    if (this.pos + s.size > this.len) return null;
+    const out = s.unpack_from(this.buf, this.pos);
+    this.pos += s.size;
+    return out;
+  }
+
   /** `fp.readline(size)`: up to and including the next `\n` (or `size` bytes, or EOF). */
   readline(size?: number | null): Uint8Array {
     const start = Math.min(this.pos, this.len);
@@ -36,16 +50,41 @@ export class BytesIO {
 
   write(data: Uint8Array): number {
     const end = this.pos + data.length;
+    this.reserve(end);
+    this.buf.set(data, this.pos);
+    this.pos = end;
+    if (end > this.len) this.len = end;
+    return data.length;
+  }
+
+  /** `fp.write(s.pack(*values))` without allocating the packed bytes. */
+  pack<F extends string>(s: Struct<F>, values: PackValue[]): number {
+    const end = this.pos + s.size;
+    if (this.pos < this.len) {
+      if (end > this.len || s.size > PACK_SCRATCH.length) return this.write(s.pack(...values));
+      // Overwrite via scratch: a failed pack must leave the visible bytes alone.
+      s.pack_to(PACK_SCRATCH, 0, values);
+      for (let i = 0; i < s.size; i++) this.buf[this.pos + i] = PACK_SCRATCH[i];
+      this.pos = end;
+      return s.size;
+    }
+    // Bytes past `len` are never observable, so a failed pack leaves no trace.
+    this.reserve(end);
+    s.pack_to(this.buf, this.pos, values);
+    this.pos = this.len = end;
+    return s.size;
+  }
+
+  /** Make room for a write ending at `end`, zeroing any gap a seek past the end left. */
+  private reserve(end: number): void {
     if (end > this.buf.length) {
       const grown = new Uint8Array(Math.max(end, this.buf.length * 2));
       grown.set(this.buf.subarray(0, this.len));
       this.buf = grown;
     }
-    if (this.pos > this.len) this.buf.fill(0, this.len, this.pos);
-    this.buf.set(data, this.pos);
-    this.pos = end;
-    if (end > this.len) this.len = end;
-    return data.length;
+    // A native `fill` costs more than a loop for the 4-byte length placeholder.
+    if (this.pos - this.len > 16) this.buf.fill(0, this.len, this.pos);
+    else for (let i = this.len; i < this.pos; i++) this.buf[i] = 0;
   }
 
   tell(): number {

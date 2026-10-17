@@ -248,6 +248,9 @@ checks single files.
   - `tools/diff/fault_run.sh` (in the gate) corrupts the btdk tree of every
     sample with text and checks that py-aep and the port read, write and
     save each corrupted project identically, exception classes included.
+- The gate ratchets the per-layer `any` / `unknown` / cast counts against
+  `loose_types` in `tools/gate_baseline.json`: they may only fall, and a pass
+  that lowers them lowers the baseline.
 
 ## Later passes
 

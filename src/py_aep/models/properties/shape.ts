@@ -98,16 +98,16 @@ export class FeatherPoint {
   }
 }
 
-descriptor(FeatherPoint, "seg_loc", new ChunkField<number>("_fp", "seg_loc", { validate: validate_positive_int }));
-descriptor(FeatherPoint, "rel_seg_loc", new ChunkField<number>("_fp", "rel_seg_loc", { validate: validate_normalized_float }));
-descriptor(FeatherPoint, "radius", new ChunkField<number>("_fp", "radius"));
+descriptor(FeatherPoint, "seg_loc", new ChunkField("_fp", "seg_loc", { validate: validate_positive_int }));
+descriptor(FeatherPoint, "rel_seg_loc", new ChunkField("_fp", "rel_seg_loc", { validate: validate_normalized_float }));
+descriptor(FeatherPoint, "radius", new ChunkField("_fp", "radius"));
 descriptor(
   FeatherPoint,
   "interp",
-  new ChunkField<number>("_fp", "interp_raw", { transform: _interp_transform, reverse: _interp_reverse }),
+  new ChunkField("_fp", "interp_raw", { transform: _interp_transform, reverse: _interp_reverse }),
 );
-descriptor(FeatherPoint, "tension", new ChunkField<number>("_fp", "tension", { validate: validate_normalized_float }));
-descriptor(FeatherPoint, "rel_corner_angle", new ChunkField<number>("_fp", "corner_angle"));
+descriptor(FeatherPoint, "tension", new ChunkField("_fp", "tension", { validate: validate_normalized_float }));
+descriptor(FeatherPoint, "rel_corner_angle", new ChunkField("_fp", "corner_angle"));
 
 /**
  * The Shape object encapsulates information describing a shape in a shape layer, or

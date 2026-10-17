@@ -15,11 +15,16 @@
 
 import { AttributeError } from "./errors.ts";
 
-export interface Descriptor {
+/**
+ * A descriptor on instances of `O` whose reads produce a `V`. `descriptor()`
+ * only reads through instances; a Python-style `__get__` that also accepts
+ * `null` (a class read) returns the descriptor itself there.
+ */
+export interface Descriptor<O extends object = object, V = unknown> {
   __set_name__?(owner: Function, name: string): void;
-  __get__(obj: any, owner: Function): any;
-  __set__?(obj: any, value: any): void;
-  __delete__?(obj: any): void;
+  __get__(obj: O, owner: Function): V | Descriptor<O, V>;
+  __set__?(obj: O, value: V): void;
+  __delete__?(obj: O): void;
 }
 
 /**
@@ -32,23 +37,19 @@ export type ClassAttributes<C> = Function & Omit<C, "prototype">;
 
 const DESCRIPTORS = new WeakMap<Function, Map<string, Descriptor>>();
 
-/** A descriptor whose instance reads produce a `T` (class reads produce the descriptor). */
-export interface TypedDescriptor<T> extends Descriptor {
-  __get__(obj: object | null, owner: Function): T | Descriptor;
-}
-
 /**
  * Install `d` as class attribute `name` of `cls` (runs `__set_name__`).
  * `name` must be declared on the instance type, and `d` must read as the
- * declared type, which a generic descriptor such as `new ChunkField(...)`
- * then infers. `P` is read from `prototype` so a generic class infers its
- * erased instance type (a generic construct signature infers nothing).
+ * declared type on instances of `cls`, which a generic descriptor such as
+ * `new ChunkField(...)` then infers (value and owner type). `P` is read from
+ * `prototype` so a generic class infers its erased instance type (a generic
+ * construct signature infers nothing).
  */
 export function descriptor<P extends object, K extends string & keyof P>(
   cls: (abstract new (...args: never[]) => object) & { prototype: P },
   name: K,
-  d: TypedDescriptor<P[K]>,
-): TypedDescriptor<P[K]>;
+  d: NoInfer<Descriptor<P, P[K]>>,
+): Descriptor<P, P[K]>;
 export function descriptor<D extends Descriptor>(cls: Function, name: string, d: D): D {
   d.__set_name__?.(cls, name);
   let own = DESCRIPTORS.get(cls);

@@ -207,10 +207,10 @@ export class ParaMeshField<T extends number | boolean = number> {
     this._property_name = property_name;
   }
 
-  __get__(obj: ParametricMeshOptions | ParametricBevelOptions | null, objtype: Function): T {
-    if (obj == null) return this as unknown as T;
+  __get__(obj: ParametricMeshOptions | ParametricBevelOptions | null, objtype: Function): T | this {
+    if (obj == null) return this;
     const value = obj._properties(this._property_name).value;
-    return value as T;
+    return value;
   }
 
   __set__(obj: ParametricMeshOptions | ParametricBevelOptions, value: T): void {

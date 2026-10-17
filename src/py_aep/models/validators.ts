@@ -28,10 +28,22 @@ import {
   type_name,
 } from "../../pyrt/index.ts";
 
-/** `validator(value, instance=None)`: raises on an invalid `value` for the model `instance`. */
-export type Validator<O = unknown> = (value: unknown, instance?: O) => void;
+/**
+ * `validator(value, instance=None)`: raises on an invalid `value`. `value` is
+ * whatever the caller assigned, so it is checked at runtime; `instance` is not
+ * read.
+ */
+export type Validator = (value: unknown, instance?: unknown) => void;
+/** A validator whose bounds are computed from the model `instance` being written. */
+export type InstanceValidator<O> = (value: unknown, instance: O) => void;
 /** A bound: a number, or computed from the model instance being validated. */
-export type NumBound<O = unknown> = number | ((instance: O) => number | null) | null;
+export type NumBound<O> = number | ((instance: O) => number | null) | null;
+/** Keyword arguments of `_validate_number`; a callable bound reads the model instance `O`. */
+export type NumberKw<O> = { min?: NumBound<O>; max?: NumBound<O>; integer?: boolean; exclusive_min?: boolean };
+/** Keyword arguments of `validate_sequence`. */
+export type SequenceKw<O> = NumberKw<O> & { length?: NumBound<O> };
+type StaticNumberKw = { min?: number | null; max?: number | null; integer?: boolean; exclusive_min?: boolean };
+type StaticSequenceKw = StaticNumberKw & { length?: number | null };
 
 /**
  * Return a validator that checks a numeric value.
@@ -46,13 +58,13 @@ export type NumBound<O = unknown> = number | ((instance: O) => number | null) | 
  *     positive-but-non-zero size).
  */
 // NOTE(port): int/float — integral values are plain numbers by design (RULEBOOK §4); error messages print whole-number bounds without Python's trailing ".0".
-export function _validate_number<O = unknown>(
-  kw: { min?: NumBound<O>; max?: NumBound<O>; integer?: boolean; exclusive_min?: boolean } = {},
-): Validator<O> {
+export function _validate_number(kw?: StaticNumberKw): Validator;
+export function _validate_number<O>(kw: NumberKw<O>): InstanceValidator<O>;
+export function _validate_number<O>(kw: NumberKw<O | null> = {}): InstanceValidator<O> {
   const { min: min_ = null, max: max_ = null, integer = false, exclusive_min = false } = kw;
   const type_label = integer ? "an integer" : "a number";
 
-  return function _validator(value: unknown, instance: O = null as O): void {
+  return function _validator(value: unknown, instance: O | null = null): void {
     if (Array.isArray(value)) {
       throw new TypeError_(`expected ${type_label}, got ${type_name(value)}`);
     }
@@ -106,20 +118,14 @@ export function _validate_number<O = unknown>(
  * - `exclusive_min`: When `true`, each element must be strictly greater than `min` (e.g. a
  *     non-zero-area box size).
  */
-export function validate_sequence<O = unknown>(
-  kw: {
-    length?: NumBound<O>;
-    min?: NumBound<O>;
-    max?: NumBound<O>;
-    integer?: boolean;
-    exclusive_min?: boolean;
-  } = {},
-): Validator<O> {
+export function validate_sequence(kw?: StaticSequenceKw): Validator;
+export function validate_sequence<O>(kw: SequenceKw<O>): InstanceValidator<O>;
+export function validate_sequence<O>(kw: SequenceKw<O | null> = {}): InstanceValidator<O> {
   const { length = null, min: min_ = null, max: max_ = null, integer = false, exclusive_min = false } = kw;
   const type_label = integer ? "an integer" : "a number";
   const _element_validator = _validate_number({ min: min_, max: max_, integer, exclusive_min });
 
-  return function _validator(value: unknown, instance: O = null as O): void {
+  return function _validator(value: unknown, instance: O | null = null): void {
     const n = typeof length === "function" ? length(instance) : length;
     if (!Array.isArray(value)) {
       throw new TypeError_(`expected a sequence${n != null ? ` of ${n} elements` : ""}`);

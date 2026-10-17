@@ -1044,8 +1044,8 @@ export class OutputModule {
   }
 
   /** Clamp writer for a `Rouu` audio-format field (no validation). */
-  _write_audio_format_raw(field: string, value: number): void {
-    (this._roou as unknown as Record<string, number>)[field] = value;
+  _write_audio_format_raw(field: "audio_channels" | "audio_bit_depth", value: number): void {
+    this._roou[field] = value;
     this._sync_audio_format();
   }
 
@@ -1705,7 +1705,7 @@ descriptor(OutputModule, "_crop", ChunkField.bool("_om_ldat", "crop", { post_set
 descriptor(
   OutputModule,
   "_crop_bottom",
-  new ChunkField<number>("_om_ldat", "crop_bottom", {
+  new ChunkField("_om_ldat", "crop_bottom", {
     validate: _validate_crop("_crop_top", "height"),
     post_set: "_update_output_dimensions",
   }),
@@ -1714,7 +1714,7 @@ descriptor(
 descriptor(
   OutputModule,
   "_crop_left",
-  new ChunkField<number>("_om_ldat", "crop_left", {
+  new ChunkField("_om_ldat", "crop_left", {
     validate: _validate_crop("_crop_right", "width"),
     post_set: "_update_output_dimensions",
   }),
@@ -1723,7 +1723,7 @@ descriptor(
 descriptor(
   OutputModule,
   "_crop_right",
-  new ChunkField<number>("_om_ldat", "crop_right", {
+  new ChunkField("_om_ldat", "crop_right", {
     validate: _validate_crop("_crop_left", "width"),
     post_set: "_update_output_dimensions",
   }),
@@ -1732,7 +1732,7 @@ descriptor(
 descriptor(
   OutputModule,
   "_crop_top",
-  new ChunkField<number>("_om_ldat", "crop_top", {
+  new ChunkField("_om_ldat", "crop_top", {
     validate: _validate_crop("_crop_bottom", "height"),
     post_set: "_update_output_dimensions",
   }),

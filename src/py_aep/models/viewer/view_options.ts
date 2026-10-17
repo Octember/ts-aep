@@ -133,7 +133,7 @@ descriptor(ViewOptions, "draft3d", ChunkField.bool("_fips", "draft3d"));
 descriptor(
   ViewOptions,
   "exposure",
-  new ChunkField<number>("_fips", "exposure", {
+  new ChunkField("_fips", "exposure", {
     validate: _validate_number({ min: -40.0, max: 40.0 }),
   }),
 );
@@ -159,7 +159,7 @@ descriptor(ViewOptions, "region_of_interest", ChunkField.bool("_fips", "region_o
 descriptor(
   ViewOptions,
   "roi_top",
-  new ChunkField<number>("_fips", "roi_top", {
+  new ChunkField("_fips", "roi_top", {
     validate: _validate_number({
       min: 0,
       max: (self: ViewOptions) => self.roi_bottom - 1,
@@ -171,7 +171,7 @@ descriptor(
 descriptor(
   ViewOptions,
   "roi_left",
-  new ChunkField<number>("_fips", "roi_left", {
+  new ChunkField("_fips", "roi_left", {
     validate: _validate_number({
       min: 0,
       max: (self: ViewOptions) => self.roi_right - 1,
@@ -183,7 +183,7 @@ descriptor(
 descriptor(
   ViewOptions,
   "roi_bottom",
-  new ChunkField<number>("_fips", "roi_bottom", {
+  new ChunkField("_fips", "roi_bottom", {
     validate: _validate_number({
       min: (self: ViewOptions) => self.roi_top + 1,
       max: (self: ViewOptions) => (self._item ? self._item.height : null),
@@ -195,7 +195,7 @@ descriptor(
 descriptor(
   ViewOptions,
   "roi_right",
-  new ChunkField<number>("_fips", "roi_right", {
+  new ChunkField("_fips", "roi_right", {
     validate: _validate_number({
       min: (self: ViewOptions) => self.roi_left + 1,
       max: (self: ViewOptions) => (self._item ? self._item.width : null),
@@ -217,7 +217,7 @@ descriptor(
 descriptor(
   ViewOptions,
   "zoom",
-  new ChunkField<number>("_fips", "zoom", {
+  new ChunkField("_fips", "zoom", {
     validate: _validate_number({ min: 0.01, max: 16.0 }),
   }),
 );

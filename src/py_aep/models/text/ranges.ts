@@ -56,7 +56,7 @@ import { AutoKernType, BaselineDirection, DigitSet, FontBaselineOption, FontCaps
 import type { ComposerEngine } from "../../enums/index.ts";
 import { CompositionUnsupported, compose_lines } from "../../resolvers/text_composition.ts";
 import { font_version_string } from "../../svg/fonts.ts";
-import { validate_bool, validate_enum, validate_font_name, validate_normalized_float, validate_number, validate_positive_nonzero_number, validate_positive_number, validate_rgb_color, validate_s4, validate_text, type Validator } from "../validators.ts";
+import { validate_bool, validate_enum, validate_font_name, validate_normalized_float, validate_number, validate_positive_nonzero_number, validate_positive_number, validate_rgb_color, validate_s4, validate_text, type InstanceValidator } from "../validators.ts";
 import { FontObject } from "./font_object.ts";
 import type { TextDocument } from "./text_document.ts";
 
@@ -879,7 +879,7 @@ export interface RangeFieldOptions<T extends InstanceValue> {
   default?: T | null;
   gate?: string | null;
   reverse?: ((value: NonNullable<T>) => CosNode) | null;
-  validate?: Validator<TextDocument> | null;
+  validate?: InstanceValidator<TextDocument> | null;
   read_only?: boolean;
 }
 
@@ -921,7 +921,7 @@ export class RangeField<T extends InstanceValue> {
   declare default_: T | null;
   declare gate: string | null;
   declare reverse: ((value: NonNullable<T>) => CosNode) | null;
-  declare validate: Validator<TextDocument> | null;
+  declare validate: InstanceValidator<TextDocument> | null;
   declare read_only: boolean;
   declare public_name: string;
 

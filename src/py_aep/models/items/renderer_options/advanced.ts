@@ -90,7 +90,7 @@ export class AdvancedRendererOptions extends RendererOptionsBase {
 descriptor(
   AdvancedRendererOptions,
   "quality",
-  new ChunkField<number>("_body", "quality", { validate: validate_advanced_quality }),
+  new ChunkField("_body", "quality", { validate: validate_advanced_quality }),
 );
 
 /** Environment light shadow resolution. Read / Write. */
@@ -104,5 +104,5 @@ descriptor(
 descriptor(
   AdvancedRendererOptions,
   "smoothness",
-  new ChunkField<number>("_body", "smoothness", { validate: validate_shadow_smoothness }),
+  new ChunkField("_body", "smoothness", { validate: validate_shadow_smoothness }),
 );

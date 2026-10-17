@@ -9,6 +9,19 @@ base() { python3 -c "import json;print(json.load(open('tools/gate_baseline.json'
 echo "== tsc"
 bun run --silent typecheck
 
+echo "== loose-type ratchet"
+# any / unknown / as-cast counts per layer (tools/strict_report.ts) may only fall;
+# lower tools/gate_baseline.json "loose_types" when they do.
+python3 - "$(bun tools/strict_report.ts --json)" <<'PY'
+import json, sys
+now, base = json.loads(sys.argv[1]), json.load(open("tools/gate_baseline.json"))["loose_types"]
+grew = [f"{layer} {k}: {now[layer][k]} > {v}" for layer, kinds in base.items() for k, v in kinds.items() if now[layer][k] > v]
+fell = [f"{layer} {k}: {now[layer][k]} < {v}" for layer, kinds in base.items() for k, v in kinds.items() if now[layer][k] < v]
+for line in fell: print("lower the baseline:", line)
+for line in grew: print("grew:", line)
+sys.exit(1 if grew else 0)
+PY
+
 echo "== generated chunk types"
 bun tools/gen_chunk_types.ts --check
 

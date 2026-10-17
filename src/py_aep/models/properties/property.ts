@@ -266,7 +266,7 @@ export class Property<V extends PropertyValue = any> extends PropertyBase {
   declare expression_error: string;
 
   /** The last value of the property (before animation). */
-  declare last_value: unknown;
+  declare last_value: PropertyValue;
 
   /** The number of options in a dropdown property. */
   declare nb_options: number | null;
@@ -375,8 +375,8 @@ export class Property<V extends PropertyValue = any> extends PropertyBase {
     property_depth: number,
     kw: {
       parent_property: PropertyGroup;
-      value?: unknown;
-      default_value?: unknown;
+      value?: PropertyValue | typeof _USE_VALUE;
+      default_value?: PropertyValue | typeof _USE_VALUE;
       synthetic?: boolean;
       control_type?: PropertyControlType | null;
     },
@@ -537,10 +537,10 @@ export class Property<V extends PropertyValue = any> extends PropertyBase {
   declare _expression: string | null;
   declare _property_control_type: PropertyControlType | null;
   declare _property_value_type: PropertyValueType | null;
-  declare _value: unknown;
+  declare _value: PropertyValue;
   declare _units_text: string | null;
-  declare _default_value_source: (() => unknown) | null;
-  declare _default_value: unknown;
+  declare _default_value_source: (() => V) | null;
+  declare _default_value: V | null;
   declare _keyframe_positions: Map<Keyframe, number> | null;
   declare _types_memo: [unknown[], [PropertyControlType, PropertyValueType]] | null;
   declare _effect_scale_dict: { value: number[] | null } | null;
@@ -574,7 +574,7 @@ export class Property<V extends PropertyValue = any> extends PropertyBase {
     property_depth: number;
     auto_name?: string | null;
     keyframes: Keyframe<KeyframeValue<NoInfer<V>>>[];
-    value: unknown;
+    value: PropertyValue;
     expression_enabled?: boolean | null;
     expression?: string | null;
     property_control_type?: PropertyControlType | null;
@@ -1359,7 +1359,7 @@ export class Property<V extends PropertyValue = any> extends PropertyBase {
    * multi-dimensional or color properties, or `null` when the
    * chunk has no data.
    */
-  _read_cdat_raw(): any {
+  _read_cdat_raw(): number | number[] | null {
     if (this._cdat == null) return null;
     const values = this._cdat.values.slice(0, this.dimensions);
     if (values.length === 0) return null;
@@ -1373,7 +1373,7 @@ export class Property<V extends PropertyValue = any> extends PropertyBase {
    * Applied in order: percent scaling, color conversion, effect point
    * denormalization.
    */
-  _resolve_value(raw: number[] | number | null): any {
+  _resolve_value(raw: number[] | number | null): number[] | number | null {
     if (raw == null) return null;
     // 0. Variable-font axis: the binary stores [value, tag4cc] but
     //    ExtendScript exposes only the scalar axis value.
@@ -1416,7 +1416,7 @@ export class Property<V extends PropertyValue = any> extends PropertyBase {
    * Applied in reverse order: effect point normalization, color
    * conversion, then percent scaling.
    */
-  _unresolve_value(value: _ValueType | boolean): any {
+  _unresolve_value(value: _ValueType | boolean): _ValueType | boolean {
     if (value == null) return null;
     if (!(typeof value === "number" || typeof value === "boolean" || Array.isArray(value))) return value;
     if (Array.isArray(value) && value?.length > 0 && !(typeof value[0] === "number" || typeof value[0] === "boolean")) return value;
@@ -1457,7 +1457,7 @@ export class Property<V extends PropertyValue = any> extends PropertyBase {
    * Applies `_unresolve_value` to convert back to raw binary units
    * before writing.
    */
-  _write_cdat(value: unknown): void {
+  _write_cdat(value: PropertyValue): void {
     if (this._cdat == null) return;
     if (!(typeof value === "number" || typeof value === "boolean" || Array.isArray(value))) return;
     if (Array.isArray(value) && value?.length > 0 && !(typeof value[0] === "number" || typeof value[0] === "boolean")) return;
@@ -1596,12 +1596,12 @@ export class Property<V extends PropertyValue = any> extends PropertyBase {
   }
 
   /** The default value of the property. */
-  get default_value(): any {
+  get default_value(): V | null {
     if (this._default_value_source != null) return this._default_value_source();
     return this._default_value;
   }
 
-  set default_value(value: unknown) {
+  set default_value(value: V | null) {
     this._default_value = value;
     this._default_value_source = null;
   }
@@ -1648,7 +1648,7 @@ export class Property<V extends PropertyValue = any> extends PropertyBase {
   }
 
   /** {@link Property.value | value} before a 2-D layer's Z is reported as 0. */
-  _stored_static_value(): any {
+  _stored_static_value(): PropertyValue {
     if (this._tdpi != null && this._composition != null) {
       const layer_id = this._tdpi.value;
       if (layer_id === 0) return 0;
@@ -1812,7 +1812,7 @@ export class Property<V extends PropertyValue = any> extends PropertyBase {
    * markers (no static value) have no clean from-scratch container
    * build and are rejected.
    */
-  _write_static_complex_value(value: unknown): unknown {
+  _write_static_complex_value(value: PropertyValue): PropertyValue {
     const kind = this._parallel_kind();
     if (kind == null || kind.name === "orientation") {
       this._write_cdat(value);
@@ -1857,7 +1857,7 @@ export class Property<V extends PropertyValue = any> extends PropertyBase {
    * version-gated attributes can resolve the AE major version. No-op for
    * other value types or when the containing comp is unknown.
    */
-  _wire_text_version(value: _ValueType): unknown {
+  _wire_text_version<T extends _ValueType>(value: T): T {
     if (value instanceof TextDocument && this._composition != null) {
       value._head = this._composition._project._head;
     }
@@ -3829,7 +3829,7 @@ export class Property<V extends PropertyValue = any> extends PropertyBase {
     // layout cache, so it inherits the template's staleness verdict.
     view._layout_dirty = template._layout_dirty;
     view._composition_calibrated = template._composition_calibrated;
-    return this._wire_text_version(view) as TextDocument;
+    return this._wire_text_version(view);
   }
 
   /**
@@ -4212,7 +4212,7 @@ export class Property<V extends PropertyValue = any> extends PropertyBase {
       this._add_text_key(time, value);
       return;
     }
-    value = kind.coerce(value) as _ValueType;
+    value = kind.coerce(value);
     for (const kf of this.keyframes) {
       if (kf.time_units === target_units) {
         this._write_parallel_kf_value(kf, value, kind);
@@ -4675,17 +4675,17 @@ export function _strip_sequence_basename(name: string): string {
 
 // ---- Chunk-backed field descriptors (ChunkField class attributes) ----
 
-descriptor(Property, "dimensions", new ChunkField<number>("_tdb4", "dimensions", { default: 1, read_only: true }));
+descriptor(Property, "dimensions", new ChunkField("_tdb4", "dimensions", { default: 1, read_only: true }));
 
-descriptor(Property, "_animated", new ChunkField<boolean>("_tdb4", "animated"));
+descriptor(Property, "_animated", new ChunkField("_tdb4", "animated"));
 
-descriptor(Property, "_color", new ChunkField<boolean>("_tdb4", "color"));
+descriptor(Property, "_color", new ChunkField("_tdb4", "color"));
 
-descriptor(Property, "_integer", new ChunkField<boolean>("_tdb4", "integer"));
+descriptor(Property, "_integer", new ChunkField("_tdb4", "integer"));
 
-descriptor(Property, "_no_value", new ChunkField<boolean>("_tdb4", "no_value"));
+descriptor(Property, "_no_value", new ChunkField("_tdb4", "no_value"));
 
-descriptor(Property, "_vector", new ChunkField<boolean>("_tdb4", "vector"));
+descriptor(Property, "_vector", new ChunkField("_tdb4", "vector"));
 
 // When `True`, the property's X/Y ratio is locked (the constrain
 // proportions switch of a Scale or Mask Feather; `True` on any property
@@ -4693,7 +4693,7 @@ descriptor(Property, "_vector", new ChunkField<boolean>("_tdb4", "vector"));
 descriptor(
   Property,
   "locked_ratio",
-  new ChunkField<boolean>("_tdsb", "ratio_unlinked", { transform: (v: unknown) => !v, read_only: true }),
+  new ChunkField("_tdsb", "ratio_unlinked", { transform: (v) => !v, read_only: true }),
 );
 
-descriptor(Property, "_is_spatial_raw", new ChunkField<boolean>("_tdb4", "is_spatial"));
+descriptor(Property, "_is_spatial_raw", new ChunkField("_tdb4", "is_spatial"));

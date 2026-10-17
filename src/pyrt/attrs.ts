@@ -21,21 +21,32 @@ export function Factory<T>(fn: () => T): Factory<T> {
 
 const NOTHING: unique symbol = Symbol("NOTHING");
 
-export type FieldSpec = {
-  default?: any;
-  converter?: ((value: any) => any) | null;
-  metadata?: Record<string, any>;
+/**
+ * `attrs` field metadata: free-form per field and read back by key (a chunk
+ * field's struct format, encoding, item class, ...), so its values are dynamic.
+ */
+export type Metadata = Readonly<Record<string, any>>;
+
+/** `attrs.field(...)` for a field holding a `V`: the default and converter produce a `V`. */
+export type FieldSpec<V = unknown> = {
+  default?: V | Factory<V>;
+  /** Runs on every assignment, so it takes whatever was assigned. */
+  converter?: ((value: unknown) => V) | null;
+  metadata?: Metadata;
   init?: boolean;
   eq?: boolean;
   repr?: boolean;
 };
 
+/** The fields `define` records for instances `I`, each typed by the field it declares. */
+export type FieldSpecs<I> = { [K in keyof I]?: FieldSpec<I[K]> };
+
 /** `attrs.Attribute` as `attrs.fields(cls)` returns it. */
 export type Attribute = {
   readonly name: string;
-  readonly default: any;
-  readonly converter: ((value: any) => any) | null;
-  readonly metadata: Readonly<Record<string, any>>;
+  readonly default: unknown;
+  readonly converter: ((value: unknown) => unknown) | null;
+  readonly metadata: Metadata;
   readonly init: boolean;
   readonly eq: boolean;
   readonly repr: boolean;
@@ -43,7 +54,7 @@ export type Attribute = {
 };
 
 /** `attrs.field(...)` */
-export function field(spec: FieldSpec = {}): FieldSpec {
+export function field<V>(spec: FieldSpec<V> = {}): FieldSpec<V> {
   return spec;
 }
 
@@ -59,7 +70,10 @@ export function init_name(name: string): string {
  * here replaces the inherited one and moves to its new position, as attrs
  * orders them.
  */
-export function define<C extends Function>(cls: C, own: Record<string, FieldSpec> = {}): C {
+export function define<C extends abstract new (...args: never) => object>(
+  cls: C,
+  own: FieldSpecs<InstanceType<C>> & Record<string, FieldSpec> = {},
+): C {
   const base: Function | null = Object.getPrototypeOf(cls);
   const inherited = (base && FIELDS.get(base)) || [];
   const own_attrs: Attribute[] = Object.entries(own).map(([name, spec]) => ({
@@ -116,15 +130,63 @@ export function has(cls: Function): boolean {
 /** Pass as the constructor argument to skip attrs' `__init__` (a hand-written `__init__` sets fields itself). */
 export const NO_INIT: unique symbol = Symbol("NO_INIT");
 
-function default_of(a: Attribute): unknown {
-  const d = a.default;
-  if (d === NOTHING) return NOTHING;
-  if (d && typeof d === "object" && "__factory__" in d) return (d as Factory).__factory__();
-  return d;
+function is_factory(d: unknown): d is Factory {
+  return !!d && typeof d === "object" && "__factory__" in d;
 }
 
-/** The generated `__init__`. */
+function default_of(a: Attribute): unknown {
+  return is_factory(a.default) ? a.default.__factory__() : a.default;
+}
+
+/** A generated `__init__`: sets every field and returns how many keys of `kw` it consumed. */
+type Init = (self: any, kw: Record<string, any>) => number;
+const INITS = new WeakMap<Function, Init | null>();
+
+/**
+ * Generate the class's `__init__`, as attrs does: literal names keep each
+ * class's stores monomorphic. Null where `new Function` is refused (Workers,
+ * strict CSP).
+ */
+function compile_init(cls: Function): Init | null {
+  const defs: unknown[] = [];
+  const body = ["let m = 0, v;"];
+  for (const a of fields(cls)) {
+    const name = JSON.stringify(a.name);
+    const alias = JSON.stringify(a.alias);
+    const i = defs.push(is_factory(a.default) ? a.default.__factory__ : a.default) - 1;
+    const dflt = is_factory(a.default) ? `defs[${i}]()` : `defs[${i}]`;
+    const required = a.default === NOTHING;
+    if (!a.init) {
+      if (!required) body.push(`self[${name}] = ${dflt};`);
+      continue;
+    }
+    body.push(`v = undefined; if (${alias} in kw) { m++; v = kw[${alias}]; }`);
+    body.push(`if (v === undefined) ${required ? `throw missing(${alias})` : `v = ${dflt}`};`);
+    body.push(`self[${name}] = v;`);
+  }
+  body.push("return m;");
+  const missing = (alias: string) => new TypeError_(`${cls.name}.__init__() missing 1 required argument: '${alias}'`);
+  try {
+    return new Function("defs", "missing", `return (self, kw) => {\n${body.join("\n")}\n};`)(defs, missing);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * The generated `__init__`. Keyword names are only counted here; when the
+ * count shows an unexpected one (or codegen is blocked), `attrs_init_slow`
+ * runs to raise attrs' error.
+ */
 export function attrs_init(self: any, cls: Function, kw: Record<string, any>): void {
+  let init = INITS.get(cls);
+  if (init === undefined) INITS.set(cls, (init = compile_init(cls)));
+  let n = 0;
+  for (const _ in kw) n++;
+  if (init === null || init(self, kw) !== n) attrs_init_slow(self, cls, kw);
+}
+
+function attrs_init_slow(self: any, cls: Function, kw: Record<string, any>): void {
   const attrs = fields(cls);
   const seen = new Set<string>();
   for (const a of attrs) {
@@ -153,7 +215,7 @@ export function attrs_init(self: any, cls: Function, kw: Record<string, any>): v
 
 /** Base for attrs classes; subclasses must declare fields with `declare` and register them via `define`. */
 export class AttrsBase {
-  constructor(kw: Record<string, any> | typeof NO_INIT = {}) {
+  constructor(kw: Record<string, unknown> | typeof NO_INIT = {}) {
     if (kw !== NO_INIT) attrs_init(this, new.target, kw);
   }
 }

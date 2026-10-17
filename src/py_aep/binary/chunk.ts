@@ -30,13 +30,22 @@ import {
   py_or,
   repr,
   struct,
-  zip,
+  type Attribute,
   type IO,
 } from "../../pyrt/index.ts";
-import { _HEADER_STRUCT, read_bytes, read_fmt, read_pad, write_bytes, write_fmt, write_pad } from "./bin_utils.ts";
+import { _struct_for, read_bytes, read_fmt, read_pad, write_bytes, write_fmt, write_pad } from "./bin_utils.ts";
 import { _decode_fields, _encode_value, _struct_info, type FieldValue, type FmtItem, type InitKwargs } from "./fmt_field.ts";
 import { CHUNK_TYPES, register } from "./registry.ts";
 import type { HeadChunk } from "./item_chunks.ts";
+
+const _PREFIX_STRUCTS = new WeakMap<readonly Attribute[], struct.Struct[]>();
+
+/** Big-endian struct for the first `n` of `data_fields`. */
+function _prefix_struct(data_fields: readonly Attribute[], n: number): struct.Struct {
+  let by_n = _PREFIX_STRUCTS.get(data_fields);
+  if (by_n === undefined) _PREFIX_STRUCTS.set(data_fields, (by_n = []));
+  return (by_n[n] ??= _struct_for(data_fields.slice(0, n).map((f) => f.metadata["fmt"]).join("")));
+}
 
 // ---------------------------------------------------------------------------
 // Chunk base (also serves as fallback for unregistered types)
@@ -82,7 +91,9 @@ export class Chunk extends AttrsBase {
       // fields, or items. dict(zip()) replaces the _decode_fields
       // Python loop. Coerces (e.g. bool_field) are handled inline.
       const kw: InitKwargs = {};
-      for (const [name, v] of zip(init_names, read_fmt(fmt, fp))) kw[name] = v;
+      const values = read_fmt(fmt, fp);
+      const n = Math.min(init_names.length, values.length);
+      for (let i = 0; i < n; i++) kw[init_names[i]] = values[i];
       kw.chunk_type = chunk_type;
       for (const [i, crc] of coerces) {
         const name = init_names[i];
@@ -218,19 +229,14 @@ export class Chunk extends AttrsBase {
         written += write_bytes(fp, struct.pack(fe + f.metadata["fmt"], value));
       }
     } else {
-      // Build format for fields we're writing
-      const write_parts: string[] = [];
-      for (let i = 0; i < last_idx; i++) write_parts.push((data_fields[i].metadata["fmt"] as string));
-      const w_fmt = write_parts.join("");
-
-      const write_values: FieldValue[] = [];
+      const values: FieldValue[] = [];
       for (let i = 0; i < last_idx; i++) {
         const f = data_fields[i];
         let value = getattr(this, f.name);
         value = _encode_value(value, i, encodings, coerces, ">", f.metadata["fmt"]);
-        write_values.push(value);
+        values.push(value);
       }
-      written = write_parts.length ? write_fmt(fp, w_fmt, ...write_values) : 0;
+      written = last_idx ? fp.pack(_prefix_struct(data_fields, last_idx), values) : 0;
     }
 
     if (items_info != null) {
@@ -725,14 +731,24 @@ export function _resolve_context(chunk_type: string, siblings: Chunk[], ctx: Rea
 // Chunk header I/O
 // ---------------------------------------------------------------------------
 
+/** The chunk header with the type as its big-endian u32 code. */
+const _HEADER_CODES = new struct.Struct(">II");
+/** Decoded chunk types by code; only codes that decode as ASCII get in. */
+const _TYPE_NAMES = new Map<number, string>();
+
 /** Read the 8-byte chunk header: (chunk_type, len_body). */
 export function read_header(fp: IO): [string, number] {
-  const data = fp.read(8);
-  if (data.length < 8) {
-    throw new OSError(`Short read on chunk header: expected 8 bytes, got ${data.length}`);
+  const header = fp.unpack(_HEADER_CODES);
+  if (header === null) {
+    const got = fp.read(8).length;
+    throw new OSError(`Short read on chunk header: expected 8 bytes, got ${got}`);
   }
-  const [raw_type, len_body] = _HEADER_STRUCT.unpack(data);
-  const chunk_type = decode(raw_type, "ASCII");
+  const [code, len_body] = header;
+  let chunk_type = _TYPE_NAMES.get(code);
+  if (chunk_type === undefined) {
+    chunk_type = decode(struct.pack(">I", code), "ASCII");
+    _TYPE_NAMES.set(code, chunk_type);
+  }
   return [chunk_type, len_body];
 }
 
@@ -780,15 +796,10 @@ export function read_chunks(
     const [chunk_type, len_body] = read_header(fp);
     const cls = dict_get(CHUNK_TYPES, chunk_type, Chunk);
 
+    const read_kw = { chunk_type, ctx, parent_result: result, defer_list_types };
     const resolver = _CONTEXT_RESOLVERS.get(chunk_type);
-    const ctx_kw = resolver ? resolver(result, ctx) : {};
-    const chunk = cls.read(fp, len_body, {
-      chunk_type,
-      ctx,
-      parent_result: result,
-      defer_list_types,
-      ...ctx_kw,
-    });
+    if (resolver) Object.assign(read_kw, resolver(result, ctx));
+    const chunk = cls.read(fp, len_body, read_kw);
     result.push(chunk);
 
     // Consume pad byte if len_body is odd
