@@ -6,7 +6,7 @@
 import { describe, expect, test } from "bun:test";
 import { NotImplementedError, Path, py_bool, py_eq, RuntimeError, ValueError, zip } from "../../src/pyrt/index.ts";
 import { approx, make_tmp_path, raises } from "../../src/pyrt/pytest.ts";
-import { parse as parse_aep } from "../../src/py_aep/index.ts";
+import { parse as parse_aep, Property } from "../../src/py_aep/index.ts";
 import * as project_mod from "../../src/py_aep/models/project.ts";
 import { CompItem } from "../../src/py_aep/models/items/composition.ts";
 import "../../src/py_aep/binary/_register.ts";
@@ -28,7 +28,9 @@ describe("TestValueSetterOnKeyframedProperty", () => {
   test("test_set_value_raises_with_keyframes", () => {
     const app = parse_aep(SAMPLES_DIR.div("property", "keyframe_1D.aep"));
     const comp = app.project.compositions[0];
-    const prop = comp.layers.flatMap((lyr) => [...lyr.transform]).find((p) => py_bool(p.keyframes))!;
+    const prop = comp.layers
+      .flatMap((lyr) => [...lyr.transform].filter((p) => p instanceof Property))
+      .find((p) => py_bool(p.keyframes));
     raises(
       ValueError,
       () => {
@@ -41,7 +43,7 @@ describe("TestValueSetterOnKeyframedProperty", () => {
   test("test_set_value_on_static_property_still_works", () => {
     const app = parse_aep(SAMPLES_DIR.div("property", "all_animated.aep"));
     const comp = app.project.compositions[0];
-    const rot = [...comp.av_layers[0].transform].find((p) => p.match_name === "ADBE Rotate Z")!;
+    const rot = comp.av_layers[0].transform.property("ADBE Rotate Z");
     expect(py_bool(rot.keyframes)).toBe(false);
     rot.value = 45.0;
     expect(rot.value).toBe(45.0);
@@ -244,13 +246,13 @@ describe("TestParentValidation", () => {
     // Python's loop keeps the last match.
     const [comp, lyr] = matches.length ? matches[matches.length - 1] : [null, null];
     expect(lyr != null).toBe(true);
-    const anchor = [...lyr!.transform].find((p) => p.match_name === "ADBE Anchor Point")!;
+    const anchor = lyr!.transform.property("ADBE Anchor Point");
     anchor.set_value_at_time(0.0, [10.0, 20.0, 0.0]);
     anchor.set_value_at_time(1.0, [70.0, 80.0, 0.0]);
     const null_ = comp!.add_null();
-    const null_pos = [...null_.transform].find((p) => p.match_name === "ADBE Position")!;
+    const null_pos = null_.transform.property("ADBE Position");
     null_pos.value = [10.0, 20.0, 0.0];
-    const null_rot = [...null_.transform].find((p) => p.match_name === "ADBE Rotate Z")!;
+    const null_rot = null_.transform.property("ADBE Rotate Z");
     null_rot.value = 30.0;
 
     lyr!.parent = null_;
@@ -261,7 +263,7 @@ describe("TestParentValidation", () => {
       [70.0, 80.0, 0.0],
     ])).toBe(true);
 
-    const pos = [...lyr!.transform].find((p) => p.match_name === "ADBE Position")!;
+    const pos = lyr!.transform.property("ADBE Position");
     const expected = [
       [117.942286340599, 24.2820323027551, 0.0],
       [564.352447854375, -2.51288694035714, 50.0],
@@ -269,8 +271,8 @@ describe("TestParentValidation", () => {
     for (const [kf, exp] of zip(pos.keyframes as any[], expected)) {
       expect(approx(kf.value, exp, { abs: 1e-6 })).toBe(true);
     }
-    const scale = [...lyr!.transform].find((p) => p.match_name === "ADBE Scale")!;
-    const rot = [...lyr!.transform].find((p) => p.match_name === "ADBE Rotate Z")!;
+    const scale = lyr!.transform.property("ADBE Scale");
+    const rot = lyr!.transform.property("ADBE Rotate Z");
     expect(py_eq(scale.keyframes.map((k) => k.value), [
       [50.0, 50.0, 100.0],
       [150.0, 150.0, 100.0],
@@ -328,7 +330,7 @@ describe("TestUnicodeNames", () => {
     const tmp_path = make_tmp_path();
     const app = parse_aep(SAMPLES_DIR.div("layer", "type.aep"));
     const comp = get_comp(app.project, "type_text");
-    const prop = [...comp.text_layers[0].text].find((p) => p.match_name === "ADBE Text Document")!;
+    const prop = comp.text_layers[0].text.property("ADBE Text Document");
     const doc = prop.value;
     doc.text = "你好 \u{1f600}";
     prop.value = doc;
@@ -336,7 +338,7 @@ describe("TestUnicodeNames", () => {
     app.project.save(out);
     const app2 = parse_aep(out);
     const comp2 = get_comp(app2.project, "type_text");
-    const prop2 = [...comp2.text_layers[0].text].find((p) => p.match_name === "ADBE Text Document")!;
+    const prop2 = comp2.text_layers[0].text.property("ADBE Text Document");
     expect(prop2.value.text).toBe("你好 \u{1f600}");
   });
 });
@@ -350,13 +352,17 @@ describe("TestLongKeyframeTimes", () => {
     const tmp_path = make_tmp_path();
     const app = parse_aep(SAMPLES_DIR.div("property", "keyframe_1D.aep"));
     const comp = app.project.compositions[0];
-    const prop = comp.layers.flatMap((lyr) => [...lyr.transform]).find((p) => py_bool(p.keyframes))!;
+    const prop = comp.layers
+      .flatMap((lyr) => [...lyr.transform].filter((p) => p instanceof Property))
+      .find((p) => py_bool(p.keyframes));
     prop.set_value_at_time(9999.0, prop.keyframes[0].value);
     const out = tmp_path.div("far.aep");
     app.project.save(out);
     const app2 = parse_aep(out);
     const comp2 = app2.project.compositions[0];
-    const prop2 = comp2.layers.flatMap((lyr) => [...lyr.transform]).find((p) => py_bool(p.keyframes))!;
+    const prop2 = comp2.layers
+      .flatMap((lyr) => [...lyr.transform].filter((p) => p instanceof Property))
+      .find((p) => py_bool(p.keyframes));
     expect(approx(prop2.keyframes.at(-1)!.time, 9999.0)).toBe(true);
   });
 
@@ -364,7 +370,9 @@ describe("TestLongKeyframeTimes", () => {
     const tmp_path = make_tmp_path();
     const app = parse_aep(SAMPLES_DIR.div("property", "keyframe_1D.aep"));
     const comp = app.project.compositions[0];
-    const prop = comp.layers.flatMap((lyr) => [...lyr.transform]).find((p) => py_bool(p.keyframes))!;
+    const prop = comp.layers
+      .flatMap((lyr) => [...lyr.transform].filter((p) => p instanceof Property))
+      .find((p) => py_bool(p.keyframes));
     prop.set_value_at_time(2.0, prop.keyframes[0].value);
     app.project.save(tmp_path.div("ok.aep"));
   });

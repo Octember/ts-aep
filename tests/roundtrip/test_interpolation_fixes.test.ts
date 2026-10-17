@@ -8,7 +8,7 @@
 
 import { describe, expect, test } from "bun:test";
 import * as py_aep from "../../src/py_aep/index.ts";
-import { KeyframeEase, KeyframeInterpolationType } from "../../src/py_aep/index.ts";
+import { KeyframeEase, KeyframeInterpolationType, Property } from "../../src/py_aep/index.ts";
 import { getattr, len, max, min, py_assert, py_bool, sum, zip } from "../../src/pyrt/index.ts";
 import type { Path } from "../../src/pyrt/index.ts";
 import { approx, make_tmp_path } from "../../src/pyrt/pytest.ts";
@@ -295,7 +295,7 @@ describe("TestAddKeyPreservesTheCurve", () => {
     let checked = 0;
     for (const comp of app.project.compositions) {
       for (const layer of comp.layers) {
-        for (const prop of layer.transform) {
+        for (const prop of [...layer.transform].filter((p) => p instanceof Property)) {
           if (!py_bool(getattr(prop, "keyframes", null)) || len(prop.keyframes) < 2) {
             continue;
           }
@@ -376,7 +376,7 @@ describe("TestAddKeyPreservesTheCurve", () => {
   test("test_bezier_split_matches_after_effects", () => {
     const app = parse_app_fresh(PROPERTY_DIR.div("keyframe_bezier_ease_in_out_1D.aep"));
     const prop = app.project.compositions
-      .flatMap((comp) => comp.layers.flatMap((layer) => [...layer.transform]))
+      .flatMap((comp) => comp.layers.flatMap((layer) => [...layer.transform].filter((p) => p instanceof Property)))
       .find((p) => py_bool(getattr(p, "keyframes", null)) && len(p.keyframes) === 2)!;
 
     const index = prop.add_key(2.5);
@@ -422,7 +422,7 @@ describe("TestAddKeyPreservesTheCurve", () => {
     const tmp_path: Path = make_tmp_path();
     const app = parse_app_fresh(PROPERTY_DIR.div("keyframe_bezier_ease_in_out_1D.aep"));
     const prop = app.project.compositions
-      .flatMap((comp) => comp.layers.flatMap((layer) => [...layer.transform]))
+      .flatMap((comp) => comp.layers.flatMap((layer) => [...layer.transform].filter((p) => p instanceof Property)))
       .find(
         (p) =>
           py_bool(getattr(p, "keyframes", null)) && len(p.keyframes) >= 2 && !p.is_spatial,

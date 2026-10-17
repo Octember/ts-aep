@@ -23,6 +23,7 @@ import {
 } from "../../src/pyrt/index.ts";
 import "../../src/py_aep/binary/_register.ts";
 import { get_comp, get_first_layer, get_layer, get_layer_from_json, get_layer_from_json_by_comp, load_expected, parse_project } from "../conftest.ts";
+import { as_instance } from "../helpers.ts";
 import { parse as parse_aep } from "../../src/py_aep/index.ts";
 import { AutoOrientType, BlendingMode, FrameBlendingType, LayerQuality, LayerSamplingQuality, LightType, PropertyType, TrackMatteType } from "../../src/py_aep/enums/index.ts";
 import { AVLayer, CameraLayer, LightLayer, ShapeLayer, TextLayer } from "../../src/py_aep/models/layers/index.ts";
@@ -192,7 +193,7 @@ describe("TestTimingEdgeCases", () => {
       "outPoint_no_clamp_collapse",
     );
     const layer_json = get_layer_from_json_by_comp(expected, "outPoint_no_clamp_collapse");
-    expect(layer.collapse_transformation).toBe(true);
+    expect(as_instance(layer, AVLayer).collapse_transformation).toBe(true);
     expect(isclose(layer.out_point, layer_json["outPoint"], 1e-9, 0.001)).toBe(true);
     expect(isclose(layer.out_point, 5.0, 1e-9, 0.001)).toBe(true);
   });
@@ -205,7 +206,7 @@ describe("TestTimingEdgeCases", () => {
       "outPoint_no_clamp_timeRemap",
     );
     const layer_json = get_layer_from_json_by_comp(expected, "outPoint_no_clamp_timeRemap");
-    expect(layer.time_remap_enabled).toBe(true);
+    expect(as_instance(layer, AVLayer).time_remap_enabled).toBe(true);
     expect(isclose(layer.out_point, layer_json["outPoint"], 1e-9, 0.001)).toBe(true);
     expect(isclose(layer.out_point, 30.0, 1e-9, 0.001)).toBe(true);
   });
@@ -298,7 +299,7 @@ describe("TestLightTypes", () => {
     const expected = load_expected(SAMPLES_DIR, "lightType");
     const layer = get_layer(parse_project(SAMPLES_DIR.div("lightType.aep")), "lightType_AMBIENT");
     const layer_json = get_layer_from_json_by_comp(expected, "lightType_AMBIENT");
-    expect(layer.light_type).toBe(layer_json["lightType"]);
+    expect(as_instance(layer, LightLayer).light_type).toBe(layer_json["lightType"]);
     expect(layer_json["lightType"]).toBe(LightType.AMBIENT);
   });
 
@@ -306,7 +307,7 @@ describe("TestLightTypes", () => {
     const expected = load_expected(SAMPLES_DIR, "lightType");
     const layer = get_layer(parse_project(SAMPLES_DIR.div("lightType.aep")), "lightType_POINT");
     const layer_json = get_layer_from_json_by_comp(expected, "lightType_POINT");
-    expect(layer.light_type).toBe(layer_json["lightType"]);
+    expect(as_instance(layer, LightLayer).light_type).toBe(layer_json["lightType"]);
     expect(layer_json["lightType"]).toBe(LightType.POINT);
   });
 
@@ -314,7 +315,7 @@ describe("TestLightTypes", () => {
     const expected = load_expected(SAMPLES_DIR, "lightType");
     const layer = get_layer(parse_project(SAMPLES_DIR.div("lightType.aep")), "lightType_SPOT");
     const layer_json = get_layer_from_json_by_comp(expected, "lightType_SPOT");
-    expect(layer.light_type).toBe(layer_json["lightType"]);
+    expect(as_instance(layer, LightLayer).light_type).toBe(layer_json["lightType"]);
     expect(layer_json["lightType"]).toBe(LightType.SPOT);
   });
 
@@ -322,7 +323,7 @@ describe("TestLightTypes", () => {
     const expected = load_expected(SAMPLES_DIR, "lightType");
     const layer = get_layer(parse_project(SAMPLES_DIR.div("lightType.aep")), "lightType_PARALLEL");
     const layer_json = get_layer_from_json_by_comp(expected, "lightType_PARALLEL");
-    expect(layer.light_type).toBe(layer_json["lightType"]);
+    expect(as_instance(layer, LightLayer).light_type).toBe(layer_json["lightType"]);
     expect(layer_json["lightType"]).toBe(LightType.PARALLEL);
   });
 
@@ -330,7 +331,7 @@ describe("TestLightTypes", () => {
     const project = parse_project(SAMPLES_DIR.div("light_source_default.aep"));
     const layer = get_first_layer(project);
     expect(layer instanceof LightLayer).toBe(true);
-    expect(layer.light_type).toBe(LightType.ENVIRONMENT);
+    expect(as_instance(layer, LightLayer).light_type).toBe(LightType.ENVIRONMENT);
   });
 });
 
@@ -342,7 +343,7 @@ describe("TestAVLayerAttributes", () => {
     const layer_json = get_layer_from_json_by_comp(expected, "threeDLayer_true");
     expect(layer instanceof AVLayer).toBe(true);
     expect(layer_json["threeDLayer"]).toBe(true);
-    expect(layer.three_d_layer).toBe(layer_json["threeDLayer"]);
+    expect(as_instance(layer, AVLayer).three_d_layer).toBe(layer_json["threeDLayer"]);
   });
 
   test("test_adjustmentLayer_true", () => {
@@ -357,7 +358,7 @@ describe("TestAVLayerAttributes", () => {
     const expected = load_expected(SAMPLES_DIR, "avlayer_flags");
     const layer = get_layer(parse_project(SAMPLES_DIR.div("avlayer_flags.aep")), "guideLayer_true");
     const layer_json = get_layer_from_json_by_comp(expected, "guideLayer_true");
-    expect(layer.guide_layer).toBe(layer_json["guideLayer"]);
+    expect(as_instance(layer, AVLayer).guide_layer).toBe(layer_json["guideLayer"]);
     expect(layer_json["guideLayer"]).toBe(true);
   });
 
@@ -368,7 +369,7 @@ describe("TestAVLayerAttributes", () => {
       "collapseTransformation_true",
     );
     const layer_json = get_layer_from_json_by_comp(expected, "collapseTransformation_true");
-    expect(layer.collapse_transformation).toBe(layer_json["collapseTransformation"]);
+    expect(as_instance(layer, AVLayer).collapse_transformation).toBe(layer_json["collapseTransformation"]);
     expect(layer_json["collapseTransformation"]).toBe(true);
   });
 
@@ -379,7 +380,7 @@ describe("TestAVLayerAttributes", () => {
       "preserveTransparency_true",
     );
     const layer_json = get_layer_from_json_by_comp(expected, "preserveTransparency_true");
-    expect(layer.preserve_transparency).toBe(layer_json["preserveTransparency"]);
+    expect(as_instance(layer, AVLayer).preserve_transparency).toBe(layer_json["preserveTransparency"]);
     expect(layer_json["preserveTransparency"]).toBe(true);
   });
 
@@ -387,7 +388,7 @@ describe("TestAVLayerAttributes", () => {
     const expected = load_expected(SAMPLES_DIR, "avlayer_flags");
     const layer = get_layer(parse_project(SAMPLES_DIR.div("avlayer_flags.aep")), "motionBlur_true");
     const layer_json = get_layer_from_json_by_comp(expected, "motionBlur_true");
-    expect(layer.motion_blur).toBe(layer_json["motionBlur"]);
+    expect(as_instance(layer, AVLayer).motion_blur).toBe(layer_json["motionBlur"]);
     expect(layer_json["motionBlur"]).toBe(true);
   });
 
@@ -396,7 +397,7 @@ describe("TestAVLayerAttributes", () => {
     const layer = get_layer(parse_project(SAMPLES_DIR.div("avlayer_flags.aep")), "effectsActive_false");
     const layer_json = get_layer_from_json_by_comp(expected, "effectsActive_false");
     expect(layer_json["effectsActive"]).toBe(false);
-    expect(layer.effects_active).toBe(layer_json["effectsActive"]);
+    expect(as_instance(layer, AVLayer).effects_active).toBe(layer_json["effectsActive"]);
   });
 });
 
@@ -406,7 +407,7 @@ describe("TestBlendingModes", () => {
     const expected = load_expected(SAMPLES_DIR, "blendingMode");
     const layer = get_layer(parse_project(SAMPLES_DIR.div("blendingMode.aep")), "blendingMode_ADD");
     const layer_json = get_layer_from_json_by_comp(expected, "blendingMode_ADD");
-    expect(layer.blending_mode).toBe(layer_json["blendingMode"]);
+    expect(as_instance(layer, AVLayer).blending_mode).toBe(layer_json["blendingMode"]);
     expect(layer_json["blendingMode"]).toBe(BlendingMode.ADD);
   });
 
@@ -414,7 +415,7 @@ describe("TestBlendingModes", () => {
     const expected = load_expected(SAMPLES_DIR, "blendingMode");
     const layer = get_layer(parse_project(SAMPLES_DIR.div("blendingMode.aep")), "blendingMode_MULTIPLY");
     const layer_json = get_layer_from_json_by_comp(expected, "blendingMode_MULTIPLY");
-    expect(layer.blending_mode).toBe(layer_json["blendingMode"]);
+    expect(as_instance(layer, AVLayer).blending_mode).toBe(layer_json["blendingMode"]);
     expect(layer_json["blendingMode"]).toBe(BlendingMode.MULTIPLY);
   });
 
@@ -422,7 +423,7 @@ describe("TestBlendingModes", () => {
     const expected = load_expected(SAMPLES_DIR, "blendingMode");
     const layer = get_layer(parse_project(SAMPLES_DIR.div("blendingMode.aep")), "blendingMode_SCREEN");
     const layer_json = get_layer_from_json_by_comp(expected, "blendingMode_SCREEN");
-    expect(layer.blending_mode).toBe(layer_json["blendingMode"]);
+    expect(as_instance(layer, AVLayer).blending_mode).toBe(layer_json["blendingMode"]);
     expect(layer_json["blendingMode"]).toBe(BlendingMode.SCREEN);
   });
 });
@@ -433,7 +434,7 @@ describe("TestQualitySettings", () => {
     const expected = load_expected(SAMPLES_DIR, "quality");
     const layer = get_layer(parse_project(SAMPLES_DIR.div("quality.aep")), "quality_BEST");
     const layer_json = get_layer_from_json_by_comp(expected, "quality_BEST");
-    expect(layer.quality).toBe(layer_json["quality"]);
+    expect(as_instance(layer, AVLayer).quality).toBe(layer_json["quality"]);
     expect(layer_json["quality"]).toBe(LayerQuality.BEST);
   });
 
@@ -441,7 +442,7 @@ describe("TestQualitySettings", () => {
     const expected = load_expected(SAMPLES_DIR, "quality");
     const layer = get_layer(parse_project(SAMPLES_DIR.div("quality.aep")), "quality_DRAFT");
     const layer_json = get_layer_from_json_by_comp(expected, "quality_DRAFT");
-    expect(layer.quality).toBe(layer_json["quality"]);
+    expect(as_instance(layer, AVLayer).quality).toBe(layer_json["quality"]);
     expect(layer_json["quality"]).toBe(LayerQuality.DRAFT);
   });
 
@@ -449,7 +450,7 @@ describe("TestQualitySettings", () => {
     const expected = load_expected(SAMPLES_DIR, "quality");
     const layer = get_layer(parse_project(SAMPLES_DIR.div("quality.aep")), "quality_WIREFRAME");
     const layer_json = get_layer_from_json_by_comp(expected, "quality_WIREFRAME");
-    expect(layer.quality).toBe(layer_json["quality"]);
+    expect(as_instance(layer, AVLayer).quality).toBe(layer_json["quality"]);
     expect(layer_json["quality"]).toBe(LayerQuality.WIREFRAME);
   });
 
@@ -457,7 +458,7 @@ describe("TestQualitySettings", () => {
     const expected = load_expected(SAMPLES_DIR, "avlayer_flags");
     const layer = get_layer(parse_project(SAMPLES_DIR.div("avlayer_flags.aep")), "samplingQuality_BICUBIC");
     const layer_json = get_layer_from_json_by_comp(expected, "samplingQuality_BICUBIC");
-    expect(layer.sampling_quality).toBe(layer_json["samplingQuality"]);
+    expect(as_instance(layer, AVLayer).sampling_quality).toBe(layer_json["samplingQuality"]);
     expect(layer_json["samplingQuality"]).toBe(LayerSamplingQuality.BICUBIC);
   });
 });
@@ -471,9 +472,9 @@ describe("TestFrameBlending", () => {
       "frameBlendingType_NO_FRAME_BLEND",
     );
     const layer_json = get_layer_from_json_by_comp(expected, "frameBlendingType_NO_FRAME_BLEND");
-    expect(layer.frame_blending_type).toBe(layer_json["frameBlendingType"]);
+    expect(as_instance(layer, AVLayer).frame_blending_type).toBe(layer_json["frameBlendingType"]);
     expect(layer_json["frameBlendingType"]).toBe(FrameBlendingType.NO_FRAME_BLEND);
-    expect(layer.frame_blending).toBe(false);
+    expect(as_instance(layer, AVLayer).frame_blending).toBe(false);
   });
 
   test("test_frameBlendingType_FRAME_MIX", () => {
@@ -483,7 +484,7 @@ describe("TestFrameBlending", () => {
       "frameBlendingType_FRAME_MIX",
     );
     const layer_json = get_layer_from_json_by_comp(expected, "frameBlendingType_FRAME_MIX");
-    expect(layer.frame_blending_type).toBe(layer_json["frameBlendingType"]);
+    expect(as_instance(layer, AVLayer).frame_blending_type).toBe(layer_json["frameBlendingType"]);
     expect(layer_json["frameBlendingType"]).toBe(FrameBlendingType.FRAME_MIX);
   });
 
@@ -494,7 +495,7 @@ describe("TestFrameBlending", () => {
       "frameBlendingType_PIXEL_MOTION",
     );
     const layer_json = get_layer_from_json_by_comp(expected, "frameBlendingType_PIXEL_MOTION");
-    expect(layer.frame_blending_type).toBe(layer_json["frameBlendingType"]);
+    expect(as_instance(layer, AVLayer).frame_blending_type).toBe(layer_json["frameBlendingType"]);
     expect(layer_json["frameBlendingType"]).toBe(FrameBlendingType.PIXEL_MOTION);
   });
 });
@@ -515,7 +516,7 @@ describe("TestAutoOrient", () => {
     const layer_json = get_layer_from_json_by_comp(expected, "autoOrient_CAMERA");
     expect(layer.auto_orient).toBe(layer_json["autoOrient"]);
     expect(layer_json["autoOrient"]).toBe(AutoOrientType.CAMERA_OR_POINT_OF_INTEREST);
-    expect(layer.three_d_layer).toBe(true);
+    expect(as_instance(layer, AVLayer).three_d_layer).toBe(true);
   });
 
   test("test_autoOrient_CHARACTERS", () => {
@@ -524,7 +525,7 @@ describe("TestAutoOrient", () => {
     const layer_json = get_layer_from_json_by_comp(expected, "autoOrient_CHARACTERS");
     expect(layer.auto_orient).toBe(layer_json["autoOrient"]);
     expect(layer_json["autoOrient"]).toBe(AutoOrientType.CHARACTERS_TOWARD_CAMERA);
-    expect(layer.three_d_layer).toBe(true);
+    expect(as_instance(layer, AVLayer).three_d_layer).toBe(true);
   });
 });
 
@@ -534,7 +535,7 @@ describe("TestTrackMatte", () => {
     const expected = load_expected(SAMPLES_DIR, "trackMatteType");
     const project = parse_project(SAMPLES_DIR.div("trackMatteType.aep"));
     const comp = get_comp(project, "trackMatteType_ALPHA");
-    const matted_layer = comp.layers.find((layer) => layer.track_matte_type === TrackMatteType.ALPHA) ?? null;
+    const matted_layer = comp.layers.find((layer) => as_instance(layer, AVLayer).track_matte_type === TrackMatteType.ALPHA) ?? null;
     let expected_layer: any = null;
     for (const item of expected["items"]) {
       if (item["name"] === "trackMatteType_ALPHA" && "layers" in item) {
@@ -548,14 +549,14 @@ describe("TestTrackMatte", () => {
     }
     expect(matted_layer != null).toBe(true);
     expect(expected_layer != null).toBe(true);
-    expect(matted_layer.track_matte_type).toBe(expected_layer["trackMatteType"]);
+    expect(as_instance(matted_layer, AVLayer).track_matte_type).toBe(expected_layer["trackMatteType"]);
   });
 
   test("test_trackMatteType_LUMA", () => {
     const expected = load_expected(SAMPLES_DIR, "trackMatteType");
     const project = parse_project(SAMPLES_DIR.div("trackMatteType.aep"));
     const comp = get_comp(project, "trackMatteType_LUMA");
-    const matted_layer = comp.layers.find((layer) => layer.track_matte_type === TrackMatteType.LUMA) ?? null;
+    const matted_layer = comp.layers.find((layer) => as_instance(layer, AVLayer).track_matte_type === TrackMatteType.LUMA) ?? null;
     let expected_layer: any = null;
     for (const item of expected["items"]) {
       if (item["name"] === "trackMatteType_LUMA" && "layers" in item) {
@@ -569,7 +570,7 @@ describe("TestTrackMatte", () => {
     }
     expect(matted_layer != null).toBe(true);
     expect(expected_layer != null).toBe(true);
-    expect(matted_layer.track_matte_type).toBe(expected_layer["trackMatteType"]);
+    expect(as_instance(matted_layer, AVLayer).track_matte_type).toBe(expected_layer["trackMatteType"]);
   });
 
   test("test_has_track_matte", () => {
@@ -585,7 +586,7 @@ describe("TestTrackMatte", () => {
     }
     expect(expected_layers != null).toBe(true);
     for (const [layer, exp] of zip(comp.layers, expected_layers)) {
-      expect(layer.has_track_matte).toBe(exp["hasTrackMatte"]);
+      expect(as_instance(layer, AVLayer).has_track_matte).toBe(exp["hasTrackMatte"]);
     }
   });
 
@@ -602,7 +603,7 @@ describe("TestTrackMatte", () => {
     }
     expect(expected_layers != null).toBe(true);
     for (const layer of comp.layers) {
-      expect(layer.has_track_matte).toBe(false);
+      expect(as_instance(layer, AVLayer).has_track_matte).toBe(false);
     }
   });
 
@@ -619,7 +620,7 @@ describe("TestTrackMatte", () => {
     }
     expect(expected_layers != null).toBe(true);
     for (const [layer, exp] of zip(comp.layers, expected_layers)) {
-      expect(layer.is_track_matte).toBe(exp["isTrackMatte"]);
+      expect(as_instance(layer, AVLayer).is_track_matte).toBe(exp["isTrackMatte"]);
     }
   });
 
@@ -627,24 +628,24 @@ describe("TestTrackMatte", () => {
     const project = parse_project(SAMPLES_DIR.div("track_matte_no.aep"));
     const comp = project.compositions[0];
     for (const layer of comp.layers) {
-      expect(layer.is_track_matte).toBe(false);
+      expect(as_instance(layer, AVLayer).is_track_matte).toBe(false);
     }
   });
 
   test("test_track_matte_layer", () => {
     const project = parse_project(SAMPLES_DIR.div("track_matte_yes.aep"));
     const comp = project.compositions[0];
-    const matted_layer = comp.layers.find((layer) => layer.has_track_matte) ?? null;
+    const matted_layer = comp.layers.find((layer) => as_instance(layer, AVLayer).has_track_matte) ?? null;
     expect(matted_layer != null).toBe(true);
-    expect(matted_layer.track_matte_layer != null).toBe(true);
-    expect(matted_layer.track_matte_layer.is_track_matte).toBe(true);
+    expect(as_instance(matted_layer, AVLayer).track_matte_layer != null).toBe(true);
+    expect(as_instance(matted_layer, AVLayer).track_matte_layer.is_track_matte).toBe(true);
   });
 
   test("test_track_matte_layer_none", () => {
     const project = parse_project(SAMPLES_DIR.div("track_matte_no.aep"));
     const comp = project.compositions[0];
     for (const layer of comp.layers) {
-      expect(layer.track_matte_layer == null).toBe(true);
+      expect(as_instance(layer, AVLayer).track_matte_layer == null).toBe(true);
     }
   });
 });
@@ -676,7 +677,7 @@ describe("TestTimeRemap", () => {
     const layer = get_layer(parse_project(SAMPLES_DIR.div("avlayer_flags.aep")), "timeRemapEnabled_true");
     const layer_json = get_layer_from_json_by_comp(expected, "timeRemapEnabled_true");
     expect(layer_json["timeRemapEnabled"]).toBe(true);
-    expect(layer.time_remap_enabled).toBe(layer_json["timeRemapEnabled"]);
+    expect(as_instance(layer, AVLayer).time_remap_enabled).toBe(layer_json["timeRemapEnabled"]);
   });
 });
 
@@ -686,7 +687,7 @@ describe("TestAudio", () => {
     const expected = load_expected(SAMPLES_DIR, "audioEnabled");
     const layer = get_layer(parse_project(SAMPLES_DIR.div("audioEnabled.aep")), "audioEnabled_true");
     const layer_json = get_layer_from_json_by_comp(expected, "audioEnabled_true");
-    expect(layer.audio_enabled).toBe(layer_json["audioEnabled"]);
+    expect(as_instance(layer, AVLayer).audio_enabled).toBe(layer_json["audioEnabled"]);
     expect(layer_json["audioEnabled"]).toBe(true);
   });
 
@@ -695,7 +696,7 @@ describe("TestAudio", () => {
     const layer = get_layer(parse_project(SAMPLES_DIR.div("audioEnabled.aep")), "audioEnabled_false");
     const layer_json = get_layer_from_json_by_comp(expected, "audioEnabled_false");
     expect(layer_json["audioEnabled"]).toBe(false);
-    expect(layer.audio_enabled).toBe(layer_json["audioEnabled"]);
+    expect(as_instance(layer, AVLayer).audio_enabled).toBe(layer_json["audioEnabled"]);
   });
 });
 
@@ -787,7 +788,7 @@ describe("TestAudioActiveAtTime", () => {
     const layer = get_layer(project, "audioEnabled_true");
     expect(layer instanceof AVLayer).toBe(true);
     const midpoint = (layer.in_point + layer.out_point) / 2;
-    expect(layer.audio_active_at_time(midpoint)).toBe(true);
+    expect(as_instance(layer, AVLayer).audio_active_at_time(midpoint)).toBe(true);
   });
 
   /** Layer with audio_enabled=False returns False. */
@@ -796,7 +797,7 @@ describe("TestAudioActiveAtTime", () => {
     const layer = get_layer(project, "audioEnabled_false");
     expect(layer instanceof AVLayer).toBe(true);
     const midpoint = (layer.in_point + layer.out_point) / 2;
-    expect(layer.audio_active_at_time(midpoint)).toBe(false);
+    expect(as_instance(layer, AVLayer).audio_active_at_time(midpoint)).toBe(false);
   });
 
   /** Layer is not audio-active before its in_point. */
@@ -804,7 +805,7 @@ describe("TestAudioActiveAtTime", () => {
     const project = parse_project(SAMPLES_DIR.div("audioEnabled.aep"));
     const layer = get_layer(project, "audioEnabled_true");
     expect(layer instanceof AVLayer).toBe(true);
-    expect(layer.audio_active_at_time(layer.in_point - 1)).toBe(false);
+    expect(as_instance(layer, AVLayer).audio_active_at_time(layer.in_point - 1)).toBe(false);
   });
 
   /** Layer is not audio-active at its out_point (exclusive). */
@@ -812,7 +813,7 @@ describe("TestAudioActiveAtTime", () => {
     const project = parse_project(SAMPLES_DIR.div("audioEnabled.aep"));
     const layer = get_layer(project, "audioEnabled_true");
     expect(layer instanceof AVLayer).toBe(true);
-    expect(layer.audio_active_at_time(layer.out_point)).toBe(false);
+    expect(as_instance(layer, AVLayer).audio_active_at_time(layer.out_point)).toBe(false);
   });
 
   /** Layer is audio-active at its in_point (inclusive). */
@@ -820,7 +821,7 @@ describe("TestAudioActiveAtTime", () => {
     const project = parse_project(SAMPLES_DIR.div("audioEnabled.aep"));
     const layer = get_layer(project, "audioEnabled_true");
     expect(layer instanceof AVLayer).toBe(true);
-    expect(layer.audio_active_at_time(layer.in_point)).toBe(true);
+    expect(as_instance(layer, AVLayer).audio_active_at_time(layer.in_point)).toBe(true);
   });
 
   /** audio_active property delegates to audio_active_at_time(time). */
@@ -828,7 +829,7 @@ describe("TestAudioActiveAtTime", () => {
     const project = parse_project(SAMPLES_DIR.div("audioEnabled.aep"));
     const layer = get_layer(project, "audioEnabled_true");
     expect(layer instanceof AVLayer).toBe(true);
-    expect(layer.audio_active).toBe(layer.audio_active_at_time(layer.time));
+    expect(as_instance(layer, AVLayer).audio_active).toBe(as_instance(layer, AVLayer).audio_active_at_time(layer.time));
   });
 });
 
@@ -982,14 +983,14 @@ describe("TestLayerPropertyGroupInheritance", () => {
   /** layer.transform.position resolves via __getattr__. */
   test("test_getattr_single_word", () => {
     const layer = get_layer(parse_project(SAMPLES_DIR.div("layer_switches.aep")), "enabled_false");
-    const position = layer.transform.position;
+    const position = layer.transform.__getattr__("position");
     expect(position.match_name).toBe("ADBE Position");
   });
 
   /** layer.transform.anchor_point resolves 'Anchor Point'. */
   test("test_getattr_multi_word", () => {
     const layer = get_layer(parse_project(SAMPLES_DIR.div("layer_switches.aep")), "enabled_false");
-    const anchor = layer.transform.anchor_point;
+    const anchor = layer.transform.__getattr__("anchor_point");
     expect(anchor.match_name).toBe("ADBE Anchor Point");
   });
 
@@ -997,7 +998,7 @@ describe("TestLayerPropertyGroupInheritance", () => {
   test("test_getattr_attribute_error", () => {
     const layer = get_layer(parse_project(SAMPLES_DIR.div("layer_switches.aep")), "enabled_false");
     raises(AttributeError, () => {
-      void layer.transform.nonexistent;
+      layer.transform.__getattr__("nonexistent");
     });
   });
 
@@ -1038,7 +1039,7 @@ describe("TestThreeDModelLayer", () => {
     const project = parse_project(SAMPLES_DIR.div("three_d_model_layer.aep"));
     const layer = get_first_layer(project);
     expect(layer instanceof ThreeDModelLayer).toBe(true);
-    expect(layer.three_d_layer).toBe(true);
+    expect(as_instance(layer, ThreeDModelLayer).three_d_layer).toBe(true);
   });
 
   /** ThreeDModelLayer has collapse_transformation=True. */
@@ -1046,7 +1047,7 @@ describe("TestThreeDModelLayer", () => {
     const project = parse_project(SAMPLES_DIR.div("three_d_model_layer.aep"));
     const layer = get_first_layer(project);
     expect(layer instanceof ThreeDModelLayer).toBe(true);
-    expect(layer.collapse_transformation).toBe(true);
+    expect(as_instance(layer, ThreeDModelLayer).collapse_transformation).toBe(true);
   });
 
   /** ThreeDModelLayer source is a FootageItem. */
@@ -1054,8 +1055,8 @@ describe("TestThreeDModelLayer", () => {
     const project = parse_project(SAMPLES_DIR.div("three_d_model_layer.aep"));
     const layer = get_first_layer(project);
     expect(layer instanceof ThreeDModelLayer).toBe(true);
-    expect(layer.source != null).toBe(true);
-    expect(layer.source.name).toBe("crystal.fbx");
+    expect(as_instance(layer, ThreeDModelLayer).source != null).toBe(true);
+    expect(as_instance(layer, ThreeDModelLayer).source.name).toBe("crystal.fbx");
   });
 
   /** CompItem.three_d_model_layers filters correctly. */
@@ -1071,7 +1072,7 @@ describe("TestThreeDModelLayer", () => {
     const project = parse_project(SAMPLES_DIR.div("three_d_model_layer.aep"));
     const layer = get_first_layer(project);
     expect(layer instanceof ThreeDModelLayer).toBe(true);
-    expect(layer.can_set_collapse_transformation).toBe(true);
+    expect(as_instance(layer, ThreeDModelLayer).can_set_collapse_transformation).toBe(true);
   });
 
   /** ThreeDModelLayer.can_set_time_remap_enabled is always False. */
@@ -1079,7 +1080,7 @@ describe("TestThreeDModelLayer", () => {
     const project = parse_project(SAMPLES_DIR.div("three_d_model_layer.aep"));
     const layer = get_first_layer(project);
     expect(layer instanceof ThreeDModelLayer).toBe(true);
-    expect(layer.can_set_time_remap_enabled).toBe(false);
+    expect(as_instance(layer, ThreeDModelLayer).can_set_time_remap_enabled).toBe(false);
   });
 });
 
@@ -1090,7 +1091,7 @@ describe("TestThreeDPerChar", () => {
     const project = parse_project(SAMPLES_DIR.div("threeDPerChar_on.aep"));
     const layer = get_first_layer(project);
     expect(layer instanceof AVLayer).toBe(true);
-    expect(layer.three_d_per_char).toBe(true);
+    expect(as_instance(layer, AVLayer).three_d_per_char).toBe(true);
   });
 
   /** three_d_per_char is False when per-character 3D is disabled. */
@@ -1098,7 +1099,7 @@ describe("TestThreeDPerChar", () => {
     const project = parse_project(SAMPLES_DIR.div("threeDPerChar_off.aep"));
     const layer = get_first_layer(project);
     expect(layer instanceof AVLayer).toBe(true);
-    expect(layer.three_d_per_char).toBe(false);
+    expect(as_instance(layer, AVLayer).three_d_per_char).toBe(false);
   });
 });
 
@@ -1168,7 +1169,7 @@ describe("TestTopLevelGroupOrder", () => {
   test("test_regular_av_layer", () => {
     const layer = get_layer(parse_project(SAMPLES_DIR.div("avlayer_flags.aep")), "adjustmentLayer_true");
     expect(layer instanceof AVLayer).toBe(true);
-    expect(py_bool(layer.three_d_layer)).toBe(false);
+    expect(py_bool(as_instance(layer, AVLayer).three_d_layer)).toBe(false);
     const match_names = layer.properties.map((p) => p.match_name);
     expect(
       py_eq(match_names, [
@@ -1194,7 +1195,7 @@ describe("TestTopLevelGroupOrder", () => {
   test("test_three_d_av_layer", () => {
     const layer = get_layer(parse_project(SAMPLES_DIR.div("avlayer_flags.aep")), "threeDLayer_true");
     expect(layer instanceof AVLayer).toBe(true);
-    expect(py_bool(layer.three_d_layer)).toBe(true);
+    expect(py_bool(as_instance(layer, AVLayer).three_d_layer)).toBe(true);
     const match_names = layer.properties.map((p) => p.match_name);
     expect(
       py_eq(match_names, [
@@ -1233,8 +1234,8 @@ describe("TestTopLevelSpecialCases", () => {
     const layer = get_layer(parse_project(SAMPLES_DIR.div("avlayer_flags.aep")), "adjustmentLayer_true");
     const marker = layer.properties.find((p) => p.match_name === "ADBE Marker")!;
     expect(marker instanceof Property).toBe(true);
-    expect(marker.dimensions).toBe(0);
-    expect(marker.units_text).toBe("");
+    expect(as_instance(marker, Property).dimensions).toBe(0);
+    expect(as_instance(marker, Property).units_text).toBe("");
   });
 
   /** Layer Sets group has elided=True. */
