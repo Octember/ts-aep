@@ -14,6 +14,7 @@
 // `object_setattr(this, name, value)`.
 
 import { AttributeError } from "./errors.ts";
+import type { Dynamic } from "./builtins.ts";
 
 /**
  * A descriptor on instances of `O` whose reads produce a `V`. `descriptor()`
@@ -93,9 +94,14 @@ const TARGET: unique symbol = Symbol("target");
  * Wrap a freshly constructed instance so `__getattr__` runs for missing
  * attributes and `__setattr__` for every assignment, as in Python.
  */
-export function py_object<T extends object>(self: T): T {
-  const has_getattr = typeof (self as { __getattr__?: unknown }).__getattr__ === "function";
-  const has_setattr = typeof (self as { __setattr__?: unknown }).__setattr__ === "function";
+type PyHooks = {
+  __getattr__?(name: string): unknown;
+  __setattr__?(name: string, value: unknown): void;
+};
+
+export function py_object<T extends object>(self: T & PyHooks): T {
+  const has_getattr = typeof self.__getattr__ === "function";
+  const has_setattr = typeof self.__setattr__ === "function";
   if (!has_getattr && !has_setattr) return self;
   const proxy = new Proxy(self, {
     get(target, key, receiver) {
@@ -105,13 +111,13 @@ export function py_object<T extends object>(self: T): T {
       // Python looks special methods (`__bool__`, `__eq__`, `__len__`, ...) up on the type,
       // never through `__getattr__`; pyrt probes them as property reads, so a miss is undefined.
       if (key.length > 4 && key.startsWith("__") && key.endsWith("__")) return undefined;
-      return (receiver as { __getattr__(name: string): unknown }).__getattr__(key);
+      return receiver.__getattr__(key);
     },
     set(target, key, value, receiver) {
       if (typeof key === "symbol" || !has_setattr || in_setattr.has(target)) {
         return Reflect.set(target, key, value, receiver);
       }
-      (receiver as { __setattr__(name: string, value: unknown): void }).__setattr__(key, value);
+      receiver.__setattr__(key, value);
       return true;
     },
   });
@@ -121,7 +127,7 @@ export function py_object<T extends object>(self: T): T {
 const in_setattr = new WeakSet<object>();
 
 /** `object.__setattr__(self, name, value)` - bypasses `__setattr__`, still runs descriptors. */
-export function object_setattr(self: any, name: string, value: unknown): void {
+export function object_setattr(self: Dynamic, name: string, value: unknown): void {
   const target = self?.[TARGET] ?? self;
   in_setattr.add(target);
   try {
@@ -132,7 +138,7 @@ export function object_setattr(self: any, name: string, value: unknown): void {
 }
 
 /** `object.__getattribute__(self, name)` - no `__getattr__` fallback. */
-export function object_getattr(self: any, name: string): any {
+export function object_getattr(self: Dynamic, name: string): Dynamic {
   const target = self?.[TARGET] ?? self;
   if (!(name in target)) {
     throw new AttributeError(`'${target.constructor?.name}' object has no attribute '${name}'`);
@@ -147,10 +153,10 @@ export function object_getattr(self: any, name: string): any {
  * `deepcopy` copies it with the instance and `Object.assign` / spreads skip
  * it; writable and configurable so a class field named `__dict__` may alias it.
  */
-export function instance_dict(obj: any): Map<string, any> {
+export function instance_dict(obj: Dynamic): Map<string, Dynamic> {
   if (!Object.prototype.hasOwnProperty.call(obj, "__dict__")) {
     Object.defineProperty(obj, "__dict__", {
-      value: new Map<string, any>(),
+      value: new Map<string, Dynamic>(),
       enumerable: false,
       writable: true,
       configurable: true,

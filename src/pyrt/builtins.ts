@@ -4,11 +4,18 @@ import { AttributeError, IndexError, KeyError, TypeError_, ValueError } from "./
 import { float_repr, PyFloat } from "./num.ts";
 
 /**
+ * A Python value whose type is only known at runtime (duck-typed containers,
+ * dunders, JSON hooks, cloned objects). The one `any` in this module: every
+ * other dynamic parameter is this alias.
+ */
+export type Dynamic = any;
+
+/**
  * Python truthiness: empty containers (array, string, bytes, Map, Set,
  * object with `__len__`) are false. JS treats `[]` and an empty
  * Uint8Array as true - never use bare `if (x)` on a container.
  */
-export function py_bool(x: any): boolean {
+export function py_bool(x: Dynamic): boolean {
   if (x == null) return false;
   if (x instanceof PyFloat) return x.value !== 0;
   if (typeof x === "boolean") return x;
@@ -37,7 +44,7 @@ export function py_and<A, B>(a: A, b: B): A | B {
 }
 
 /** `len(x)` */
-export function len(x: any): number {
+export function len(x: Dynamic): number {
   if (typeof x === "string" || Array.isArray(x) || ArrayBuffer.isView(x)) return (x as ArrayLike<unknown>).length;
   if (x instanceof Map || x instanceof Set) return x.size;
   if (x && typeof x.__len__ === "function") return x.__len__();
@@ -56,7 +63,7 @@ export function zip<T extends unknown[][]>(...arrays: T): { [K in keyof T]: T[K]
   let n = Infinity;
   for (const a of arrays) n = Math.min(n, a.length);
   if (n === Infinity) n = 0;
-  const out: any[] = [];
+  const out: Dynamic[] = [];
   for (let i = 0; i < n; i++) {
     const row = [];
     for (const a of arrays) row.push(a[i]);
@@ -72,7 +79,7 @@ export function* enumerate<T>(xs: Iterable<T>, start = 0): Generator<[number, T]
 }
 
 /** Python ordering of numbers, strings, bools, and tuples/lists (lexicographic). */
-export function py_cmp(a: any, b: any): number {
+export function py_cmp(a: Dynamic, b: Dynamic): number {
   if (Array.isArray(a) && Array.isArray(b)) {
     const n = Math.min(a.length, b.length);
     for (let i = 0; i < n; i++) {
@@ -105,8 +112,9 @@ export function sorted<T>(xs: Iterable<T>, key?: ((x: T) => unknown) | null, rev
 }
 
 /** `min(xs, key=..., default=...)` - first minimal element, like Python. */
-export function min<T>(xs: Iterable<T>, key?: ((x: T) => unknown) | null, ...dflt: [T?]): T {
-  let best: T | undefined;
+export function min<T>(xs: Iterable<T>, key?: ((x: T) => unknown) | null, ...dflt: [T?]): T;
+export function min(xs: Iterable<Dynamic>, key?: ((x: Dynamic) => unknown) | null, ...dflt: [Dynamic?]): Dynamic {
+  let best: Dynamic;
   let best_k: unknown;
   let any = false;
   for (const x of xs) {
@@ -114,15 +122,16 @@ export function min<T>(xs: Iterable<T>, key?: ((x: T) => unknown) | null, ...dfl
     if (!any || py_cmp(k, best_k) < 0) [best, best_k, any] = [x, k, true];
   }
   if (!any) {
-    if (dflt.length) return dflt[0] as T;
+    if (dflt.length) return dflt[0];
     throw new ValueError("min() iterable argument is empty");
   }
-  return best as T;
+  return best;
 }
 
 /** `max(xs, key=..., default=...)` - first maximal element, like Python. */
-export function max<T>(xs: Iterable<T>, key?: ((x: T) => unknown) | null, ...dflt: [T?]): T {
-  let best: T | undefined;
+export function max<T>(xs: Iterable<T>, key?: ((x: T) => unknown) | null, ...dflt: [T?]): T;
+export function max(xs: Iterable<Dynamic>, key?: ((x: Dynamic) => unknown) | null, ...dflt: [Dynamic?]): Dynamic {
+  let best: Dynamic;
   let best_k: unknown;
   let any = false;
   for (const x of xs) {
@@ -130,10 +139,10 @@ export function max<T>(xs: Iterable<T>, key?: ((x: T) => unknown) | null, ...dfl
     if (!any || py_cmp(k, best_k) > 0) [best, best_k, any] = [x, k, true];
   }
   if (!any) {
-    if (dflt.length) return dflt[0] as T;
+    if (dflt.length) return dflt[0];
     throw new ValueError("max() iterable argument is empty");
   }
-  return best as T;
+  return best;
 }
 
 /** `xs[i]` with Python's negative indexes and IndexError. */
@@ -144,20 +153,21 @@ export function at<T>(xs: ArrayLike<T>, i: number): T {
 }
 
 /** `xs[start:end]` for arrays and strings with Python's clamping. */
-export function py_slice<T extends { slice(s: number, e: number): T; length: number }>(xs: T, start?: number | null, end?: number | null, step?: number | null): T {
+export function py_slice<T extends { slice(s: number, e: number): T; length: number }>(xs: T, start?: number | null, end?: number | null, step?: number | null): T;
+export function py_slice(xs: Dynamic, start?: number | null, end?: number | null, step?: number | null): Dynamic {
   const n = xs.length;
   if (step != null && step !== 1) {
-    const out: unknown[] = [];
+    const out: Dynamic[] = [];
     if (step > 0) {
       const s = start == null ? 0 : start < 0 ? Math.max(0, n + start) : Math.min(start, n);
       const e = end == null ? n : end < 0 ? Math.max(0, n + end) : Math.min(end, n);
-      for (let i = s; i < e; i += step) out.push((xs as unknown as ArrayLike<unknown>)[i]);
+      for (let i = s; i < e; i += step) out.push(xs[i]);
     } else {
       const s = start == null ? n - 1 : start < 0 ? n + start : Math.min(start, n - 1);
       const e = end == null ? -1 : end < 0 ? Math.max(-1, n + end) : end;
-      for (let i = s; i > e; i += step) out.push((xs as unknown as ArrayLike<unknown>)[i]);
+      for (let i = s; i > e; i += step) out.push(xs[i]);
     }
-    return (typeof xs === "string" ? out.join("") : out) as unknown as T;
+    return (typeof xs === "string" ? out.join("") : out);
   }
   const s = start == null ? 0 : start < 0 ? Math.max(0, n + start) : Math.min(start, n);
   const e = end == null ? n : end < 0 ? Math.max(0, n + end) : Math.min(end, n);
@@ -165,31 +175,36 @@ export function py_slice<T extends { slice(s: number, e: number): T; length: num
 }
 
 /** `d[k]` on a Map with KeyError. */
-export function getitem<K, V>(d: Map<K, V>, k: K): V {
+export function getitem<K, V>(d: Map<K, V>, k: K): V;
+export function getitem(d: Map<unknown, Dynamic>, k: unknown): Dynamic {
   if (!d.has(k)) throw new KeyError(repr(k));
-  return d.get(k)!;
+  return d.get(k);
 }
 
 /** `d.get(k, default)` on a Map (None, not undefined, when absent). */
-export function dict_get<K, V, D = null>(d: Map<K, V>, k: K, dflt: D = null as D): V | D {
+export function dict_get<K, V>(d: Map<K, V>, k: K): V | null;
+export function dict_get<K, V, D>(d: Map<K, V>, k: K, dflt: D): V | D;
+export function dict_get(d: Map<unknown, Dynamic>, k: unknown, dflt: Dynamic = null): Dynamic {
   const v = d.get(k);
-  return v !== undefined || d.has(k) ? v! : dflt;
+  return v !== undefined || d.has(k) ? v : dflt;
 }
 
 /** `d.setdefault(k, v)` */
-export function setdefault<K, V>(d: Map<K, V>, k: K, v: V): V {
+export function setdefault<K, V>(d: Map<K, V>, k: K, v: V): V;
+export function setdefault(d: Map<unknown, Dynamic>, k: unknown, v: Dynamic): Dynamic {
   if (!d.has(k)) d.set(k, v);
-  return d.get(k)!;
+  return d.get(k);
 }
 
 /** `d.pop(k, default)` */
-export function dict_pop<K, V>(d: Map<K, V>, k: K, ...dflt: [V?]): V {
+export function dict_pop<K, V>(d: Map<K, V>, k: K, ...dflt: [V?]): V;
+export function dict_pop(d: Map<unknown, Dynamic>, k: unknown, ...dflt: [Dynamic?]): Dynamic {
   if (d.has(k)) {
-    const v = d.get(k)!;
+    const v = d.get(k);
     d.delete(k);
     return v;
   }
-  if (dflt.length) return dflt[0] as V;
+  if (dflt.length) return dflt[0];
   throw new KeyError(repr(k));
 }
 
@@ -208,15 +223,15 @@ export function tkey(...parts: unknown[]): string {
  */
 export function getattr<O, N extends string & keyof NonNullable<O>>(obj: O, name: N): Required<NonNullable<O>>[N];
 export function getattr<O, N extends string & keyof NonNullable<O>, D>(obj: O, name: N, dflt: D): Required<NonNullable<O>>[N] | D;
-export function getattr(obj: any, name: string, ...dflt: [unknown?]): any;
-export function getattr(obj: any, name: string, ...dflt: [unknown?]): any {
+export function getattr(obj: Dynamic, name: string, ...dflt: [unknown?]): Dynamic;
+export function getattr(obj: Dynamic, name: string, ...dflt: [unknown?]): Dynamic {
   if (obj != null && name in Object(obj)) return obj[name];
   if (dflt.length) return dflt[0];
   throw new AttributeError(`'${obj?.constructor?.name}' object has no attribute '${name}'`);
 }
 
 /** `hasattr(obj, name)` */
-export function hasattr(obj: any, name: string): boolean {
+export function hasattr(obj: Dynamic, name: string): boolean {
   if (obj == null || !(name in Object(obj))) return false;
   try {
     void obj[name];
@@ -228,7 +243,7 @@ export function hasattr(obj: any, name: string): boolean {
 }
 
 /** `x in container` for arrays, strings (substring), Maps (keys), Sets. */
-export function contains(container: any, x: any): boolean {
+export function contains(container: Dynamic, x: Dynamic): boolean {
   if (typeof container === "string") return container.includes(x);
   if (container instanceof Map || container instanceof Set) return container.has(x);
   if (Array.isArray(container)) return container.some((y) => py_eq(y, x));
@@ -237,7 +252,7 @@ export function contains(container: any, x: any): boolean {
 }
 
 /** `a == b` for values (numbers, strings, arrays/tuples, bytes, Maps, objects with `__eq__`). */
-export function py_eq(a: any, b: any): boolean {
+export function py_eq(a: Dynamic, b: Dynamic): boolean {
   if (a === b) return true;
   if (a instanceof PyFloat) a = a.value;
   if (b instanceof PyFloat) b = b.value;
@@ -268,7 +283,7 @@ export function py_eq(a: any, b: any): boolean {
 const NON_PRINTABLE = /^[\p{Cc}\p{Cf}\p{Cs}\p{Co}\p{Cn}\p{Zl}\p{Zp}\p{Zs}]$/u;
 
 /** Python `repr(x)` for messages. */
-export function repr(x: any): string {
+export function repr(x: Dynamic): string {
   if (x == null) return "None";
   if (typeof x === "boolean") return x ? "True" : "False";
   if (typeof x === "number") return Number.isInteger(x) ? String(x) : float_repr(x);
@@ -318,7 +333,7 @@ export function repr(x: any): string {
  * int-valued float from an int unless it is a boxed `PyFloat`; class
  * instances report their constructor name, which equals the Python class name.
  */
-export function type_name(x: any): string {
+export function type_name(x: Dynamic): string {
   if (x == null) return "NoneType";
   if (typeof x === "boolean") return "bool";
   if (x instanceof PyFloat) return "float";
@@ -344,11 +359,11 @@ export function list_mul<T>(xs: readonly T[], n: number): T[] {
  * `mapping.items()` over the Mapping protocol: a `Map`'s entries, an
  * object's own `items()`, or `keys()` + `__getitem__`.
  */
-export function mapping_items(m: any): [any, any][] {
+export function mapping_items(m: Dynamic): [Dynamic, Dynamic][] {
   if (m instanceof Map) return [...m.entries()];
   if (typeof m.items === "function") return [...m.items()];
   if (typeof m.keys === "function" && typeof m.__getitem__ === "function") {
-    return [...m.keys()].map((k: unknown): [unknown, unknown] => [k, m.__getitem__(k)]);
+    return [...m.keys()].map((k: Dynamic): [Dynamic, Dynamic] => [k, m.__getitem__(k)]);
   }
   throw new TypeError_(`'${type_name(m)}' object is not a mapping`);
 }
@@ -357,16 +372,16 @@ export function mapping_items(m: any): [any, any][] {
  * `dict(arg)`: a new `Map` from a mapping (`Map`, an object with `keys()` /
  * `items()`) or an iterable of key/value pairs, in iteration order.
  */
-export function dict<K = any, V = any>(arg?: any): Map<K, V> {
+export function dict<K = Dynamic, V = Dynamic>(arg?: Dynamic): Map<K, V> {
   if (arg == null) return new Map();
   if (arg instanceof Map) return new Map(arg);
   // CPython: anything with `keys()` is a mapping, read through `keys()` + `__getitem__`.
   if (typeof arg.keys === "function" && typeof arg.__getitem__ === "function") {
-    return new Map([...arg.keys()].map((k: any): [any, any] => [k, arg.__getitem__(k)]));
+    return new Map([...arg.keys()].map((k: Dynamic): [K, V] => [k, arg.__getitem__(k)]));
   }
   const out = new Map<K, V>();
   let i = 0;
-  for (const pair of arg as Iterable<any>) {
+  for (const pair of arg) {
     const kv = [...pair];
     if (kv.length !== 2) {
       throw new ValueError(`dictionary update sequence element #${i} has length ${kv.length}; 2 is required`);
@@ -378,7 +393,7 @@ export function dict<K = any, V = any>(arg?: any): Map<K, V> {
 }
 
 /** Python `str(x)` for messages. */
-export function str(x: any): string {
+export function str(x: Dynamic): string {
   if (typeof x === "string") return x;
   if (x instanceof String) return String(x);
   if (x != null && typeof x.__str__ === "function") return x.__str__();
@@ -441,29 +456,30 @@ export function split(s: string, sep?: string | null, maxsplit = -1): string[] {
 }
 
 /** `copy.deepcopy`: clones arrays, Maps, Sets, bytes, plain objects and class instances (prototype kept). */
-export function deepcopy<T>(x: T, memo = new Map<unknown, unknown>()): T {
+export function deepcopy<T>(x: T, memo?: Map<unknown, unknown>): T;
+export function deepcopy(x: Dynamic, memo = new Map<unknown, unknown>()): Dynamic {
   if (x === null || typeof x !== "object") return x;
-  if (memo.has(x)) return memo.get(x) as T;
-  if (x instanceof Uint8Array) return x.slice() as unknown as T;
+  if (memo.has(x)) return memo.get(x);
+  if (x instanceof Uint8Array) return x.slice();
   if (Array.isArray(x)) {
-    const out: unknown[] = [];
+    const out: Dynamic[] = [];
     memo.set(x, out);
     for (const v of x) out.push(deepcopy(v, memo));
-    return out as unknown as T;
+    return out;
   }
   if (x instanceof Map) {
     const out = new Map();
     memo.set(x, out);
     for (const [k, v] of x) out.set(deepcopy(k, memo), deepcopy(v, memo));
-    return out as unknown as T;
+    return out;
   }
   if (x instanceof Set) {
     const out = new Set();
     memo.set(x, out);
     for (const v of x) out.add(deepcopy(v, memo));
-    return out as unknown as T;
+    return out;
   }
-  if (typeof (x as unknown as { __deepcopy__(memo: Map<unknown, unknown>): T }).__deepcopy__ === "function") return (x as unknown as { __deepcopy__(memo: Map<unknown, unknown>): T }).__deepcopy__(memo);
+  if (typeof x.__deepcopy__ === "function") return x.__deepcopy__(memo);
   const out =
     x instanceof String
       ? Reflect.construct(String, [x.valueOf()], x.constructor)
@@ -479,16 +495,17 @@ export function deepcopy<T>(x: T, memo = new Map<unknown, unknown>()): T {
 }
 
 /** `copy.copy`: shallow clone keeping the prototype. */
-export function copy<T>(x: T): T {
+export function copy<T>(x: T): T;
+export function copy(x: Dynamic): Dynamic {
   if (x === null || typeof x !== "object") return x;
-  if (Array.isArray(x)) return [...x] as unknown as T;
-  if (x instanceof Uint8Array) return x.slice() as unknown as T;
-  if (x instanceof Map) return new Map(x) as unknown as T;
-  if (x instanceof Set) return new Set(x) as unknown as T;
+  if (Array.isArray(x)) return [...x];
+  if (x instanceof Uint8Array) return x.slice();
+  if (x instanceof Map) return new Map(x);
+  if (x instanceof Set) return new Set(x);
   if (x instanceof String) {
     const out = Reflect.construct(String, [x.valueOf()], x.constructor);
     for (const k of Object.keys(x)) if (!/^\d+$/.test(k)) out[k] = (x as unknown as Record<string, unknown>)[k];
-    return out as unknown as T;
+    return out;
   }
   if (x instanceof String) return Object.assign(Object.setPrototypeOf(new String(x.valueOf()), Object.getPrototypeOf(x)), x);
   return Object.assign(Object.create(Object.getPrototypeOf(x)), x);
@@ -496,7 +513,7 @@ export function copy<T>(x: T): T {
 
 /** `functools.lru_cache(maxsize=None)` for functions of primitive / object-identity arguments. */
 export function lru_cache<A extends unknown[], R>(fn: (...args: A) => R): ((...args: A) => R) & { cache_clear(): void } {
-  const roots = new Map<unknown, unknown>();
+  const roots = new Map<Dynamic, Dynamic>();
   const RESULT = Symbol("result");
   const single = new Map<A[0], R>();
   const wrapped = (...args: A): R => {
@@ -505,7 +522,7 @@ export function lru_cache<A extends unknown[], R>(fn: (...args: A) => R): ((...a
       if (r === undefined && !single.has(args[0])) single.set(args[0], (r = fn(...args)));
       return r!;
     }
-    let node: Map<any, any> = roots;
+    let node: Map<Dynamic, Dynamic> = roots;
     for (const a of args) {
       let next = node.get(a);
       if (!next) node.set(a, (next = new Map()));

@@ -5,9 +5,9 @@
   "fault_cases": 2640,
   "loose_types": {
     "0 pyrt": {
-      "any": 51,
-      "unknown": 109,
-      "casts": 65
+      "any": 1,
+      "unknown": 87,
+      "casts": 14
     },
     "1 binary+enums+data": {
       "any": 9,

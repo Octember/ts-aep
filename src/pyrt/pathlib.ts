@@ -1,6 +1,7 @@
 // The `pathlib.Path` subset py_aep uses, over the host fs / path (pyrt/host).
 
 import { fs, homedir, path as nodepath, type HostStats } from "./host.ts";
+import type { Dynamic } from "./builtins.ts";
 import { FileNotFoundError } from "./errors.ts";
 
 export class Path {
@@ -80,8 +81,8 @@ export class Path {
   read_bytes(): Uint8Array {
     try {
       return new Uint8Array(fs.readFileSync(this.path));
-    } catch (e: unknown) {
-      if ((e as NodeJS.ErrnoException | null)?.code === "ENOENT") throw new FileNotFoundError(`[Errno 2] No such file or directory: '${this.path}'`);
+    } catch (e: Dynamic) {
+      if (e?.code === "ENOENT") throw new FileNotFoundError(`[Errno 2] No such file or directory: '${this.path}'`);
       throw e;
     }
   }
@@ -91,8 +92,8 @@ export class Path {
     return data.length;
   }
 
-  read_text(encoding = "utf-8"): string {
-    return new TextDecoder(encoding as "utf-8").decode(this.read_bytes());
+  read_text(encoding: "utf-8" = "utf-8"): string {
+    return new TextDecoder(encoding).decode(this.read_bytes());
   }
 
   write_text(text: string): number {

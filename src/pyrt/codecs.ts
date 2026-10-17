@@ -150,7 +150,7 @@ const UTF8_ENCODER = new TextEncoder();
 
 function encode_utf8(text: string, errors: Errors): Uint8Array {
   // TextEncoder would turn a lone surrogate into U+FFFD; those go byte-wise.
-  if ((text as { isWellFormed?(): boolean }).isWellFormed?.()) return UTF8_ENCODER.encode(text);
+  if (text.isWellFormed?.()) return UTF8_ENCODER.encode(text);
   return encode_utf8_slow(text, errors);
 }
 

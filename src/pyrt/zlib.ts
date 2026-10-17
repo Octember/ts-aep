@@ -7,7 +7,8 @@
 // input yields (a truncated stream is not an error) and stops at max_length.
 // Error texts follow CPython's ("Error -3 while decompressing data: ...").
 
-import { Inflate, gunzipSync, type FlateError } from "fflate";
+import { Inflate, gunzipSync } from "fflate";
+import type { Dynamic } from "./builtins.ts";
 
 /** fflate's `Inflate` with the decoder state this module reads (not in its typings). */
 type InflateState = Pick<Inflate, "push"> & {
@@ -38,8 +39,8 @@ const _FFLATE_MESSAGES: Record<number, string> = {
   3: "invalid distance too far back",
 };
 
-function _rethrow(e: unknown): never {
-  const code = (e as FlateError | null | undefined)?.code;
+function _rethrow(e: Dynamic): never {
+  const code = e?.code;
   if (code === 0) _fail(Z_BUF_ERROR, "incomplete or truncated stream");
   if (typeof code === "number" && code in _FFLATE_MESSAGES) _fail(Z_DATA_ERROR, _FFLATE_MESSAGES[code]);
   throw e;

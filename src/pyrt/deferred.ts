@@ -10,17 +10,20 @@
 // hub src/py_aep/_modules.ts (tools/gen_deferred_modules.ts) statically imports
 // every target and registers it here; py_aep/index.ts imports the hub last.
 
+import type { Dynamic } from "./builtins.ts";
+
 const _modules = new Map<string, object>();
 
 export function register(key: string, mod: object): void {
   _modules.set(key, mod);
 }
 
-export function deferred<M>(key: string): () => M {
-  let mod: M | undefined;
+export function deferred<M extends object>(key: string): () => M;
+export function deferred(key: string): () => Dynamic {
+  let mod: Dynamic;
   return () => {
     if (mod === undefined) {
-      mod = _modules.get(key) as M | undefined;
+      mod = _modules.get(key);
       if (mod === undefined) {
         throw new Error(`deferred module "${key}" is not registered: import py_aep/index.ts, which loads py_aep/_modules.ts`);
       }

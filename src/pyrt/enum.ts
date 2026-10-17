@@ -22,6 +22,7 @@
 //   export type BlendingMode = EnumValue<typeof BlendingMode>;
 
 import { KeyError, ValueError } from "./errors.ts";
+import type { Dynamic } from "./builtins.ts";
 
 const AUTO: unique symbol = Symbol("auto");
 
@@ -54,14 +55,14 @@ export function py_enum<const M extends Record<string, unknown>, X extends Recor
   name: string,
   members: M,
   methods?: X & ThisType<Resolved<M> & EnumHelpers<Resolved<M>[keyof M]> & X>,
-): Resolved<M> & EnumHelpers<Resolved<M>[keyof M]> & X {
-  type V = Resolved<M>[keyof M];
-  const by_name = new Map<string, V>();
-  const by_value = new Map<unknown, string>();
-  const canonical: V[] = [];
+): Resolved<M> & EnumHelpers<Resolved<M>[keyof M]> & X;
+export function py_enum(name: string, members: Record<string, Dynamic>, methods?: Record<string, Dynamic>): Dynamic {
+  const by_name = new Map<string, Dynamic>();
+  const by_value = new Map<Dynamic, string>();
+  const canonical: Dynamic[] = [];
   let last = 0;
   for (const [k, raw] of Object.entries(members)) {
-    const v = (raw === AUTO ? last + 1 : raw) as V;
+    const v = (raw === AUTO ? last + 1 : raw);
     if (typeof v === "number") last = v;
     by_name.set(k, v);
     if (!by_value.has(v)) {
@@ -70,30 +71,30 @@ export function py_enum<const M extends Record<string, unknown>, X extends Recor
     }
   }
   const self = Object.fromEntries(by_name);
-  const helpers: EnumHelpers<V> = {
+  const helpers = {
     __name__: name,
-    of(value: unknown): V {
-      if (by_value.has(value)) return value as V;
+    of(value: Dynamic): Dynamic {
+      if (by_value.has(value)) return value;
       if (typeof self._missing_ === "function") {
         const found = self._missing_(value);
         if (found != null) return found;
       }
       throw new ValueError(`${typeof value === "string" ? `'${value}'` : String(value)} is not a valid ${name}`);
     },
-    name_of(value: V): string {
+    name_of(value: Dynamic): string {
       const n = by_value.get(value);
       if (n === undefined) throw new ValueError(`${String(value)} is not a valid ${name}`);
       return n;
     },
-    has(value: unknown): value is V {
+    has(value: unknown): boolean {
       return by_value.has(value);
     },
-    members(): V[] {
+    members(): Dynamic[] {
       return [...canonical];
     },
-    by_name(n: string): V {
+    by_name(n: string): Dynamic {
       if (!by_name.has(n)) throw new KeyError(`'${n}'`);
-      return by_name.get(n)!;
+      return by_name.get(n);
     },
     __members__: by_name,
   };
@@ -103,7 +104,7 @@ export function py_enum<const M extends Record<string, unknown>, X extends Recor
       Object.defineProperty(self, k, { ...v, enumerable: false });
     }
   }
-  return Object.freeze(self) as Resolved<M> & EnumHelpers<Resolved<M>[keyof M]> & X;
+  return Object.freeze(self);
 }
 
 /** `class X(IntEnum)` */
