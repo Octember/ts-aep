@@ -151,7 +151,7 @@ export function _font_post_script_name(font: FontObject | string): string {
     validate_font_name(font);
     return font;
   }
-  const name = getattr(font, "post_script_name", null);
+  const name = font?.post_script_name ?? null;
   if (typeof name !== "string" || !name) {
     throw new TypeError_("expected a FontObject or a PostScript name string");
   }
@@ -2047,7 +2047,7 @@ export class Project {
     let removed = 0;
     for (const item_id of [...this.items.keys()]) {
       if (keep_ids.has(item_id) || !this.items.has(item_id)) continue;
-      getitem(this.items, item_id).remove();
+      this.items.get(item_id).remove();
       removed += 1;
     }
     return removed;

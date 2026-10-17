@@ -544,7 +544,7 @@ export class ContainerChunk extends Chunk {
       return this.data;
     }
     const encoded = encode(cls._legacy_string(value), "UTF-8", "surrogateescape");
-    const size = py_or(this.data.length, _LEGACY_FIXED_BUFFERS.get(this.chunk_type) ?? null);
+    const size = this.data.length || (_LEGACY_FIXED_BUFFERS.get(this.chunk_type) ?? null);
     if (!_LEGACY_FIXED_BUFFERS.has(this.chunk_type) || size == null) {
       return bytes_.concat(encoded, b("\x00"));
     }

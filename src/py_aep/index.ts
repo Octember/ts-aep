@@ -4,7 +4,7 @@
 // registration imports at the end of binary/chunk.py).
 import "./binary/_register.ts";
 
-import { deferred, BytesIO, Path, fspath, py_bool, type PathLike } from "../pyrt/index.ts";
+import { deferred, BytesIO, Path, fspath, type PathLike } from "../pyrt/index.ts";
 import { AlphaMode, AudioBitDepth, AudioChannels, AudioSampleRate, AutoKernType, AutoOrientType, BaselineDirection, BitsPerChannel, BlendingMode, BoxAutoFitPolicy, BoxFirstBaselineAlignment, BoxVerticalAlignment, ChannelType, CloseOptions, ColorDepthSetting, ColorManagementSystem, ComposerEngine, CTFontTechnology, CTFontType, CTScript, DigitSet, DiskCacheSetting, EffectsSetting, EnvironmentLightShadowResolution, FastPreviewType, FeetFramesFilmType, FieldRender, FieldSeparationType, FillLightingCorrectionType, FillMethodType, FillOutputDepthType, FillRangeType, FontBaselineOption, FontCapsOption, FootageTimecodeDisplayStartType, FrameBlendingSetting, FrameBlendingType, FrameRateSetting, FramesCountType, GetSettingsFormat, GpuAccelType, GuideLayers, GuideOrientationType, ImportAsType, KeyframeInterpolationType, Label, Language, LayerQuality, LayerSamplingQuality, LeadingType, LightType, LinearLightMode, LineJoinType, LineOrientation, LogType, LoopMode, LutInterpolationMethod, MaskFeatherFalloff, MaskMode, MaskMotionBlur, MotionBlurSetting, OutputAudio, OutputChannels, OutputColorDepth, OutputColorMode, OutputFormat, ParagraphDirection, ParagraphJustification, ParametricMeshType, PlayMode, PostRenderAction, PREFType, ProjectThread, PropertyControlType, PropertyType, PropertyValueType, ProxyUseSetting, PulldownMethod, PulldownPhase, PulldownSetting, PurgeTarget, RenderQuality, ResizeQuality, ResolveType, RQItemStatus, ShadowMapResolution, SoloSwitchesSetting, TimeDisplayType, TimeSpanSource, ToolType, TrackMatteType, ViewerType } from "./enums/index.ts";
 import { CURRENT_VALUE, AdvancedRendererOptions, Application, AVItem, AVLayer, CameraLayer, Cinema4DRendererOptions, CineonFormatOptions, ClassicRendererOptions, CompItem, FeatherPoint, FileSource, FolderItem, FontObject, FootageItem, FootageSource, Guide, ImportOptions, Item, JpegFormatOptions, Keyframe, KeyframeEase, Layer, LightLayer, MarkerValue, MaskPropertyGroup, OpenExrFormatOptions, OutputModule, ParametricMeshLayer, PlaceholderSource, PngFormatOptions, Preferences, Project, Property, PropertyBase, PropertyGroup, RayTracedRendererOptions, RendererOptionsBase, RenderQueue, RenderQueueItem, SettingsView, Shape, ShapeLayer, SolidSource, TargaFormatOptions, TextDocument, TextLayer, ThreeDModelLayer, TiffFormatOptions, View, Viewer, ViewOptions, XmlFormatOptions } from "./models/index.ts";
 import { validate_ae_release, validate_platform } from "./models/validators.ts";
@@ -51,7 +51,7 @@ export function parse(
     validate_platform(platform);
   }
   const file_path = fspath(aep_file_path);
-  const prefs_path = py_bool(ae_preferences_dir) ? new Path(ae_preferences_dir) : null;
+  const prefs_path = ae_preferences_dir ? new Path(ae_preferences_dir) : null;
   // `with open(file_path, "rb") as f:`
   const f = new BytesIO(new Path(file_path).read_bytes());
   const [rifx, xmp] = _chunk().read_aep(f, { defer_list_types: _DEFERRED_LIST_TYPES });
@@ -107,7 +107,7 @@ export function new_(
   if (platform != null) {
     validate_platform(platform);
   }
-  const prefs_path = py_bool(ae_preferences_dir) ? new Path(ae_preferences_dir) : null;
+  const prefs_path = ae_preferences_dir ? new Path(ae_preferences_dir) : null;
   return Application._new(version, prefs_path, platform);
 }
 

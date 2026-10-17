@@ -218,7 +218,7 @@ export class PropertyBase {
   _reposition_canonically(): void {
     const parent = this._parent_property;
     if (parent == null) return;
-    const tdgp = getattr(parent, "_tdgp", null) as ListChunk | null;
+    const tdgp = (parent?._tdgp ?? null) as ListChunk | null;
     const tdmn = this._tdmn;
     const body = this._chunk_body();
     if (tdgp == null || tdmn == null || body == null) return;

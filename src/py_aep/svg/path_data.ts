@@ -17,7 +17,6 @@ import {
   max,
   min,
   mod,
-  py_bool,
   py_eq,
   radians,
   repr,
@@ -343,7 +342,7 @@ export class _PathParser {
     const angle = (ux: number, uy: number, vx: number, vy: number): number => {
       const dot = ux * vx + uy * vy;
       const ln = hypot(ux, uy) * hypot(vx, vy);
-      const ang = py_bool(ln) ? Math.acos(max([-1.0, min([1.0, dot / ln])])) : 0.0;
+      const ang = ln !== 0 ? Math.acos(max([-1.0, min([1.0, dot / ln])])) : 0.0;
       return (ux * vy - uy * vx) < 0 ? -ang : ang;
     };
 

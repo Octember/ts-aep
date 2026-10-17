@@ -35,7 +35,6 @@ import {
   mod,
   py_bool,
   py_eq,
-  py_or,
   repr,
   round,
   rshift,
@@ -742,7 +741,7 @@ export function _tiff_media_info(
     icc_profile,
     depth,
     bit_depth: bits,
-    layer_count: py_or(photoshop_layers, counted_alpha ? 1 : 0) as number,
+    layer_count: photoshop_layers || (counted_alpha ? 1 : 0),
     color_mode: bits === 1 ? 0 : _TIFF_COLOR_MODES.get(photometric) ?? 3,
     pixel_channels: counted_alpha || layered ? base + 1 : base,
   });
@@ -885,10 +884,8 @@ export function _probe_jpeg(fp: IO): MediaInfo {
     }
     fp.seek(length - 2, SEEK_CUR);
   }
-  const icc_profile = py_or(
-    bytes_.join(sorted([...icc_chunks.keys()]).map((key) => getitem(icc_chunks, key))),
-    null,
-  );
+  const icc_bytes = bytes_.join(sorted([...icc_chunks.keys()]).map((key) => getitem(icc_chunks, key)));
+  const icc_profile = icc_bytes.length > 0 ? icc_bytes : null;
   return new MediaInfo({
     width,
     height,
@@ -1952,7 +1949,7 @@ export function _probe_mp3(fp: IO): MediaInfo {
   const mpeg_ver = (h >>> 19) & 0x3; // 3=MPEG1, 2=MPEG2, 0=MPEG2.5
   const sr_i = (h >>> 10) & 0x3;
   const mono = ((h >>> 6) & 0x3) === 3;
-  const sr = sr_i < 3 ? dict_get(_MP3_SR, mpeg_ver, [0, 0, 0])![sr_i] : 0;
+  const sr = sr_i < 3 ? (_MP3_SR.get(mpeg_ver) ?? [0, 0, 0])![sr_i] : 0;
   const spf = mpeg_ver === 3 ? 1152 : 576;
   // A Xing/Info header (VBR) carries the exact frame count; else assume CBR.
   const side = mpeg_ver === 3 ? (mono ? 17 : 32) : mono ? 9 : 17;
@@ -2301,7 +2298,7 @@ export function _probe_hdr(fp: IO): MediaInfo {
     throw new ValueError("Cannot parse HDR resolution line (missing X or Y axis)");
   }
   // Radiance RGBE is floating-point RGB.
-  return new MediaInfo({ width: getitem(dims, X), height: getitem(dims, Y), depth: _color_depth(false, 32) });
+  return new MediaInfo({ width: dims.get(X), height: dims.get(Y), depth: _color_depth(false, 32) });
 }
 
 // ---------------------------------------------------------------------------

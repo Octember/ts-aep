@@ -32,7 +32,6 @@ import {
   getattr,
   getitem,
   int,
-  len,
   repr,
   sorted,
   str,
@@ -59,8 +58,8 @@ export function _chunk_detail(chunk: Chunk): string {
     if (cps.length > 60) v = cps.slice(0, 57).join("") + "...";
     return `value=${v}`;
   }
-  const data = getattr(chunk, "data", null);
-  if (data != null) return `${len(data)}B`;
+  const data = chunk?.data ?? null;
+  if (data != null) return `${data.length}B`;
   return "";
 }
 

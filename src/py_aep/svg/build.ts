@@ -9,7 +9,7 @@
  * points, type, and color stops AE writes for an SVG import.
  */
 
-import { float, max, min, py_bool, py_eq, zip } from "../../pyrt/index.ts";
+import { float, max, min, py_eq, zip } from "../../pyrt/index.ts";
 import { to_f4 } from "../binary/bin_utils.ts";
 import { Gradient, GradientAlphaStop, GradientColorStop } from "../models/properties/gradient.ts";
 import { Shape } from "../models/properties/shape.ts";
@@ -233,7 +233,7 @@ export function _apply_gradient(
   if (!py_eq(paint.scale, [100.0, 100.0])) {
     _set_if_present(group, "ADBE Vector Grad Scale", [paint.scale[0], paint.scale[1]]);
   }
-  if (py_bool(paint.rotation)) {
+  if (paint.rotation !== 0) {
     _set_if_present(group, "ADBE Vector Grad Rotation", paint.rotation);
   }
 }

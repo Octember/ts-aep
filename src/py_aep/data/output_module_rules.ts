@@ -645,7 +645,7 @@ export function _conditions_match(conditions: Map<string, any>, context: Map<str
  */
 export function constrained_keys(fmt: OutputFormat): ReadonlySet<string> {
   const keys = new Set<string>(getitem(_KIND_RULES, OutputFormat.kind(fmt)).keys());
-  for (const k of dict_get(_FORMAT_RULES, fmt, new Map<string, ReadonlySet<any>>()).keys()) keys.add(k);
+  for (const k of (_FORMAT_RULES.get(fmt) ?? new Map<string, ReadonlySet<any>>()).keys()) keys.add(k);
   for (const [, constraints] of dict_get(_CONDITIONAL_RULES, fmt, [] as Rule[])) {
     for (const k of constraints.keys()) keys.add(k);
   }
@@ -669,7 +669,7 @@ export function allowed_values(
 ): ReadonlySet<any> | null {
   const rules = new Map<string, ReadonlySet<any>>();
   for (const [k, v] of getitem(_KIND_RULES, OutputFormat.kind(fmt))) rules.set(k, v);
-  for (const [k, v] of dict_get(_FORMAT_RULES, fmt, new Map<string, ReadonlySet<any>>())) rules.set(k, v);
+  for (const [k, v] of (_FORMAT_RULES.get(fmt) ?? new Map<string, ReadonlySet<any>>())) rules.set(k, v);
   if (context == null) context = new Map<string, any>();
   for (const [conditions, constraints] of dict_get(_CONDITIONAL_RULES, fmt, [] as Rule[])) {
     if (_conditions_match(conditions, context)) {

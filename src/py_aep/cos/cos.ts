@@ -18,7 +18,6 @@ import {
   py_assert,
   py_enum,
   py_eq,
-  py_or,
   pyfloat,
   repr,
   str,
@@ -558,7 +557,8 @@ export class CosParser {
     // `read(1)` gives `b""` at the end of the data. Every lexer loop stops
     // on `None`, so passing `b""` on spun them forever on a truncated
     // document (an empty byte also matched `in b".+-"` as a number start).
-    return py_or(this.file.read(1), null);
+    const byte = this.file.read(1);
+    return byte.length > 0 ? byte : null;
   }
 
   unget(): void {

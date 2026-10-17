@@ -12,7 +12,6 @@ import * as fontkit from "fontkit";
 import * as host from "../../pyrt/host.ts";
 import {
   Path,
-  dict_get,
   py_bool,
   setdefault,
   split,
@@ -426,11 +425,7 @@ export function resolve_font(
   }
   // No requested family is installed: fall back to the generic chain (the
   // requested generic, or sans-serif for an unknown family).
-  for (const candidate of dict_get(
-    _GENERIC_FALLBACKS,
-    generic || "sans-serif",
-    [] as readonly string[],
-  )) {
+  for (const candidate of (_GENERIC_FALLBACKS.get(generic || "sans-serif") ?? [] as readonly string[])) {
     const styles = _index.get(candidate) ?? null;
     if (styles?.size > 0) {
       return _pick(styles, bold, italic);

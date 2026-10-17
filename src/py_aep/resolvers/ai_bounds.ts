@@ -56,7 +56,6 @@ import {
   str,
   warn,
   round,
-  py_bool,
   is_real,
   hypot,
 } from "../../pyrt/index.ts";
@@ -820,7 +819,7 @@ export function _font_metrics(doc: _Document, font: Map<string, any> | null): Me
   const default_ = doc.number(doc.get(descriptor, "MissingWidth"), 0.0);
   if (widths.size === 0) widths = _builtin_widths(doc, font, base);
   const [y_min, y_max] = _vertical_extent(doc, descriptor, STD14_EXTENT.get(base) ?? null);
-  return [widths, py_or(default_, _DEFAULT_WIDTH), y_min, y_max, false];
+  return [widths, default_ !== 0 ? default_ : _DEFAULT_WIDTH, y_min, y_max, false];
 }
 
 export function _type0_metrics(doc: _Document, font: Map<string, any>): Metrics {
@@ -829,7 +828,8 @@ export function _type0_metrics(doc: _Document, font: Map<string, any>): Metrics 
     Array.isArray(descendants) && descendants.length > 0
       ? doc.resolve(descendants[0])
       : new Map<string, any>();
-  const default_ = py_or(doc.number(doc.get(child, "DW"), 1000.0), 1000.0);
+  const dw = doc.number(doc.get(child, "DW"), 1000.0);
+  const default_ = dw !== 0 ? dw : 1000.0;
   const widths = new Map<number, number>();
   const table = doc.get(child, "W");
   const entries: any[] = Array.isArray(table) ? table : [];
@@ -1214,7 +1214,7 @@ export class _Measurer {
     const scale = gs.h_scale / 100.0;
     let render = _mat_mul([gs.size * scale, 0.0, 0.0, gs.size, 0.0, gs.rise], text_matrix);
     render = _mat_mul(render, gs.ctm);
-    const horizontal = py_bool(gs.size) && py_bool(scale) ? advance / (gs.size * scale) : width;
+    const horizontal = gs.size !== 0 && scale !== 0 ? advance / (gs.size * scale) : width;
     const acc = new _Acc();
     const corners: Pt[] = [
       [0.0, y_min / 1000.0],

@@ -349,10 +349,7 @@ export function _parse_effect_properties(
   // reachable once the effect is attached, so callers that already know
   // it pass its size; during the initial parse it is unknown and the
   // composition stands in (what py_aep has always used).
-  const point_size: [number, number] = py_or(
-    layer != null ? layer._pixel_size : null,
-    [float(composition.width), float(composition.height)] as [number, number],
-  );
+  const point_size: [number, number] = layer?._pixel_size ?? [float(composition.width), float(composition.height)];
 
   // Skip index-0 internal parameters (not exposed in ExtendScript).
   const property_runs = [...get_match_name_runs(tdgp_chunk)].filter(
@@ -467,7 +464,7 @@ export const parse_effect = _suppress_materialization().decorate(function parse_
   // is used more than once (AE doesn't duplicate the data).  Fall back
   // to previously cached or project-level EfdG definitions.
   if (!param_defs?.size && effect_param_defs.has(group_match_name)) {
-    param_defs = getitem(effect_param_defs, group_match_name);
+    param_defs = effect_param_defs.get(group_match_name);
   }
 
   // Cache successful parT parsing so later instances of the same

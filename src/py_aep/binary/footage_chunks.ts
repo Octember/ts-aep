@@ -17,7 +17,6 @@ import {
   define,
   deferred,
   descriptor,
-  dict_get,
   encode,
   field,
   int,
@@ -937,7 +936,7 @@ export class OptiChunk extends Chunk {
     if (!asset_type && asset_type_int === 2) {
       return PlaceholderOptiChunk.read(fp, size, { chunk_type });
     }
-    const variant_cls = dict_get(_OPTI_VARIANTS, asset_type, OptiChunk)!;
+    const variant_cls = (_OPTI_VARIANTS.get(asset_type) ?? OptiChunk)!;
     if (variant_cls === OptiChunk) {
       return new this({ chunk_type, data: read_bytes(fp, size) });
     }

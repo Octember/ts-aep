@@ -30,7 +30,6 @@ import {
   py_assert,
   py_bool,
   py_eq,
-  py_or,
   repr,
   round,
   sorted,
@@ -353,7 +352,7 @@ export function _insert_layer_skeleton_extras(layer: Layer): void {
 
   function has_following(chunks: Chunk[], i: number, kind: string): boolean {
     const nxt = i + 1 < chunks.length ? chunks[i + 1] : null;
-    return getattr(nxt, "list_type", getattr(nxt, "chunk_type", null)) === kind;
+    return getattr(nxt, "list_type", nxt?.chunk_type ?? null) === kind;
   }
 
   const chunks = root.chunks;
@@ -1197,7 +1196,7 @@ export class CompItem extends AVItem {
       // matte_layer_id is absent (None) in pre-AE23 files.
       const matte = ldta.matte_layer_id;
       if (matte != null && id_map.has(matte)) {
-        ldta.matte_layer_id = getitem(id_map, matte);
+        ldta.matte_layer_id = id_map.get(matte);
       }
     }
     // tdpi layer references: the effect owner (hidden -0000 param) and
@@ -1206,7 +1205,7 @@ export class CompItem extends AVItem {
     for (const tdpi of recursive_find(cloned_item.chunks, "tdpi")) {
       const value = (tdpi as S4Chunk).value;
       if (id_map.has(value)) {
-        (tdpi as S4Chunk).value = getitem(id_map, value);
+        (tdpi as S4Chunk).value = id_map.get(value);
       }
     }
 
@@ -2500,7 +2499,7 @@ export class CompItem extends AVItem {
       }
       const matte_id = ldta.matte_layer_id || 0;
       if (matte_id) {
-        ldta.matte_layer_id = py_or(id_map.get(matte_id), matte_map.get(matte_id) ?? 0);
+        ldta.matte_layer_id = id_map.get(matte_id) || (matte_map.get(matte_id) ?? 0);
       }
     }
 
