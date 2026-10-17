@@ -3,15 +3,15 @@
 
 import type { Chunk, ContainerChunk, ListChunk } from "./chunk.ts";
 import type { CdtaChunk, CsctChunk } from "./composition_chunks.ts";
-import type { OptiChunk, PlaceholderOptiChunk, PsdOptiChunk, SoliOptiChunk, SspcChunk, TextOptiChunk } from "./footage_chunks.ts";
+import type { OptiChunk, SspcChunk } from "./footage_chunks.ts";
 import type { CmtaChunk, HeadChunk, IdpcChunk, IdtaChunk, NhedChunk, NnhdChunk } from "./item_chunks.ts";
 import type { LdtaChunk } from "./layer_chunks.ts";
 import type { GdtaChunk, LdatChunk, Lhd3Chunk } from "./ldat_chunks.ts";
-import type { AdvancedPrdaChunk, AnglePardChunk, ApidChunk, BooleanPardChunk, Cinema4DPrdaChunk, ClassicPrdaChunk, ColorPardChunk, DcuiChunk, DropChunk, DwgaChunk, EmbpChunk, EmpdChunk, EnumPardChunk, EpidChunk, EwotChunk, EwotItem, FeatherPointItem, FipsChunk, FtgiChunk, Fth5Chunk, GenericPardChunk, HdrmChunk, IntegerPardChunk, IpwsChunk, LinlChunk, McspChunk, MkifChunk, NmhdChunk, OcspChunk, OmtnChunk, OtlnChunk, OtlnItem, PardChunk, PguiChunk, PrdaChunk, PrgbChunk, PrinChunk, RayTracedPrdaChunk, ScalarPardChunk, SfdtChunk, ShphChunk, SliderPardChunk, StrtChunk, TensionItem, ThreeDPardChunk, TwoDPardChunk } from "./misc_chunks.ts";
+import type { ApidChunk, DcuiChunk, DropChunk, DwgaChunk, EmbpChunk, EmpdChunk, EpidChunk, EwotChunk, EwotItem, FeatherPointItem, FipsChunk, FtgiChunk, Fth5Chunk, HdrmChunk, IpwsChunk, LinlChunk, McspChunk, MkifChunk, NmhdChunk, OcspChunk, OmtnChunk, OtlnChunk, OtlnItem, PardChunk, PguiChunk, PrdaChunk, PrgbChunk, PrinChunk, SfdtChunk, ShphChunk, StrtChunk, TensionItem } from "./misc_chunks.ts";
 import type { CpidChunk, FdtaChunk, RhedChunk, SvapChunk, WsnmChunk, WsnsChunk } from "./project_chunks.ts";
 import type { CdatChunk, CurvesRecordItem, OtdaChunk, Tdb4Chunk, TdmnChunk, TdsbChunk, TdsnChunk, TdumChunk, VfdnChunk } from "./property_chunks.ts";
-import type { ArsiChunk, CineonRoptChunk, JpegRoptChunk, OpenExrRoptChunk, PngRoptChunk, RoptChunk, RoutChunk, RoutItem, RouuChunk, TargaRoptChunk, TiffRoptChunk } from "./render_chunks.ts";
-import type { AsciiChunk, F8Chunk, S2Chunk, S4Chunk, U1Chunk, U2Chunk, U4Chunk, U4LeChunk, Utf8Chunk, _StringChunkBase } from "./scalar_chunks.ts";
+import type { ArsiChunk, RoptChunk, RoutChunk, RoutItem, RouuChunk } from "./render_chunks.ts";
+import type { AsciiChunk, F8Chunk, S2Chunk, S4Chunk, U1Chunk, U2Chunk, U4Chunk, U4LeChunk, Utf8Chunk } from "./scalar_chunks.ts";
 
 /** Registered chunk class by `chunk_type`. */
 export interface ChunkTypes {
@@ -263,7 +263,9 @@ export type ChunkOf<K extends string> = K extends keyof ChunkTypes ? ChunkTypes[
 // writers store a number), raw `s` is `Uint8Array`, an encoding makes `string`,
 // `bool_field` and `coerce: py_bool` are `boolean`, an enum coerce (or a `declare`
 // of an enum over an integer) is that enum, `items_field` is the item class.
-// Optional fields include `null`.
+// Optional fields include `null`. A field shared by every variant of a
+// registered base (`RoptChunk`, `OptiChunk`) is declared on the base too,
+// which is what `find_by_type` returns and what models store.
 declare module "./composition_chunks.ts" {
   interface CdtaChunk {
     resolution_factor_h: number;
@@ -321,7 +323,6 @@ declare module "./composition_chunks.ts" {
 }
 declare module "./footage_chunks.ts" {
   interface OptiChunk {
-    readonly __chunk: "OptiChunk";
     asset_type: string;
     asset_type_int: number;
     _pad: Uint8Array;
@@ -859,7 +860,6 @@ declare module "./misc_chunks.ts" {
     entry_type: number;
   }
   interface PardChunk {
-    readonly __chunk: "PardChunk";
     _pad_pre: Uint8Array;
     _pad_post: Uint8Array;
     _body: Uint8Array;
@@ -901,7 +901,6 @@ declare module "./misc_chunks.ts" {
     guid: Uint8Array;
   }
   interface PrdaChunk {
-    readonly __chunk: "PrdaChunk";
     _version: number;
     _renderer_tag: number;
     shadow_map_resolution: number;
@@ -1085,9 +1084,6 @@ declare module "./property_chunks.ts" {
     _lock_flags: number;
     _enable_flags: number;
   }
-  interface TdsnChunk {
-    readonly __chunk: "TdsnChunk";
-  }
 }
 declare module "./render_chunks.ts" {
   interface ArsiChunk {
@@ -1228,7 +1224,6 @@ declare module "./render_chunks.ts" {
     _remaining: Uint8Array;
   }
   interface RoptChunk {
-    readonly __chunk: "RoptChunk";
     _pad: Uint8Array;
     ten_bit_black_point: number;
     ten_bit_white_point: number;
@@ -1314,9 +1309,6 @@ declare module "./render_chunks.ts" {
   }
 }
 declare module "./scalar_chunks.ts" {
-  interface _StringChunkBase {
-    readonly __chunk: "_StringChunkBase";
-  }
   interface F8Chunk {
     value: number;
   }
@@ -1339,15 +1331,3 @@ declare module "./scalar_chunks.ts" {
     value: number;
   }
 }
-
-// `find_by_type` is typed as the registered base; `read()` returns a variant.
-// `ChunkBodyOf` is that base plus every variant field, so a model can name the
-// field. `__chunk` keeps the base from matching every other chunk structurally.
-export type ChunkBodyOf<T> =
-  [T] extends [TdsnChunk] ? { [K in keyof VfdnChunk]: (K extends keyof VfdnChunk ? VfdnChunk[K] : never) } :
-  [T] extends [_StringChunkBase] ? { [K in keyof AsciiChunk | keyof TdmnChunk | keyof Utf8Chunk]: (K extends keyof AsciiChunk ? AsciiChunk[K] : never) | (K extends keyof TdmnChunk ? TdmnChunk[K] : never) | (K extends keyof Utf8Chunk ? Utf8Chunk[K] : never) } :
-  [T] extends [OptiChunk] ? { [K in keyof PlaceholderOptiChunk | keyof PsdOptiChunk | keyof SoliOptiChunk | keyof TextOptiChunk]: (K extends keyof PlaceholderOptiChunk ? PlaceholderOptiChunk[K] : never) | (K extends keyof PsdOptiChunk ? PsdOptiChunk[K] : never) | (K extends keyof SoliOptiChunk ? SoliOptiChunk[K] : never) | (K extends keyof TextOptiChunk ? TextOptiChunk[K] : never) } :
-  [T] extends [PardChunk] ? { [K in keyof AnglePardChunk | keyof BooleanPardChunk | keyof ColorPardChunk | keyof EnumPardChunk | keyof GenericPardChunk | keyof IntegerPardChunk | keyof ScalarPardChunk | keyof SliderPardChunk | keyof ThreeDPardChunk | keyof TwoDPardChunk]: (K extends keyof AnglePardChunk ? AnglePardChunk[K] : never) | (K extends keyof BooleanPardChunk ? BooleanPardChunk[K] : never) | (K extends keyof ColorPardChunk ? ColorPardChunk[K] : never) | (K extends keyof EnumPardChunk ? EnumPardChunk[K] : never) | (K extends keyof GenericPardChunk ? GenericPardChunk[K] : never) | (K extends keyof IntegerPardChunk ? IntegerPardChunk[K] : never) | (K extends keyof ScalarPardChunk ? ScalarPardChunk[K] : never) | (K extends keyof SliderPardChunk ? SliderPardChunk[K] : never) | (K extends keyof ThreeDPardChunk ? ThreeDPardChunk[K] : never) | (K extends keyof TwoDPardChunk ? TwoDPardChunk[K] : never) } :
-  [T] extends [PrdaChunk] ? { [K in keyof AdvancedPrdaChunk | keyof Cinema4DPrdaChunk | keyof ClassicPrdaChunk | keyof RayTracedPrdaChunk]: (K extends keyof AdvancedPrdaChunk ? AdvancedPrdaChunk[K] : never) | (K extends keyof Cinema4DPrdaChunk ? Cinema4DPrdaChunk[K] : never) | (K extends keyof ClassicPrdaChunk ? ClassicPrdaChunk[K] : never) | (K extends keyof RayTracedPrdaChunk ? RayTracedPrdaChunk[K] : never) } :
-  [T] extends [RoptChunk] ? { [K in keyof CineonRoptChunk | keyof JpegRoptChunk | keyof OpenExrRoptChunk | keyof PngRoptChunk | keyof TargaRoptChunk | keyof TiffRoptChunk]: (K extends keyof CineonRoptChunk ? CineonRoptChunk[K] : never) | (K extends keyof JpegRoptChunk ? JpegRoptChunk[K] : never) | (K extends keyof OpenExrRoptChunk ? OpenExrRoptChunk[K] : never) | (K extends keyof PngRoptChunk ? PngRoptChunk[K] : never) | (K extends keyof TargaRoptChunk ? TargaRoptChunk[K] : never) | (K extends keyof TiffRoptChunk ? TiffRoptChunk[K] : never) } :
-  T;

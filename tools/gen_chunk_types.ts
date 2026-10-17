@@ -269,10 +269,9 @@ if (errors.length) {
 }
 
 // `find_by_type(chunks, "Ropt")` is typed as the registered base, while `read()`
-// returns a variant. Models keep the base. Variant fields the children agree on
-// are added to that base so a read of `body.solid_name` is typed; `__chunk`
-// (below) keeps a raw `Chunk` from counting as the base. A field whose variants
-// disagree stays off the base and is visible through `ChunkBodyOf`.
+// returns a variant. Models keep the base, so a field every variant defines the
+// same way is added there (`body.solid_name`). A field the variants type
+// differently stays on the variant only.
 const NO_VARIANT = new Set(["Chunk", "ContainerChunk", "ListChunk", "FmtItem", "AttrsBase"]);
 const variant_kids = new Map<string, ClassInfo[]>();
 for (const info of classes.values()) {
@@ -319,28 +318,12 @@ for (const [key, list] of variant_kids) {
     owned_by.set(key, created);
   }
 }
-const depth_of = (info: ClassInfo): number => {
-  let n = 0;
-  for (let c: ClassInfo | undefined = info; c?.base; c = find_class(c.base, c.file)) n++;
-  return n;
-};
-const variant_parents = [...variant_kids]
-  .flatMap(([key, list]) => {
-    const parent = classes.get(key);
-    return parent ? [{ parent, children: list.map((c) => c.name).sort(), depth: depth_of(parent) }] : [];
-  })
-  .sort((a, b) => b.depth - a.depth || a.parent.name.localeCompare(b.parent.name));
-
 const by_file = new Map<string, Set<string>>([["chunk.ts", new Set(["Chunk"])]]);
 const add_import = (file: string, name: string) => {
   const set = by_file.get(file);
   if (set) set.add(name);
   else by_file.set(file, new Set([name]));
 };
-for (const { parent, children } of variant_parents) {
-  add_import(parent.file, parent.name);
-  for (const child of children) add_import(find_class(child, parent.file)?.file ?? parent.file, child);
-}
 const sorted_types = [...types].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
 for (const { cls, file } of types.values()) add_import(file, cls);
 for (const { file, refs } of owned) for (const r of refs) add_import(file, r);
@@ -354,28 +337,16 @@ const module_group = (file: string): OwnedFields[] => {
   return created;
 };
 for (const o of owned) module_group(o.file).push(o);
-// A polymorphic base (`OptiChunk`) has no field of its own, so structurally every
-// chunk extends it. A required literal distinguishes it; subclasses inherit it,
-// and a raw `Chunk` (no literal) is not one. The property is type-only.
-const brand_of = new Map(variant_parents.map(({ parent }) => [`${parent.file}:${parent.name}`, parent.name]));
-for (const { parent } of variant_parents) {
-  if (owned.some((o) => o.file === parent.file && o.cls === parent.name)) continue;
-  module_group(parent.file).push({ cls: parent.name, file: parent.file, fields: [], refs: new Set() });
-}
 const augmentations = [...by_module]
   .sort(([a], [b]) => a.localeCompare(b))
   .map(([file, groups]) => {
     const body = groups
       .sort((a, b) => a.cls.localeCompare(b.cls))
-      .flatMap(({ cls, fields }) => {
-        const brand = brand_of.get(`${file}:${cls}`);
-        return [
-          `  interface ${cls} {`,
-          ...(brand ? [`    readonly __chunk: "${brand}";`] : []),
-          ...fields.map((f) => `    ${ident(f.name)}: ${f.type};`),
-          "  }",
-        ];
-      });
+      .flatMap(({ cls, fields }) => [
+        `  interface ${cls} {`,
+        ...fields.map((f) => `    ${ident(f.name)}: ${f.type};`),
+        "  }",
+      ]);
     return [`declare module "./${file}" {`, ...body, "}"].join("\n");
   });
 const key = (t: string) => (/^[A-Za-z_$][\w$]*$/.test(t) ? t : JSON.stringify(t));
@@ -405,23 +376,10 @@ const out = [
   "// writers store a number), raw `s` is `Uint8Array`, an encoding makes `string`,",
   "// `bool_field` and `coerce: py_bool` are `boolean`, an enum coerce (or a `declare`",
   "// of an enum over an integer) is that enum, `items_field` is the item class.",
-  "// Optional fields include `null`.",
+  "// Optional fields include `null`. A field shared by every variant of a",
+  "// registered base (`RoptChunk`, `OptiChunk`) is declared on the base too,",
+  "// which is what `find_by_type` returns and what models store.",
   ...augmentations,
-  "",
-  "// `find_by_type` is typed as the registered base; `read()` returns a variant.",
-  "// `ChunkBodyOf` is that base plus every variant field, so a model can name the",
-  "// field. `__chunk` keeps the base from matching every other chunk structurally.",
-  variant_parents.length
-    ? [
-        "export type ChunkBodyOf<T> =",
-        ...variant_parents.map(({ parent, children }) => {
-          const keys = children.map((c) => `keyof ${c}`).join(" | ");
-          const parts = children.map((c) => `(K extends keyof ${c} ? ${c}[K] : never)`);
-          return `  [T] extends [${parent.name}] ? { [K in ${keys}]: ${parts.join(" | ")} } :`;
-        }),
-        "  T;",
-      ].join("\n")
-    : "export type ChunkBodyOf<T> = T;",
   "",
 ].join("\n");
 

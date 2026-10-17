@@ -19,7 +19,6 @@ import {
   instance_dict,
 } from "../../pyrt/index.ts";
 import type { EnumHelpers, EnumValue } from "../../pyrt/enum.ts";
-import type { ChunkBodyOf } from "../binary/chunk_types.ts";
 import type { FieldValue } from "../binary/fmt_field.ts";
 import { get_ae_version_major } from "../ae_version.ts";
 import { validate_bool, validate_enum } from "./validators.ts";
@@ -38,8 +37,8 @@ export type HookName<O> = object extends O
 /** The name of an attribute of `O` (a chunk body); any name when the owner is not known. */
 export type AttrName<O> = object extends O ? string : string & keyof O;
 
-/** The chunk or item `O[A]` holds, ignoring a missing (`null`) body. Variants of a registered base are included. */
-type ChunkBody<O, A extends string> = A extends keyof O ? ChunkBodyOf<NonNullable<O[A]>> : FieldValue;
+/** The chunk or item `O[A]` holds, ignoring a missing (`null`) body. */
+type ChunkBody<O, A extends string> = A extends keyof O ? NonNullable<O[A]> : FieldValue;
 
 /** Field names of that body. A body with no known keys accepts any name. */
 type ChunkFieldKey<O, A extends string> = [keyof ChunkBody<O, A> & string] extends [never]
