@@ -124,21 +124,59 @@ function default_of(a: Attribute): any {
 }
 
 /** `fields(cls)` flattened into parallel arrays, built on a class's first construction. */
-type Plan = { names: string[]; aliases: string[]; init: boolean[]; defs: any[]; factory: boolean[] };
+type Plan = {
+  names: string[];
+  aliases: string[];
+  init: boolean[];
+  defs: any[];
+  factory: boolean[];
+  /** Per-class initializer with literal field names; null where code generation is blocked. */
+  /** Returns the count of init names found in `kw`, or `-1 - i` when required field `i` is missing. */
+  compiled: ((self: any, kw: Record<string, any>, defs: any[]) => number) | null;
+};
 const PLANS = new WeakMap<Function, Plan>();
+
+/**
+ * Generate the class's `__init__` body, as attrs does: literal names keep each
+ * class's stores monomorphic. Workers and strict-CSP pages refuse
+ * `new Function`; they get the generic loop.
+ */
+function compile(p: Omit<Plan, "compiled">): Plan["compiled"] {
+  const body = ["let m = 0, v;"];
+  for (let i = 0; i < p.names.length; i++) {
+    const name = JSON.stringify(p.names[i]);
+    const alias = JSON.stringify(p.aliases[i]);
+    const required = !p.factory[i] && p.defs[i] === NOTHING;
+    if (!p.init[i]) {
+      if (required) continue;
+      body.push(`self[${name}] = ${p.factory[i] ? `defs[${i}]()` : `defs[${i}]`};`);
+      continue;
+    }
+    body.push(`v = undefined; if (${alias} in kw) { m++; v = kw[${alias}]; }`);
+    body.push(`if (v === undefined) ${required ? `return ${-1 - i}` : `v = ${p.factory[i] ? `defs[${i}]()` : `defs[${i}]`}`};`);
+    body.push(`self[${name}] = v;`);
+  }
+  body.push("return m;");
+  try {
+    return new Function("self", "kw", "defs", body.join("\n")) as Plan["compiled"];
+  } catch {
+    return null;
+  }
+}
 
 function plan_of(cls: Function): Plan {
   let p = PLANS.get(cls);
   if (p) return p;
   const attrs = fields(cls);
   const is_factory = (d: any) => !!d && typeof d === "object" && "__factory__" in d;
-  p = {
+  const flat = {
     names: attrs.map((a) => a.name),
     aliases: attrs.map((a) => a.alias),
     init: attrs.map((a) => a.init),
     defs: attrs.map((a) => (is_factory(a.default) ? a.default.__factory__ : a.default)),
     factory: attrs.map((a) => is_factory(a.default)),
   };
+  p = { ...flat, compiled: compile(flat) };
   PLANS.set(cls, p);
   return p;
 }
@@ -148,9 +186,12 @@ function plan_of(cls: Function): Plan {
  * count shows an unexpected one, `attrs_init_slow` reruns to raise attrs' error.
  */
 export function attrs_init(self: any, cls: Function, kw: Record<string, any>): void {
-  const { names, aliases, init, defs, factory } = plan_of(cls);
+  const { names, aliases, init, defs, factory, compiled } = plan_of(cls);
   let matched = 0;
-  for (let i = 0; i < names.length; i++) {
+  if (compiled) {
+    matched = compiled(self, kw, defs);
+    if (matched < 0) throw new TypeError_(`${cls.name}.__init__() missing 1 required argument: '${aliases[-1 - matched]}'`);
+  } else for (let i = 0; i < names.length; i++) {
     let v: any;
     if (init[i]) {
       const alias = aliases[i];
