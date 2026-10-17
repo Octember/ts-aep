@@ -47,6 +47,25 @@ function _prefix_struct(data_fields: readonly Attribute[], n: number): struct.St
   return (by_n[n] ??= _struct_for(data_fields.slice(0, n).map((f) => f.metadata["fmt"]).join("")));
 }
 
+/** The required-field format and each optional field's format and size. */
+type OptionalLayout = { req_fmt: string | null; req_size: number; optional: [fmt: string, size: number][] };
+const _OPTIONAL_LAYOUTS = new WeakMap<readonly Attribute[], OptionalLayout>();
+
+function _optional_layout(data_fields: readonly Attribute[], optional_start: number): OptionalLayout {
+  let layout = _OPTIONAL_LAYOUTS.get(data_fields);
+  if (layout === undefined) {
+    const req_parts = data_fields.slice(0, optional_start).map((f) => f.metadata["fmt"]);
+    const req_fmt = req_parts.length ? req_parts.join("") : null;
+    layout = {
+      req_fmt,
+      req_size: req_fmt !== null ? struct.calcsize(">" + req_fmt) : 0,
+      optional: data_fields.slice(optional_start).map((f) => [f.metadata["fmt"], struct.calcsize(">" + f.metadata["fmt"])]),
+    };
+    _OPTIONAL_LAYOUTS.set(data_fields, layout);
+  }
+  return layout;
+}
+
 type SimpleKw = (values: readonly FieldValue[], chunk_type: string) => InitKwargs;
 const _SIMPLE_KW = new WeakMap<Function, SimpleKw | null>();
 
@@ -173,22 +192,18 @@ export class Chunk extends AttrsBase {
       values = fmt ? [...read_fmt(fmt, fp)] : [];
       items_start = expected;
     } else {
-      // Build required-only format
-      const req_parts = data_fields.slice(0, optional_start).map((f) => f.metadata["fmt"]);
-      const req_fmt = req_parts.join("");
-      const req_size = req_parts.length ? struct.calcsize(">" + req_fmt) : 0;
+      const { req_fmt, req_size, optional } = _optional_layout(data_fields, optional_start);
       if (size < req_size) {
         throw new OSError(
           `${chunk_type} body too short: expected >= ${req_size} ` +
             `bytes, got ${size}`,
         );
       }
-      values = req_parts.length ? [...read_fmt(req_fmt, fp)] : [];
+      values = req_fmt !== null ? [...read_fmt(req_fmt, fp)] : [];
       let remaining = size - req_size;
-      for (const f of data_fields.slice(optional_start)) {
-        const f_size = struct.calcsize(">" + f.metadata["fmt"]);
+      for (const [f_fmt, f_size] of optional) {
         if (remaining >= f_size) {
-          values.push(...read_fmt(f.metadata["fmt"], fp));
+          values.push(...read_fmt(f_fmt, fp));
           remaining -= f_size;
         } else {
           break;
@@ -199,8 +214,8 @@ export class Chunk extends AttrsBase {
       items_start = size - remaining;
     }
 
-    const kw2: InitKwargs = { chunk_type };
-    Object.assign(kw2, _decode_fields(data_fields, values, encodings, coerces, init_names));
+    const kw2 = _decode_fields(data_fields, values, encodings, coerces, init_names);
+    kw2.chunk_type = chunk_type;
     let extra_trailing: Uint8Array | null = null;
     if (items_info != null) {
       const [items_name, item_cls, item_size] = items_info;

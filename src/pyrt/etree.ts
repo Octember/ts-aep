@@ -963,12 +963,11 @@ class _Parser {
     type Frame = { el: Element; raw: string; scope: Map<string, string> };
     const stack: Frame[] = [];
     let scope = new Map<string, string>([["xml", XML_NS]]);
-    let pending: string[] = [];
+    let pending = "";
     const flush = (): void => {
-      if (pending.length === 0) return;
-      const text = pending.join("");
-      pending = [];
-      if (!text) return;
+      if (!pending) return;
+      const text = pending;
+      pending = "";
       const top = stack[stack.length - 1].el;
       if (top._children.length === 0) top.text = text;
       else top._children[top._children.length - 1].tail = text;
@@ -1063,9 +1062,10 @@ class _Parser {
 
     while (stack.length) {
       if (this.pos >= s.length) this.err("no element found");
-      const c = s[this.pos];
-      if (c === "<") {
-        if (s.startsWith("</", this.pos)) {
+      const c = s.charCodeAt(this.pos);
+      if (c === 0x3c) {
+        const next = s.charCodeAt(this.pos + 1);
+        if (next === 0x2f) {
           this.pos += 2;
           const name = this.read_name();
           const at = this.pos;
@@ -1076,22 +1076,22 @@ class _Parser {
           this.pos++;
           flush();
           stack.pop();
-        } else if (s.startsWith("<![CDATA[", this.pos)) {
+        } else if (next === 0x21 && s.startsWith("<![CDATA[", this.pos)) {
           const e = s.indexOf("]]>", this.pos + 9);
           if (e < 0) this.err("unclosed CDATA section");
           const data = s.slice(this.pos + 9, e);
           this.check_chars(data, this.pos + 9);
-          pending.push(data);
+          pending += data;
           this.pos = e + 3;
-        } else if (s.startsWith("<!--", this.pos) || s.startsWith("<?", this.pos)) {
+        } else if (next === 0x3f || (next === 0x21 && s.startsWith("<!--", this.pos))) {
           this.skip_misc_token();
-        } else if (s.startsWith("<!", this.pos)) {
+        } else if (next === 0x21) {
           this.err("not well-formed (invalid token)");
         } else {
           start_tag();
         }
-      } else if (c === "&") {
-        pending.push(this.reference(0));
+      } else if (c === 0x26) {
+        pending += this.reference(0);
       } else {
         const start = this.pos;
         let c = s.charCodeAt(this.pos);
@@ -1100,7 +1100,7 @@ class _Parser {
         this.check_chars(chunk, start);
         const cd = chunk.indexOf("]]>");
         if (cd >= 0) this.err("not well-formed (invalid token)", start + cd + 2);
-        pending.push(chunk);
+        pending += chunk;
       }
     }
     return this.epilog(root!);
