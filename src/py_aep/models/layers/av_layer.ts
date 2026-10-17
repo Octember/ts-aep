@@ -4,7 +4,6 @@ import { deferred, descriptor } from "../../../pyrt/index.ts";
 import { BlendingMode, FrameBlendingType, LayerQuality, LayerSamplingQuality, LayerType, TrackMatteType } from "../../enums/index.ts";
 import {
   AttributeError,
-  KeyError,
   NotImplementedError,
   ValueError,
   float_repr,
@@ -869,13 +868,8 @@ export class AVLayer extends Layer {
 
   /** `true` if time remapping is enabled for this layer. Read / Write. */
   get time_remap_enabled(): boolean {
-    let prop: Property | PropertyGroup;
-    try {
-      prop = this.__getitem__("ADBE Time Remapping");
-    } catch (e) {
-      if (!(e instanceof KeyError)) throw e;
-      return false;
-    }
+    const prop = this._child_or_null("ADBE Time Remapping");
+    if (prop === null) return false;
     if (!(prop instanceof Property)) {
       return false;
     }

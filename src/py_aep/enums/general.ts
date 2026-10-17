@@ -4,7 +4,7 @@
  * These enums match the values used in After Effects ExtendScript.
  */
 
-import { KeyError, TypeError_, ValueError, getitem, int, int_enum, repr, type EnumValue } from "../../pyrt/index.ts";
+import { TypeError_, ValueError, getitem, int, int_enum, repr, type EnumValue } from "../../pyrt/index.ts";
 import type { EnumHelpers } from "../../pyrt/enum.ts";
 
 /**
@@ -1035,12 +1035,9 @@ export const ViewerType = int_enum("ViewerType", {
    */
   from_string(label: string | null): ViewerType {
     if (!label) label = "";
-    try {
-      return getitem(_VIEWER_STRING_MAP, label);
-    } catch (e) {
-      if (!(e instanceof KeyError)) throw e;
-      throw new ValueError(`Unknown viewer type label: ${repr(label)}`);
-    }
+    const viewer_type = _VIEWER_STRING_MAP.get(label);
+    if (viewer_type === undefined) throw new ValueError(`Unknown viewer type label: ${repr(label)}`);
+    return viewer_type;
   },
 });
 export type ViewerType = EnumValue<typeof ViewerType>;

@@ -1122,12 +1122,8 @@ export class Project {
   /** Get a layer by its unique ID. */
   layer_by_id(layer_id: number): Layer {
     for (const comp of this.compositions) {
-      try {
-        return getitem(comp.layers_by_id, layer_id);
-      } catch (e) {
-        if (!(e instanceof KeyError)) throw e;
-        continue;
-      }
+      const layer = comp.layers_by_id.get(layer_id);
+      if (layer !== undefined) return layer;
     }
     throw new KeyError(`Layer with ID ${layer_id} not found`);
   }

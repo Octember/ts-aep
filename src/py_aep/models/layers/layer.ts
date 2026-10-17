@@ -29,7 +29,6 @@ import {
   descriptor,
   getattr,
   setattr,
-  getitem,
   mod,
   object_setattr,
   py_assert,
@@ -335,14 +334,10 @@ export class Layer extends PropertyGroup {
     } = kw;
     // NOTE(port): TS cannot touch `this` before super(); the early self._ldta/_cmta/_layer_list/essential_property_uuids assignments move below it (the base __init__ never reads them) and new.target stands in for self in the match-name lookup.
 
-    let layer_type_raw: number | undefined;
-    let match_name: string;
-    try {
-      layer_type_raw = _ldta.layer_type;
-      const layer_type = LayerType.of(layer_type_raw);
-      match_name = getitem(new.target._LAYER_MATCH_NAMES, layer_type);
-    } catch (e) {
-      if (!(e instanceof ValueError || e instanceof KeyError)) throw e;
+    const layer_type_raw = _ldta.layer_type;
+    const layer_type = LayerType.of_or_null(layer_type_raw);
+    let match_name = layer_type === null ? undefined : new.target._LAYER_MATCH_NAMES.get(layer_type);
+    if (match_name === undefined) {
       logger.warning(
         `Unknown layer type ${layer_type_raw} for layer '${_name_utf8.value}' in comp '${containing_comp.name}'. Defaulting to 'ADBE AV Layer'.`,
       );
@@ -701,14 +696,7 @@ export class Layer extends PropertyGroup {
    * `null` when the layer has no markers.
    */
   get marker(): Property<MarkerValue | null> | null {
-    let prop: Property | PropertyGroup;
-    try {
-      prop = this.__getitem__("ADBE Marker");
-    } catch (e) {
-      if (!(e instanceof KeyError)) throw e;
-      return null;
-    }
-    return prop;
+    return this._child_or_null("ADBE Marker");
   }
 
   /**
@@ -814,13 +802,7 @@ export class Layer extends PropertyGroup {
    * one (AE writes the Effect / Mask Parade only once it has content).
    */
   _optional_group(match_name: string): PropertyGroup | null {
-    let group: Property | PropertyGroup;
-    try {
-      group = this.__getitem__(match_name);
-    } catch (e) {
-      if (!(e instanceof KeyError)) throw e;
-      return null;
-    }
+    const group = this._child_or_null(match_name);
     return group instanceof PropertyGroup ? group : null;
   }
 
