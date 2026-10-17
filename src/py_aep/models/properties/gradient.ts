@@ -1,6 +1,5 @@
 /** Gradient color data model for gradient fill/stroke properties. */
 
-import type { Dynamic } from "../descriptors.ts";
 import {
   ValueError,
   descriptor,
@@ -98,7 +97,7 @@ export class GradientColorStop {
     );
   }
 
-  __eq__(other: Dynamic): boolean {
+  __eq__(other: unknown): boolean {
     // Python returns NotImplemented for a foreign type; py_eq treats that as False.
     if (!(other instanceof GradientColorStop)) return false;
     return (
@@ -149,7 +148,7 @@ export class GradientAlphaStop {
     );
   }
 
-  __eq__(other: Dynamic): boolean {
+  __eq__(other: unknown): boolean {
     // Python returns NotImplemented for a foreign type; py_eq treats that as False.
     if (!(other instanceof GradientAlphaStop)) return false;
     return (
@@ -372,7 +371,7 @@ export class Gradient {
     );
   }
 
-  __eq__(other: Dynamic): boolean {
+  __eq__(other: unknown): boolean {
     // Python returns NotImplemented for a foreign type; py_eq treats that as False.
     if (!(other instanceof Gradient)) return false;
     return (

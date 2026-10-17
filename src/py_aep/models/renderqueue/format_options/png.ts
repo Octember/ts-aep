@@ -117,7 +117,7 @@ export class PngFormatOptions extends FormatOptionsBase {
    * out-of-enum stored value reads back as a raw `int` (the binary
    * is trusted). Read / Write.
    */
-  get color_primaries(): Hdr10ColorPrimaries | number {
+  get color_primaries(): Hdr10ColorPrimaries | JsonValue {
     const raw = this._hdr10_meta.get("displayPrimaries") ?? null;
     if (raw == null) return Hdr10ColorPrimaries.P3_D65;
     return enum_or_raw((v: JsonValue) => Hdr10ColorPrimaries.of(json_int(v)))(raw);

@@ -58,14 +58,16 @@ export type Dynamic = any;
  * through `obj._ensure_materialized()`, which only owners of synthetic chunks
  * define (Python duck typing).
  */
-export type ChunkOwner = Dynamic;
+export interface ChunkOwner {
+  _ensure_materialized?(): void;
+}
 
 /** Effect match name → parameter match name → pard field bag. */
 export type EffectParamDefs = Map<string, Map<string, ParamDef>>;
 
 
 /** Python `**kwargs` that `ChunkField.enum` rewrites key by key before forwarding them. */
-type Kwargs = Record<string, Dynamic>;
+type Kwargs<V> = ChunkFieldOptions<V, object>;
 
 /**
  * Keyword arguments of `ChunkField` for a field reading as `T` on an `O`.
@@ -138,8 +140,8 @@ export function _suppress_materialization() {
  * Python `isinstance(x, IntEnum)` for a py_enum object (pyrt/enum.ts).
  */
 // NOTE(port): int_enum === py_enum in pyrt, so this also admits non-int enums; the only non-IntEnum enum in py_aep (cos.TokenType) never reaches a descriptor, so the IntEnum check matches Python.
-export function is_enum(x: Dynamic): x is EnumHelpers<unknown> {
-  return x != null && typeof x === "object" && "__members__" in x && typeof x.has === "function";
+export function is_enum(x: unknown): x is EnumHelpers<unknown> {
+  return x != null && typeof x === "object" && "__members__" in x && "has" in x && typeof x.has === "function";
 }
 
 /**
@@ -161,12 +163,16 @@ export function _enum_class(transform: ChunkTransform | null | undefined): EnumH
  * bound to the enum (its `__self__`); a py_enum method needs `this` bound
  * the same way, and `_enum_class` finds the enum through `__self__`.
  */
-export function bound_enum_method(enum_cls: Dynamic, name: string, dflt: Dynamic): Dynamic {
+export function bound_enum_method<V, R>(
+  enum_cls: EnumHelpers<unknown>,
+  name: string,
+  dflt: EnumHelpers<R> | ((value: V) => R),
+): (value: V) => R {
   const m = getattr(enum_cls, name, dflt);
   // Python's default is the enum class itself, which is callable (`E(v)`); a
   // py_enum object is not, so use `E.of` and keep `__self__` for `_enum_class`.
-  if (m === dflt && is_enum(m)) return Object.assign((v: Dynamic) => m.of(v), { __self__: m });
-  if (m === dflt || typeof m !== "function") return m;
+  if (m === dflt) return is_enum(dflt) ? Object.assign((v: V) => dflt.of(v), { __self__: dflt }) : dflt;
+  if (typeof m !== "function") return m;
   return Object.assign(m.bind(enum_cls), { __self__: enum_cls });
 }
 
@@ -185,8 +191,8 @@ export function bound_enum_method(enum_cls: Dynamic, name: string, dflt: Dynamic
  * is for the read paths that are not `ChunkField`s (e.g. a `@property`
  * over decoded JSON).
  */
-export function enum_or_raw(convert: (value: Dynamic) => Dynamic): (value: Dynamic) => Dynamic {
-  function _transform(value: Dynamic): Dynamic {
+export function enum_or_raw<V, R>(convert: (value: V) => R): (value: V) => R | V {
+  function _transform(value: V): R | V {
     try {
       return convert(value);
     } catch (e) {
@@ -205,7 +211,7 @@ export function enum_or_raw(convert: (value: Dynamic) => Dynamic): (value: Dynam
  * Raw ints must appear in the enum's value map; any other type must
  * already be an instance of the enum.
  */
-export function _validate_enum_member(enum_cls: EnumHelpers<unknown>, value: Dynamic, public_name: string): void {
+export function _validate_enum_member(enum_cls: EnumHelpers<unknown>, value: unknown, public_name: string): void {
   if (enum_cls.has(value)) return;
   // NOTE(port): int/float — integral values are plain numbers by design (RULEBOOK §4); an integer-valued float such as 2.0 takes the int branch and gets the "Invalid value" message instead of "is not a valid".
   // A Python bool is an int that hashes like 0/1, so it is checked as its int value.
@@ -321,7 +327,7 @@ export class ChunkField<
     return (this.transform ? this.transform(value) : value);
   }
 
-  __set__(obj: ChunkOwner, value: T): void {
+  __set__(obj: O & ChunkOwner, value: T): void {
     if (this.read_only) throw new AttributeError(`${repr(this.public_name)} is read-only.`);
     if (this.min_version != null) {
       let major: number | null;
@@ -362,7 +368,8 @@ export class ChunkField<
       return;
     }
     if (py_bool(getattr(body, "synthetic", false))) {
-      obj._ensure_materialized();
+      const owner: ChunkOwner = obj;
+      getattr(owner, "_ensure_materialized").call(owner);
       body = getattr(obj, this.chunk_attr);
     }
     if (this.reverse != null) body[this.field] = this.reverse(value);
@@ -445,17 +452,18 @@ export class ChunkField<
     field: string & F,
     kw?: ChunkFieldOptions<EnumValue<E>, O> & { allow_out_of_enum_values?: false },
   ): ChunkField<EnumValue<E>, O>;
-  static enum(
-    enum_cls: EnumHelpers<unknown>,
+  static enum<V extends number>(
+    enum_cls: EnumHelpers<V>,
     chunk_attr: string,
     field: string,
-    kw: { allow_out_of_enum_values?: boolean } & Kwargs = {},
-  ): ChunkField<unknown> {
+    kw: { allow_out_of_enum_values?: boolean } & Kwargs<V> = {},
+  ): ChunkField<V> {
     const { allow_out_of_enum_values = false, ...kwargs } = kw;
     if (!("transform" in kwargs)) kwargs.transform = bound_enum_method(enum_cls, "from_binary", enum_cls);
     if (!("reverse" in kwargs)) kwargs.reverse = bound_enum_method(enum_cls, "to_binary", int);
     if (allow_out_of_enum_values) {
-      kwargs.transform = enum_or_raw(kwargs.transform);
+      const transform = kwargs.transform;
+      if (transform != null) kwargs.transform = enum_or_raw(transform);
       if (!kwargs.read_only) {
         if (!("validate" in kwargs)) kwargs.validate = validate_enum(enum_cls);
       }
