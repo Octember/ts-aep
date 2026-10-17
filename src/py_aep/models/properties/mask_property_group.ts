@@ -11,7 +11,7 @@ import { validate_bool, validate_rgb_color } from "../validators.ts";
 // NOTE(port): property_group.ts reaches this module only through `deferred(...)` (the
 // port of Python's in-method import), so `extends PropertyGroup` evaluates after it.
 import { PropertyGroup, _insert_before_group_end } from "./property_group.ts";
-import { deferred, descriptor, getattr, mod, py_assert, zip, instance_dict } from "../../../pyrt/index.ts";
+import { deferred, descriptor, getattr, py_assert, zip, instance_dict } from "../../../pyrt/index.ts";
 import type { Utf8Chunk } from "../../binary/scalar_chunks.ts";
 import type { AVLayer } from "../layers/av_layer.ts";
 import type { Property } from "./property.ts";
@@ -187,7 +187,7 @@ export class MaskPropertyGroup extends PropertyGroup {
   ): MaskPropertyGroup {
     const parent_property: PropertyGroup = parent_property_;
     const { name, mask_id }: { name: string; mask_id: number } = kw;
-    const color = _MASK_COLOR_CYCLE[mod(mask_id - 1, _MASK_COLOR_CYCLE.length)];
+    const color = _MASK_COLOR_CYCLE.at((mask_id - 1) % _MASK_COLOR_CYCLE.length)!;
     const _tdmn = new TdmnChunk({ value: "ADBE Mask Atom" });
     const _mkif = new MkifChunk({
       mode: 1, // binary PF_MaskMode for MaskMode.ADD

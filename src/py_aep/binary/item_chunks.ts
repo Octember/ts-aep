@@ -251,7 +251,7 @@ export class HeadChunk extends Chunk {
     }
     const [major, minor, build] = [int(m[1]!), int(m[2]!), int(m[3]!)];
     this.ae_version_major_a = floordiv(major, 8);
-    this.ae_version_major_b = mod(major, 8);
+    this.ae_version_major_b = major % 8;
     this.ae_version_minor = minor;
     this.ae_build_number = build;
   }

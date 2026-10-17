@@ -22,7 +22,6 @@ import {
   decode,
   floordiv,
   IndexError,
-  mod,
   py_eq,
   py_slice,
   range,
@@ -901,7 +900,7 @@ export function _parse_layer_extra(
   const pascal_len = at(extra, pos);
   const pascal = decode(bytes_.slice(extra, pos + 1, pos + 1 + pascal_len), "latin-1");
   pos += 1 + pascal_len;
-  pos += mod(4 - mod(1 + pascal_len, 4), 4);
+  pos += (4 - ((1 + pascal_len) % 4)) % 4;
   // Remaining bytes are additional layer info blocks.
   let unicode_name: string | null = null;
   let layer_id: number | null = null;
@@ -962,7 +961,7 @@ export function _parse_layer_extra(
     } else if (bytes_eq(key, b("brst"))) {
       channel_restrictions = block;
     }
-    pos = block_start + block_len + mod(block_len, 2); // blocks padded to even
+    pos = block_start + block_len + (block_len % 2); // blocks padded to even
   }
   // Photoshop writes lmfx (and drops lfx2) when any style has multiple
   // instances; prefer it when both somehow exist. Groups carry lfxs

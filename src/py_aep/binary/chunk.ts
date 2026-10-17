@@ -34,7 +34,7 @@ import {
   type IO,
 } from "../../pyrt/index.ts";
 import { _struct_for, read_bytes, read_fmt, read_pad, write_bytes, write_fmt, write_pad } from "./bin_utils.ts";
-import { _decode_fields, _encode_value, _struct_info, type FieldValue, type FmtItem, type InitKwargs } from "./fmt_field.ts";
+import { _decode_fields, _encode_value, _struct_info, type Coerce, type FieldValue, type FmtItem, type InitKwargs } from "./fmt_field.ts";
 import { CHUNK_TYPES, register } from "./registry.ts";
 import type { HeadChunk } from "./item_chunks.ts";
 
@@ -45,6 +45,30 @@ function _prefix_struct(data_fields: readonly Attribute[], n: number): struct.St
   let by_n = _PREFIX_STRUCTS.get(data_fields);
   if (by_n === undefined) _PREFIX_STRUCTS.set(data_fields, (by_n = []));
   return (by_n[n] ??= _struct_for(data_fields.slice(0, n).map((f) => f.metadata["fmt"]).join("")));
+}
+
+type SimpleKw = (values: readonly FieldValue[], chunk_type: string) => InitKwargs;
+const _SIMPLE_KW = new WeakMap<Function, SimpleKw | null>();
+
+/**
+ * The simple-path `cls(**kw)` keywords as one object literal, so each class's
+ * kwargs keep a single shape. Null where `new Function` is refused (Workers,
+ * strict CSP) or the names don't map one-to-one onto keys.
+ */
+function _compile_simple_kw(init_names: readonly string[], coerces: ReadonlyMap<number, Coerce>): SimpleKw | null {
+  if (new Set(init_names).size !== init_names.length || init_names.includes("chunk_type")) return null;
+  const fns: Coerce[] = [];
+  const props = init_names.map((name, i) => {
+    const crc = coerces.get(i);
+    const key = JSON.stringify(name);
+    if (crc === undefined) return `${key}: v[${i}]`;
+    return `${key}: f[${fns.push(crc) - 1}](v[${i}])`;
+  });
+  try {
+    return new Function("f", `return (v, t) => ({ ${props.join(", ")}, chunk_type: t });`)(fns);
+  } catch {
+    return null;
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -90,14 +114,24 @@ export class Chunk extends AttrsBase {
       // Fast path: no string encodings, endian overrides, optional
       // fields, or items. dict(zip()) replaces the _decode_fields
       // Python loop. Coerces (e.g. bool_field) are handled inline.
-      const kw: InitKwargs = {};
       const values = read_fmt(fmt, fp);
-      const n = Math.min(init_names.length, values.length);
-      for (let i = 0; i < n; i++) kw[init_names[i]] = values[i];
-      kw.chunk_type = chunk_type;
-      for (const [i, crc] of coerces) {
-        const name = init_names[i];
-        kw[name] = crc(kw[name]);
+      let make = _SIMPLE_KW.get(cls);
+      if (make === undefined) {
+        make = values.length === init_names.length ? _compile_simple_kw(init_names, coerces) : null;
+        _SIMPLE_KW.set(cls, make);
+      }
+      let kw: InitKwargs;
+      if (make !== null) {
+        kw = make(values, chunk_type);
+      } else {
+        kw = {};
+        const n = Math.min(init_names.length, values.length);
+        for (let i = 0; i < n; i++) kw[init_names[i]] = values[i];
+        kw.chunk_type = chunk_type;
+        for (const [i, crc] of coerces) {
+          const name = init_names[i];
+          kw[name] = crc(kw[name]);
+        }
       }
       const trailing_size = size - expected;
       if (trailing_size > 0) {
@@ -309,7 +343,7 @@ export class ListChunk extends Chunk {
     const { chunk_type = "LIST", defer_list_types = null } = kwargs;
     if (size < 4) throw new OSError(`${chunk_type} body too small: ${size}`);
     const ctx = kwargs.ctx ?? EMPTY_CTX;
-    const list_type = decode(read_fmt("4s", fp)[0], "ASCII");
+    const list_type = _type_name(read_fmt("I", fp)[0]);
     if (list_type === "btdk") {
       const data = read_bytes(fp, size - 4);
       return new this({ list_type, data, chunk_type });
@@ -744,12 +778,17 @@ export function read_header(fp: IO): [string, number] {
     throw new OSError(`Short read on chunk header: expected 8 bytes, got ${got}`);
   }
   const [code, len_body] = header;
-  let chunk_type = _TYPE_NAMES.get(code);
-  if (chunk_type === undefined) {
-    chunk_type = decode(struct.pack(">I", code), "ASCII");
-    _TYPE_NAMES.set(code, chunk_type);
+  return [_type_name(code), len_body];
+}
+
+/** A four-character type read as its big-endian u32 code. */
+function _type_name(code: number): string {
+  let name = _TYPE_NAMES.get(code);
+  if (name === undefined) {
+    name = decode(struct.pack(">I", code), "ASCII");
+    _TYPE_NAMES.set(code, name);
   }
-  return [chunk_type, len_body];
+  return name;
 }
 
 /**

@@ -25,7 +25,7 @@
  *   are both zero, 1/3 at any other.
  */
 
-import { mod, zip, hypot } from "../../pyrt/index.ts";
+import { zip, hypot } from "../../pyrt/index.ts";
 
 export const DEFAULT_TENSION = 1.0 / 3.0;
 
@@ -58,7 +58,7 @@ export function roto_bezier_tangents(
   for (let i = loop_start; i < loop_stop; i++) {
     const [vx, vy] = points[i];
     const [px, py] = points.at(i - 1)!;
-    const [nx, ny] = points[mod(i + 1, count)];
+    const [nx, ny] = points[(i + 1) % count];
     const chord = hypot(nx - px, ny - py);
     if (chord < 1e-12) {
       continue;

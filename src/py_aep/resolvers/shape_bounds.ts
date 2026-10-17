@@ -39,7 +39,6 @@ import {
   int,
   max,
   min,
-  mod,
   radians,
   repr,
 } from "../../pyrt/index.ts";
@@ -159,7 +158,7 @@ export function _closed_path(
   const path: _Path = [];
   const n = closed ? count : count - 1;
   for (let i = 0; i < n; i++) {
-    const j = mod(i + 1, count);
+    const j = (i + 1) % count;
     const [x0, y0] = vertices[i];
     const [x3, y3] = vertices[j];
     path.push([
@@ -267,7 +266,7 @@ export function _polystar_path(item: PropertyGroup, time: number): _Path {
   const outs: _Point[] = [];
   for (let i = 0; i < count; i++) {
     const [radius, roundness] =
-      mod(i, 2) === 0 || !star ? [outer, outer_round] : [inner, inner_round];
+      i % 2 === 0 || !star ? [outer, outer_round] : [inner, inner_round];
     const cos = Math.cos(angle),
       sin = Math.sin(angle);
     const length = radius * roundness * handle;

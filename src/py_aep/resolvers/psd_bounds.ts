@@ -24,7 +24,7 @@
  *   (`psd_styles.merged_styles_bounds`).
  */
 
-import { and, bytes_, max, min, mod, OverflowError, struct, ValueError } from "../../pyrt/index.ts";
+import { and, bytes_, max, min, OverflowError, struct, ValueError } from "../../pyrt/index.ts";
 import { parse_vector_mask } from "./psd_paths.ts";
 import { merged_styles_bounds } from "./psd_styles.ts";
 import { cubic_range } from "./shape_bounds.ts";
@@ -94,7 +94,7 @@ export function _path_box(layer: PsdLayer, canvas_w: number, canvas_h: number): 
     const vertices = shape.vertices;
     const count = vertices.length;
     for (let i = 0; i < count; i++) {
-      const j = mod(i + 1, count);
+      const j = (i + 1) % count;
       const p0 = vertices[i];
       const p3 = vertices[j];
       let p1: number[];

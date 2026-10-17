@@ -676,7 +676,7 @@ export function _tiff_photoshop_layer_count(fp: IO, en: string, offset: number, 
       const count: number = struct.unpack(en + "h", count_raw)[0];
       return Math.abs(count);
     }
-    fp.seek(block_len + mod(-block_len, 4), SEEK_CUR); // blocks are padded to 4 bytes
+    fp.seek(block_len + ((4 - (block_len % 4)) % 4), SEEK_CUR); // blocks are padded to 4 bytes
   }
   return 0;
 }
@@ -1102,7 +1102,7 @@ export function psd_layer_record_count(fp: IO, is_psb: boolean): [number, number
       return [Math.abs(struct.unpack(">h", count_raw)[0]), block_len - 2];
     }
     // Global blocks are padded to a multiple of 4.
-    fp.seek(block_len + mod(-block_len, 4), SEEK_CUR);
+    fp.seek(block_len + ((4 - (block_len % 4)) % 4), SEEK_CUR);
   }
   return [0, 0];
 }
