@@ -67,7 +67,7 @@ export function default_sequence_fps(preferences: Preferences): number {
     PREFType.PREF_Type_MACHINE_INDEPENDENT,
     { default: 30.0 },
   );
-  return float(value);
+  return value;
 }
 
 export const _CHOOSE_LAYER_SECTION = "Choose Layer Dialog";
@@ -197,7 +197,7 @@ export function _sheet_readers(
 ): [(key: string, fallback: number) => number, (key: string, fallback: boolean) => boolean] {
   function number(key: string, fallback: number): number {
     const value = preferences.get_pref_as_number(section, key, _TXT, { default: fallback });
-    return float(value);
+    return value;
   }
 
   function flag(key: string, fallback: boolean): boolean {
@@ -271,7 +271,7 @@ export function default_paragraph_style(preferences: Preferences) {
   });
   const justification = _JUSTIFICATION_BY_PREF.get(strip(split(raw_justification, "|")[0])) ?? factory.justification;
   return {
-    justification: justification,
+    justification,
     first_line_indent: number("First Line Indent", factory.first_line_indent),
     start_indent: number("Start Indent", factory.start_indent),
     end_indent: number("End Indent", factory.end_indent),
@@ -353,8 +353,8 @@ export function apply_text_style_prefs(document: TextDocument, preferences: Pref
   const fill = [number("Fill Red"), number("Fill Green"), number("Fill Blue")];
   if (!fill.includes(null)) {
     const current_fill = document.fill_color?.length! > 0 ? document.fill_color! : [0.0, 0.0, 0.0];
-    if (zip(current_fill, fill as number[]).some(([c, n]) => differs(c, float(n!)))) {
-      document.fill_color = fill.map((n) => float(n!));
+    if (zip(current_fill, fill as number[]).some(([c, n]) => differs(c, n!))) {
+      document.fill_color = fill.map((n) => n!);
     }
   }
 
@@ -392,8 +392,8 @@ export function apply_text_style_prefs(document: TextDocument, preferences: Pref
       const stroke = [number("Stroke Red"), number("Stroke Green"), number("Stroke Blue")];
       if (!stroke.includes(null)) {
         const current = document.stroke_color?.length! > 0 ? document.stroke_color! : [0.0, 0.0, 0.0];
-        if (zip(current, stroke as number[]).some(([c, n]) => differs(c, float(n!)))) {
-          document.stroke_color = stroke.map((n) => float(n!));
+        if (zip(current, stroke as number[]).some(([c, n]) => differs(c, n!))) {
+          document.stroke_color = stroke.map((n) => n!);
         }
       }
     }

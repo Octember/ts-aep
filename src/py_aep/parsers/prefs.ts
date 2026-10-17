@@ -31,7 +31,6 @@ import { PREFType } from "../enums/general.ts";
 import {
   bytes_,
   decode,
-  dict_get,
   encode,
   float,
   getitem,
@@ -195,7 +194,7 @@ export class PrefsFile {
 
   /** Return the raw text value for `section`/`key`, or None. */
   get_raw(section: string, key: string): string | null {
-    return dict_get(this._sections, section, new Map<string, string>()).get(key) ?? null;
+    return (this._sections.get(section) ?? new Map<string, string>()).get(key) ?? null;
   }
 
   /**
@@ -203,6 +202,6 @@ export class PrefsFile {
    * (empty if the section is absent).
    */
   section(name: string): Map<string, string> {
-    return new Map(dict_get(this._sections, name, new Map<string, string>()));
+    return new Map(this._sections.get(name) ?? new Map<string, string>());
   }
 }

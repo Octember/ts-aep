@@ -35,7 +35,7 @@ import { PropertyBase } from "./property_base.ts";
 import { Shape } from "./shape.ts";
 import type { PropertyGroup } from "./property_group.ts";
 import { type MaskPropertyGroup } from "./mask_property_group.ts";
-import { deferred, deepcopy, dict_get, getitem, isclose, py_bool, py_eq, sorted, warn, int, round, floordiv, TypeError_, ValueError, KeyError, IndexError, AttributeError, NotImplementedError, py_assert, repr, hasattr, getattr, min, max, range, zip, float, lshift, rshift, and, or, b, descriptor, list_mul, type_name, type ClassAttributes } from "../../../pyrt/index.ts";
+import { deferred, deepcopy, getitem, isclose, py_eq, sorted, warn, int, round, floordiv, TypeError_, ValueError, KeyError, IndexError, AttributeError, NotImplementedError, py_assert, repr, hasattr, getattr, min, max, range, zip, float, lshift, rshift, and, or, b, descriptor, list_mul, type_name, type ClassAttributes } from "../../../pyrt/index.ts";
 
 const _property_group = deferred<typeof import("./property_group.ts")>("py_aep/models/properties/property_group");
 import { AVItem } from "../items/av_item.ts";
@@ -454,9 +454,9 @@ export class Property<V extends PropertyValue = any> extends PropertyBase {
     if (final_value != null && (typeof final_value === "number" || typeof final_value === "boolean" || Array.isArray(final_value))) {
       let raw_vals: number[];
       if (Array.isArray(final_value)) {
-        raw_vals = final_value.map((v) => float(v));
+        raw_vals = final_value;
       } else {
-        raw_vals = [float(final_value)];
+        raw_vals = [final_value];
       }
       _cdat = new CdatChunk({ values: raw_vals, synthetic });
       _tdbs.chunks.push(_cdat);
@@ -736,7 +736,7 @@ export class Property<V extends PropertyValue = any> extends PropertyBase {
       const kf_raw = this.keyframes[0]._extract_raw_value();
       if (Array.isArray(kf_raw) && kf_raw.length >= 2) raw = kf_raw[1];
     }
-    if (py_bool(raw)) {
+    if (raw != null && raw !== 0) {
       this._vf_tag_cache = raw;
       return raw;
     }
@@ -784,8 +784,8 @@ export class Property<V extends PropertyValue = any> extends PropertyBase {
    */
   get _effect_point_speed_factor(): number | null {
     const scale = this._effect_scale;
-    if (scale == null || !py_bool(scale[1])) return null;
-    return float(scale[1]);
+    if (scale == null || scale[1] === 0) return null;
+    return scale[1];
   }
 
   /**
@@ -1026,7 +1026,7 @@ export class Property<V extends PropertyValue = any> extends PropertyBase {
    */
   _ensure_mask_index_chunks(): void {
     if (this.property_value_type !== PropertyValueType.MASK_INDEX) return;
-    if (this._tdbs.chunks.some((c) => getattr(c, "chunk_type", "") === "tdli")) return;
+    if (this._tdbs.chunks.some((c) => ("chunk_type" in c ? c.chunk_type : "") === "tdli")) return;
     const index = (typeof this._value === "number" && Number.isInteger(this._value)) || typeof this._value === "boolean" ? this._value : 0;
     this._tdbs.chunks.push(new S4Chunk({ chunk_type: "tdli", value: index }));
   }
@@ -1073,7 +1073,7 @@ export class Property<V extends PropertyValue = any> extends PropertyBase {
    */
   _stamp_normalized_arc_metric(): void {
     const scale = this._effect_scale;
-    if (scale == null || !py_bool(scale[1]) || !this._has_motion_path) return;
+    if (scale == null || scale[1] === 0 || !this._has_motion_path) return;
     const layer = this._containing_layer;
     const source: AVLayer["source"] | null = getattr(layer, "source", null);
     const pixel_aspect = source != null ? source.pixel_aspect : layer.containing_comp.pixel_aspect;
@@ -1378,7 +1378,7 @@ export class Property<V extends PropertyValue = any> extends PropertyBase {
     // 0. Variable-font axis: the binary stores [value, tag4cc] but
     //    ExtendScript exposes only the scalar axis value.
     if (this._is_vf_axis && Array.isArray(raw) && raw.length >= 2) {
-      if (this._vf_tag_cache == null && py_bool(raw[1])) this._vf_tag_cache = raw[1];
+      if (this._vf_tag_cache == null && raw[1] !== 0) this._vf_tag_cache = raw[1];
       return raw[0];
     }
     // 1. Percent scaling (0-1 fraction -> 0-100 percentage)
@@ -1492,7 +1492,7 @@ export class Property<V extends PropertyValue = any> extends PropertyBase {
     for (const follower of followers) {
       const component = time == null ? follower.value : follower.value_at_time(time);
       if (!(typeof component === "number" || typeof component === "boolean")) return null;
-      composed.push(float(component));
+      composed.push(component);
     }
     return composed;
   }
@@ -1702,7 +1702,7 @@ export class Property<V extends PropertyValue = any> extends PropertyBase {
       );
     }
     for (const [follower, component] of zip(followers, value)) {
-      if (!py_eq(follower.value, component)) follower.value = component;
+      if (follower.value !== component) follower.value = component;
     }
   }
 
@@ -1773,7 +1773,7 @@ export class Property<V extends PropertyValue = any> extends PropertyBase {
       // stays all-zeros); _ensure_materialized has appended one.
       const index = typeof value === "number" || typeof value === "boolean" ? int(value) : 0;
       for (const chunk of this._tdbs.chunks) {
-        if (getattr(chunk, "chunk_type", "") === "tdli") {
+        if (("chunk_type" in chunk ? chunk.chunk_type : "") === "tdli") {
           (chunk as S4Chunk).value = index;
           break;
         }
@@ -2072,7 +2072,7 @@ export class Property<V extends PropertyValue = any> extends PropertyBase {
       }
     }
     if (comp != null) {
-      const param_def = dict_get(comp._project._effect_param_defs, effect.match_name, new Map()).get(this.match_name);
+      const param_def = (comp._project._effect_param_defs.get(effect.match_name) ?? new Map()).get(this.match_name);
       if (param_def != null) {
         param_def.set("property_parameters", [...items]);
         param_def.set("nb_options", items.length);
@@ -2203,7 +2203,7 @@ export class Property<V extends PropertyValue = any> extends PropertyBase {
    * followers to their dead, unserialized state.
    */
   _recombine_static(followers: Property<number>[]): void {
-    const composed = followers.map((follower) => float(follower.value));
+    const composed = followers.map((follower) => follower.value);
     this._set_separated_flags(false);
     this.value = composed;
     for (const follower of followers) _deactivate_follower(follower);
@@ -2327,10 +2327,10 @@ export class Property<V extends PropertyValue = any> extends PropertyBase {
         const keyframe = keys_at[dimension].get(time);
         if (keyframe == null) {
           const sampled = follower.value_at_time(time);
-          composed[index][dimension] = typeof sampled === "number" ? float(sampled) : 0.0;
+          composed[index][dimension] = typeof sampled === "number" ? sampled : 0.0;
           continue;
         }
-        composed[index][dimension] = float(keyframe.value);
+        composed[index][dimension] = keyframe.value;
         for (const [direction, target, spans] of [
           ["in", in_tangents, incoming],
           ["out", out_tangents, outgoing],
@@ -2438,7 +2438,7 @@ export class Property<V extends PropertyValue = any> extends PropertyBase {
    */
   get expression_enabled(): boolean {
     if (this._expression_enabled != null) return this._expression_enabled;
-    const disabled = getattr(this._tdb4, "expression_disabled", true);
+    const disabled = "expression_disabled" in this._tdb4 ? this._tdb4.expression_disabled : true;
     return !disabled && !!this.expression;
   }
 
@@ -3000,8 +3000,8 @@ export class Property<V extends PropertyValue = any> extends PropertyBase {
 
     const clamp = (component: unknown): unknown => {
       if (typeof component !== "number") return component;
-      if (lo != null && component < lo) return float(lo);
-      if (hi != null && component > hi) return float(hi);
+      if (lo != null && component < lo) return lo;
+      if (hi != null && component > hi) return hi;
       return component;
     };
 
@@ -3024,7 +3024,7 @@ export class Property<V extends PropertyValue = any> extends PropertyBase {
       [tdb4.pixel_aspect, tdb4._arc_multiplier_y, tdb4._arc_multiplier_z, tdb4._arc_multiplier_w],
       scale != null ? [...scale] : null,
       // `_effect_point_speed_factor`, from the scale already in hand.
-      scale != null && py_bool(scale[1]) ? float(scale[1]) : 1.0,
+      scale != null && scale[1] !== 0 ? scale[1] : 1.0,
     );
   }
 
@@ -3687,7 +3687,7 @@ export class Property<V extends PropertyValue = any> extends PropertyBase {
     if (typeof raw === "number" || typeof raw === "boolean") {
       raw_vals = [float(raw)];
     } else if (Array.isArray(raw)) {
-      raw_vals = raw.map((v) => float(v));
+      raw_vals = raw;
     } else {
       raw_vals = [0.0];
     }
@@ -4315,7 +4315,7 @@ export class Property<V extends PropertyValue = any> extends PropertyBase {
       return 1.0;
     }
     if (!stretch) return 1.0;
-    return float(stretch) / 100.0;
+    return stretch / 100.0;
   }
 
   /**
@@ -4334,7 +4334,7 @@ export class Property<V extends PropertyValue = any> extends PropertyBase {
     if (comp == null) return 0.0;
     const base = comp._cdta.internal_timebase;
     if (base === 0) return 0.0;
-    return float(layer_timebase(base, this._time_stretch));
+    return layer_timebase(base, this._time_stretch);
   }
 
   /**
@@ -4491,11 +4491,11 @@ export function _segment_components(prev_kf: Keyframe, next_kf: Keyframe): [numb
   const v0 = prev_kf._stored_value;
   const v1 = next_kf._stored_value;
   if ((typeof v0 === "number" || typeof v0 === "boolean") && (typeof v1 === "number" || typeof v1 === "boolean")) {
-    return [[[float(v0), float(v1)]], 1];
+    return [[[v0, v1]], 1];
   }
   if (Array.isArray(v0) && Array.isArray(v1) && v0.length === v1.length) {
     if (![...v0, ...v1].every((x) => typeof x === "number" || typeof x === "boolean")) return null;
-    return [zip(v0, v1).map(([a, b]) => [float(a), float(b)]), v0.length];
+    return [zip(v0, v1).map(([a, b]) => [a, b]), v0.length];
   }
   return null;
 }

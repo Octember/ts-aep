@@ -7,7 +7,6 @@ import {
   KeyError,
   NotImplementedError,
   ValueError,
-  float,
   float_repr,
   getattr,
   hasattr,
@@ -206,7 +205,7 @@ export class AVLayer extends Layer {
     const width = this.width;
     const height = this.height;
     if (width && height) {
-      return [float(width), float(height)];
+      return [width, height];
     }
     return null;
   }
@@ -221,7 +220,7 @@ export class AVLayer extends Layer {
     if (source == null) {
       return [1.0, 1.0];
     }
-    return [float(source.width), float(source.height)];
+    return [source.width, source.height];
   }
 
   /**
@@ -373,7 +372,7 @@ export class AVLayer extends Layer {
    */
   get _matte_layer_id(): number {
     // matte_layer_id is conditional (only in AE >= 23)
-    return py_or(getattr(this._ldta, "matte_layer_id", 0), 0);
+    return py_or("matte_layer_id" in this._ldta ? this._ldta.matte_layer_id : 0, 0);
   }
 
   /**
@@ -439,7 +438,7 @@ export class AVLayer extends Layer {
     }
     py_assert(this.source != null); // _should_clamp_times guards
     const source_duration = this.source!.duration;
-    const max_out = float(this.start_time + source_duration * this._stretch_factor);
+    const max_out = this.start_time + source_duration * this._stretch_factor;
     return min([raw, max_out]);
   }
 
@@ -753,8 +752,8 @@ export class AVLayer extends Layer {
       point_top_left,
       point_top_right,
       point_bottom_left,
-      float(this.width),
-      float(this.height),
+      this.width,
+      this.height,
     );
   }
 
@@ -808,8 +807,8 @@ export class AVLayer extends Layer {
     return {
       top: 0.0,
       left: 0.0,
-      width: float(this.width),
-      height: float(this.height),
+      width: this.width,
+      height: this.height,
     };
   }
 
@@ -1192,7 +1191,7 @@ export class AVLayer extends Layer {
     }
 
     const old_source = this.source;
-    if (old_source != null && hasattr(old_source, "_used_in")) {
+    if (old_source != null && "_used_in" in old_source) {
       _unregister_source_usage(old_source, comp, { exclude: this });
     }
 

@@ -29,11 +29,9 @@ import {
   int,
   py_assert,
   py_bool,
-  py_eq,
   repr,
   round,
   sorted,
-  str,
   ValueError,
   zip,
   type ClassAttributes,
@@ -1557,7 +1555,7 @@ export class CompItem extends AVItem {
       return build_slider_cctl(
         name,
         uuid_str,
-        float(prop.value as number),
+        prop.value as number,
         min_v != null ? float(min_v) : 0.0,
         max_v != null ? float(max_v) : 100.0,
         comp_id,
@@ -1576,7 +1574,7 @@ export class CompItem extends AVItem {
       );
     }
     if (plan.controller_type === CONTROLLER_COLOR) {
-      let rgba = (prop.value as number[]).map((c) => float(c));
+      let rgba = (prop.value as number[]);
       rgba = [...rgba, 1.0, 1.0, 1.0, 1.0].slice(0, 4);
       return build_color_cctl(name, uuid_str, rgba, comp_id, layer_id, plan.path_json);
     }
@@ -1731,14 +1729,14 @@ export class CompItem extends AVItem {
    * Read `renderer_options` again after changing the renderer.
    */
   get renderer(): string {
-    const binary_name = str(this._prin.match_name);
+    const binary_name = this._prin.match_name;
     return _RENDERER_BINARY_TO_EXTENDSCRIPT.get(binary_name) ?? binary_name;
   }
 
   set renderer(value: string) {
     _validate_renderer(value);
     const binary_name = getitem(_RENDERER_EXTENDSCRIPT_TO_BINARY, value);
-    if (py_eq(binary_name, this._prin.match_name)) {
+    if (binary_name === this._prin.match_name) {
       // If comp is already set to the requested renderer,
       // preserve renderer options instead of replacing with defaults
       return;
@@ -1884,7 +1882,7 @@ export class CompItem extends AVItem {
       throw new ValueError(`Layer with name '${name}' not found`);
     } else if (index != null) {
       return at(this.layers, index);
-    } else if (py_bool(other_layer) && py_bool(rel_index)) {
+    } else if (py_bool(other_layer) && rel_index != null && rel_index !== 0) {
       const other_idx = this.layers.indexOf(other_layer!);
       if (other_idx < 0) {
         throw new ValueError(`${repr(other_layer)} is not in list`);
@@ -2710,7 +2708,7 @@ export class CompItem extends AVItem {
     validate_text(text);
     if (box) {
       if (box_size == null) {
-        box_size = [float(this.width), float(this.height)];
+        box_size = [this.width, this.height];
       } else {
         validate_box_size(box_size);
       }
@@ -2941,7 +2939,7 @@ descriptor(
   CompItem,
   "drop_frame",
   ChunkField.bool("_cdrp", "value", {
-    transform: (v: number) => py_bool(v),
+    transform: (v: number) => v !== 0,
     reverse: (v: boolean) => int(v),
     default: false,
   }),

@@ -29,7 +29,6 @@ import {
   repr,
   rstrip,
   sorted,
-  str,
 } from "../../pyrt/index.ts";
 import { profile_id_for_name } from "../enums/mappings.ts";
 
@@ -154,7 +153,7 @@ export class ColorProfileNotFoundError extends LookupError {
   declare profile_name: string;
 
   constructor(name: string, searched: Iterable<Path>) {
-    const dirs = [...searched].map((d) => str(d)).join("\n  ");
+    const dirs = [...searched].map((d) => d.toString()).join("\n  ");
     super(
       `ICC profile ${repr(name)} was not found. Writing an Adobe-CMS ` +
         "working/display color space needs the profile's ICC file, which is " +

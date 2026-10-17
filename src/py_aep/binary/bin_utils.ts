@@ -15,7 +15,6 @@ import {
   decode,
   divmod,
   encode,
-  float,
   float_repr,
   floordiv,
   int,
@@ -152,7 +151,7 @@ export const FLOAT32_MAX = 3.4028234663852886e38;
 
 /** Round a Python float (f8) to float32 (f4) precision. */
 export function to_f4(value: number): number {
-  return float(struct.unpack("<f", struct.pack("<f", value))[0]);
+  return struct.unpack("<f", struct.pack("<f", value))[0];
 }
 
 /**

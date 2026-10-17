@@ -16,7 +16,6 @@ import type { RenderQueue } from "./render_queue.ts";
 import {
   deepcopy,
   descriptor,
-  float,
   float_repr,
   format,
   getitem,
@@ -25,7 +24,6 @@ import {
   repr,
   round,
   StopIteration,
-  str,
   ValueError,
   type ClassAttributes,
 } from "../../../pyrt/index.ts";
@@ -263,8 +261,8 @@ export class RenderQueueItem {
       _rcom: null,
       _rcom_utf8: null,
       _rout_items: build_rout_block(),
-      parent: parent,
-      comp: comp,
+      parent,
+      comp,
       output_modules: [],
     });
 
@@ -386,7 +384,7 @@ export class RenderQueueItem {
    */
   get comment(): string {
     if (this._rcom_utf8 == null) return "";
-    return str(this._rcom_utf8.value);
+    return this._rcom_utf8.value;
   }
 
   set comment(value: string) {
@@ -394,7 +392,7 @@ export class RenderQueueItem {
     if (this._rcom_utf8 != null) {
       this._rcom_utf8.value = value;
     } else if (value) {
-      const utf8_chunk = new Utf8Chunk({ value: value });
+      const utf8_chunk = new Utf8Chunk({ value });
       const rcom_chunk = new ContainerChunk({
         chunk_type: "RCom",
         chunks: [utf8_chunk],
@@ -583,8 +581,8 @@ export class RenderQueueItem {
   _set_time_span(value: number, field: string, is_frames = false): void {
     const frame_duration = 1.0 / this.comp.frame_rate;
     // A signed 32-bit dividend over a divisor of at least 1.
-    _validate_number({ min: 0.0, max: float(2 ** 31 - 1) })(value);
-    const seconds = is_frames ? value / this.comp.frame_rate : float(value);
+    _validate_number({ min: 0.0, max: 2 ** 31 - 1 })(value);
+    const seconds = is_frames ? value / this.comp.frame_rate : value;
     // Both fields resolve the span BEFORE switching the source to
     // CUSTOM: a WORK_AREA_ONLY / LENGTH_OF_COMP item takes its span
     // from the comp, so CUSTOM has to carry the resolved values over

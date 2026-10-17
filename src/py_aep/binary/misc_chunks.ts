@@ -564,7 +564,7 @@ export class PardChunk extends Chunk {
 
   /** Control type discriminator at byte 15 of the raw data. */
   get property_control_type(): number {
-    const data = getattr(this, "data", b(""));
+    const data = "data" in this ? this.data : b("");
     if (len(data) > 15) return data[15];
     return 0;
   }
@@ -600,7 +600,7 @@ export class PardChunk extends Chunk {
   get param_flags(): number {
     const pad: Uint8Array = getattr(this, "_pad_post", b(""));
     if (pad.length > 3) return pad[3];
-    const data = getattr(this, "data", b(""));
+    const data = "data" in this ? this.data : b("");
     if (len(data) > 51) return data[51];
     return 0;
   }
@@ -616,14 +616,14 @@ export class PardChunk extends Chunk {
   get expressions_disabled(): boolean {
     const pre: Uint8Array = getattr(this, "_pad_pre", b(""));
     if (pre.length > 6) return (pre[6] & 0x02) !== 0;
-    const data = getattr(this, "data", b(""));
+    const data = "data" in this ? this.data : b("");
     if (len(data) > 6) return (data[6] & 0x02) !== 0;
     return false;
   }
 
   /** Decoded parameter name (from `_raw_name` up to first NUL). */
   get name(): string {
-    const raw: Uint8Array = getattr(this, "_raw_name", b(""));
+    const raw: Uint8Array = "_raw_name" in this ? this._raw_name : b("");
     if (!raw.length) return "";
     const nul = bytes_.find(raw, 0x00);
     if (nul >= 0) return decode(bytes_.slice(raw, 0, nul), "utf-8", "surrogateescape");

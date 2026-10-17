@@ -34,7 +34,6 @@ import { Affine, IDENTITY } from "../svg/transform.ts";
 import {
   NotImplementedError,
   ZeroDivisionError,
-  float,
   float_repr,
   int,
   max,
@@ -405,7 +404,7 @@ export function _stroke_reach(item: PropertyGroup, time: number): number {
   if (_value(item, "ADBE Vector Stroke Line Cap", time) === _SQUARE_CAP) {
     reach *= Math.sqrt(2);
   }
-  return float(reach);
+  return reach;
 }
 
 // ---------------------------------------------------------------------------

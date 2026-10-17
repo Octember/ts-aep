@@ -17,7 +17,7 @@
  *   parameter (see `_ArcSpline`).
  */
 
-import { ZeroDivisionError, at, float, floordiv, getitem, int, max, min, mod, radians, range, sorted, sum, tkey, zip } from "../../pyrt/index.ts";
+import { ZeroDivisionError, at, floordiv, getitem, int, max, min, mod, radians, range, sorted, sum, tkey, zip } from "../../pyrt/index.ts";
 import { KeyframeInterpolationType } from "../enums/index.ts";
 import { ORIENTATION_KIND, SHAPE_KIND, type ParallelKind } from "../models/properties/parallel.ts";
 import { Shape } from "../models/properties/shape.ts";
@@ -1998,10 +1998,10 @@ export function interpolate_keyframes(
       const out_e_1d = kf_left.out_temporal_ease?.length > 0 ? kf_left.out_temporal_ease[0] : null;
       const in_e_1d = kf_right.in_temporal_ease?.length > 0 ? kf_right.in_temporal_ease[0] : null;
       if (out_e_1d != null && in_e_1d != null) {
-        return _interpolate_bezier_1d(time, t0, t1, float(v0), float(v1), out_e_1d, in_e_1d);
+        return _interpolate_bezier_1d(time, t0, t1, v0, v1, out_e_1d, in_e_1d);
       }
       const ratio = (time - t0) / (t1 - t0);
-      return float(v0) + (float(v1) - float(v0)) * ratio;
+      return v0 + (v1 - v0) * ratio;
     }
   }
 

@@ -18,7 +18,6 @@ import {
   descriptor,
   encode,
   field,
-  float,
   floordiv,
   int,
   object_setattr,
@@ -493,7 +492,7 @@ export class TdumChunk extends Chunk {
       trailing = raw.slice(16);
     } else if (is_integer && size < 8) {
       const [v] = struct.unpack(">I", raw.slice(0, 4));
-      vals = [float(v)];
+      vals = [v];
       trailing = raw.slice(4);
     } else {
       // Read as a u4, a double's high word turned 100.0 into 1079574528.

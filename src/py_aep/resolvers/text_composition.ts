@@ -39,7 +39,6 @@ import type { Path } from "../../pyrt/index.ts";
 import {
   at,
   KeyError,
-  float,
   islower,
   max,
   OSError,
@@ -268,17 +267,17 @@ export function _resolve_face(ps_name: string): [Path, number] {
 
 export function _hb_font(ps_name: string): [_HbFont, number] {
   const [path, face_index] = _resolve_face(ps_name);
-  const key = tkey(str(path), face_index);
+  const key = tkey(path.toString(), face_index);
   let cached = _hb_cache.get(key);
   if (cached === undefined) {
     let face: _HbFace;
     try {
-      const blob = hb.Blob.from_file_path(str(path));
+      const blob = hb.Blob.from_file_path(path.toString());
       face = new hb.Face(blob, face_index);
     } catch (exc) {
       if (!(exc instanceof Object) || !_is_font_open_error(exc)) throw exc;
       throw Object.assign(
-        new CompositionUnsupported(`font file for ${repr(ps_name)} is unreadable: ${str(path)}`),
+        new CompositionUnsupported(`font file for ${repr(ps_name)} is unreadable: ${path.toString()}`),
         { cause: exc },
       );
     }
@@ -295,7 +294,7 @@ export function _hb_font(ps_name: string): [_HbFont, number] {
  */
 export function _ascender_ratio(ps_name: string): number {
   const [path, face_index] = _resolve_face(ps_name);
-  const key = tkey(str(path), face_index);
+  const key = tkey(path.toString(), face_index);
   let ratio = _ascender_cache.get(key);
   if (ratio === undefined) {
     let font: fontkit.Font;
@@ -303,12 +302,12 @@ export function _ascender_ratio(ps_name: string): number {
       // NOTE(port): fontTools TTFont(path, fontNumber=face_index, lazy=True) ->
       // fontkit. fontkit's create returns a FontCollection for .ttc files, so the
       // face is picked with `.fonts[face_index]`.
-      const opened = fontkit.create(host.fs.readFileSync(str(path)));
+      const opened = fontkit.create(host.fs.readFileSync(path.toString()));
       font = opened.fonts ? at(opened.fonts, face_index) : opened;
     } catch (exc) {
       if (!(exc instanceof Object) || !_is_font_open_error(exc)) throw exc;
       throw Object.assign(
-        new CompositionUnsupported(`font file for ${repr(ps_name)} is unreadable: ${str(path)}`),
+        new CompositionUnsupported(`font file for ${repr(ps_name)} is unreadable: ${path.toString()}`),
         { cause: exc },
       );
     }
@@ -640,8 +639,8 @@ export function compose_lines(doc: TextDocument): ComposedLines {
   _check_envelope(doc, raw);
   const styles = _char_styles(doc, raw);
   const inset = doc.box_inset_spacing;
-  const width = float(box_size[0]);
-  const height = float(box_size[1]);
+  const width = box_size[0];
+  const height = box_size[1];
 
   const para_geo: [number, number][] = [];
   for (const [_start, _end, style] of run_spans(doc._doc, "5", "5")) {
@@ -727,7 +726,7 @@ export function calibrate(
     // TrueType ascenders reproduce AE within ~1.4 font units
     // (<= 0.03 px at 36 pt); breaks are unaffected, only a box
     // height landing inside that sliver could mis-clip.
-    if (Math.abs(computed - float(cached)) > 0.05) {
+    if (Math.abs(computed - cached) > 0.05) {
       return false;
     }
   }

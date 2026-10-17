@@ -2432,7 +2432,7 @@ descriptor(
   Project,
   "compensate_for_scene_referred_profiles",
   ChunkField.bool("_acer", "value", {
-    transform: (v: number) => py_bool(v),
+    transform: (v: number) => v !== 0,
     reverse: (v: boolean) => int(v),
     min_version: 16,
   }),

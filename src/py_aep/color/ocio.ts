@@ -25,7 +25,6 @@ import {
   ValueError,
   py_bool,
   py_or,
-  dict_get,
   tkey,
   setdefault,
   sorted,
@@ -388,7 +387,7 @@ export function _output_envelope(index: _ConfigIndex, color_space: string): [str
     // display after a family (ACES 1.2's only display is `ACES`, which is
     // also the family of `ACES - ACEScg`), and matching on the display
     // alone would claim the `family/name` form the getters return.
-    if (dict_get(index.displays, display, [] as string[]).includes(view)) {
+    if ((index.displays.get(display) ?? [] as string[]).includes(view)) {
       return [
         color_space,
         _compact({ colorSpace1: display, colorSpace2: view, ocioColorSpaceType: 1 }),

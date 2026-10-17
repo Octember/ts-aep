@@ -19,11 +19,9 @@ import {
   deferred,
   dict_get,
   enumerate,
-  float,
   getitem,
   int,
   py_bool,
-  py_eq,
   py_or,
   split,
   warn,
@@ -350,7 +348,7 @@ export function _parse_effect_properties(
   // reachable once the effect is attached, so callers that already know
   // it pass its size; during the initial parse it is unknown and the
   // composition stands in (what py_aep has always used).
-  const point_size: [number, number] = layer?._pixel_size ?? [float(composition.width), float(composition.height)];
+  const point_size: [number, number] = layer?._pixel_size ?? [composition.width, composition.height];
 
   // Skip index-0 internal parameters (not exposed in ExtendScript).
   const property_runs = [...get_match_name_runs(tdgp_chunk)].filter(
@@ -576,7 +574,7 @@ _pard_extractor(PropertyControlType.ENUM)(_extract_enum);
 /** Return integral floats as int, matching ExtendScript output. */
 // NOTE(port): Python returns int for integral floats, else the float; JS numbers carry the same value, and the int/float type is only observable via repr()/type().
 export function _intify(value: number): number {
-  return Number.isInteger(float(value)) ? int(value) : value;
+  return Number.isInteger(value) ? int(value) : value;
 }
 
 export function _extract_integer(body: any, result: ParamDef): void {
@@ -770,10 +768,10 @@ export function match_effect_definition(
   name: string,
 ): [string, string, ListChunk] | null {
   for (const entry of entries) {
-    if (py_eq(name, entry[0])) return entry;
+    if (name === entry[0]) return entry;
   }
   for (const entry of entries) {
-    if (py_eq(name, entry[1])) return entry;
+    if (name === entry[1]) return entry;
   }
   return null;
 }

@@ -787,11 +787,11 @@ export function _builtin_widths(doc: _Document, font: CosDict, base: string): Ma
   const table = STD14_WIDTHS.get(base);
   if (table == null) return new Map();
   const widths = new Map<number, number>();
-  for (const [i, w] of table.entries()) widths.set(STD14_FIRST_CODE + i, float(w));
+  for (const [i, w] of table.entries()) widths.set(STD14_FIRST_CODE + i, w);
   const quotes = STD14_STANDARD_QUOTES.get(base);
   if (quotes != null && !_ASCII_QUOTE_ENCODINGS.has(_base_encoding(doc, font))) {
-    widths.set(39, float(quotes[0]));
-    widths.set(96, float(quotes[1]));
+    widths.set(39, quotes[0]);
+    widths.set(96, quotes[1]);
   }
   return widths;
 }
@@ -1169,7 +1169,7 @@ export class _Measurer {
     const scale = gs.h_scale / 100.0;
     for (const item of items) {
       if (typeof item === "number") {
-        const shift = -float(item) / 1000.0 * gs.size * scale;
+        const shift = -item / 1000.0 * gs.size * scale;
         text_matrix = _mat_mul([1.0, 0.0, 0.0, 1.0, shift, 0.0], text_matrix);
         continue;
       }

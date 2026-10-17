@@ -5,7 +5,7 @@ import type { Utf8Chunk } from "../binary/scalar_chunks.ts";
 import type { Chunk, ListChunk } from "../binary/chunk.ts";
 import { _suppress_materialization } from "../models/descriptors.ts";
 import { EssentialGraphicsController, SourcePropertyRef } from "../models/essential_graphics.ts";
-import { at, dict_get, getitem, int, json_loads, py_eq, sorted } from "../../pyrt/index.ts";
+import { at, dict_get, getitem, int, json_loads, sorted } from "../../pyrt/index.ts";
 
 // AE stores 0xFFFFFFFF in a CPrp path node's `index` to mean "match by name".
 export const _BY_NAME_INDEX = 0xffffffff;
@@ -28,7 +28,7 @@ export function _parse_source_property_path(raw: string): SourcePropertyRef[] {
     path.push(
       new SourcePropertyRef(
         dict_get(node, "matchName", ""),
-        py_eq(index, _BY_NAME_INDEX) ? null : index,
+        index === _BY_NAME_INDEX ? null : index,
       ),
     );
   }

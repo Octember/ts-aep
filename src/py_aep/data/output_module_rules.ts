@@ -31,7 +31,7 @@
  */
 
 import { AudioBitDepth, AudioChannels, AudioCodec, FormatKind, MPEGAudioFormat, MPEGAudioLayer, MPEGMultiplexer, OutputAudio, OutputChannels, OutputColorDepth, OutputColorMode, OutputFormat, VideoCodec } from "../enums/index.ts";
-import { contains, dict_get, getitem, py_eq, setdefault } from "../../pyrt/index.ts";
+import { contains, getitem, py_eq, setdefault } from "../../pyrt/index.ts";
 
 /**
  * One conditional rule: (conditions, constraints). Every condition must
@@ -647,7 +647,7 @@ export function _conditions_match(conditions: Map<string, RuleValue | RuleValue[
 export function constrained_keys(fmt: OutputFormat): ReadonlySet<string> {
   const keys = new Set<string>(getitem(_KIND_RULES, OutputFormat.kind(fmt)).keys());
   for (const k of (_FORMAT_RULES.get(fmt) ?? new Map<string, ReadonlySet<RuleValue>>()).keys()) keys.add(k);
-  for (const [, constraints] of dict_get(_CONDITIONAL_RULES, fmt, [] as Rule[])) {
+  for (const [, constraints] of (_CONDITIONAL_RULES.get(fmt) ?? [] as Rule[])) {
     for (const k of constraints.keys()) keys.add(k);
   }
   return new Set(keys);
@@ -672,7 +672,7 @@ export function allowed_values(
   for (const [k, v] of getitem(_KIND_RULES, OutputFormat.kind(fmt))) rules.set(k, v);
   for (const [k, v] of (_FORMAT_RULES.get(fmt) ?? new Map<string, ReadonlySet<RuleValue>>())) rules.set(k, v);
   if (context == null) context = new Map<string, unknown>();
-  for (const [conditions, constraints] of dict_get(_CONDITIONAL_RULES, fmt, [] as Rule[])) {
+  for (const [conditions, constraints] of (_CONDITIONAL_RULES.get(fmt) ?? [] as Rule[])) {
     if (_conditions_match(conditions, context)) {
       for (const [k, v] of constraints) rules.set(k, v);
     }

@@ -333,7 +333,7 @@ export class CosName {
   }
 
   __eq__(other: unknown): boolean {
-    return other instanceof CosName && py_eq(this.value, other.value);
+    return other instanceof CosName && this.value === other.value;
   }
 }
 

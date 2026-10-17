@@ -1,5 +1,4 @@
 import { descriptor } from "../../../pyrt/index.ts";
-import { str } from "../../../pyrt/index.ts";
 import { SoliOptiChunk, SspcChunk } from "../../binary/footage_chunks.ts";
 import { solid_color_name } from "../../resolvers/solid.ts";
 import { ChunkField } from "../descriptors.ts";
@@ -109,7 +108,7 @@ export class SolidSource extends FootageSource {
   }
 
   _resolve_name(raw_name: string): string {
-    return str(this._opti.solid_name);
+    return this._opti.solid_name;
   }
 
   _store_name(value: string): void {

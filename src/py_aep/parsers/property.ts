@@ -18,7 +18,7 @@ import { parse_markers } from "./marker.ts";
 import { parse_property } from "./property_value.ts";
 import { parse_gradient, parse_orientation, parse_shape, parse_text_document } from "./specialized_properties.ts";
 import { get_chunks_by_match_name, get_match_name_runs } from "./utils.ts";
-import { dict_get, enumerate, warn, zip } from "../../pyrt/index.ts";
+import { enumerate, warn, zip } from "../../pyrt/index.ts";
 import { Property, _EssentialOverrideProperty } from "../models/properties/property.ts";
 
 // `logging.getLogger(__name__)`: this module logs nothing today, so only the
@@ -484,7 +484,7 @@ export const _parse_mask_atom = _suppress_materialization().decorate(function _p
   // Extract the mask shape's tdsb for the roto_bezier descriptor.
   let mask_shape_tdsb: TdsbChunk | null = null;
   const chunks_by_mn = get_chunks_by_match_name(tdgp_chunk);
-  const mask_shape_chunks = dict_get(chunks_by_mn, "ADBE Mask Shape", []);
+  const mask_shape_chunks = chunks_by_mn.get("ADBE Mask Shape") ?? [];
   for (const chunk of mask_shape_chunks) {
     if (chunk instanceof ListChunk && chunk.list_type === "om-s") {
       try {
