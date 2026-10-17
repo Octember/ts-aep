@@ -4288,8 +4288,8 @@ export class Property<V extends PropertyValue = any> extends PropertyBase {
     // rejects the whole call instead of leaving the earlier keys added.
     validate_sequence({})(times);
     for (const value of new_values) _validate_key_value(this, value);
-    for (const [time, value] of zip(times, new_values)) {
-      this.set_value_at_time(time, value);
+    for (let i = 0; i < times.length; i++) {
+      this.set_value_at_time(times[i], new_values[i]);
     }
   }
 
@@ -4502,7 +4502,7 @@ export function _segment_components(prev_kf: Keyframe, next_kf: Keyframe): [numb
   }
   if (Array.isArray(v0) && Array.isArray(v1) && v0.length === v1.length) {
     if (![...v0, ...v1].every((x) => typeof x === "number" || typeof x === "boolean")) return null;
-    return [zip(v0, v1).map(([a, b]) => [a, b]), v0.length];
+    return [v0.map((a, i) => [a, v1[i]]), v0.length];
   }
   return null;
 }
