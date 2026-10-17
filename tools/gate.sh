@@ -25,6 +25,9 @@ PY
 echo "== generated chunk types"
 bun tools/gen_chunk_types.ts --check
 
+echo "== zero-cast ratchet (cos, models/text, resolvers/text_*)"
+bun tools/type_ratchet.ts
+
 echo "== tsdoc"
 tsdoc=$(bun tools/tsdoc_lint.ts)
 echo "$tsdoc"
@@ -57,4 +60,9 @@ echo "== differential vs py-aep"
 tools/diff/run.sh 8 > /dev/null
 tools/diff/edit_run.sh 40 8 > /dev/null
 python3 tools/diff/gate.py
+
+echo "== fault-injection differential (corrupted btdk trees) vs py-aep"
+fault=$(tools/diff/fault_run.sh 8)
+echo "$fault" | head -1
+python3 -c "import json,sys; r=json.loads(sys.argv[1]); sys.exit(0 if r.get('identical')==r['cases']>=$(base fault_cases) else 1)" "$(echo "$fault" | head -1)" || { echo "$fault" | head -40; exit 1; }
 echo "gate ok"

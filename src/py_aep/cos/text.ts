@@ -8,20 +8,21 @@
 import { b64decode } from "../../pyrt/base64.ts";
 import { gzip_decompress } from "../../pyrt/zlib.ts";
 import { BytesIO, bytes_, py_assert } from "../../pyrt/index.ts";
-import { CosParser } from "./cos.ts";
+import { CosParser, type CosDict } from "./cos.ts";
+import { decode_btdk } from "./schema.ts";
 
-export let _COS_TEMPLATE_CACHE: Map<string, any> | null = null;
+export let _COS_TEMPLATE_CACHE: CosDict | null = null;
 
 /** Parse and cache the COS template from the gzip blob. */
-export function get_cos_template(): Map<string, any> {
+export function get_cos_template(): CosDict {
   if (_COS_TEMPLATE_CACHE != null) {
     return _COS_TEMPLATE_CACHE;
   }
 
   const raw = bytes_.lstrip(gzip_decompress(b64decode(POINT_TEXT_COS_TEMPLATE)));
   const parser = new CosParser(new BytesIO(raw), raw.length);
-  const result = parser.parse();
-  py_assert(result instanceof Map);
+  const result = decode_btdk(parser.parse());
+  py_assert(result != null);
   _COS_TEMPLATE_CACHE = result;
   return result;
 }

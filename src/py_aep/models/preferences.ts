@@ -215,7 +215,7 @@ export function _sheet_readers(
  * style `addText` gives a new layer. Keys map to `TextDocument`
  * attributes. Missing preferences fall back to AE's factory values.
  */
-export function default_character_style(preferences: Preferences): Record<string, unknown> {
+export function default_character_style(preferences: Preferences) {
   const [number, flag] = _sheet_readers(preferences, _TEXT_STYLE_SECTION);
   const factory = _FACTORY_CHAR_STYLE;
   const fill = [
@@ -263,7 +263,7 @@ export function default_character_style(preferences: Preferences): Record<string
  * Note that hyphenation has no entry in this sheet, which is why After
  * Effects leaves `auto_hyphenate` untouched on a reset.
  */
-export function default_paragraph_style(preferences: Preferences): Record<string, unknown> {
+export function default_paragraph_style(preferences: Preferences) {
   const [number, flag] = _sheet_readers(preferences, _PARA_SHEET_SECTION);
   const factory = _FACTORY_PARA_STYLE;
   const raw_justification = preferences.get_pref_as_string(_PARA_SHEET_SECTION, "Justification", PREFType.PREF_Type_MACHINE_SPECIFIC_TEXT, {
