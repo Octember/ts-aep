@@ -4,7 +4,7 @@
  * These enums match the values used in After Effects ExtendScript.
  */
 
-import { and, getitem, int, int_enum, type EnumValue } from "../../pyrt/index.ts";
+import { and, int, int_enum, type EnumValue } from "../../pyrt/index.ts";
 
 /**
  * Frame rate source setting for rendering.
@@ -25,17 +25,17 @@ export const FrameRateSetting = int_enum(
   {
     /** ExtendScript STRING format label. */
     // NOTE(port): Python `@property label` is `FrameRateSetting.label(member)` per RULEBOOK enum mapping (members are plain numbers); same labels-table lookup.
-    label(self: number): string {
-      return getitem(_FRAME_RATE_SETTING_LABELS, self);
+    label(self: FrameRateSetting): string {
+      return _FRAME_RATE_SETTING_LABELS[self];
     },
   },
 );
 export type FrameRateSetting = EnumValue<typeof FrameRateSetting>;
 
-export const _FRAME_RATE_SETTING_LABELS: Map<number, string> = new Map<number, string>([
-  [0, "Use comp's frame rate"],
-  [1, "Use this frame rate"],
-]);
+export const _FRAME_RATE_SETTING_LABELS: Readonly<Record<FrameRateSetting, string>> = {
+  0: "Use comp's frame rate",
+  1: "Use this frame rate",
+};
 
 /**
  * Quality setting for rendering.
@@ -55,8 +55,8 @@ export const RenderQuality = int_enum(
   {
     /** ExtendScript STRING format label. */
     // NOTE(port): Python `@property label` is `RenderQuality.label(member)` per RULEBOOK enum mapping (members are plain numbers); same labels-table lookup.
-    label(self: number): string {
-      return getitem(_RENDER_QUALITY_LABELS, self);
+    label(self: RenderQuality): string {
+      return _RENDER_QUALITY_LABELS[self];
     },
 
     /** Convert binary value to RenderQuality (0xFFFF = CURRENT_SETTINGS). */
@@ -72,12 +72,12 @@ export const RenderQuality = int_enum(
 );
 export type RenderQuality = EnumValue<typeof RenderQuality>;
 
-export const _RENDER_QUALITY_LABELS: Map<number, string> = new Map<number, string>([
-  [-1, "Current Settings"],
-  [0, "Wireframe"],
-  [1, "Draft"],
-  [2, "Best"],
-]);
+export const _RENDER_QUALITY_LABELS: Readonly<Record<RenderQuality, string>> = {
+  "-1": "Current Settings",
+  0: "Wireframe",
+  1: "Draft",
+  2: "Best",
+};
 
 /**
  * Field rendering option.
@@ -96,18 +96,18 @@ export const FieldRender = int_enum(
   {
     /** ExtendScript STRING format label. */
     // NOTE(port): Python `@property label` is `FieldRender.label(member)` per RULEBOOK enum mapping (members are plain numbers); same labels-table lookup.
-    label(self: number): string {
-      return getitem(_FIELD_RENDER_LABELS, self);
+    label(self: FieldRender): string {
+      return _FIELD_RENDER_LABELS[self];
     },
   },
 );
 export type FieldRender = EnumValue<typeof FieldRender>;
 
-export const _FIELD_RENDER_LABELS: Map<number, string> = new Map<number, string>([
-  [0, "Off"],
-  [1, "Upper Field First"],
-  [2, "Lower Field First"],
-]);
+export const _FIELD_RENDER_LABELS: Readonly<Record<FieldRender, string>> = {
+  0: "Off",
+  1: "Upper Field First",
+  2: "Lower Field First",
+};
 
 /**
  * 3:2 Pulldown phase for field rendering.
@@ -129,21 +129,21 @@ export const PulldownSetting = int_enum(
   {
     /** ExtendScript STRING format label. */
     // NOTE(port): Python `@property label` is `PulldownSetting.label(member)` per RULEBOOK enum mapping (members are plain numbers); same labels-table lookup.
-    label(self: number): string {
-      return getitem(_PULLDOWN_SETTING_LABELS, self);
+    label(self: PulldownSetting): string {
+      return _PULLDOWN_SETTING_LABELS[self];
     },
   },
 );
 export type PulldownSetting = EnumValue<typeof PulldownSetting>;
 
-export const _PULLDOWN_SETTING_LABELS: Map<number, string> = new Map<number, string>([
-  [0, "Off"],
-  [1, "WSSWW"],
-  [2, "SSWWW"],
-  [3, "SWWWS"],
-  [4, "WWWSS"],
-  [5, "WWSSW"],
-]);
+export const _PULLDOWN_SETTING_LABELS: Readonly<Record<PulldownSetting, string>> = {
+  0: "Off",
+  1: "WSSWW",
+  2: "SSWWW",
+  3: "SWWWS",
+  4: "WWWSS",
+  5: "WWSSW",
+};
 
 /**
  * Motion blur render setting.
@@ -162,8 +162,8 @@ export const MotionBlurSetting = int_enum(
   {
     /** ExtendScript STRING format label. */
     // NOTE(port): Python `@property label` is `MotionBlurSetting.label(member)` per RULEBOOK enum mapping (members are plain numbers); same labels-table lookup.
-    label(self: number): string {
-      return getitem(_MOTION_BLUR_SETTING_LABELS, self);
+    label(self: MotionBlurSetting): string {
+      return _MOTION_BLUR_SETTING_LABELS[self];
     },
 
     /** Convert binary value (0xFFFF = CURRENT_SETTINGS). */
@@ -174,11 +174,11 @@ export const MotionBlurSetting = int_enum(
 );
 export type MotionBlurSetting = EnumValue<typeof MotionBlurSetting>;
 
-export const _MOTION_BLUR_SETTING_LABELS: Map<number, string> = new Map<number, string>([
-  [0, "Off for All Layers"],
-  [1, "On for Checked Layers"],
-  [2, "Current Settings"],
-]);
+export const _MOTION_BLUR_SETTING_LABELS: Readonly<Record<MotionBlurSetting, string>> = {
+  0: "Off for All Layers",
+  1: "On for Checked Layers",
+  2: "Current Settings",
+};
 
 /**
  * Frame blending render setting.
@@ -197,8 +197,8 @@ export const FrameBlendingSetting = int_enum(
   {
     /** ExtendScript STRING format label. */
     // NOTE(port): Python `@property label` is `FrameBlendingSetting.label(member)` per RULEBOOK enum mapping (members are plain numbers); same labels-table lookup.
-    label(self: number): string {
-      return getitem(_FRAME_BLENDING_SETTING_LABELS, self);
+    label(self: FrameBlendingSetting): string {
+      return _FRAME_BLENDING_SETTING_LABELS[self];
     },
 
     /** Convert binary value (0xFFFF = CURRENT_SETTINGS). */
@@ -209,11 +209,11 @@ export const FrameBlendingSetting = int_enum(
 );
 export type FrameBlendingSetting = EnumValue<typeof FrameBlendingSetting>;
 
-export const _FRAME_BLENDING_SETTING_LABELS: Map<number, string> = new Map<number, string>([
-  [0, "Off for All Layers"],
-  [1, "On for Checked Layers"],
-  [2, "Current Settings"],
-]);
+export const _FRAME_BLENDING_SETTING_LABELS: Readonly<Record<FrameBlendingSetting, string>> = {
+  0: "Off for All Layers",
+  1: "On for Checked Layers",
+  2: "Current Settings",
+};
 
 /**
  * Effects render setting.
@@ -232,8 +232,8 @@ export const EffectsSetting = int_enum(
   {
     /** ExtendScript STRING format label. */
     // NOTE(port): Python `@property label` is `EffectsSetting.label(member)` per RULEBOOK enum mapping (members are plain numbers); same labels-table lookup.
-    label(self: number): string {
-      return getitem(_EFFECTS_SETTING_LABELS, self);
+    label(self: EffectsSetting): string {
+      return _EFFECTS_SETTING_LABELS[self];
     },
 
     /** Convert binary value (0xFFFF = CURRENT_SETTINGS). */
@@ -244,11 +244,11 @@ export const EffectsSetting = int_enum(
 );
 export type EffectsSetting = EnumValue<typeof EffectsSetting>;
 
-export const _EFFECTS_SETTING_LABELS: Map<number, string> = new Map<number, string>([
-  [0, "All Off"],
-  [1, "All On"],
-  [2, "Current Settings"],
-]);
+export const _EFFECTS_SETTING_LABELS: Readonly<Record<EffectsSetting, string>> = {
+  0: "All Off",
+  1: "All On",
+  2: "Current Settings",
+};
 
 /**
  * Proxy usage render setting.
@@ -268,8 +268,8 @@ export const ProxyUseSetting = int_enum(
   {
     /** ExtendScript STRING format label. */
     // NOTE(port): Python `@property label` is `ProxyUseSetting.label(member)` per RULEBOOK enum mapping (members are plain numbers); same labels-table lookup.
-    label(self: number): string {
-      return getitem(_PROXY_USE_SETTING_LABELS, self);
+    label(self: ProxyUseSetting): string {
+      return _PROXY_USE_SETTING_LABELS[self];
     },
 
     /** Convert binary value (0xFFFF = CURRENT_SETTINGS). */
@@ -280,12 +280,12 @@ export const ProxyUseSetting = int_enum(
 );
 export type ProxyUseSetting = EnumValue<typeof ProxyUseSetting>;
 
-export const _PROXY_USE_SETTING_LABELS: Map<number, string> = new Map<number, string>([
-  [0, "Use No Proxies"],
-  [1, "Use All Proxies"],
-  [2, "Current Settings"],
-  [3, "Use Comp Proxies Only"],
-]);
+export const _PROXY_USE_SETTING_LABELS: Readonly<Record<ProxyUseSetting, string>> = {
+  0: "Use No Proxies",
+  1: "Use All Proxies",
+  2: "Current Settings",
+  3: "Use Comp Proxies Only",
+};
 
 /**
  * Solo switches render setting.
@@ -303,8 +303,8 @@ export const SoloSwitchesSetting = int_enum(
   {
     /** ExtendScript STRING format label. */
     // NOTE(port): Python `@property label` is `SoloSwitchesSetting.label(member)` per RULEBOOK enum mapping (members are plain numbers); same labels-table lookup.
-    label(self: number): string {
-      return getitem(_SOLO_SWITCHES_SETTING_LABELS, self);
+    label(self: SoloSwitchesSetting): string {
+      return _SOLO_SWITCHES_SETTING_LABELS[self];
     },
 
     /** Convert binary value (0xFFFF = CURRENT_SETTINGS). */
@@ -315,10 +315,10 @@ export const SoloSwitchesSetting = int_enum(
 );
 export type SoloSwitchesSetting = EnumValue<typeof SoloSwitchesSetting>;
 
-export const _SOLO_SWITCHES_SETTING_LABELS: Map<number, string> = new Map<number, string>([
-  [0, "All Off"],
-  [2, "Current Settings"],
-]);
+export const _SOLO_SWITCHES_SETTING_LABELS: Readonly<Record<SoloSwitchesSetting, string>> = {
+  0: "All Off",
+  2: "Current Settings",
+};
 
 /**
  * Guide layers render setting.
@@ -336,8 +336,8 @@ export const GuideLayers = int_enum(
   {
     /** ExtendScript STRING format label. */
     // NOTE(port): Python `@property label` is `GuideLayers.label(member)` per RULEBOOK enum mapping (members are plain numbers); same labels-table lookup.
-    label(self: number): string {
-      return getitem(_GUIDE_LAYERS_LABELS, self);
+    label(self: GuideLayers): string {
+      return _GUIDE_LAYERS_LABELS[self];
     },
 
     /** Convert binary value (0xFFFF = CURRENT_SETTINGS). */
@@ -348,10 +348,10 @@ export const GuideLayers = int_enum(
 );
 export type GuideLayers = EnumValue<typeof GuideLayers>;
 
-export const _GUIDE_LAYERS_LABELS: Map<number, string> = new Map<number, string>([
-  [0, "All Off"],
-  [2, "Current Settings"],
-]);
+export const _GUIDE_LAYERS_LABELS: Readonly<Record<GuideLayers, string>> = {
+  0: "All Off",
+  2: "Current Settings",
+};
 
 /**
  * Disk cache render setting.
@@ -369,8 +369,8 @@ export const DiskCacheSetting = int_enum(
   {
     /** ExtendScript STRING format label. */
     // NOTE(port): Python `@property label` is `DiskCacheSetting.label(member)` per RULEBOOK enum mapping (members are plain numbers); same labels-table lookup.
-    label(self: number): string {
-      return getitem(_DISK_CACHE_SETTING_LABELS, self);
+    label(self: DiskCacheSetting): string {
+      return _DISK_CACHE_SETTING_LABELS[self];
     },
 
     /** Convert binary value (0xFFFF = CURRENT_SETTINGS). */
@@ -381,10 +381,10 @@ export const DiskCacheSetting = int_enum(
 );
 export type DiskCacheSetting = EnumValue<typeof DiskCacheSetting>;
 
-export const _DISK_CACHE_SETTING_LABELS: Map<number, string> = new Map<number, string>([
-  [0, "Read Only"],
-  [2, "Current Settings"],
-]);
+export const _DISK_CACHE_SETTING_LABELS: Readonly<Record<DiskCacheSetting, string>> = {
+  0: "Read Only",
+  2: "Current Settings",
+};
 
 /**
  * Color depth render setting.
@@ -404,8 +404,8 @@ export const ColorDepthSetting = int_enum(
   {
     /** ExtendScript STRING format label. */
     // NOTE(port): Python `@property label` is `ColorDepthSetting.label(member)` per RULEBOOK enum mapping (members are plain numbers); same labels-table lookup.
-    label(self: number): string {
-      return getitem(_COLOR_DEPTH_SETTING_LABELS, self);
+    label(self: ColorDepthSetting): string {
+      return _COLOR_DEPTH_SETTING_LABELS[self];
     },
 
     /** Convert binary value (0xFFFF = CURRENT_SETTINGS). */
@@ -421,12 +421,12 @@ export const ColorDepthSetting = int_enum(
 );
 export type ColorDepthSetting = EnumValue<typeof ColorDepthSetting>;
 
-export const _COLOR_DEPTH_SETTING_LABELS: Map<number, string> = new Map<number, string>([
-  [-1, "Current Settings"],
-  [0, "8 bits per channel"],
-  [1, "16 bits per channel"],
-  [2, "32 bits per channel"],
-]);
+export const _COLOR_DEPTH_SETTING_LABELS: Readonly<Record<ColorDepthSetting, string>> = {
+  "-1": "Current Settings",
+  0: "8 bits per channel",
+  1: "16 bits per channel",
+  2: "32 bits per channel",
+};
 
 /**
  * Time span source setting.
@@ -445,8 +445,8 @@ export const TimeSpanSource = int_enum(
   {
     /** ExtendScript STRING format label. */
     // NOTE(port): Python `@property label` is `TimeSpanSource.label(member)` per RULEBOOK enum mapping (members are plain numbers); same labels-table lookup.
-    label(self: number): string {
-      return getitem(_TIME_SPAN_SOURCE_LABELS, self);
+    label(self: TimeSpanSource): string {
+      return _TIME_SPAN_SOURCE_LABELS[self];
     },
 
     /** Convert binary value (0xFFFF = CUSTOM). */
@@ -457,11 +457,11 @@ export const TimeSpanSource = int_enum(
 );
 export type TimeSpanSource = EnumValue<typeof TimeSpanSource>;
 
-export const _TIME_SPAN_SOURCE_LABELS: Map<number, string> = new Map<number, string>([
-  [0, "Length of Comp"],
-  [1, "Work Area Only"],
-  [2, "Custom"],
-]);
+export const _TIME_SPAN_SOURCE_LABELS: Readonly<Record<TimeSpanSource, string>> = {
+  0: "Length of Comp",
+  1: "Work Area Only",
+  2: "Custom",
+};
 
 /**
  * Post-render action for the output module settings dict.
@@ -481,16 +481,16 @@ export const PostRenderActionSetting = int_enum(
   {
     /** ExtendScript STRING format label. */
     // NOTE(port): Python `@property label` is `PostRenderActionSetting.label(member)` per RULEBOOK enum mapping (members are plain numbers); same labels-table lookup.
-    label(self: number): string {
-      return getitem(_POST_RENDER_ACTION_SETTING_LABELS, self);
+    label(self: PostRenderActionSetting): string {
+      return _POST_RENDER_ACTION_SETTING_LABELS[self];
     },
   },
 );
 export type PostRenderActionSetting = EnumValue<typeof PostRenderActionSetting>;
 
-export const _POST_RENDER_ACTION_SETTING_LABELS: Map<number, string> = new Map<number, string>([
-  [0, "None"],
-  [1, "Import"],
-  [2, "Import & Replace Usage"],
-  [3, "Set Proxy"],
-]);
+export const _POST_RENDER_ACTION_SETTING_LABELS: Readonly<Record<PostRenderActionSetting, string>> = {
+  0: "None",
+  1: "Import",
+  2: "Import & Replace Usage",
+  3: "Set Proxy",
+};

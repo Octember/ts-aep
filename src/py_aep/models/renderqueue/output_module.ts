@@ -64,7 +64,7 @@ export function is_int(v: unknown): v is number | boolean {
  * as a decoded enum member only when it belongs to the enum class that owns its key. A raw
  * out-of-enum fallback fails the membership test, as it does in Python.
  */
-type KeyEnum = EnumHelpers<number> & { label?: (v: number) => string | null };
+type KeyEnum = EnumHelpers<number> & { label?(v: number): string | null };
 
 export const _KEY_ENUM = new Map<string, KeyEnum>([
   ["Channels", OutputChannels],
