@@ -9,7 +9,7 @@
 // taking the member as `self`, e.g. `OutputChannels.label(member)`; same
 // values and lookups as the Python properties. Applies to every enum here.
 
-import { KeyError, ValueError, getitem, round, int, decode, repr, format, int_enum } from "../../pyrt/index.ts";
+import { ValueError, getitem, round, int, decode, repr, format, int_enum } from "../../pyrt/index.ts";
 import type { EnumValue } from "../../pyrt/index.ts";
 
 /**
@@ -196,13 +196,9 @@ export const OutputFormat = int_enum("OutputFormat", {
     if (format_id instanceof Uint8Array) {
       format_id = decode(format_id, "ascii");
     }
-    try {
-      return getitem(_FORMAT_ID_TO_OUTPUT_FORMAT, format_id);
-    } catch (e) {
-      if (!(e instanceof KeyError)) throw e;
-      // `from None`: no exception chaining.
-      throw new ValueError(`Unknown output format identifier: ${repr(format_id)}`);
-    }
+    const format = _FORMAT_ID_TO_OUTPUT_FORMAT.get(format_id);
+    if (format === undefined) throw new ValueError(`Unknown output format identifier: ${repr(format_id)}`);
+    return format;
   },
 
   /** Convert OutputFormat to a Roou 4-char format identifier. */

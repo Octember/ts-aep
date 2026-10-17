@@ -797,18 +797,23 @@ export class PropertyGroup extends PropertyBase {
       return at(this.properties, key);
     }
     if (typeof key === "string") {
-      for (const prop of this.properties) {
-        if (
-          prop.name === key ||
-          prop.match_name === key ||
-          prop.name.toLowerCase().replaceAll(" ", "_") === key
-        ) {
-          return prop;
-        }
-      }
-      throw new KeyError(repr(key));
+      const prop = this._child_or_null(key);
+      if (prop === null) throw new KeyError(repr(key));
+      return prop;
     }
     throw new TypeError_(`Property key must be int or str, not ${type_name(key)}`);
+  }
+
+  /** The child whose display name, match name or snake_case name is `name`, or `null`. */
+  _child_or_null<K extends keyof MatchNameTypes>(name: K): MatchNameTypes[K] | null;
+  _child_or_null(name: string): Property | PropertyGroup | null;
+  _child_or_null(name: string): Property | PropertyGroup | null {
+    for (const prop of this.properties) {
+      if (prop.name === name || prop.match_name === name || prop.name.toLowerCase().replaceAll(" ", "_") === name) {
+        return prop;
+      }
+    }
+    return null;
   }
 
   /**

@@ -35,7 +35,7 @@ import { PropertyBase } from "./property_base.ts";
 import { Shape } from "./shape.ts";
 import type { PropertyGroup } from "./property_group.ts";
 import { type MaskPropertyGroup } from "./mask_property_group.ts";
-import { deferred, deepcopy, getitem, isclose, py_eq, sorted, warn, int, round, floordiv, TypeError_, ValueError, KeyError, IndexError, AttributeError, NotImplementedError, py_assert, repr, hasattr, getattr, min, max, range, zip, float, lshift, rshift, and, or, b, descriptor, list_mul, type_name, type ClassAttributes } from "../../../pyrt/index.ts";
+import { deferred, deepcopy, getitem, isclose, py_eq, sorted, warn, int, round, floordiv, TypeError_, ValueError, IndexError, AttributeError, NotImplementedError, py_assert, repr, hasattr, getattr, min, max, range, zip, float, lshift, rshift, and, or, b, descriptor, list_mul, type_name, type ClassAttributes } from "../../../pyrt/index.ts";
 
 const _property_group = deferred<typeof import("./property_group.ts")>("py_aep/models/properties/property_group");
 import { AVItem } from "../items/av_item.ts";
@@ -2637,15 +2637,8 @@ export class Property<V extends PropertyValue = any> extends PropertyBase {
       throw new ValueError(`dim must be in range [0, ${_SEPARATION_FOLLOWERS.length - 1}], got ${dim}`);
     }
     const match_name = _SEPARATION_FOLLOWERS[dim];
-    try {
-      return parent.property(match_name) as Property<number> | null;
-    } catch (e) {
-      // `property()` reaches `PropertyGroup.__getitem__`, which
-      // raises rather than returning None. A separated leader on a
-      // 2D layer genuinely has no Z follower.
-      if (!(e instanceof KeyError)) throw e;
-      return null;
-    }
+    // A separated leader on a 2D layer genuinely has no Z follower.
+    return parent._child_or_null(match_name) as Property<number> | null;
   }
 
   /**
