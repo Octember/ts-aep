@@ -19,8 +19,11 @@
  *   raises.
  *
  * Keys and kinds are the ones py_aep reads or writes (cos/descriptors.py,
- * models/text/*.py, resolvers/text_*.py); `tests/unit/test_cos_schema.test.ts`
- * checks that every sample's tree takes the typed path at each of them.
+ * models/text/*.py, resolvers/text_*.py). The readers `read` through
+ * `char_style`, `cache_line`, `first_baseline` and `font_ref`; the other
+ * layouts document the format. `tests/unit/test_cos_schema.test.ts` checks
+ * that every sample's tree, and the trees py_aep writes, match every layout
+ * wherever it sits, so real files take the typed path.
  */
 
 import * as z from "zod/mini";
