@@ -10,9 +10,11 @@ import type { CompItem } from "../composition.ts";
  * Subclasses {@link SettingsView} with itself as the owner, so one object
  * satisfies both idioms.
  *
- * ```python
- * comp.renderer_options["Quality"] = 61     # mapping
- * comp.renderer_options.quality = 61        # typed, validated
+ * ```ts
+ * import type { CompItem } from "@bevyl-ai/ts-aep";
+ * declare const comp: CompItem;
+ * comp.renderer_options.__setitem__("Quality", 61);   // mapping
+ * comp.renderer_options.__setattr__("quality", 61);   // typed, validated
  * ```
  *
  * The {@link CompItem} is held because Advanced 3D stores its Casting Box
@@ -30,7 +32,7 @@ export class RendererOptionsBase extends SettingsView {
   constructor(kw: { body: any; comp: CompItem }) {
     const { body, comp } = kw;
     // NOTE(port): Python passes `self` as the owner; TS forbids touching `this` before super(), so the owner is patched in just below (SettingsView only stores it).
-    super(null as any, (new.target as typeof RendererOptionsBase)._SPEC);
+    super(null as unknown as object, new.target._SPEC);
     this._body = body;
     this._comp = comp;
     // Python's owner is the (possibly proxied) instance itself, so writes via
@@ -40,12 +42,12 @@ export class RendererOptionsBase extends SettingsView {
     return self;
   }
 
-  __setattr__(name: string, value: any): void {
+  __setattr__(name: string, value: unknown): void {
     // A fresh wrapper is built on every `renderer_options` access, so a
     // write to a name with no backing descriptor would vanish with the
     // wrapper. Reject it instead of silently dropping it.
     // NOTE(port): `name in prototype` is `hasattr(type(self), name)`; pyrt `hasattr` would run descriptor getters on the prototype.
-    if (!name.startsWith("_") && !(name in (this.constructor as any).prototype)) {
+    if (!name.startsWith("_") && !(name in this.constructor.prototype)) {
       throw new AttributeError(`${this.constructor.name} has no option ${repr(name)}`);
     }
     object_setattr(this, name, value);

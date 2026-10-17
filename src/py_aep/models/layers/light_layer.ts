@@ -21,7 +21,7 @@ export function _require_environment_lights(comp: CompItem, what: string): void 
   }
 }
 
-export function _validate_light_type(value: any, obj: LightLayer): void {
+export function _validate_light_type(value: number, obj: LightLayer): void {
   if (value === LightType.ENVIRONMENT) {
     _require_environment_lights(obj.containing_comp, "LightType.ENVIRONMENT");
   }
@@ -30,13 +30,13 @@ export function _validate_light_type(value: any, obj: LightLayer): void {
 /**
  * The `LightLayer` object represents a light layer within a composition.
  *
- * ```python
- * from py_aep import parse
+ * ```ts
+ * import { parse } from "@bevyl-ai/ts-aep";
  *
- * app = parse("project.aep")
- * comp = app.project.compositions[0]
- * light = comp.light_layers[0]
- * print(light.light_type)
+ * const app = parse("project.aep");
+ * const comp = app.project.compositions[0];
+ * const light = comp.light_layers[0];
+ * console.log(light.light_type);
  * ```
  *
  * Info:
@@ -55,7 +55,7 @@ export class LightLayer extends Layer {
 
   static _LIVE_DEFAULTS = [["ADBE Transform Group", "ADBE Position"]] as const;
 
-  /** Always `True`: a camera / light layer only exists in 3D space.
+  /** Always `true`: a camera / light layer only exists in 3D space.
    * Read-only. */
   get is_3d(): boolean {
     return true;
@@ -76,27 +76,28 @@ export class LightLayer extends Layer {
   }
 
   /** The type of light. Read / Write. */
-  declare light_type: number;
+  declare light_type: LightType;
 
   /** The ID of the layer used as a light source. `0` if none. */
   declare _light_source_id: number;
 
-  static _new(
-    match_name: string,
-    auto_name: string,
-    property_depth: number,
-    kw?: any,
-  ): PropertyGroup;
   static _new(kw: {
     name: string;
     layer_id: number;
     duration: number;
     containing_comp: CompItem;
     light_type?: number;
-    effect_param_defs?: Map<string, Map<string, Map<string, any>>> | null;
+    effect_param_defs?: Map<string, Map<string, Map<string, unknown>>> | null;
   }): LightLayer;
-  static _new(kw: any): LightLayer;
-  static _new(kw: any): any {
+  static _new(...args: any[]): any;
+  static _new(kw: {
+    name: string;
+    layer_id: number;
+    duration: number;
+    containing_comp: CompItem;
+    light_type?: number;
+    effect_param_defs?: Map<string, Map<string, Map<string, unknown>>> | null;
+  }): LightLayer {
     // NOTE(port): Python `# type: ignore[override]` is type-only; overloads above mirror Layer._new's signature set.
     const {
       name,
@@ -133,7 +134,7 @@ export class LightLayer extends Layer {
 
   /**
    * The layer used as a light source when `light_type` is
-   * `LightType.ENVIRONMENT`. Returns `None` if no source is assigned.
+   * `LightType.ENVIRONMENT`. Returns `null` if no source is assigned.
    * Read / Write.
    *
    * The light source can be any 2D video, still, pre-composition, text

@@ -12,13 +12,15 @@ import type { RoptChunk } from "../../../binary/render_chunks.ts";
  * accessible when the output format is set to TIFF Sequence.
  *
  * @example
- * ```python
- * from py_aep import TiffFormatOptions, parse
+ * ```ts
+ * import { parse } from "@bevyl-ai/ts-aep";
+ * import { TiffFormatOptions } from "@bevyl-ai/ts-aep";
  *
- * app = parse("project.aep")
- * om = app.project.render_queue.items[0].output_modules[0]
- * if isinstance(om.format_options, TiffFormatOptions):
- *     print(om.format_options.lzw_compression)
+ * const app = parse("project.aep");
+ * const om = app.project.render_queue.items[0].output_modules[0];
+ * if (om.format_options instanceof TiffFormatOptions) {
+ *   console.log(om.format_options.lzw_compression);
+ * }
  * ```
  */
 export class TiffFormatOptions extends FormatOptionsBase {

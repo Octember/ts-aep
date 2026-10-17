@@ -15,7 +15,6 @@ import { DwgaChunk } from "../binary/misc_chunks.ts";
 import { CpidChunk, FdtaChunk, SvapChunk, WsnmChunk, WsnsChunk } from "../binary/project_chunks.ts";
 import { F8Chunk, U1Chunk, U2Chunk, U4Chunk, U4LeChunk, Utf8Chunk } from "../binary/scalar_chunks.ts";
 import { PENDING_ASCENDCOUNT, ChunkNotFoundError, dump_alas, filter_by_type, find_by_list_type, find_by_type, index_by_identity, recursive_find, toggle_flag_chunk } from "../binary/utils.ts";
-import type { LdtaChunk } from "../binary/layer_chunks.ts";
 import type { RenderSettingsItem } from "../binary/render_chunks.ts";
 import { build_icc_envelope, build_ocio_display_envelope, envelope_profile_name } from "../color/envelope.ts";
 import { IccProfileLibrary, icc_profile_description, icc_profile_id } from "../color/icc.ts";
@@ -47,10 +46,8 @@ import { Preferences, default_sequence_fps, psd_comp_layer_styles, psd_footage_d
 import { Gradient } from "./properties/gradient.ts";
 import { Property, _values_equal } from "./properties/property.ts";
 import { PropertyGroup } from "./properties/property_group.ts";
-import type { MaskPropertyGroup } from "./properties/mask_property_group.ts";
 import { Shape } from "./properties/shape.ts";
 import { RenderQueue } from "./renderqueue/render_queue.ts";
-import type { AVLayer } from "./layers/av_layer.ts";
 import type { Layer } from "./layers/layer.ts";
 import { PSD_LAYER_STYLES_C8, FileSource, ai_document_profile, check_footage_size, named_media_profile, psd_layer_footage } from "./sources/file.ts";
 import { _replace_layer_font } from "./text/ranges.ts";
@@ -96,8 +93,12 @@ import {
   json_dumps,
   json_loads,
   type_name,
+  type ClassAttributes,
 } from "../../pyrt/index.ts";
 import type { PathLike } from "../../pyrt/index.ts";
+import type { Element } from "../../pyrt/etree.ts";
+import type { Box } from "../resolvers/ai_bounds.ts";
+import type { PsdNode } from "../resolvers/psd_layers.ts";
 
 /**
  * Mutable module globals: ESM exports are read-only, so names that Python
@@ -117,17 +118,17 @@ export function* count(start = 0): Generator<number> {
   for (let i = start; ; i++) yield i;
 }
 
-export function ET_fromstring(text: string): any {
+export function ET_fromstring(text: string): Element {
   return fromstring(text);
 }
 
-export function ET_tostring(el: any): string {
+export function ET_tostring(el: Element): string {
   return tostring(el, "unicode");
 }
 
 
 /** `isinstance(x, (list, tuple))` as used by the port. */
-export function is_list_or_tuple(x: any): boolean {
+export function is_list_or_tuple(x: unknown): boolean {
   return Array.isArray(x);
 }
 
@@ -193,7 +194,7 @@ export const _set_expression_engine = requires_version(16)(function expression_e
 
 export const _set_color_management_system = requires_version(24)(function color_management_system(
   this: Project,
-  value: any,
+  value: ColorManagementSystem | number,
 ): void {
   validate_enum(ColorManagementSystem)(value);
   this._update_cms_setting("colorManagementSystem", int(value));
@@ -201,7 +202,7 @@ export const _set_color_management_system = requires_version(24)(function color_
 
 export const _set_lut_interpolation_method = requires_version(24)(function lut_interpolation_method(
   this: Project,
-  value: any,
+  value: LutInterpolationMethod | number,
 ): void {
   validate_enum(LutInterpolationMethod)(value);
   this._update_cms_setting("lutInterpolationMethod", int(value));
@@ -222,18 +223,20 @@ export const _set_ocio_configuration_file = requires_version(24)(function ocio_c
  * timecode base.
  *
  * @example
- * ```python
- * from py_aep import parse
+ * ```ts
+ * import { parse } from "@bevyl-ai/ts-aep";
  *
- * app = parse("project.aep")
- * project = app.project
- * print(project.file)
- * for item in project:
- *     ...
+ * const app = parse("project.aep");
+ * const project = app.project;
+ * console.log(project.file);
+ * for (const item of project) {
+ *   // ...
+ * }
  * ```
  * @see https://ae-scripting.docsforadobe.dev/general/project/
  */
 export class Project {
+  declare ["constructor"]: ClassAttributes<typeof Project>;
   /**
    * The After Effects platform the project is for, `"windows"` or
    * `"macos"`, which picks a BMP/GIF sequence's importer code (see
@@ -279,7 +282,7 @@ export class Project {
   declare display_start_frame: number;
 
   /**
-   * When `True`, the Frames field in the UI is displayed as
+   * When `true`, the Frames field in the UI is displayed as
    * feet+frames. Read / Write.
    */
   declare frames_use_feet_frames: boolean;
@@ -291,7 +294,7 @@ export class Project {
   declare time_display_type: TimeDisplayType;
 
   /**
-   * When `True`, thumbnail views use the transparency checkerboard
+   * When `true`, thumbnail views use the transparency checkerboard
    * pattern. Read / Write.
    */
   declare transparency_grid_thumbnails: boolean;
@@ -338,11 +341,11 @@ export class Project {
   // in __init__ so the descriptor chain is: getattr(self, "_aep") -> self,
   // then getattr(self, "_xmp") -> the raw XMP string.
   /**
-   * The XMP packet for the project, containing metadata. `None` when the
+   * The XMP packet for the project, containing metadata. `null` when the
    * project has no XMP packet (e.g. projects created via `py_aep.new()`).
    * Read / Write.
    */
-  declare xmp_packet: any;
+  declare xmp_packet: Element | null;
 
   // Chunk body references for descriptors
   declare _nhed: NhedChunk;
@@ -447,7 +450,7 @@ export class Project {
     this._ae_preferences_dir = ae_preferences_dir;
     this._preferences = new Preferences(ae_preferences_dir);
     // Class attribute read through the instance until `_new` assigns one.
-    this._platform = (this.constructor as typeof Project)._platform;
+    this._platform = this.constructor._platform;
     // ICC profile discovery for Adobe-CMS working-space writes. `None`
     // dirs = auto-discover the standard Adobe Color directories.
     this._icc_profile_dirs = null;
@@ -711,7 +714,7 @@ export class Project {
       for (const source_id of composition._source_ids_for_linking()) {
         const source = this.items.get(source_id) ?? null;
         if (source != null && hasattr(source, "_used_in")) {
-          (source as any)._used_in.add(composition);
+          (source as AVItem)._used_in.add(composition);
         }
       }
     }
@@ -734,7 +737,7 @@ export class Project {
 
   /**
    * The item that is currently active and is to be acted upon, or
-   * `None` if no item is currently selected or if multiple items are
+   * `null` if no item is currently selected or if multiple items are
    * selected. Read-only.
    */
   get active_item(): Item | null {
@@ -754,7 +757,7 @@ export class Project {
     if (this._active_item !== removed) return;
     this._active_item = null;
     try {
-      const fcid = find_by_type(this._root_chunks, "fcid") as U4Chunk;
+      const fcid = find_by_type(this._root_chunks, "fcid");
       fcid.value = 0;
     } catch (e) {
       if (!(e instanceof ChunkNotFoundError)) throw e;
@@ -775,7 +778,7 @@ export class Project {
   }
 
   _sync_nhed_field(field_name: string): void {
-    (this._nhed as any)[field_name] = getattr(this._nnhd, field_name);
+    (this._nhed as unknown as Record<string, unknown>)[field_name] = getattr(this._nnhd, field_name);
   }
 
   _sync_nhed_timecode_default_base(): void {
@@ -867,7 +870,7 @@ export class Project {
       // whose ICC profile id `cpid` holds (all 0xFF: None).
       const profile_id = this._cpid.data;
       const cppl = find_by_list_type(this._root_chunks, "CPPl");
-      for (const pprf of filter_by_type(cppl.chunks, "pprf") as any[]) {
+      for (const pprf of filter_by_type(cppl.chunks, "pprf")) {
         if (bytes_eq(icc_profile_id(pprf.data), profile_id)) {
           return icc_profile_description(pprf.data) || "None";
         }
@@ -903,7 +906,7 @@ export class Project {
   }
 
   get _cpid(): CpidChunk {
-    return find_by_type(this._root_chunks, "cpid") as CpidChunk;
+    return find_by_type(this._root_chunks, "cpid");
   }
 
   /** Whether the project is for After Effects on Windows (`_platform`). */
@@ -927,15 +930,15 @@ export class Project {
 
   /**
    * Directories scanned to resolve ICC profiles when writing an
-   * Adobe-CMS working space. `None` (default) auto-discovers the standard
-   * Adobe Color directories. Assign a list of folders containing `.icc`/
+   * Adobe-CMS working space. `null` (default) auto-discovers the standard
+   * Adobe Color directories. Assign an array of folders containing `.icc`/
    * `.icm` files to override (e.g. for a non-default install or CI).
    */
   get icc_profile_dirs(): Path[] | null {
     return this._icc_profile_dirs;
   }
 
-  set icc_profile_dirs(value: any[] | null) {
+  set icc_profile_dirs(value: PathLike[] | null) {
     if (value != null) {
       if (!is_list_or_tuple(value)) {
         throw new TypeError_(
@@ -946,7 +949,7 @@ export class Project {
       for (const p of value) validate_path_exists(p);
       value = value.map((p: PathLike) => new Path(p));
     }
-    this._icc_profile_dirs = value;
+    this._icc_profile_dirs = value as Path[] | null;
     this._icc_library = null; // rebuild on next use
   }
 
@@ -962,7 +965,7 @@ export class Project {
    * "ACES/sRGB"). Only relevant when color_management_system is OCIO.
    * "None" when not set. Read / Write.
    *
-   * Assign a `(display, view)` tuple or a `"display/view"` string. Writable
+   * Assign a `[display, view]` array or a `"display/view"` string. Writable
    * only in OCIO mode (the chunk stores an OCIO display + view by name). In
    * Adobe CMS mode the display uses the operating system's monitor profile,
    * which is not stored in the project (the `pdvc` chunk is an empty `{}`,
@@ -976,7 +979,7 @@ export class Project {
     return "None";
   }
 
-  set display_color_space(value: [string, string] | string | any) {
+  set display_color_space(value: [string, string] | string) {
     if (this.color_management_system !== ColorManagementSystem.OCIO) {
       throw new NotImplementedError(
         "display_color_space is only settable in OCIO mode. In Adobe " +
@@ -1053,7 +1056,7 @@ export class Project {
     return ColorManagementSystem.of(int(getitem(settings, "colorManagementSystem")));
   }
 
-  set color_management_system(value: any) {
+  set color_management_system(value: ColorManagementSystem | number) {
     _set_color_management_system.call(this, value);
   }
 
@@ -1066,7 +1069,7 @@ export class Project {
     return LutInterpolationMethod.of(int(getitem(settings, "lutInterpolationMethod")));
   }
 
-  set lut_interpolation_method(value: any) {
+  set lut_interpolation_method(value: LutInterpolationMethod | number) {
     _set_lut_interpolation_method.call(this, value);
   }
 
@@ -1123,7 +1126,7 @@ export class Project {
   layer_by_id(layer_id: number): Layer {
     for (const comp of this.compositions) {
       try {
-        return getitem((comp as any).layers_by_id, layer_id);
+        return getitem(comp.layers_by_id, layer_id);
       } catch (e) {
         if (!(e instanceof KeyError)) throw e;
         continue;
@@ -1150,7 +1153,7 @@ export class Project {
   /**
    * Import a placeholder footage item into the project root folder.
    *
-   * @param name - The placeholder name. Pass `None` to use `Missing Name`. An empty string becomes
+   * @param name - The placeholder name. Pass `null` to use `Missing Name`. An empty string becomes
    *   `Placeholder`.
    * @param width - Width in pixels (4-30000).
    * @param height - Height in pixels (4-30000).
@@ -1353,7 +1356,7 @@ export class Project {
 
   /**
    * The COMP-import Layer Options value: the user's explicit choice, or
-   * the machine's sticky PSD-comp import preference. `None` (no preference,
+   * the machine's sticky PSD-comp import preference. `null` (no preference,
    * or no preferences directory) keeps AE's `editable` dialog default.
    */
   _resolve_comp_layer_styles(options: ImportOptions): string | null {
@@ -1391,9 +1394,9 @@ export class Project {
     // py_aep does not model; the origin avoids that and renders the
     // same.)
     const transform = layer.transform;
-    (transform.__getitem__("ADBE Anchor Point") as Property).value = [0.0, 0.0, 0.0];
-    (transform.__getitem__("ADBE Position") as Property).value = [0.0, 0.0, 0.0];
-    const contents = layer.property("ADBE Root Vectors Group") as PropertyGroup;
+    transform.__getitem__("ADBE Anchor Point").value = [0.0, 0.0, 0.0];
+    transform.__getitem__("ADBE Position").value = [0.0, 0.0, 0.0];
+    const contents = layer.property("ADBE Root Vectors Group");
     build_shape_layer_contents(contents, doc.drawables);
     return comp;
   }
@@ -1498,7 +1501,7 @@ export class Project {
         // `name_set` stays off - matching avoids both deltas. A
         // clipping-run precomp instead bakes the base layer's name
         // (still with `name_set` off) and stays uncollapsed.
-        const group_layer = comp.add(nested) as AVLayer;
+        const group_layer = comp.add(nested);
         if (spec.collapsed) group_layer.collapse_transformation = true;
         if (!spec.enabled) group_layer.enabled = false;
         if (spec.layer_name != null) {
@@ -1544,18 +1547,18 @@ export class Project {
       if (spec.transform != null) {
         const [[anchor_x, anchor_y], [position_x, position_y]] = spec.transform;
         const transform = layer.transform;
-        (transform.__getitem__("ADBE Anchor Point") as Property).value = [anchor_x, anchor_y, 0.0];
-        (transform.__getitem__("ADBE Position") as Property).value = [position_x, position_y, 0.0];
+        transform.__getitem__("ADBE Anchor Point").value = [anchor_x, anchor_y, 0.0];
+        transform.__getitem__("ADBE Position").value = [position_x, position_y, 0.0];
       }
-      if (spec.is_adjustment) (layer as AVLayer).adjustment_layer = true;
-      if (spec.preserve_transparency) (layer as AVLayer).preserve_transparency = true;
+      if (spec.is_adjustment) layer.adjustment_layer = true;
+      if (spec.preserve_transparency) layer.preserve_transparency = true;
       if (spec.masks?.length > 0) {
         // A PSD vector-mask/shape-layer path: AE creates one mask
         // per subpath (psd_vector_mask* fixtures).
-        const parade = layer.property("ADBE Mask Parade") as PropertyGroup;
+        const parade = layer.property("ADBE Mask Parade");
         for (const shape of spec.masks) {
-          const mask = parade.add_property("ADBE Mask Atom") as unknown as MaskPropertyGroup;
-          (mask.property("ADBE Mask Shape") as Property).value = shape;
+          const mask = parade.add_property("ADBE Mask Atom");
+          mask.property("ADBE Mask Shape").value = shape;
         }
       }
       _serialize_import_layer_styles(layer, spec.styles, file.name);
@@ -1583,7 +1586,7 @@ export class Project {
     const boxes = cropped ? read_ai_layer_bounds(file, data) : null;
     const specs: (LayerSpec | LayerGroupSpec)[] = [];
     for (const [index, layer] of layers.entries()) {
-      let box: any = null;
+      let box: Box | null = null;
       let width = info.width;
       let height = info.height;
       let transform: [[number, number], [number, number]] | null = null;
@@ -1655,7 +1658,7 @@ export class Project {
    */
   _import_psd_layered(file: Path, cropped = false, layer_styles: string | null = null): CompItem {
     const info = probe_media(file);
-    let nodes: any[];
+    let nodes: PsdNode[];
     try {
       nodes = read_psd_layers(file);
     } catch (e) {
@@ -1702,7 +1705,7 @@ export class Project {
    * disables run detection while building a run's own children.
    */
   _psd_layer_specs(
-    nodes: any[],
+    nodes: PsdNode[],
     file: Path,
     info: MediaInfo,
     cropped: boolean,
@@ -1749,8 +1752,8 @@ export class Project {
         // preserve-transparency on the clipped members
         // (psd_clipping_mask fixture).
         const run = [node];
-        while (index < nodes.length && nodes[index] instanceof PsdLayer && nodes[index].clipped) {
-          run.push(nodes[index]);
+        while (index < nodes.length && nodes[index] instanceof PsdLayer && (nodes[index] as PsdLayer).clipped) {
+          run.push(nodes[index] as PsdLayer);
           index += 1;
         }
         if (run.length > 1) {
@@ -1856,7 +1859,7 @@ export class Project {
     return specs;
   }
 
-  *_iter_text_source_properties(): Generator<[Layer, Property]> {
+  *_iter_text_source_properties(): Generator<[Layer, Property<TextDocument>]> {
     /** Yield `(layer, source_text)` for every text layer in the project. */
     for (const comp of this.compositions) {
       for (const layer of comp.layers) {
@@ -1893,10 +1896,10 @@ export class Project {
       let entries: [TextDocument, number][];
       if (source_text.keyframes?.length > 0) {
         entries = source_text.keyframes.map(
-          (kf: any) => [kf.value as TextDocument, kf.time - layer.start_time] as [TextDocument, number],
+          (kf) => [kf.value, kf.time - layer.start_time] as [TextDocument, number],
         );
       } else {
-        entries = [[source_text.value as TextDocument, 0.0]];
+        entries = [[source_text.value, 0.0]];
       }
       for (const [doc, layer_time] of entries) {
         if (doc == null) continue;
@@ -1931,8 +1934,8 @@ export class Project {
    * @param no_font_locking - Accepted for ExtendScript parity and ignored. After Effects uses it to
    *   suppress the fallback font it picks when `to_font` lacks glyphs for the text; that fallback
    *   is a runtime font-engine decision py_aep does not make, so py_aep always performs the direct
-   *   replacement (i.e. it behaves as if this were `True`).
-   * @returns `True` if at least one layer was changed.
+   *   replacement (i.e. it behaves as if this were `true`).
+   * @returns `true` if at least one layer was changed.
    */
   replace_font(from_font: FontObject | string, to_font: FontObject | string, no_font_locking = false): boolean {
     validate_bool(no_font_locking);
@@ -1942,8 +1945,8 @@ export class Project {
 
     let changed = false;
     for (const [, source_text] of this._iter_text_source_properties()) {
-      let docs = source_text.keyframes.map((kf: any) => kf.value as TextDocument);
-      if (!docs?.length) docs = [source_text.value as TextDocument];
+      let docs = source_text.keyframes.map((kf) => kf.value);
+      if (!docs?.length) docs = [source_text.value];
       docs = docs.filter((doc) => doc != null);
       if (docs?.length > 0 && _replace_layer_font(docs, from_name, to_name)) changed = true;
     }
@@ -2045,7 +2048,7 @@ export class Project {
     let removed = 0;
     for (const item_id of [...this.items.keys()]) {
       if (keep_ids.has(item_id) || !this.items.has(item_id)) continue;
-      this.items.get(item_id).remove();
+      this.items.get(item_id)!.remove();
       removed += 1;
     }
     return removed;
@@ -2073,7 +2076,7 @@ export class Project {
       if (duplicates.length < 2) continue;
       const kept = duplicates[0];
       for (const dup of duplicates.slice(1)) {
-        for (const comp of dup.used_in as any as CompItem[]) {
+        for (const comp of dup.used_in) {
           for (const layer of comp.av_layers) {
             if (layer._source_id === dup.id) {
               layer._source_id = kept.id;
@@ -2081,7 +2084,7 @@ export class Project {
               // `layer.source` access doesn't keep returning
               // the removed duplicate.
               layer._source = kept;
-              (kept as any)._used_in.add(comp);
+              kept._used_in.add(comp);
             }
           }
         }
@@ -2104,7 +2107,7 @@ export class Project {
     validate_path_does_not_exist(path);
     for (const comp of this.compositions) {
       // A comp whose layers were never loaded has had nothing moved.
-      if ((comp as any)._layers_loaded) {
+      if (comp._layers_loaded) {
         for (const layer of comp.layers) {
           layer._write_out_moved_defaults();
         }
@@ -2156,11 +2159,11 @@ export class Project {
   _fill_relative_path_counts(project_file: string): [Utf8Chunk, string][] {
     const filled: [Utf8Chunk, string][] = [];
     for (const chunk of recursive_find(this._rifx.chunks, "alas", undefined, true)) {
-      const alas = chunk as Utf8Chunk;
+      const alas = chunk;
       const text = alas.value;
       const data = text ? json_loads(text) : new Map<string, any>();
       if (!py_eq(dict_get(data, "ascendcount_base"), PENDING_ASCENDCOUNT)) continue;
-      const counts = relative_path_counts(project_file, dict_get(data, "fullpath", "") as string, {
+      const counts = relative_path_counts(project_file, dict_get(data, "fullpath", ""), {
         target_is_folder: py_bool(dict_get(data, "target_is_folder")),
       });
       data.set("ascendcount_base", counts[0]);
@@ -2205,7 +2208,7 @@ export class Project {
   /**
    * Lazily parse output module templates from AE preferences.
    *
-   * Returns a list of {@link OutputModuleTemplate} objects.
+   * Returns an array of {@link OutputModuleTemplate} objects.
    *
    * @throws {@link ValueError} If no preferences directory was provided to `parse()`. Output module
    *   templates are required for adding items to the render queue.
@@ -2237,7 +2240,7 @@ export class Project {
       const layer_ids: number[] = [];
       for (const comp of this.compositions) {
         for (const ldta of recursive_find(comp._item_list.chunks, "ldta")) {
-          layer_ids.push((ldta as LdtaChunk).layer_id);
+          layer_ids.push(ldta.layer_id);
         }
       }
       const max_layer_id = max(layer_ids, null, 0);
@@ -2263,7 +2266,7 @@ export class Project {
     let name: string;
     try {
       const sfnm = find_by_list_type(this._rifx.chunks, "sfnm");
-      name = (find_by_type(sfnm.chunks, "Utf8") as Utf8Chunk).value;
+      name = find_by_type(sfnm.chunks, "Utf8").value;
     } catch (e) {
       if (!(e instanceof ChunkNotFoundError)) throw e;
       return "Solids";
@@ -2274,7 +2277,7 @@ export class Project {
   get _sfid(): U4LeChunk | null {
     try {
       const sfnm = find_by_list_type(this._rifx.chunks, "sfnm");
-      return find_by_type(sfnm.chunks, "sfid") as U4LeChunk;
+      return find_by_type(sfnm.chunks, "sfid");
     } catch (e) {
       if (!(e instanceof ChunkNotFoundError)) throw e;
       return null;
@@ -2315,15 +2318,15 @@ export class Project {
     ocioConfigurationFile: "",
   };
 
-  /** Return the color profile settings dict. */
+  /** Return the color profile settings Map. */
   _get_cms_settings(): Map<string, any> {
     if (this._cms_utf8 != null) {
       const cms_data = json_loads(this._cms_utf8.value);
-      const merged = new Map<string, any>(Object.entries((this.constructor as typeof Project)._CMS_DEFAULTS));
+      const merged = new Map<string, any>(Object.entries(this.constructor._CMS_DEFAULTS));
       for (const [k, v] of cms_data) merged.set(k, v);
       return merged;
     }
-    return new Map<string, any>(Object.entries((this.constructor as typeof Project)._CMS_DEFAULTS));
+    return new Map<string, any>(Object.entries(this.constructor._CMS_DEFAULTS));
   }
 
   /** Update a single key in the CMS settings JSON chunk. */
@@ -2333,7 +2336,7 @@ export class Project {
       data.set(key, value);
       this._cms_utf8.value = json_dumps(data);
     } else {
-      const data = new Map<string, any>(Object.entries((this.constructor as typeof Project)._CMS_DEFAULTS));
+      const data = new Map<string, any>(Object.entries(this.constructor._CMS_DEFAULTS));
       data.set(key, value);
       const chunk = new Utf8Chunk({ value: json_dumps(data) });
       this._rifx.chunks.push(chunk);
@@ -2429,8 +2432,8 @@ descriptor(
   Project,
   "compensate_for_scene_referred_profiles",
   ChunkField.bool("_acer", "value", {
-    transform: (v: any) => py_bool(v),
-    reverse: (v: any) => int(v),
+    transform: (v: unknown) => py_bool(v),
+    reverse: (v: boolean) => int(v),
     min_version: 16,
   }),
 );
@@ -2469,7 +2472,7 @@ descriptor(
   "xmp_packet",
   new ChunkField("_aep", "_xmp", {
     transform: (s: any) => (py_bool(s) && strip(s) ? ET_fromstring(s) : null),
-    reverse: (el: any) => (el != null ? ET_tostring(el) : ""),
+    reverse: (el: Element | null) => (el != null ? ET_tostring(el) : ""),
   }),
 );
 
@@ -2497,11 +2500,11 @@ export function _ai_cropped_transform(
   return [anchor, position];
 }
 
-/** Get the list of effect names used in the project. */
+/** Get the array of effect names used in the project. */
 export function _get_effect_names(root_chunks: Chunk[]): string[] {
   const pefl_chunk = find_by_list_type(root_chunks, "Pefl");
   const pjef_chunks = filter_by_type(pefl_chunk.chunks, "pjef");
-  return pjef_chunks.map((chunk) => (chunk as Utf8Chunk).value);
+  return pjef_chunks.map((chunk) => chunk.value);
 }
 
 // tdb4 canon AE writes on materialized Layer Styles leaves, keyed by leaf
@@ -2514,13 +2517,16 @@ export function _get_effect_names(root_chunks: Chunk[]): string[] {
 // scalar-stamped here although `_style_leaf_canon` leaves the spec
 // uncanonized, the 2D point rows come from the psd_styles_offset_phase
 // fixture, and the blend-options leaves are keyed by full match name.
-export const _STYLE_TDB4_ENUM: any[] = [0x0001, null, 0x04, 0x04, 0x04, null, null, false];
-export const _STYLE_TDB4_SCALAR: any[] = [0xffff, null, null, null, null, null, null, false];
-export const _STYLE_TDB4_ANGLE: any[] = [0xffff, 0xff, 0xff, 0x04, 0x06, null, null, false];
-export const _STYLE_TDB4_TOGGLE: any[] = [0xffff, null, 0x04, 0x04, 0x04, null, null, false];
-export const _STYLE_TDB4_POINT: any[] = [0xffff, 0xff, 0xff, 0x04, 0x06, 3, false, true];
+/** `[hint, hint_flag, cvot, type_flags, category, pad2a, vector, spatial]`. */
+export type Tdb4Row = [number, number | null, number | null, number | null, number | null, number | null, boolean | null, boolean];
 
-export const _STYLE_TDB4_CANON = new Map<string, any[]>();
+export const _STYLE_TDB4_ENUM: Tdb4Row = [0x0001, null, 0x04, 0x04, 0x04, null, null, false];
+export const _STYLE_TDB4_SCALAR: Tdb4Row = [0xffff, null, null, null, null, null, null, false];
+export const _STYLE_TDB4_ANGLE: Tdb4Row = [0xffff, 0xff, 0xff, 0x04, 0x06, null, null, false];
+export const _STYLE_TDB4_TOGGLE: Tdb4Row = [0xffff, null, 0x04, 0x04, 0x04, null, null, false];
+export const _STYLE_TDB4_POINT: Tdb4Row = [0xffff, 0xff, 0xff, 0x04, 0x06, 3, false, true];
+
+export const _STYLE_TDB4_CANON = new Map<string, Tdb4Row>();
 for (const k of _STYLE_ENUM_SUFFIXES) _STYLE_TDB4_CANON.set(k, _STYLE_TDB4_ENUM);
 for (const k of _STYLE_ANGLE_SUFFIXES) _STYLE_TDB4_CANON.set(k, _STYLE_TDB4_ANGLE);
 for (const k of _STYLE_HINT_BOUNDS.keys()) _STYLE_TDB4_CANON.set(k, _STYLE_TDB4_SCALAR);
@@ -2540,7 +2546,7 @@ _STYLE_TDB4_CANON.set("ADBE Blend Interior", _STYLE_TDB4_TOGGLE);
 
 /** Apply the AE tdb4 canon to a just-written Layer Styles leaf. */
 export function _stamp_style_tdb4(leaf: Property, match_name: string, timebase: number, point_aspect: number): void {
-  const tdb4 = (leaf as any)._tdb4;
+  const tdb4 = leaf._tdb4;
   if (tdb4 == null) return;
   const canon = py_or(
     _STYLE_TDB4_CANON.get(match_name),
@@ -2592,7 +2598,7 @@ export function _style_leaf_map(group: PropertyGroup): Map<string, Property> {
         setdefault(leaves, name, leaf);
       }
     } else if (!leaves.has(child.match_name)) {
-      leaves.set(child.match_name, child as Property);
+      leaves.set(child.match_name, child);
     }
   }
   return leaves;
@@ -2612,7 +2618,7 @@ export function _style_leaf_map(group: PropertyGroup): Map<string, Property> {
  * 0x02 - functional bits, fixture-pinned).
  */
 export function _serialize_import_layer_styles(layer: Layer, styles: PsdLayerStyles | null, source_name: string): void {
-  const container = layer.__getitem__("ADBE Layer Styles") as PropertyGroup;
+  const container = layer.__getitem__("ADBE Layer Styles");
   // AE enables the container + Blend Options chain when any style is
   // enabled OR the layer carries blend-options data (a Photoshop Fill
   // slider away from 100% enables the chain with zero styles - the
@@ -2620,8 +2626,8 @@ export function _serialize_import_layer_styles(layer: Layer, styles: PsdLayerSty
   const styled = styles != null && py_bool(styles.enabled?.length > 0 ? styles.enabled : styles.blend_options);
   const container_flags = styled ? 1 : 3;
   container._ensure_materialized();
-  py_assert((container as any)._tdsb != null);
-  (container as any)._tdsb._enable_flags = container_flags;
+  py_assert(container._tdsb != null);
+  container._tdsb._enable_flags = container_flags;
   // The synthesis pass stamped derived `enabled` overrides while every
   // group was still synthetic-disabled; refresh them to the written state
   // (ExtendScript semantics: container/Blend Options = any style enabled).
@@ -2629,18 +2635,18 @@ export function _serialize_import_layer_styles(layer: Layer, styles: PsdLayerSty
   for (const child of container.properties) {
     if (!(child instanceof PropertyGroup)) continue;
     child._ensure_materialized();
-    py_assert((child as any)._tdsb != null);
+    py_assert(child._tdsb != null);
     if (child.match_name === "ADBE Blend Options Group") {
-      (child as any)._tdsb._enable_flags = container_flags;
+      child._tdsb._enable_flags = container_flags;
       instance_dict(child).set("enabled", styled);
       for (const sub of child.properties) {
         if (sub instanceof PropertyGroup) {
           sub._ensure_materialized();
-          py_assert((sub as any)._tdsb != null);
+          py_assert(sub._tdsb != null);
           // AE writes the Advanced Blending subgroup enabled on
           // EVERY import, plain skeletons included (pinned by the
           // psd_fill_opacity/psd_layer_styles/ai_comp fixtures).
-          (sub as any)._tdsb._enable_flags = 1;
+          sub._tdsb._enable_flags = 1;
         }
       }
     } else {
@@ -2655,7 +2661,7 @@ export function _serialize_import_layer_styles(layer: Layer, styles: PsdLayerSty
       } else {
         flags = 2;
       }
-      (child as any)._tdsb._enable_flags = flags;
+      child._tdsb._enable_flags = flags;
       instance_dict(child).delete("enabled");
     }
   }
@@ -2669,7 +2675,7 @@ export function _serialize_import_layer_styles(layer: Layer, styles: PsdLayerSty
     );
   }
   if (!styles.values?.size) return;
-  const timebase = (layer.containing_comp as any)._cdta.internal_timebase;
+  const timebase = layer.containing_comp._cdta.internal_timebase;
   const source = layer.source as AVItem;
   const point_aspect = (source.width * source.pixel_aspect) / source.height;
   const leaves = _style_leaf_map(container);
@@ -2678,10 +2684,10 @@ export function _serialize_import_layer_styles(layer: Layer, styles: PsdLayerSty
     const leaf = leaves.get(match_name) ?? null;
     if (leaf == null) continue;
     leaf.value = value;
-    if (value instanceof Gradient && (leaf as any)._tdb4 != null) {
+    if (value instanceof Gradient && leaf._tdb4 != null) {
       // AE's style gradient tdb4 is vector-typed (the NO_VALUE-seeded
       // spec builds a bare one).
-      (leaf as any)._tdb4.vector = true;
+      leaf._tdb4.vector = true;
     }
     _stamp_style_tdb4(leaf, match_name, timebase, point_aspect);
   }

@@ -8,3 +8,4 @@ dist/
 *.ts-e
 .gate/
 __pycache__/
+.doccheck/

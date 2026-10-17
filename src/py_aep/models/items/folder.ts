@@ -19,14 +19,15 @@ import { CompItem } from "./composition.ts";
  * as other folders.
  *
  * @example
- * ```python
- * from py_aep import parse
+ * ```ts
+ * import { parse } from "@bevyl-ai/ts-aep";
  *
- * app = parse("project.aep")
- * root = app.project.root_folder
- * print(root.name)
- * for item in root:
- *     ...
+ * const app = parse("project.aep");
+ * const root = app.project.root_folder;
+ * console.log(root.name);
+ * for (const item of root) {
+ *   // ...
+ * }
  * ```
  * @see https://ae-scripting.docsforadobe.dev/item/folderitem/
  */
@@ -78,17 +79,17 @@ export class FolderItem extends Item {
 
   /** All the compositions in the project. */
   get compositions(): CompItem[] {
-    return this.items.filter((item) => item instanceof CompItem) as CompItem[];
+    return this.items.filter((item) => item instanceof CompItem);
   }
 
   /** All the folders in the project. */
   get folders(): FolderItem[] {
-    return this.items.filter((item) => item instanceof FolderItem) as FolderItem[];
+    return this.items.filter((item) => item instanceof FolderItem);
   }
 
   /** All the footages in the project. */
   get footages(): FootageItem[] {
-    return this.items.filter((item) => item instanceof FootageItem) as FootageItem[];
+    return this.items.filter((item) => item instanceof FootageItem);
   }
 
   /** Remove this folder and all its children from the project. */
@@ -106,7 +107,7 @@ export class FolderItem extends Item {
    * Create a new empty folder with backing chunks.
    *
    * @param name - The name of the new folder.
-   * @param kw - Keyword arguments:
+   * @param kw - Options:
    * - `project`: The project that owns this folder.
    * - `parent_folder`: The folder that will contain this folder.
    */
@@ -267,7 +268,7 @@ export class FolderItem extends Item {
    *
    * Width, height, pixel aspect and frame rate resolve from the named
    * preset in the AE preferences (see
-   * {@link py_aep.models.preferences.Preferences.composition_presets});
+   * {@link Preferences.composition_presets});
    * presets carry no duration, so it must be given.
    *
    * @param name - The name of the new composition. Pass `null` to auto-generate a name (`Comp 1`,

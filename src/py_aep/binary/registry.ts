@@ -3,8 +3,15 @@
  */
 
 import type { Chunk } from "./chunk.ts";
+import type { ChunkClasses } from "./chunk_types.ts";
 
-export const CHUNK_TYPES: Map<string, typeof Chunk> = new Map();
+/** The registry by `chunk_type`; `get` of a literal registered type returns its class. */
+export interface ChunkRegistry extends Map<string, typeof Chunk> {
+  get<K extends keyof ChunkClasses>(chunk_type: K): ChunkClasses[K] | undefined;
+  get(chunk_type: string): typeof Chunk | undefined;
+}
+
+export const CHUNK_TYPES: ChunkRegistry = new Map();
 
 /**
  * Decorator that registers a Chunk subclass for one or more chunk_types.

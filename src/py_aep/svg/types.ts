@@ -3,7 +3,7 @@
  *
  * All coordinates are absolute, in the SVG viewBox coordinate system, with
  * every ancestor transform already applied. Tangents are stored relative to
- * their vertex (After Effects' {@link py_aep.models.properties.shape.Shape | Shape}
+ * their vertex (After Effects' {@link Shape | Shape}
  * convention).
  */
 
@@ -156,7 +156,7 @@ export class StrokeStyle {
  * One leaf drawable: its outline(s) plus fill and stroke.
  *
  * Mirrors the single `ADBE Vector Group` After Effects creates per leaf
- * element. `fill` / `stroke` are `None` when the element has no such
+ * element. `fill` / `stroke` are `null` when the element has no such
  * paint.
  */
 export class SvgDrawable {

@@ -48,7 +48,12 @@ export function build_layer_view_block(): Chunk[] {
 
 // NOTE(port): the only specs in data/comp_skeleton_specs.ts are `+`/`-`/unary minus over env names and int
 // literals (`W2 - ZV`, `-ZV`, `H2 + 5000`, `TB`); there JS doubles and CPython eval agree, so Function stands in.
-export function _evaluate(value: any, env: Record<string, number>): any {
+/** A node of the comp skeleton spec tree (JSON-like data from data/comp_skeleton_specs.ts). */
+export type SpecDict = Record<string, any>;
+/** A leaf of a spec: a literal, or a `$`-prefixed expression over the env names. */
+export type SpecValue = string | number | boolean;
+
+export function _evaluate(value: SpecValue, env: Record<string, number>): SpecValue {
   if (typeof value === "string" && value.startsWith("$")) {
     const names = Object.keys(env);
     return new Function(...names, `return (${value.slice(1)});`)(...names.map((n) => env[n]));
@@ -56,9 +61,9 @@ export function _evaluate(value: any, env: Record<string, number>): any {
   return value;
 }
 
-export function _build_tdbs(spec: Record<string, any>, env: Record<string, number>): ListChunk {
+export function _build_tdbs(spec: SpecDict, env: Record<string, number>): ListChunk {
   const tdb4 = new Tdb4Chunk(
-    Object.fromEntries(Object.entries(spec["tdb4"]).map(([k, v]) => [k, _evaluate(v, env)])),
+    Object.fromEntries(Object.entries<SpecValue>(spec["tdb4"]).map(([k, v]) => [k, _evaluate(v, env)])),
   );
   if (tdb4._spatial_marker && !tdb4.color && !tdb4.no_value) {
     // AE writes the comp's pixel aspect into spatial point tdb4s
@@ -72,7 +77,7 @@ export function _build_tdbs(spec: Record<string, any>, env: Record<string, numbe
   ];
   if ("cdat" in spec) {
     chunks.push(
-      new CdatChunk({ values: spec["cdat"].map((v: any) => float(_evaluate(v, env))) }),
+      new CdatChunk({ values: spec["cdat"].map((v: SpecValue) => float(_evaluate(v, env))) }),
     );
   }
   if ("tdum" in spec) {
@@ -97,7 +102,7 @@ export function _build_extras(extras: [string, string][]): Chunk[] {
 }
 
 export function _build_tdgp(
-  spec: Record<string, any>,
+  spec: SpecDict,
   env: Record<string, number>,
   ae_major: number,
 ): ListChunk {
@@ -115,7 +120,7 @@ export function _build_tdgp(
     } else if (kind === "prop") {
       chunks.push(_build_tdbs(body, env));
     } else if (kind === "orientation") {
-      const otda_values = body["otda"].map((v: any) => float(_evaluate(v, env)));
+      const otda_values = body["otda"].map((v: SpecValue) => float(_evaluate(v, env)));
       const inner = Object.fromEntries(Object.entries(body).filter(([k]) => k !== "otda"));
       const otky = new ListChunk({
         list_type: "otky",
@@ -136,13 +141,13 @@ export function _build_tdgp(
 }
 
 export function _build_view_layer(
-  spec: Record<string, any>,
+  spec: SpecDict,
   env: Record<string, number>,
   layer_id: number,
   ae_major: number,
 ): ListChunk {
-  const ldta_kwargs: Record<string, any> = Object.fromEntries(
-    Object.entries(spec["ldta"]).map(([k, v]) => [k, _evaluate(v, env)]),
+  const ldta_kwargs: Record<string, SpecValue> = Object.fromEntries(
+    Object.entries<SpecValue>(spec["ldta"]).map(([k, v]) => [k, _evaluate(v, env)]),
   );
   if (!ae_writes("matte layer id", ae_major)) {
     // The matte-layer field arrived with AE 23: AE 22 writes 160-byte

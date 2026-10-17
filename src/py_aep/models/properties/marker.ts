@@ -27,13 +27,13 @@ export function _validate_params(value: Map<string, string>): void {
  * link, or Flash Video cue point with a particular point in a layer.
  *
  * @example
- * ```python
- * from py_aep import parse
+ * ```ts
+ * import { parse } from "@bevyl-ai/ts-aep";
  *
- * app = parse("project.aep")
- * comp = app.project.compositions[0]
- * marker = comp.markers[0]
- * print(marker.comment)
+ * const app = parse("project.aep");
+ * const comp = app.project.compositions[0];
+ * const marker = comp.markers[0];
+ * console.log(marker.comment);
  * ```
  * @see https://ae-scripting.docsforadobe.dev/other/markervalue/
  */
@@ -81,12 +81,12 @@ export class MarkerValue {
     this._nmrd = null;
     this._frame_time = 0;
     this._param_utf8s = [];
-    if (params?.size > 0) {
+    if (params?.size! > 0) {
       for (const [key, val] of params!) {
         this._param_utf8s.push(new Utf8Chunk({ value: key }));
         this._param_utf8s.push(new Utf8Chunk({ value: val }));
       }
-      this._nmhd.num_params = params.size;
+      this._nmhd.num_params = params!.size;
     }
   }
 
@@ -126,7 +126,7 @@ export class MarkerValue {
     obj._keyframe = _keyframe;
     obj._nmrd = _nmrd;
     obj._frame_time = frame_time;
-    obj._param_utf8s = _param_utf8s?.length > 0 ? _param_utf8s : [];
+    obj._param_utf8s = _param_utf8s?.length! > 0 ? _param_utf8s! : [];
     return obj;
   }
 
@@ -227,7 +227,7 @@ export class MarkerValue {
   }
 
   /**
-   * When `True`, the FlashVideo cue point is for an event; otherwise, it is
+   * When `true`, the FlashVideo cue point is for an event; otherwise, it is
    * for navigation.
    */
   get event_cue_point(): boolean {
@@ -250,8 +250,8 @@ descriptor(MarkerValue, "navigation", ChunkField.bool("_nmhd", "navigation"));
 
 /**
  * State of the Protected Region option in the Composition Marker dialog box.
- * When `True`, the composition marker behaves as a protected region. Will
- * also return `True` for protected region markers on nested composition
+ * When `true`, the composition marker behaves as a protected region. Will
+ * also return `true` for protected region markers on nested composition
  * layers, but is otherwise not applicable to layer markers. Read / Write.
  */
 descriptor(MarkerValue, "protected_region", ChunkField.bool("_nmhd", "protected_region"));

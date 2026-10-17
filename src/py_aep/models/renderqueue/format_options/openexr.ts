@@ -14,13 +14,14 @@ import type { OpenExrRoptChunk } from "../../../binary/render_chunks.ts";
  * accessible when the output format is set to OpenEXR or OpenEXR Sequence.
  *
  * @example
- * ```python
- * from py_aep import OpenExrFormatOptions, parse
+ * ```ts
+ * import { OpenExrFormatOptions, parse } from "@bevyl-ai/ts-aep";
  *
- * app = parse("project.aep")
- * om = app.project.render_queue.items[0].output_modules[0]
- * if isinstance(om.format_options, OpenExrFormatOptions):
- *     print(om.format_options.compression)
+ * const app = parse("project.aep");
+ * const om = app.project.render_queue.items[0].output_modules[0];
+ * if (om.format_options instanceof OpenExrFormatOptions) {
+ *   console.log(om.format_options.compression);
+ * }
  * ```
  */
 export class OpenExrFormatOptions extends FormatOptionsBase {
@@ -29,7 +30,7 @@ export class OpenExrFormatOptions extends FormatOptionsBase {
   /**
    * The compression method. Corresponds to the `Compression` dropdown
    * in the OpenEXR Options dialog. An out-of-enum stored value reads
-   * back as a raw `int` (the binary is trusted). Read / Write.
+   * back as a raw integer (the binary is trusted). Read / Write.
    */
   declare compression: OpenExrCompression | number;
 
@@ -60,7 +61,7 @@ export class OpenExrFormatOptions extends FormatOptionsBase {
    * `45.0`. Read / Write.
    */
   get dwa_compression_level(): number | null {
-    if ([OpenExrCompression.DWAA, OpenExrCompression.DWAB].includes(this.compression as any)) {
+    if (([OpenExrCompression.DWAA, OpenExrCompression.DWAB] as (OpenExrCompression | number)[]).includes(this.compression)) {
       return this._body.dwa_compression_level;
     }
     return null;

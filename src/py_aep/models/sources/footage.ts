@@ -10,6 +10,7 @@ import {
   py_cmp,
   repr,
   round,
+  type ClassAttributes,
 } from "../../../pyrt/index.ts";
 import { to_dividend_divisor } from "../../binary/bin_utils.ts";
 import { ChunkNotFoundError, find_by_type, find_chunks_after, toggle_flag_chunk } from "../../binary/utils.ts";
@@ -21,7 +22,7 @@ import { map_media_color_space, profile_id_for_name } from "../../enums/mappings
 import { ChunkField } from "../descriptors.ts";
 import { _validate_number, validate_bool, validate_conform_frame_rate, validate_rgb_color, validate_string } from "../validators.ts";
 
-import type { ListChunk } from "../../binary/chunk.ts";
+import type { Chunk, ListChunk } from "../../binary/chunk.ts";
 import type { SspcChunk } from "../../binary/footage_chunks.ts";
 import type { U1Chunk, Utf8Chunk } from "../../binary/scalar_chunks.ts";
 import type { ColorProfile } from "../../color/envelope.ts";
@@ -51,7 +52,7 @@ export const _CLRS_RECORDS_SINCE: ReadonlyArray<readonly [string, readonly [numb
  * writing a mode over it would claim an alpha channel the media does not
  * have. AE greys the whole alpha section out for such footage.
  */
-export function _validate_has_alpha(value: any, instance: any = null): void {
+export function _validate_has_alpha(value: unknown, instance: { has_alpha?: boolean } | null = null): void {
   if (instance != null && !instance.has_alpha) {
     throw new ValueError(
       "cannot set alpha_mode: the footage has no alpha channel " +
@@ -101,6 +102,7 @@ export function _store_frames_over_rate(sspc: SspcChunk, frames: number, rate: n
  * @see https://ae-scripting.docsforadobe.dev/sources/footagesource/
  */
 export class FootageSource {
+  declare ["constructor"]: ClassAttributes<typeof FootageSource>;
   /**
    * Whether the item display name lives in this source's own `opti` chunk.
    *
@@ -112,7 +114,7 @@ export class FootageSource {
 
   /**
    * Defines how the alpha information in the footage is interpreted.
-   * If `has_alpha` is `False`, this attribute has no relevant meaning.
+   * If `has_alpha` is `false`, this attribute has no relevant meaning.
    * Read / Write.
    */
   declare alpha_mode: AlphaMode;
@@ -124,24 +126,24 @@ export class FootageSource {
   declare field_separation_type: FieldSeparationType;
 
   /**
-   * When `True`, the footage has an alpha component. In this case, the
+   * When `true`, the footage has an alpha component. In this case, the
    * attributes `alpha_mode`, `invert_alpha`, and `premultiplied` have valid
-   * values. When `False`, those attributes have no relevant meaning for the
+   * values. When `false`, those attributes have no relevant meaning for the
    * footage. Read-only.
    */
   declare has_alpha: boolean;
 
   /**
-   * When `True`, After Effects uses special algorithms to determine how to
+   * When `true`, After Effects uses special algorithms to determine how to
    * perform high-quality field separation. Read / Write.
    */
   declare high_quality_field_separation: boolean;
 
   /**
-   * When `True`, an alpha channel in a footage clip or proxy should be
+   * When `true`, an alpha channel in a footage clip or proxy should be
    * inverted. This attribute is valid only if an alpha is present. If
-   * `has_alpha` is `False`, or if `alpha_mode` is
-   * {@link py_aep.enums.AlphaMode | AlphaMode.IGNORE}, this attribute is
+   * `has_alpha` is `false`, or if `alpha_mode` is
+   * {@link AlphaMode | AlphaMode.IGNORE}, this attribute is
    * ignored. Read / Write.
    */
   declare invert_alpha: boolean;
@@ -155,7 +157,7 @@ export class FootageSource {
   /**
    * The color to be premultiplied. This attribute is valid only if
    * the `alpha_mode` is
-   * {@link py_aep.enums.AlphaMode | AlphaMode.PREMULTIPLIED}.
+   * {@link AlphaMode | AlphaMode.PREMULTIPLIED}.
    * Read / Write.
    */
   declare premul_color: number[];
@@ -232,7 +234,7 @@ export class FootageSource {
 
   /**
    * Controls which pulldown phase to remove from the source footage.
-   * {@link py_aep.enums.PulldownPhase | PulldownPhase.OFF} by default.
+   * {@link PulldownPhase | PulldownPhase.OFF} by default.
    * Read / Write.
    */
   declare remove_pulldown: PulldownPhase;
@@ -441,7 +443,7 @@ export class FootageSource {
       ),
     );
     const chunks = this._clrs.chunks;
-    const kept: any[] = [];
+    const kept: Chunk[] = [];
     let index = 0;
     while (index < chunks.length) {
       if (dropped.has(chunks[index].chunk_type)) {
@@ -469,9 +471,9 @@ export class FootageSource {
     const old_clrs = this._clrs,
       new_clrs = new_._clrs;
     if (old_clrs == null || new_clrs == null) return;
-    for (const chunk_type of ["ipws", "linl"]) {
-      const old_chunk = find_by_type(old_clrs.chunks, chunk_type) as U1Chunk;
-      const new_chunk = find_by_type(new_clrs.chunks, chunk_type) as U1Chunk;
+    for (const chunk_type of ["ipws", "linl"] as const) {
+      const old_chunk = find_by_type(old_clrs.chunks, chunk_type);
+      const new_chunk = find_by_type(new_clrs.chunks, chunk_type);
       new_chunk.value = old_chunk.value;
     }
     toggle_flag_chunk(new_clrs, "prgb", this.preserve_rgb);
@@ -512,7 +514,7 @@ export class FootageSource {
   }
 
   /**
-   * When `True`, the footage Preserve RGB setting is enabled.
+   * When `true`, the footage Preserve RGB setting is enabled.
    * From the Interpret Footage \> Color Management tab. Read / Write.
    *
    * **Note:** Not exposed in ExtendScript.
@@ -538,7 +540,7 @@ export class FootageSource {
    *
    * Returns `"Embedded"`, `"Working Color Space"`, the name of an assigned
    * OCIO color space, or the name of an Adobe ICC profile (e.g.
-   * `"Apple RGB"`). As with {@link py_aep.models.project.Project.working_space | working_space},
+   * `"Apple RGB"`). As with {@link Project.working_space | working_space},
    * an assigned OCIO space reads back as AE's stored `colorProfileName`:
    * `"<family>/<name>"` for a direct color-space pick (e.g.
    * `"ACES/ACES - ACEScg"`), or the target name for a role/alias pick.
@@ -565,7 +567,7 @@ export class FootageSource {
    */
   get media_color_space(): string {
     if (this._clrs == null) return "Embedded";
-    const ipws_chunk = find_by_type(this._clrs.chunks, "ipws") as U1Chunk;
+    const ipws_chunk = find_by_type(this._clrs.chunks, "ipws");
     if (ipws_chunk.value) return "Working Color Space";
     // In OCIO mode the assigned color space is carried as an OCIO envelope in
     // the `ocsp` Utf8 (apid is the unmanaged sentinel). In Adobe mode `ocsp`
@@ -587,7 +589,7 @@ export class FootageSource {
           "this footage source.",
       );
     }
-    const ipws_chunk = find_by_type(this._clrs.chunks, "ipws") as U1Chunk;
+    const ipws_chunk = find_by_type(this._clrs.chunks, "ipws");
     const apid_chunk = find_by_type(this._clrs.chunks, "apid");
     if (value === "Working Color Space") {
       // AE sets ipws, clears the override id, and empties the ocsp Utf8.
@@ -634,14 +636,14 @@ export class FootageSource {
   /** The `Utf8` chunk after the CLRS `ocsp` marker (the assigned space). */
   _ocsp_utf8(): Utf8Chunk | null {
     if (this._clrs == null) return null;
-    let after: any[];
+    let after: Utf8Chunk[];
     try {
       after = find_chunks_after(this._clrs.chunks, "Utf8", "ocsp");
     } catch (e) {
       if (!(e instanceof ChunkNotFoundError)) throw e;
       return null;
     }
-    return after?.length > 0 ? (after[0] as Utf8Chunk) : null;
+    return after?.length > 0 ? after[0] : null;
   }
 
   _ocsp_profile(): ColorProfile | null {
@@ -653,14 +655,14 @@ export class FootageSource {
   /** The embedded source profile envelope (CLRS `Mcsp` Utf8), or `{}`. */
   _embedded_envelope(): string {
     if (this._clrs == null) return "{}";
-    let after: any[];
+    let after: Utf8Chunk[];
     try {
       after = find_chunks_after(this._clrs.chunks, "Utf8", "Mcsp");
     } catch (e) {
       if (!(e instanceof ChunkNotFoundError)) throw e;
       return "{}";
     }
-    return after?.length > 0 ? (after[0] as Utf8Chunk).value : "{}";
+    return after?.length > 0 ? after[0].value : "{}";
   }
 
   _write_ocsp(envelope: string): void {
@@ -674,7 +676,7 @@ export class FootageSource {
   }
 
   /**
-   * Whether the footage is still; When `False`, it has a
+   * Whether the footage is still; When `false`, it has a
    * time-based component. Read-only.
    */
   get is_still(): boolean {

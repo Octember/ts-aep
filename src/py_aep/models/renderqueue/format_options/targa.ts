@@ -13,13 +13,14 @@ import type { RoptChunk } from "../../../binary/render_chunks.ts";
  * accessible when the output format is set to Targa Sequence.
  *
  * @example
- * ```python
- * from py_aep import TargaFormatOptions, parse
+ * ```ts
+ * import { parse, TargaFormatOptions } from "@bevyl-ai/ts-aep";
  *
- * app = parse("project.aep")
- * om = app.project.render_queue.items[0].output_modules[0]
- * if isinstance(om.format_options, TargaFormatOptions):
- *     print(om.format_options.bits_per_pixel)
+ * const app = parse("project.aep");
+ * const om = app.project.render_queue.items[0].output_modules[0];
+ * if (om.format_options instanceof TargaFormatOptions) {
+ *   console.log(om.format_options.bits_per_pixel);
+ * }
  * ```
  */
 export class TargaFormatOptions extends FormatOptionsBase {

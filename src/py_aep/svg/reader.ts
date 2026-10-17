@@ -184,7 +184,7 @@ export class _Reader {
     this._by_id = new Map();
     for (const elem of root.iter()) {
       const eid = elem.get("id");
-      if (eid) this._by_id.set(eid as string, elem);
+      if (eid) this._by_id.set(eid, elem);
     }
     this._root = root;
     this._parents = null;
@@ -197,7 +197,7 @@ export class _Reader {
     const rules: CssRule[] = [];
     for (const elem of root.iter()) {
       if (local_name(elem.tag) === "style" && elem.text) {
-        rules.push(...parse_css(elem.text as string));
+        rules.push(...parse_css(elem.text));
       }
     }
     return rules;
@@ -385,8 +385,8 @@ export class _Reader {
     depth = 0,
   ): void {
     const ref = elem.get("href") || elem.get("{http://www.w3.org/1999/xlink}href");
-    if (!ref || !(ref as string).startsWith("#")) return;
-    const target_id = (ref as string).slice(1);
+    if (!ref || !ref.startsWith("#")) return;
+    const target_id = ref.slice(1);
     if (this._use_stack.includes(target_id)) {
       throw new UnsupportedSVGError(`Recursive <use> reference: #${target_id}`);
     }
@@ -424,16 +424,16 @@ export class _Reader {
     // a run with an absolute x starts a new anchor chunk (outline_runs).
     if ((style.get("visibility") ?? null) === "hidden") return;
     const runs: [TextRun, Map<string, string>][] = [];
-    if (elem.text && strip(elem.text as string)) {
-      const run = this._make_run(elem.text as string, style, null);
+    if (elem.text && strip(elem.text)) {
+      const run = this._make_run(elem.text, style, null);
       if (run != null) runs.push([run, style]);
     }
     for (const child of elem) {
       const ctag = local_name(child.tag);
       if (ctag === "tspan") {
         const cstyle = resolve_properties(style, "tspan", child.attrib, this._css);
-        if (child.text && strip(child.text as string)) {
-          const run = this._make_run(child.text as string, cstyle, child);
+        if (child.text && strip(child.text)) {
+          const run = this._make_run(child.text, cstyle, child);
           if (run != null) runs.push([run, cstyle]);
         }
       } else if (ctag === "textPath") {
@@ -441,10 +441,10 @@ export class _Reader {
       }
       // Text after a child element (its `tail`) belongs to the parent.
       const tail = child.tail;
-      if (tail && strip(tail as string)) {
-        const run = this._make_run(tail as string, style, null);
+      if (tail && strip(tail)) {
+        const run = this._make_run(tail, style, null);
         if (run != null) runs.push([run, style]);
-      } else if (tail && !strip(tail as string) && runs.length > 0) {
+      } else if (tail && !strip(tail) && runs.length > 0) {
         // A whitespace-only tail between two runs (e.g.
         // `<tspan>foo</tspan> <tspan>bar</tspan>`) is a significant SVG
         // space that collapses to one space. Fold it into the preceding
@@ -522,14 +522,14 @@ export class _Reader {
     // A <textPath> lays its text along a referenced path's geometry, in the
     // path's own coordinate space (its accumulated transform).
     const href = tp_elem.get("href") || tp_elem.get("{http://www.w3.org/1999/xlink}href");
-    if (!href || !(href as string).startsWith("#")) return;
-    const target = this._by_id.get((href as string).slice(1)) ?? null;
-    if (target == null || !(!!tp_elem.text && !!strip(tp_elem.text as string))) {
+    if (!href || !href.startsWith("#")) return;
+    const target = this._by_id.get(href.slice(1)) ?? null;
+    if (target == null || !(!!tp_elem.text && !!strip(tp_elem.text))) {
       return;
     }
     const ctm = this._element_ctm(target);
     const style = resolve_properties(parent_style, "textPath", tp_elem.attrib, this._css);
-    const run = this._make_run(tp_elem.text as string, style, null);
+    const run = this._make_run(tp_elem.text, style, null);
     if (run == null) return;
     let path: RawSubpath[];
     try {
@@ -549,7 +549,7 @@ export class _Reader {
       off_frac = null;
     }
     const subpaths = outline_text_path(
-      strip(_collapse_ws(tp_elem.text as string)),
+      strip(_collapse_ws(tp_elem.text)),
       path,
       run.font_path,
       run.font_size,

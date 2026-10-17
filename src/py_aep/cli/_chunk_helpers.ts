@@ -48,7 +48,7 @@ export function build_chunk_path(
   if (!counters.has(counter_key)) {
     counters.set(counter_key, 0);
   } else {
-    counters.set(counter_key, counters.get(counter_key) + 1);
+    counters.set(counter_key, counters.get(counter_key)! + 1);
   }
 
   if (getitem(counters, counter_key) > 0) {

@@ -7,7 +7,6 @@ import { LayerType } from "../../enums/index.ts";
 import { label_index } from "../preferences.ts";
 import { AVLayer } from "./av_layer.ts";
 import type { CompItem } from "../items/composition.ts";
-import type { Layer } from "./layer.ts";
 import type { PropertyGroup } from "../properties/property_group.ts";
 
 /**
@@ -19,16 +18,27 @@ import type { PropertyGroup } from "../properties/property_group.ts";
  *     attributes of {@link AVLayer} are available when working with `TextLayer`.
  *
  * @example
- * ```python
- * from py_aep import parse
+ * ```ts
+ * import { parse } from "@bevyl-ai/ts-aep";
  *
- * app = parse("project.aep")
- * comp = app.project.compositions[0]
- * text_layer = comp.text_layers[0]
- * print(text_layer.text)
+ * const app = parse("project.aep");
+ * const comp = app.project.compositions[0];
+ * const text_layer = comp.text_layers[0];
+ * console.log(text_layer.text);
  * ```
  * @see https://ae-scripting.docsforadobe.dev/layer/textlayer/
  */
+type TextLayerNewKw = {
+  name: string;
+  layer_id: number;
+  duration: number;
+  containing_comp: CompItem;
+  btds: ListChunk;
+  btgu: ListChunk;
+  tdmn: TdmnChunk;
+  effect_param_defs?: Map<string, Map<string, Map<string, unknown>>> | null;
+};
+
 export class TextLayer extends AVLayer {
   static _auto_name: string = "Text";
 
@@ -37,20 +47,11 @@ export class TextLayer extends AVLayer {
     match_name: string,
     auto_name: string,
     property_depth: number,
-    kw?: any,
+    kw?: unknown,
   ): PropertyGroup;
-  static _new(kw: {
-    name: string;
-    layer_id: number;
-    duration: number;
-    containing_comp: CompItem;
-    btds: ListChunk;
-    btgu: ListChunk;
-    tdmn: TdmnChunk;
-    effect_param_defs?: Map<string, Map<string, Map<string, any>>> | null;
-  }): TextLayer;
-  static _new(kw: any): AVLayer;
-  static _new(kw: any): any {
+  static _new(kw: TextLayerNewKw): TextLayer;
+  static _new(kw: unknown): AVLayer;
+  static _new(kw: any): unknown {
     const {
       name,
       layer_id,
@@ -83,11 +84,11 @@ export class TextLayer extends AVLayer {
       containing_comp,
       root_tdgp_extra: [text_props_tdmn, text_props_tdgp],
       effect_param_defs,
-    }) as TextLayer;
+    });
     layer._ldta.layer_type = LayerType.TEXT;
     // The base factory named the layer from the AV type it started with.
     layer._match_name = getitem(
-      (layer.constructor as typeof Layer)._LAYER_MATCH_NAMES,
+      layer.constructor._LAYER_MATCH_NAMES,
       LayerType.TEXT,
     );
     // AE labels scripted text layers with the "Text Label Index"

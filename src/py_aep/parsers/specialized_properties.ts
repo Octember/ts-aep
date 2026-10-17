@@ -1,20 +1,19 @@
 /** Orientation, shape, text document, and gradient property parsers. */
 
 import type { ListChunk } from "../binary/chunk.ts";
-import type { LdatChunk } from "../binary/ldat_chunks.ts";
-import type { Fth5Chunk, OmtnChunk, ShphChunk } from "../binary/misc_chunks.ts";
-import type { CdatChunk, OtdaChunk, TdmnChunk } from "../binary/property_chunks.ts";
+import type { OmtnChunk } from "../binary/misc_chunks.ts";
+import type { TdmnChunk } from "../binary/property_chunks.ts";
 import { ChunkNotFoundError, filter_by_list_type, filter_by_type, find_by_list_type, find_by_type } from "../binary/utils.ts";
 import { CosParser } from "../cos/index.ts";
 // Python's builtin `SyntaxError` as raised by `CosParser`.
-import { SyntaxError_ } from "../cos/cos.ts";
+import { type CosValue, SyntaxError_ } from "../cos/cos.ts";
 import { PropertyValueType } from "../enums/index.ts";
 import { ORIENTATION_KIND } from "../models/properties/parallel.ts";
 import { FeatherPoint, Shape } from "../models/properties/shape.ts";
-import type { Utf8Chunk } from "../binary/scalar_chunks.ts";
 import type { CompItem } from "../models/items/composition.ts";
 import type { Layer } from "../models/layers/layer.ts";
 import type { Property } from "../models/properties/property.ts";
+import type { Gradient } from "../models/properties/gradient.ts";
 import { parse_gradient_xml } from "./gradient.ts";
 import { parse_property } from "./property_value.ts";
 import { parse_btdk_cos } from "./text.ts";
@@ -22,8 +21,8 @@ import { BytesIO, OverflowError, ValueError, warn, zip, instance_dict } from "..
 
 // `logging.getLogger(__name__)`: only the warning path is wired to pyrt `warn`.
 export const logger = {
-  debug(..._args: any[]) {},
-  info(..._args: any[]) {},
+  debug(..._args: unknown[]) {},
+  info(..._args: unknown[]) {},
   warning: (m: string) => warn(m),
 };
 
@@ -54,7 +53,7 @@ export function parse_orientation(
   // cdat is parameterized with is_le; .value returns the correctly-
   // endian doubles regardless of context.
   try {
-    const cdat = find_by_type(tdbs_chunk.chunks, "cdat") as CdatChunk;
+    const cdat = find_by_type(tdbs_chunk.chunks, "cdat");
     const values = [...cdat.values];
     while (values.length < 3) values.push(0.0);
     prop._cache_value(values.slice(0, 3));
@@ -70,7 +69,7 @@ export function parse_orientation(
   try {
     const otky_chunk = find_by_list_type(otst_chunk.chunks, "otky");
     prop._kf_value_container = otky_chunk;
-    const otda_chunks = filter_by_type(otky_chunk.chunks, "otda") as OtdaChunk[];
+    const otda_chunks = filter_by_type(otky_chunk.chunks, "otda");
     for (const [idx, kf] of prop.keyframes.entries()) {
       if (idx < otda_chunks.length) {
         kf._cache_value([...otda_chunks[idx].values]);
@@ -106,7 +105,7 @@ export function _parse_shape_shap(shap_chunk: ListChunk, layer: Layer | null, ma
    * @param layer - The owning layer, which a mask shape denormalizes against. Only optional because
    *   a shape-layer path does not need one.
    * @param mask_path - The Mask Path property this shape is a value of (its mask's RotoBezier
-   *   switch decides the reported tangents), or `None` for a shape-layer path.
+   *   switch decides the reported tangents), or `null` for a shape-layer path.
    * @returns A {@link Shape} with absolute coordinates and tangent offsets.
    * @throws {@link ValueError} If a mask shape is parsed without its layer, which would silently
    *   yield raw normalized coordinates.
@@ -115,14 +114,14 @@ export function _parse_shape_shap(shap_chunk: ListChunk, layer: Layer | null, ma
   if (is_mask_shape && layer == null) {
     throw new ValueError("a mask shape must be parsed with its owning layer");
   }
-  const shph_chunk = find_by_type(shap_chunk.chunks, "shph") as ShphChunk;
+  const shph_chunk = find_by_type(shap_chunk.chunks, "shph");
   const list_chunk = find_by_list_type(shap_chunk.chunks, "list");
 
   // An empty path (no vertices) carries only the lhd3 header, no ldat;
   // treat it as zero points so the value is an empty Shape, not None.
-  let points: any[];
+  let points: Parameters<typeof Shape._from_binary>[0]["_points"];
   try {
-    const ldat = find_by_type(list_chunk.chunks, "ldat") as LdatChunk;
+    const ldat = find_by_type(list_chunk.chunks, "ldat");
     points = ldat.items;
   } catch (e) {
     if (!(e instanceof ChunkNotFoundError)) throw e;
@@ -132,7 +131,7 @@ export function _parse_shape_shap(shap_chunk: ListChunk, layer: Layer | null, ma
   // Extract variable-width mask feather data from fth5 chunk (if present).
   let feather_points: FeatherPoint[];
   try {
-    const fth5 = find_by_type(shap_chunk.chunks, "fth5") as Fth5Chunk;
+    const fth5 = find_by_type(shap_chunk.chunks, "fth5");
     feather_points = fth5.points.map((pt) => new FeatherPoint({ _fp: pt }));
   } catch (e) {
     if (!(e instanceof ChunkNotFoundError)) throw e;
@@ -141,7 +140,7 @@ export function _parse_shape_shap(shap_chunk: ListChunk, layer: Layer | null, ma
 
   let omtn: OmtnChunk | null;
   try {
-    omtn = find_by_type(shap_chunk.chunks, "omtn") as OmtnChunk;
+    omtn = find_by_type(shap_chunk.chunks, "omtn");
   } catch (e) {
     if (!(e instanceof ChunkNotFoundError)) throw e;
     omtn = null;
@@ -181,7 +180,7 @@ export function parse_shape(
    * @param layer - The owning layer, required for a mask path (which denormalizes against the
    *   layer, not the composition).
    * @returns A {@link Property} with `property_value_type` set to
-   *   {@link py_aep.enums.PropertyValueType.SHAPE | SHAPE} and `value` set to a {@link Shape}.
+   *   {@link PropertyValueType.SHAPE | SHAPE} and `value` set to a {@link Shape}.
    */
   const tdbs_chunk = find_by_list_type(oms_chunk.chunks, "tdbs");
   const prop = parse_property(tdbs_chunk, match_name, composition, property_depth, tdmn);
@@ -249,7 +248,7 @@ export function parse_text_document(
   prop._property_value_type = PropertyValueType.TEXT_DOCUMENT;
 
   let btdk_chunk: ListChunk;
-  let cos_data: any;
+  let cos_data: CosValue;
   try {
     btdk_chunk = find_by_list_type(btds_chunk.chunks, "btdk");
     // btdk is a ListChunk with list_type="btdk"; raw data stored in .data
@@ -332,8 +331,8 @@ export function parse_gradient(
   }
 
   prop._kf_value_container = gcky_chunk;
-  const utf8_chunks = filter_by_type(gcky_chunk.chunks, "Utf8") as Utf8Chunk[];
-  const gradient_values = [];
+  const utf8_chunks = filter_by_type(gcky_chunk.chunks, "Utf8");
+  const gradient_values: Gradient[] = [];
   for (const utf8 of utf8_chunks) {
     const gdata = parse_gradient_xml(utf8);
     if (gdata != null) {

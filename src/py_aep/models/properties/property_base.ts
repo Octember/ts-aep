@@ -22,7 +22,6 @@ import { MATCH_NAME_TO_AUTO_NAME } from "../../data/match_names.ts";
 import { ChunkField } from "../descriptors.ts";
 import { validate_bool, validate_name } from "../validators.ts";
 import type { Utf8Chunk } from "../../binary/scalar_chunks.ts";
-import type { MkifChunk } from "../../binary/misc_chunks.ts";
 import type { Layer } from "../layers/layer.ts";
 import type { MaskPropertyGroup } from "./mask_property_group.ts";
 import type { Property } from "./property.ts";
@@ -218,7 +217,7 @@ export class PropertyBase {
   _reposition_canonically(): void {
     const parent = this._parent_property;
     if (parent == null) return;
-    const tdgp = getattr(parent, "_tdgp", null) as ListChunk | null;
+    const tdgp = getattr(parent, "_tdgp", null);
     const tdmn = this._tdmn;
     const body = this._chunk_body();
     if (tdgp == null || tdmn == null || body == null) return;
@@ -256,10 +255,10 @@ export class PropertyBase {
   }
 
   /**
-   * When `True`, the property is selected. Read / Write.
+   * When `true`, the property is selected. Read / Write.
    *
    * **Note:** Property selection is stored in the `.aep` binary format but very complex.
-   * Parsed projects report `False` for now.
+   * Parsed projects report `false` for now.
    */
   get selected(): boolean {
     return false;
@@ -285,7 +284,7 @@ export class PropertyBase {
   }
 
   /**
-   * When `True`, the property is not shown in the UI. An elided
+   * When `true`, the property is not shown in the UI. An elided
    * property is still present in the timeline but hidden from view.
    * Read-only.
    */
@@ -294,7 +293,7 @@ export class PropertyBase {
   }
 
   /**
-   * When `True`, this property is an effect {@link PropertyGroup}.
+   * When `true`, this property is an effect {@link PropertyGroup}.
    * Read-only.
    */
   get is_effect(): boolean {
@@ -302,7 +301,7 @@ export class PropertyBase {
   }
 
   /**
-   * When `True`, this property is a mask {@link PropertyGroup}.
+   * When `true`, this property is a mask {@link PropertyGroup}.
    * Read-only.
    */
   get is_mask(): boolean {
@@ -319,7 +318,7 @@ export class PropertyBase {
   }
 
   /**
-   * The parent {@link PropertyGroup} of this property, or `None` for
+   * The parent {@link PropertyGroup} of this property, or `null` for
    * top-level layer property groups. Read-only.
    */
   get parent_property(): PropertyGroup | null {
@@ -375,7 +374,7 @@ export class PropertyBase {
     this._name_utf8.value = value;
   }
 
-  /** `True` if the name has been explicitly set by the user. Read-only. */
+  /** `true` if the name has been explicitly set by the user. Read-only. */
   get is_name_set(): boolean {
     if (this._name != null) return true;
     if (this._name_utf8 != null) {
@@ -393,7 +392,7 @@ export class PropertyBase {
   /**
    * The 0-based position of this property within its parent group.
    *
-   * Returns `None` for layers (property depth 0).
+   * Returns `null` for layers (property depth 0).
    *
    * **Warning:** Unlike ExtendScript (1-based), this uses Python's 0-based
    * convention so that `group.properties[prop.property_index]`
@@ -407,9 +406,9 @@ export class PropertyBase {
   }
 
   /**
-   * `True` if the `enabled` attribute value can be set.
+   * `true` if the `enabled` attribute value can be set.
    *
-   * This is `True` for all layers, effect property groups, shape
+   * This is `true` for all layers, effect property groups, shape
    * vector groups, text path options, and the Layer Styles group
    * and its individual styles. Read-only.
    */
@@ -470,7 +469,7 @@ export class PropertyBase {
   }
 
   /**
-   * `True` if this property has been changed since its creation.
+   * `true` if this property has been changed since its creation.
    *
    * A property is considered modified if its value differs from the
    * default, if it has keyframes, or if an expression is enabled.
@@ -649,7 +648,7 @@ export class PropertyBase {
     const comp = layer.containing_comp;
 
     // Get effect param defs from the project
-    let effect_param_defs: Map<string, Map<string, Map<string, any>>> = new Map();
+    let effect_param_defs: Map<string, Map<string, Map<string, unknown>>> = new Map();
     const project = comp._project;
     if (project != null) {
       effect_param_defs = project._effect_param_defs;
@@ -659,7 +658,7 @@ export class PropertyBase {
     const list_chunk = cloned.at(-1)! as ListChunk;
     let result: PropertyBase;
     if (this._is_mask) {
-      const mkif = find_by_type(cloned, "mkif") as MkifChunk;
+      const mkif = find_by_type(cloned, "mkif");
       result = _property()._parse_mask_atom(
         list_chunk,
         mkif,

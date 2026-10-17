@@ -11,13 +11,14 @@ import type { U1Chunk } from "../../binary/scalar_chunks.ts";
  * The `PlaceholderSource` object describes the footage source of a
  * placeholder.
  *
- * ```python
- * from py_aep import PlaceholderSource, parse
+ * ```ts
+ * import { PlaceholderSource, parse } from "@bevyl-ai/ts-aep";
  *
- * app = parse("project.aep")
- * footage = app.project.footages[0]
- * if isinstance(footage.main_source, PlaceholderSource):
- *     print(footage.main_source.width)
+ * const app = parse("project.aep");
+ * const footage = app.project.footages[0];
+ * if (footage.main_source instanceof PlaceholderSource) {
+ *   console.log(footage.main_source.native_frame_rate);
+ * }
  * ```
  *
  * Info:

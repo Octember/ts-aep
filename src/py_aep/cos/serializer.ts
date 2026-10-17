@@ -1,8 +1,8 @@
 /**
- * Serialize Python objects back to COS (Carousel Object Syntax) binary.
+ * Serialize objects back to COS (Carousel Object Syntax) binary.
  *
- * This is the inverse of `CosParser.parse`: it takes a nested Python
- * structure (dicts, lists, strings, numbers, bools, `None`,
+ * This is the inverse of `CosParser.parse`: it takes a nested
+ * structure (Maps, arrays, strings, numbers, bools, `null`,
  * `IndirectObject`, `IndirectReference`, `Stream`) and emits COS-format
  * bytes suitable for writing back into a btdk chunk's `binary_data`.
  */
@@ -13,12 +13,12 @@ import { CosName, IndirectObject, IndirectReference, Stream } from "./cos.ts";
 /**
  * Serialize a parsed COS value tree back to binary.
  *
- * @param data - The Python object tree to serialize. May be a dict, list,
- *   str, int, float, bool, `None`, `bytes`,
+ * @param data - The object tree to serialize. May be a Map, array,
+ *   string, number, boolean, `null`, `bytes`,
  *   `IndirectObject`, `IndirectReference`, or `Stream`.
  * @returns The COS binary representation.
  */
-export function serialize(data: any): Uint8Array {
+export function serialize(data: unknown): Uint8Array {
   const buf = new BytesIO();
   // AE's btdk blob begins with a leading space before the first token.
   buf.write(b(" "));
@@ -36,7 +36,7 @@ export function _space(buf: BytesIO): void {
 }
 
 /** Dispatch `value` to the appropriate serialization handler. */
-export function _write_value(buf: BytesIO, value: any, kw: { top_level?: boolean } = {}): void {
+export function _write_value(buf: BytesIO, value: unknown, kw: { top_level?: boolean } = {}): void {
   const { top_level = false } = kw;
   if (value instanceof Map) {
     if (top_level) {
@@ -70,7 +70,7 @@ export function _write_value(buf: BytesIO, value: any, kw: { top_level?: boolean
     // A CosString / _NulTailStr is a String object in TS (a str subclass in Python),
     // so a typeof check alone would miss it.
     _space(buf);
-    _write_string(buf, value as string);
+    _write_string(buf, value);
   } else if (value instanceof Uint8Array) {
     _space(buf);
     _write_hex_string(buf, value);
@@ -112,15 +112,15 @@ export function _format_float(value: number): Uint8Array {
 }
 
 /** Write a COS dictionary: `<< /key value /key value >>`. */
-export function _write_dict(buf: BytesIO, d: Map<string, any>): void {
+export function _write_dict(buf: BytesIO, d: Map<string, unknown>): void {
   buf.write(b("<<"));
   _write_dict_content(buf, d);
   _space(buf);
   buf.write(b(">>"));
 }
 
-/** Write dict key/value pairs without the `<<`/`>>` delimiters. */
-export function _write_dict_content(buf: BytesIO, d: Map<string, any>): void {
+/** Write Map key/value pairs without the `<<`/`>>` delimiters. */
+export function _write_dict_content(buf: BytesIO, d: Map<string, unknown>): void {
   for (const [key, val] of d) {
     _space(buf);
     _write_identifier(buf, key);
@@ -129,7 +129,7 @@ export function _write_dict_content(buf: BytesIO, d: Map<string, any>): void {
 }
 
 /** Write a COS array: `[ val val val ]`. */
-export function _write_array(buf: BytesIO, lst: any[]): void {
+export function _write_array(buf: BytesIO, lst: unknown[]): void {
   buf.write(b("["));
   _write_array_content(buf, lst);
   _space(buf);
@@ -137,7 +137,7 @@ export function _write_array(buf: BytesIO, lst: any[]): void {
 }
 
 /** Write array elements without `[`/`]` delimiters. */
-export function _write_array_content(buf: BytesIO, lst: any[]): void {
+export function _write_array_content(buf: BytesIO, lst: unknown[]): void {
   for (const item of lst) {
     _write_value(buf, item);
   }
@@ -166,7 +166,7 @@ export function _write_identifier(buf: BytesIO, name: string): void {
  * raw ASCII / UTF-8 (e.g. bit-flag strings), in which case the original
  * single-byte encoding is reproduced for byte fidelity.
  */
-export function _write_string(buf: BytesIO, s: string): void {
+export function _write_string(buf: BytesIO, s: string | String): void {
   let raw: Uint8Array;
   if (getattr(s, "cos_utf16", true)) {
     raw = concat(b("\xfe\xff"), encode(String(s), "utf-16-be"));

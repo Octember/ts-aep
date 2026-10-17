@@ -1,9 +1,7 @@
 /** Effect and parameter definition parsers. */
 
-import type { Chunk, ContainerChunk, ListChunk } from "../binary/chunk.ts";
-import type { PardChunk } from "../binary/misc_chunks.ts";
-import type { TdmnChunk, TdsbChunk, TdsnChunk } from "../binary/property_chunks.ts";
-import type { Utf8Chunk } from "../binary/scalar_chunks.ts";
+import type { Chunk, ListChunk } from "../binary/chunk.ts";
+import type { TdmnChunk, TdsbChunk } from "../binary/property_chunks.ts";
 import { ChunkNotFoundError, filter_by_list_type, filter_by_type, find_by_list_type, find_by_type } from "../binary/utils.ts";
 import { MATCH_NAME_TO_AUTO_NAME } from "../data/match_names.ts";
 import { EFFECT_PARAM_SPATIAL_FLAGS } from "../data/spatial_flags.ts";
@@ -42,6 +40,9 @@ export const logger = {
   warning: (m: string) => warn(m),
 };
 
+/** A parsed pard parameter definition: heterogeneous values keyed by field name. */
+export type ParamDef = Map<string, any>;
+
 export const _PVT_DIMENSIONS: Map<number, number> = new Map<number, number>([
   [PropertyValueType.COLOR, 4],
   [PropertyValueType.ThreeD_SPATIAL, 3],
@@ -49,13 +50,13 @@ export const _PVT_DIMENSIONS: Map<number, number> = new Map<number, number>([
 ]);
 
 /**
- * Convert an effect parameter definition dict into a `PropSpec`.
+ * Convert an effect parameter definition into a `PropSpec`.
  *
  * @param match_name - The property's match name.
- * @param param_def - The parameter definition dict from parT parsing.
+ * @param param_def - The parameter definition from parT parsing.
  * @returns A `PropSpec` suitable for `Property._new()`.
  */
-export function _param_def_to_spec(match_name: string, param_def: Map<string, any>): PropSpec {
+export function _param_def_to_spec(match_name: string, param_def: ParamDef): PropSpec {
   const pvt = dict_get(param_def, "property_value_type", PropertyValueType.OneD);
   const control_type = getitem(param_def, "property_control_type");
   const is_color = control_type === PropertyControlType.COLOR;
@@ -91,13 +92,13 @@ export function _param_def_to_spec(match_name: string, param_def: Map<string, an
  * layer size; `_scale_point_to_pixels` converts them to pixels.
  *
  * @param match_name - The property's match name.
- * @param param_def - The parameter definition dict from parT parsing.
+ * @param param_def - The parameter definition from parT parsing.
  * @param control_type - The effect control type.
- * @returns A (value, default_value) tuple.
+ * @returns A [value, default_value] pair.
  */
 export function _resolve_effect_value(
   match_name: string,
-  param_def: Map<string, any>,
+  param_def: ParamDef,
   control_type: PropertyControlType,
 ): [any, any] {
   if (control_type === PropertyControlType.ENUM) {
@@ -140,13 +141,13 @@ export function _resolve_effect_value(
  * Apply parameter definition metadata to a property.
  *
  * Sets last_value, min/max bounds, nb_options, and
- * property_parameters from the parameter definition dict.  Shared by
+ * property_parameters from the parameter definition.  Shared by
  * `_synthesize_effect_property` and `_merge_param_def`.
  *
  * @param prop - The property to update in place.
- * @param param_def - The parameter definition dict.
+ * @param param_def - The parameter definition.
  */
-export function _apply_param_def_metadata(prop: Property, param_def: Map<string, any>): void {
+export function _apply_param_def_metadata(prop: Property, param_def: ParamDef): void {
   prop.last_value = param_def.get("last_value") ?? null;
   const min_val = param_def.get("min_value") ?? null;
   if (min_val != null) prop._min_value_fallback = min_val;
@@ -191,10 +192,10 @@ export function _apply_param_def_metadata(prop: Property, param_def: Map<string,
  *
  * Returns `null` when the value is not a point.
  */
-export function _point_default_pixels(raw: any, size: [number, number]): number[] | null {
+export function _point_default_pixels(raw: unknown, size: [number, number]): number[] | null {
   if (!Array.isArray(raw) || raw.length < 2) return null;
   const scale = [size[0], size[1], size[1]];
-  return zip(raw as number[], scale).map(([v, factor]) => v / 100.0 * factor);
+  return zip(raw, scale).map(([v, factor]) => v / 100.0 * factor);
 }
 
 /** Convert a synthesized point property's value and default in place. */
@@ -212,13 +213,13 @@ export function _scale_point_to_pixels(prop: Property, size: [number, number]): 
  * describe the control type, default values, and ranges.
  *
  * @param sspc_child_chunks - The SSPC chunk's child chunks.
- * @returns Dict mapping parameter match names to definition dicts.
+ * @returns Map of parameter match names to definition dicts.
  */
 export function parse_effect_param_defs(
   sspc_child_chunks: Chunk[],
-): Map<string, Map<string, any>> {
+): Map<string, ParamDef> {
   const part_chunk = find_by_list_type(sspc_child_chunks, "parT");
-  const param_defs = new Map<string, Map<string, any>>();
+  const param_defs = new Map<string, ParamDef>();
 
   const chunks_by_parameter = get_chunks_by_match_name(part_chunk);
   for (const [index, [match_name, parameter_chunks]] of enumerate(chunks_by_parameter)) {
@@ -237,12 +238,12 @@ export function parse_effect_param_defs(
  * values from the effect's parameter definition.
  *
  * @param prop - The property to update in place.
- * @param param_def - The parameter definition dict.
+ * @param param_def - The parameter definition.
  * @param point_size - The layer size a point parameter's default is relative to.
  */
 export function _merge_param_def(
   prop: Property,
-  param_def: Map<string, any>,
+  param_def: ParamDef,
   point_size: [number, number],
 ): void {
   prop._auto_name = py_or(getitem(param_def, "name"), prop._auto_name);
@@ -283,7 +284,7 @@ export function _merge_param_def(
  * output matches what ExtendScript reports.
  *
  * @param match_name - The property's match name.
- * @param param_def - The parameter definition dict from parT parsing.
+ * @param param_def - The parameter definition from parT parsing.
  * @param property_depth - The nesting depth for this property.
  * @param kw - Keyword arguments:
  * - `parent_property`: The effect group that owns the synthesized child.
@@ -291,7 +292,7 @@ export function _merge_param_def(
  */
 export function _synthesize_effect_property(
   match_name: string,
-  param_def: Map<string, any>,
+  param_def: ParamDef,
   property_depth: number,
   kw: { parent_property: PropertyGroup },
 ): Property | PropertyGroup {
@@ -338,7 +339,7 @@ export function _synthesize_effect_property(
  */
 export function _parse_effect_properties(
   tdgp_chunk: ListChunk,
-  param_defs: Map<string, Map<string, any>>,
+  param_defs: Map<string, ParamDef>,
   child_depth: number,
   composition: CompItem,
   parent_property: PropertyGroup,
@@ -388,7 +389,7 @@ export function _parse_effect_properties(
       });
       if (
         synth instanceof Property &&
-        ([PropertyControlType.TWO_D, PropertyControlType.THREE_D] as number[]).includes(
+        ([PropertyControlType.TWO_D, PropertyControlType.THREE_D] as (number | null)[]).includes(
           synth._property_control_type,
         )
       ) {
@@ -440,19 +441,19 @@ export const parse_effect = _suppress_materialization().decorate(function parse_
   sspc_chunk: ListChunk,
   group_match_name: string,
   property_depth: number,
-  effect_param_defs: Map<string, Map<string, Map<string, any>>>,
+  effect_param_defs: Map<string, Map<string, ParamDef>>,
   composition: CompItem,
   tdmn: TdmnChunk,
   layer: Layer | null = null,
 ): PropertyGroup {
   const sspc_child_chunks = sspc_chunk.chunks;
-  const fnam_chunk = find_by_type(sspc_child_chunks, "fnam") as ContainerChunk;
+  const fnam_chunk = find_by_type(sspc_child_chunks, "fnam");
 
   // fnam is a ContainerChunk with a Utf8 child
-  const fnam_utf8 = find_by_type(fnam_chunk.chunks, "Utf8") as Utf8Chunk;
+  const fnam_utf8 = find_by_type(fnam_chunk.chunks, "Utf8");
   const tdgp_chunk = find_by_list_type(sspc_child_chunks, "tdgp");
 
-  let param_defs: Map<string, Map<string, any>>;
+  let param_defs: Map<string, ParamDef>;
   try {
     param_defs = parse_effect_param_defs(sspc_child_chunks);
   } catch (e) {
@@ -464,7 +465,7 @@ export const parse_effect = _suppress_materialization().decorate(function parse_
   // is used more than once (AE doesn't duplicate the data).  Fall back
   // to previously cached or project-level EfdG definitions.
   if (!param_defs?.size && effect_param_defs.has(group_match_name)) {
-    param_defs = effect_param_defs.get(group_match_name);
+    param_defs = effect_param_defs.get(group_match_name)!;
   }
 
   // Cache successful parT parsing so later instances of the same
@@ -473,12 +474,12 @@ export const parse_effect = _suppress_materialization().decorate(function parse_
     effect_param_defs.set(group_match_name, param_defs);
   }
   // Resolve _name_utf8 from the effect tdgp's tdsn child
-  const tdsn = find_by_type(tdgp_chunk.chunks, "tdsn") as TdsnChunk;
+  const tdsn = find_by_type(tdgp_chunk.chunks, "tdsn");
   const effect_name_utf8 = tdsn.utf8;
 
   let effect_tdsb: TdsbChunk | null;
   try {
-    effect_tdsb = find_by_type(tdgp_chunk.chunks, "tdsb") as TdsbChunk;
+    effect_tdsb = find_by_type(tdgp_chunk.chunks, "tdsb");
   } catch (e) {
     if (!(e instanceof ChunkNotFoundError)) throw e;
     effect_tdsb = null;
@@ -520,7 +521,7 @@ export const parse_effect = _suppress_materialization().decorate(function parse_
   return effect_group;
 });
 
-export type PardExtractor = (body: any, result: Map<string, any>) => void;
+export type PardExtractor = (body: any, result: ParamDef) => void;
 
 export const _PARD_EXTRACTORS: Map<number, PardExtractor> = new Map();
 
@@ -537,14 +538,14 @@ export function _pard_extractor(
 
 // Python's `@_pard_extractor(...)` decorator is applied as a registration call
 // directly after each definition, which keeps the registration order.
-export function _extract_angle(body: any, result: Map<string, any>): void {
+export function _extract_angle(body: any, result: ParamDef): void {
   result.set("last_value", body.last_value);
   if (body.default_ != null) result.set("default", _intify(body.default_));
   result.set("property_value_type", PropertyValueType.OneD);
 }
 _pard_extractor(PropertyControlType.ANGLE)(_extract_angle);
 
-export function _extract_boolean(body: any, result: Map<string, any>): void {
+export function _extract_boolean(body: any, result: ParamDef): void {
   result.set("last_value", body.last_value);
   result.set("default_value", body.default_);
   result.set("min_value", 0);
@@ -552,7 +553,7 @@ export function _extract_boolean(body: any, result: Map<string, any>): void {
 }
 _pard_extractor(PropertyControlType.BOOLEAN)(_extract_boolean);
 
-export function _extract_color(body: any, result: Map<string, any>): void {
+export function _extract_color(body: any, result: ParamDef): void {
   // pard stores colors as [A, R, G, B] in 0-255 range;
   // ExtendScript uses [R, G, B, A] in 0-1 range.
   {
@@ -569,7 +570,7 @@ export function _extract_color(body: any, result: Map<string, any>): void {
 }
 _pard_extractor(PropertyControlType.COLOR)(_extract_color);
 
-export function _extract_enum(body: any, result: Map<string, any>): void {
+export function _extract_enum(body: any, result: ParamDef): void {
   result.set("last_value", body.last_value);
   result.set("nb_options", body.nb_options);
   result.set("default_value", body.default_);
@@ -584,14 +585,14 @@ export function _intify(value: number): number {
   return Number.isInteger(float(value)) ? int(value) : value;
 }
 
-export function _extract_integer(body: any, result: Map<string, any>): void {
+export function _extract_integer(body: any, result: ParamDef): void {
   if (body.default_ != null) result.set("default", body.default_);
   result.set("min_value", body.valid_min);
   result.set("max_value", body.valid_max);
 }
 _pard_extractor(PropertyControlType.INTEGER)(_extract_integer);
 
-export function _extract_scalar(body: any, result: Map<string, any>): void {
+export function _extract_scalar(body: any, result: ParamDef): void {
   result.set("last_value", body.last_value);
   if (body.default_ != null) result.set("default", _intify(body.default_));
   result.set("min_value", _intify(body.valid_min));
@@ -601,7 +602,7 @@ export function _extract_scalar(body: any, result: Map<string, any>): void {
 }
 _pard_extractor(PropertyControlType.SCALAR)(_extract_scalar);
 
-export function _extract_slider(body: any, result: Map<string, any>): void {
+export function _extract_slider(body: any, result: ParamDef): void {
   result.set("last_value", body.last_value);
   if (body.default_ != null && Number.isFinite(body.default_)) {
     result.set("default", _intify(body.default_));
@@ -617,7 +618,7 @@ export function _extract_slider(body: any, result: Map<string, any>): void {
 }
 _pard_extractor(PropertyControlType.SLIDER)(_extract_slider);
 
-export function _extract_three_d(body: any, result: Map<string, any>): void {
+export function _extract_three_d(body: any, result: ParamDef): void {
   result.set("last_value", [body.last_value_x, body.last_value_y, body.last_value_z]);
   // Percent of the layer size; `_point_default_pixels` converts it.
   result.set("default_value", body.default_);
@@ -625,31 +626,31 @@ export function _extract_three_d(body: any, result: Map<string, any>): void {
 }
 _pard_extractor(PropertyControlType.THREE_D)(_extract_three_d);
 
-export function _extract_two_d(body: any, result: Map<string, any>): void {
+export function _extract_two_d(body: any, result: ParamDef): void {
   result.set("last_value", [body.last_value_x, body.last_value_y]);
   result.set("default_value", body.default_);
   result.set("property_value_type", PropertyValueType.TwoD_SPATIAL);
 }
 _pard_extractor(PropertyControlType.TWO_D)(_extract_two_d);
 
-export function _extract_layer(body: any, result: Map<string, any>): void {
+export function _extract_layer(body: any, result: ParamDef): void {
   result.set("property_value_type", PropertyValueType.LAYER_INDEX);
   result.set("default_value", 0);
 }
 _pard_extractor(PropertyControlType.LAYER)(_extract_layer);
 
-export function _extract_mask(body: any, result: Map<string, any>): void {
+export function _extract_mask(body: any, result: ParamDef): void {
   result.set("property_value_type", PropertyValueType.MASK_INDEX);
   result.set("default_value", 0);
 }
 _pard_extractor(PropertyControlType.MASK)(_extract_mask);
 
-export function _extract_curve(body: any, result: Map<string, any>): void {
+export function _extract_curve(body: any, result: ParamDef): void {
   result.set("property_value_type", PropertyValueType.CUSTOM_VALUE);
 }
 _pard_extractor(PropertyControlType.CURVE)(_extract_curve);
 
-export function _extract_no_value(body: any, result: Map<string, any>): void {
+export function _extract_no_value(body: any, result: ParamDef): void {
   result.set("property_value_type", PropertyValueType.NO_VALUE);
 }
 _pard_extractor(
@@ -659,13 +660,13 @@ _pard_extractor(
   PropertyControlType.PAINT_GROUP,
 )(_extract_no_value);
 
-/** Parse effect parameter definition from pard chunk, returning a dict of values. */
-export function _parse_effect_parameter_def(parameter_chunks: Chunk[]): Map<string, any> {
-  const pard_chunk = find_by_type(parameter_chunks, "pard") as PardChunk;
+/** Parse effect parameter definition from pard chunk, returning a map of values. */
+export function _parse_effect_parameter_def(parameter_chunks: Chunk[]): ParamDef {
+  const pard_chunk = find_by_type(parameter_chunks, "pard");
 
   const control_type = PropertyControlType.of(pard_chunk.property_control_type);
 
-  const result = new Map<string, any>([
+  const result = new Map<string, unknown>([
     ["name", pard_chunk.name],
     ["property_control_type", control_type],
     // PF param flags bit 1 = CANNOT_TIME_VARY (the tdb4 byte is
@@ -685,9 +686,9 @@ export function _parse_effect_parameter_def(parameter_chunks: Chunk[]): Map<stri
   }
 
   try {
-    const pdnm_chunk = find_by_type(parameter_chunks, "pdnm") as ContainerChunk;
+    const pdnm_chunk = find_by_type(parameter_chunks, "pdnm");
     // pdnm is a ContainerChunk with a Utf8 child
-    const utf8_chunk = find_by_type(pdnm_chunk.chunks, "Utf8") as Utf8Chunk;
+    const utf8_chunk = find_by_type(pdnm_chunk.chunks, "Utf8");
     const pdnm_data = utf8_chunk.value;
     if (control_type === PropertyControlType.ENUM) {
       result.set("property_parameters", split(pdnm_data, "|"));
@@ -709,12 +710,12 @@ export function _parse_effect_parameter_def(parameter_chunks: Chunk[]): Map<stri
  * include a parT chunk.
  *
  * @param root_chunks - The root chunks of the AEP file.
- * @returns Dict mapping effect match names to their parameter definitions (effect_match_name -\>
- *   param_match_name -\> param_def dict).
+ * @returns Map of effect match names to their parameter definitions (effect_match_name -\>
+ *   param_match_name -\> param_def).
  */
 export function parse_effect_definitions(
   root_chunks: Chunk[],
-): Map<string, Map<string, Map<string, any>>> {
+): Map<string, Map<string, ParamDef>> {
   let efdg_chunk: ListChunk;
   try {
     efdg_chunk = find_by_list_type(root_chunks, "EfdG");
@@ -723,14 +724,14 @@ export function parse_effect_definitions(
     return new Map();
   }
 
-  const effect_defs = new Map<string, Map<string, Map<string, any>>>();
+  const effect_defs = new Map<string, Map<string, ParamDef>>();
   const efdf_chunks = filter_by_list_type(efdg_chunk.chunks, "EfDf");
 
   for (const efdf_chunk of efdf_chunks) {
     const efdf_child_chunks = efdf_chunk.chunks;
     // First tdmn in EfDf contains the effect match name
     const tdmn_chunk = find_by_type(efdf_child_chunks, "tdmn");
-    const effect_match_name = (tdmn_chunk as TdmnChunk).value;
+    const effect_match_name = tdmn_chunk.value;
 
     const sspc_chunk = find_by_list_type(efdf_child_chunks, "sspc");
     const param_defs = parse_effect_param_defs(sspc_chunk.chunks);
@@ -763,10 +764,10 @@ export function effect_definition_entries(
 
   const entries: [string, string, ListChunk][] = [];
   for (const efdf_chunk of filter_by_list_type(efdg_chunk.chunks, "EfDf")) {
-    const match_name = (find_by_type(efdf_chunk.chunks, "tdmn") as TdmnChunk).value;
+    const match_name = find_by_type(efdf_chunk.chunks, "tdmn").value;
     const sspc_chunk = find_by_list_type(efdf_chunk.chunks, "sspc");
-    const fnam = find_by_type(sspc_chunk.chunks, "fnam") as ContainerChunk;
-    const display = (find_by_type(fnam.chunks, "Utf8") as Utf8Chunk).value;
+    const fnam = find_by_type(sspc_chunk.chunks, "fnam");
+    const display = find_by_type(fnam.chunks, "Utf8").value;
     entries.push([match_name, display, sspc_chunk]);
   }
   return entries;
@@ -778,7 +779,7 @@ export function effect_definition_entries(
  * `name` is matched against the effect match name across all entries
  * first, then against the `fnam` display name.
  *
- * @returns `(match_name, display_name, def_sspc)` for the matching definition, or `None`.
+ * @returns `(match_name, display_name, def_sspc)` for the matching definition, or `null`.
  */
 export function match_effect_definition(
   entries: [string, string, ListChunk][],

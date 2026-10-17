@@ -22,21 +22,21 @@ export const __version__ = "0.0.0";
  *
  * This is the main entry point for the library. It parses the binary
  * RIFX data and returns an {@link Application} object whose
- * {@link py_aep.models.application.Application.project | project} attribute
+ * {@link Application.project | project} attribute
  * holds the full project tree.
  *
  * @param aep_file_path - Path to the `.aep` file.
- * @param kw - Keyword arguments:
+ * @param kw - Options:
  * - `ae_preferences_dir`: Optional path to the AE preferences directory (e.g. `C:/Users/<user>/AppData/Roaming/Adobe/After Effects/25.6`). When provided, render settings and output module templates are parsed lazily when needed.
  * - `platform`: The After Effects platform the project is for: `"windows"` or `"macos"`. Footage and render output paths py_aep writes are stored in that platform's style (`C:\\x` \<-\> `/x`, see {@link py_aep.resolvers.platform_paths.platform_path | platform_path}), and imported footage is recorded the way After Effects on that platform records it: BMP and GIF files take the platform's importer code (After Effects on the other platform refuses an image sequence tagged for it), and on Windows a HEIC file has no alpha channel. Defaults to the running operating system.
  *
  * @example
- * ```python
- * import py_aep
+ * ```ts
+ * import { parse } from "@bevyl-ai/ts-aep";
  *
- * app = py_aep.parse("project.aep")
- * project = app.project
- * print(app.version)
+ * const app = parse("project.aep");
+ * const project = app.project;
+ * console.log(app.version);
  * ```
  */
 export function parse(
@@ -79,7 +79,7 @@ export const _DEFAULT_NEW_VERSION = "26.0x67";
  *   or 22 and later. A release newer than 26 gets the After Effects
  *   2026 project and file-format stamp, so the file also opens in
  *   After Effects 2026.
- * @param kw - Keyword arguments:
+ * @param kw - Options:
  * - `ae_preferences_dir`: Optional path to the AE preferences directory (e.g. `C:/Users/<user>/AppData/Roaming/Adobe/After Effects/26.0`), required only for adding items to the render queue.
  * - `platform`: The After Effects platform the project is for, as in {@link py_aep.parse | parse}. It also selects the header stamps and the GPU renderer (Metal on macOS, CUDA on Windows) a project created on that platform carries. Defaults to the running operating system.
  *
@@ -89,12 +89,12 @@ export const _DEFAULT_NEW_VERSION = "26.0x67";
  *   chunk's field widths).
  *
  * @example
- * ```python
- * import py_aep
+ * ```ts
+ * import { new as new_project } from "@bevyl-ai/ts-aep";
  *
- * app = py_aep.new()
- * comp = app.project.root_folder.add_comp("Comp 1", 1920, 1080, 1.0, 10.0, 30.0)
- * app.project.save("new_project.aep")
+ * const app = new_project();
+ * const comp = app.project.root_folder.add_comp("Comp 1", 1920, 1080, 1.0, 10.0, 30.0);
+ * app.project.save("new_project.aep");
  * ```
  */
 export function new_(

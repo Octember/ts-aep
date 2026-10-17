@@ -15,13 +15,14 @@ import type { RoptChunk } from "../../../binary/render_chunks.ts";
  * Sequence.
  *
  * @example
- * ```python
- * from py_aep import CineonFormatOptions, parse
+ * ```ts
+ * import { CineonFormatOptions, parse } from "@bevyl-ai/ts-aep";
  *
- * app = parse("project.aep")
- * om = app.project.render_queue.items[0].output_modules[0]
- * if isinstance(om.format_options, CineonFormatOptions):
- *     print(om.format_options.file_format)
+ * const app = parse("project.aep");
+ * const om = app.project.render_queue.items[0].output_modules[0];
+ * if (om.format_options instanceof CineonFormatOptions) {
+ *   console.log(om.format_options.file_format);
+ * }
  * ```
  */
 export class CineonFormatOptions extends FormatOptionsBase {
@@ -69,7 +70,7 @@ export class CineonFormatOptions extends FormatOptionsBase {
   /**
    * The file format for the Cineon output. See {@link CineonFileFormat} for
    * possible values. An out-of-enum stored value reads back as a raw
-   * `int` (the binary is trusted). Read / Write.
+   * `number` (the binary is trusted). Read / Write.
    */
   declare file_format: CineonFileFormat | number;
 
@@ -141,7 +142,7 @@ descriptor(
 descriptor(
   CineonFormatOptions,
   "file_format",
-  ChunkField.enum<CineonFileFormat | number>(CineonFileFormat, "_body", "file_format", {
+  ChunkField.enum(CineonFileFormat, "_body", "file_format", {
     allow_out_of_enum_values: true,
   }),
 );

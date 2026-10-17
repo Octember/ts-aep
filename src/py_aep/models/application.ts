@@ -7,7 +7,7 @@ import { ChunkField } from "./descriptors.ts";
 import { validate_ae_version, validate_u1 } from "./validators.ts";
 import type { Preferences } from "./preferences.ts";
 import type { Viewer } from "./viewer/viewer.ts";
-import { descriptor, int, repr, split, str, ValueError, type Path } from "../../pyrt/index.ts";
+import { descriptor, int, repr, split, str, ValueError, type Path, type ClassAttributes } from "../../pyrt/index.ts";
 import { Project } from "./project.ts";
 
 // Version-gated parts After Effects expects from the format version alone,
@@ -19,7 +19,7 @@ import { Project } from "./project.ts";
 export const _LAYOUT_PARTS = ["matte layer id", "media replacement folder id"] as const;
 
 /** A version whose file layout matches the project's. */
-export function _validate_version(value: any, obj: Application): void {
+export function _validate_version(value: unknown, obj: Application): void {
   validate_ae_version(value);
   const current = obj._head.ae_version_major;
   const target = int(split(str(value), ".", 1)[0]);
@@ -51,15 +51,16 @@ export function _validate_version(value: any, obj: Application): void {
  * the binary file.
  *
  * @example
- * ```python
- * from py_aep import parse
+ * ```ts
+ * import { parse } from "@bevyl-ai/ts-aep";
  *
- * app = parse("project.aep")
- * print(app.version)
+ * const app = parse("project.aep");
+ * console.log(app.version);
  * ```
  * @see https://ae-scripting.docsforadobe.dev/general/application/
  */
 export class Application {
+  declare ["constructor"]: ClassAttributes<typeof Application>;
   /**
    * The build number of After Effects that last saved the project.
    * Read / Write.
@@ -110,7 +111,7 @@ export class Application {
 
   /** Instance-level read of the class attribute (`app.app_name` in Python). */
   get app_name(): string {
-    return (this.constructor as typeof Application).app_name;
+    return this.constructor.app_name;
   }
 
   declare _head: HeadChunk;
@@ -145,7 +146,7 @@ export class Application {
 
   /**
    * The Viewer object for the currently focused or active-focused viewer
-   * (Composition, Layer, or Footage) panel. Returns `None` if no viewers
+   * (Composition, Layer, or Footage) panel. Returns `null` if no viewers
    * are open. Read-only.
    */
   get active_viewer(): Viewer | null {
@@ -165,7 +166,7 @@ export class Application {
    * A string indicating the version and build of After Effects, formatted
    * as "\{major\}.\{minor\}x\{build\}" (e.g., "25.6x101"). Read / Write.
    *
-   * Alias for {@link py_aep.models.application.Application.version | version}.
+   * Alias for {@link Application.version | version}.
    *
    * **Warning:** This attribute is read-only in ExtendScript. Modifying it could
    * cause issues when opening the file in After Effects.

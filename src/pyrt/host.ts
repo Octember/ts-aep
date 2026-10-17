@@ -18,6 +18,14 @@ export interface HostStats {
   mtimeMs: number;
 }
 
+export interface HostBigStats {
+  isFile(): boolean;
+  isDirectory(): boolean;
+  size: bigint;
+  mtimeMs: bigint;
+  mtimeNs: bigint;
+}
+
 export interface HostDirent {
   name: string;
   isFile(): boolean;
@@ -25,11 +33,16 @@ export interface HostDirent {
 }
 
 /** The sync `node:fs` subset py_aep uses. */
+/** Text encodings the port writes with (a host-neutral subset of Node's `BufferEncoding`). */
+export type HostEncoding = "utf8" | "utf-8" | "latin1" | "ascii";
+
 export interface HostFs {
   existsSync(path: string): boolean;
-  statSync(path: string, opts?: { bigint?: boolean }): any;
+  statSync(path: string, opts?: { bigint?: false }): HostStats;
+  statSync(path: string, opts: { bigint: true }): HostBigStats;
+  statSync(path: string, opts?: { bigint?: boolean }): HostStats | HostBigStats;
   readFileSync(path: string): Uint8Array;
-  writeFileSync(path: string, data: Uint8Array | string, encoding?: string): void;
+  writeFileSync(path: string, data: Uint8Array | string, encoding?: HostEncoding): void;
   mkdirSync(path: string, opts?: { recursive?: boolean }): void;
   readdirSync(path: string): string[];
   readdirSync(path: string, opts: { withFileTypes: true }): HostDirent[];
@@ -54,9 +67,12 @@ export interface HostPath {
   isAbsolute(path: string): boolean;
 }
 
-const _process: any = (globalThis as any).process;
+const _process = globalThis.process;
 
-function _builtin(name: string): any {
+function _builtin(name: "node:os"): typeof import("node:os") | null;
+function _builtin(name: "node:path"): typeof import("node:path") | null;
+function _builtin(name: "node:fs"): typeof import("node:fs") | null;
+function _builtin(name: string): object | null {
   try {
     return _process?.getBuiltinModule?.(name) ?? null;
   } catch {
@@ -222,7 +238,10 @@ export class MemoryFs implements HostFs {
     return this.files.has(k) || this._is_dir(k);
   }
 
-  statSync(p: string, opts: { bigint?: boolean } = {}): any {
+  statSync(p: string, opts?: { bigint?: false }): HostStats;
+  statSync(p: string, opts: { bigint: true }): HostBigStats;
+  statSync(p: string, opts?: { bigint?: boolean }): HostStats | HostBigStats;
+  statSync(p: string, opts: { bigint?: boolean } = {}): HostStats | HostBigStats {
     const st = this._stats(this.key(p));
     if (!opts.bigint) return st;
     return {
@@ -233,7 +252,9 @@ export class MemoryFs implements HostFs {
     };
   }
 
-  readFileSync(p: string, encoding?: string): any {
+  readFileSync(p: string): Uint8Array;
+  readFileSync(p: string, encoding: string): string;
+  readFileSync(p: string, encoding?: string): Uint8Array | string {
     const k = this.key(p);
     const f = this.files.get(k);
     if (!f) throw _fs_error(this._is_dir(k) ? "EISDIR" : "ENOENT", "open", k);
@@ -261,7 +282,9 @@ export class MemoryFs implements HostFs {
     this.dirs.add(k);
   }
 
-  readdirSync(p: string, opts?: { withFileTypes?: boolean }): any {
+  readdirSync(p: string): string[];
+  readdirSync(p: string, opts: { withFileTypes: true }): HostDirent[];
+  readdirSync(p: string, opts?: { withFileTypes?: boolean }): string[] | HostDirent[] {
     const k = this.key(p);
     if (this.files.has(k)) throw _fs_error("ENOTDIR", "scandir", k);
     if (!this._is_dir(k)) throw _fs_error("ENOENT", "scandir", k);
@@ -392,11 +415,11 @@ export function fs_backend(): "node" | "memory" {
 /** The active file system: the host's `node:fs`, or the in-memory one. */
 export const fs: HostFs = new Proxy({} as HostFs, {
   get(_t, name: string) {
-    const target: any = _active ?? _node_fs ?? _memory;
-    const v = target[name];
+    const target: HostFs = _active ?? _node_fs ?? _memory;
+    const v = (target as unknown as Record<string, unknown>)[name];
     return typeof v === "function" ? v.bind(target) : v;
   },
-}) as HostFs;
+});
 
 /**
  * Move bytes in and out of the in-memory file system (the backend in

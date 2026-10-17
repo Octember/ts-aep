@@ -19,7 +19,7 @@ import { py_eq } from "./builtins.ts";
 import { warnings } from "./errors.ts";
 import { Path } from "./pathlib.ts";
 
-export function raises<E extends Error>(cls: abstract new (...a: any[]) => E, fn: () => unknown, match?: string | RegExp): E {
+export function raises<E extends Error>(cls: abstract new (...a: never[]) => E, fn: () => void, match?: string | RegExp): E {
   try {
     fn();
   } catch (e) {
@@ -32,7 +32,7 @@ export function raises<E extends Error>(cls: abstract new (...a: any[]) => E, fn
   throw new Error(`DID NOT RAISE ${cls.name}`);
 }
 
-export function warns(fn: () => unknown, match?: string | RegExp): string[] {
+export function warns(fn: () => void, match?: string | RegExp): string[] {
   const start = warnings.length;
   fn();
   const caught = warnings.slice(start);
@@ -43,11 +43,14 @@ export function warns(fn: () => unknown, match?: string | RegExp): string[] {
   return caught;
 }
 
+/** Numbers, (nested) sequences of them, or anything `py_eq` compares. */
+export type ApproxOperand = number | ArrayLike<ApproxOperand> | object | string | boolean | null | undefined;
+
 /** `actual == pytest.approx(expected, rel=1e-6, abs=1e-12)` over numbers or (nested) sequences. */
-export function approx(actual: any, expected: any, opts: { rel?: number; abs?: number } = {}): boolean {
+export function approx(actual: ApproxOperand, expected: ApproxOperand, opts: { rel?: number; abs?: number } = {}): boolean {
   if (Array.isArray(expected) || ArrayBuffer.isView(expected)) {
-    const a = Array.from(actual as ArrayLike<any>);
-    const e = Array.from(expected as ArrayLike<any>);
+    const a = Array.from(actual as ArrayLike<ApproxOperand>);
+    const e = Array.from(expected as ArrayLike<ApproxOperand>);
     return a.length === e.length && a.every((x, i) => approx(x, e[i], opts));
   }
   if (typeof expected !== "number" || typeof actual !== "number") return py_eq(actual, expected);

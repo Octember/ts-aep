@@ -11,7 +11,6 @@ import { layer_index_for_stored } from "../../resolvers/source_layers.ts";
 import { CURRENT_VALUE, _CurrentValue } from "../import_options.ts";
 import { auto_name } from "../naming.ts";
 import { default_sequence_fps, label_index } from "../preferences.ts";
-import type { FootageSource } from "../sources/footage.ts";
 import { FileSource } from "../sources/file.ts";
 import { PlaceholderSource } from "../sources/placeholder.ts";
 import { SolidSource } from "../sources/solid.ts";
@@ -35,12 +34,12 @@ import type { FolderItem } from "./folder.ts";
  * The `FootageItem` object represents a footage item imported into a project,
  * which appears in the Project panel.
  *
- * ```python
- * from py_aep import parse
+ * ```ts
+ * import { parse } from "@bevyl-ai/ts-aep";
  *
- * app = parse("project.aep")
- * footage = app.project.footages[0]
- * print(footage.main_source)
+ * const app = parse("project.aep");
+ * const footage = app.project.footages[0];
+ * console.log(footage.main_source);
  * ```
  *
  * Info:
@@ -106,13 +105,13 @@ export class FootageItem extends AVItem {
   }
 
   /**
-   * When `True`, the AVItem is a placeholder, or represents footage with a
+   * When `true`, the AVItem is a placeholder, or represents footage with a
    * source file that could not be found when the project was last saved.
    *
    * In this case, the path of the missing source file is in the
    * `missing_footage_path` attribute of the footage item's source-file object.
    * See {@link FootageItem.main_source} and
-   * {@link py_aep.models.sources.file.FileSource.missing_footage_path | FileSource.missing_footage_path}.
+   * {@link FileSource.missing_footage_path | FileSource.missing_footage_path}.
    * Read-only.
    */
   get footage_missing(): boolean {
@@ -120,10 +119,10 @@ export class FootageItem extends AVItem {
   }
 
   /**
-   * When `True`, the footage has an audio component.
+   * When `true`, the footage has an audio component.
    *
-   * When {@link py_aep.models.items.av_item.AVItem.use_proxy | use_proxy} is
-   * `True`, reflects the proxy source rather than the main source.
+   * When {@link AVItem.use_proxy | use_proxy} is
+   * `true`, reflects the proxy source rather than the main source.
    * Read-only.
    */
   get has_audio(): boolean {
@@ -134,11 +133,11 @@ export class FootageItem extends AVItem {
   }
 
   /**
-   * `True` if the footage can be used as an alternate source when setting
-   * {@link py_aep.models.properties.property.Property.alternate_source | Property.alternate_source}.
+   * `true` if the footage can be used as an alternate source when setting
+   * {@link Property.alternate_source | Property.alternate_source}.
    * Read-only.
    *
-   * `False` for solids, for footage without a video component (audio-only
+   * `false` for solids, for footage without a video component (audio-only
    * or data files), and for 3D model scenes (AE 2026 reports an imported
    * `.fbx` as incompatible even though it has video).
    */
@@ -223,7 +222,7 @@ export class FootageItem extends AVItem {
     // back from. AE keeps a solid's or placeholder's name in the source
     // `opti` chunk and leaves the item-level Utf8 empty; only file
     // footage is named through the item chunk.
-    if ((this._main_source.constructor as typeof FootageSource)._owns_name) {
+    if (this._main_source.constructor._owns_name) {
       this._main_source._store_name(value);
       this._name_utf8.value = "";
     } else {
@@ -248,15 +247,15 @@ export class FootageItem extends AVItem {
     } else {
       // TODO(port): Python formats `type(src)` as `<class 'py_aep.<module>.<Name>'>`; JS has no module path, so only the bare class name is printed. Affects only this unreachable-in-practice error message.
       throw new TypeError_(
-        `Unexpected source type for ${this.name}: ${(this._main_source as any)?.constructor?.name}`,
+        `Unexpected source type for ${this.name}: ${(this._main_source as object)?.constructor?.name}`,
       );
     }
   }
 
-  /** The footage file path if its source is a {@link FileSource}, else `None`. */
+  /** The footage file path if its source is a {@link FileSource}, else `null`. */
   get file(): string | null {
     if (hasattr(this._main_source, "file")) {
-      return (this._main_source as any).file;
+      return (this._main_source as FileSource).file;
     }
     return null;
   }
@@ -265,7 +264,7 @@ export class FootageItem extends AVItem {
    * Identity used by {@link Project.consolidate_footage}.
    *
    * Returns a hashable key for footage that can be merged with other
-   * footage sharing the same source file and interpretation, or `None`
+   * footage sharing the same source file and interpretation, or `null`
    * for sources that are always unique (solids, placeholders).
    *
    * The Python tuple is returned as a `tkey(...)` string because the
@@ -403,7 +402,7 @@ export class FootageItem extends AVItem {
   /**
    * Replace the footage source with a placeholder.
    *
-   * name: The placeholder name. Pass `None` to use
+   * name: The placeholder name. Pass `null` to use
    * `Missing Name`. An empty string becomes `Placeholder`.
    * width: Width in pixels (4-30000).
    * height: Height in pixels (4-30000).
@@ -431,7 +430,7 @@ export class FootageItem extends AVItem {
    * Replace the footage source with a solid.
    *
    * color: Solid color as [R, G, B] in 0.0-1.0 range.
-   * name: The solid name. Pass `None` to auto-generate
+   * name: The solid name. Pass `null` to auto-generate
    * a name from the color (e.g. `Red Solid 1`).
    * An empty string becomes `????`.
    * width: Width in pixels (1-30000).
@@ -472,7 +471,7 @@ export class FootageItem extends AVItem {
    *
    * py_aep extension: `layer_index` binds the new source to a single
    * layer of a layered file, by `list_layers` position (see
-   * `ImportOptions.layer_index`). `None` (the default) always replaces
+   * `ImportOptions.layer_index`). `null` (the default) always replaces
    * with the merged/whole document, even when the current source references a
    * single layer - consistent with `import_file`, where `layer_index=None`
    * imports merged. Pass `CURRENT_VALUE` to rebind at the current source's
@@ -486,7 +485,7 @@ export class FootageItem extends AVItem {
    * For an AI/PDF target the content box is the artwork box measured from
    * the page content stream (see
    * {@link py_aep.resolvers.ai_bounds.read_ai_layer_bounds | read_ai_layer_bounds}).
-   * `layer_dimensions` is ignored when `layer_index` is `None` (a merged
+   * `layer_dimensions` is ignored when `layer_index` is `null` (a merged
    * document is always document-sized).
    *
    * `layer_styles` chooses how a PSD layer's styles are treated (see
@@ -497,7 +496,7 @@ export class FootageItem extends AVItem {
    * which is not accepted as an explicit argument (AE's footage dialog
    * offers merge/ignore only) - and falls back to `"merge"` when the
    * current source has no PSD layer binding. Like `layer_dimensions`, it
-   * is ignored when `layer_index` is `None`.
+   * is ignored when `layer_index` is `null`.
    *
    * **Note:** 
    * Unlike ExtendScript, if the specified file has an unlabeled alpha channel,
@@ -506,7 +505,7 @@ export class FootageItem extends AVItem {
    * file: Path to the new source file.
    * layer_index: Layer of the new file to reference, as its 0-based
    * `list_layers` position, or `CURRENT_VALUE` (layered files
-   * only); `None` replaces with the merged/whole document.
+   * only); `null` replaces with the merged/whole document.
    * layer_dimensions: `"document"`, `"layer"`, or `CURRENT_VALUE` to
    * keep the current binding's choice (the default).
    * layer_styles: `"merge"`, `"ignore"`, or `CURRENT_VALUE` to keep
@@ -671,7 +670,7 @@ export class FootageItem extends AVItem {
     // A solid or placeholder carries its name in the new `opti` chunk
     // instead, so the Utf8 goes back to empty.
     py_assert(this._name_utf8 != null);
-    if ((source.constructor as typeof FootageSource)._owns_name) {
+    if (source.constructor._owns_name) {
       this._name_utf8.value = "";
     }
     this._name = source._resolve_name(this._name_utf8.value);

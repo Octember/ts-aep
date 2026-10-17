@@ -5,7 +5,7 @@ import type { Keyframe } from "../properties/keyframe.ts";
 import type { MarkerValue } from "../properties/marker.ts";
 import { AutoOrientType, Label, LayerType } from "../../enums/index.ts";
 import { ae_writes } from "../../ae_version.ts";
-import { ListChunk } from "../../binary/chunk.ts";
+import { Chunk, ListChunk } from "../../binary/chunk.ts";
 import { layer_timebase, rescale_ticks } from "../../binary/composition_chunks.ts";
 import { CmtaChunk } from "../../binary/item_chunks.ts";
 import { build_gide_list, build_ovdg, clone_chunk_tree, remap_layer_ref_tdpi, rewrite_owner_tdpi, rewrite_time_base } from "../../binary/mutations.ts";
@@ -22,6 +22,7 @@ import { PropertyBase } from "../properties/property_base.ts";
 import { PropertyGroup } from "../properties/property_group.ts";
 import { _validate_number, validate_int, validate_number, validate_string } from "../validators.ts";
 import type { CompItem } from "../items/composition.ts";
+import type { AVLayer } from "./av_layer.ts";
 import {
   KeyError,
   ValueError,
@@ -39,6 +40,7 @@ import {
   round,
   warn,
   deferred,
+  type ClassAttributes,
 } from "../../../pyrt/index.ts";
 
 const _synthesis_core = deferred<typeof import("../../synthesis/core.ts")>("py_aep/synthesis/core");
@@ -66,8 +68,8 @@ export const _validate_stretch = _validate_number({
 
 // The start time is a signed 32-bit count of the layer's timebase ticks.
 export const _validate_start_time = _validate_number({
-  min: (layer: any) => -0x80000000 / layer._layer_timebase(),
-  max: (layer: any) => 0x7fffffff / layer._layer_timebase(),
+  min: (layer: Layer) => -0x80000000 / layer._layer_timebase(),
+  max: (layer: Layer) => 0x7fffffff / layer._layer_timebase(),
 });
 
 /** Sentinel value indicating an undefined source id in the binary format. */
@@ -89,13 +91,13 @@ export function _parent_world(parent: Layer | null, time: number, child_is_3d: b
 }
 
 /** `list.index(x)` with `==` (identity for layers) and CPython's ValueError. */
-export function _list_index(xs: any[], x: any): number {
+export function _list_index(xs: unknown[], x: unknown): number {
   for (let i = 0; i < xs.length; i++) if (xs[i] === x) return i;
   throw new ValueError(`${repr(x)} is not in list`);
 }
 
 /** `list.remove(x)` with CPython's ValueError. */
-export function _list_remove(xs: any[], x: any): void {
+export function _list_remove(xs: unknown[], x: unknown): void {
   for (let i = 0; i < xs.length; i++) {
     if (xs[i] === x) {
       xs.splice(i, 1);
@@ -105,12 +107,17 @@ export function _list_remove(xs: any[], x: any): void {
   throw new ValueError("list.remove(x): x not in list");
 }
 
+/** A group holding a property whose left-out default follows other state (see `Layer._LIVE_DEFAULTS`). */
+export type LiveDefaultGroup = "ADBE Transform Group" | "ADBE Camera Options Group";
+/** A property whose left-out default follows other state (see `Layer._LIVE_DEFAULTS`). */
+export type LiveDefaultProperty = "ADBE Position" | "ADBE Camera Zoom" | "ADBE Camera Focus Distance";
+
 /**
  * The `Layer` object provides access to layers within compositions.
  *
  * Info:
  *     `Layer` is a subclass of {@link PropertyGroup}, which is a subclass of
- *     {@link py_aep.models.properties.property_base.PropertyBase | PropertyBase}. All
+ *     {@link PropertyBase | PropertyBase}. All
  *     methods and attributes of {@link PropertyGroup}, in addition to those listed below,
  *     are available when working with `Layer` objects.
  *
@@ -122,6 +129,7 @@ export function _list_remove(xs: any[], x: any): void {
  * @see https://ae-scripting.docsforadobe.dev/layer/layer/
  */
 export class Layer extends PropertyGroup {
+  declare ["constructor"]: ClassAttributes<typeof Layer>;
   static _LAYER_MATCH_NAMES: Map<LayerType, string> = new Map<LayerType, string>([
     [LayerType.AV, "ADBE AV Layer"],
     [LayerType.LIGHT, "ADBE Light Layer"],
@@ -144,10 +152,10 @@ export class Layer extends PropertyGroup {
 
   // The (group, property) match names whose default follows other state,
   // which `_write_out_moved_defaults` writes once that state moves it.
-  static _LIVE_DEFAULTS: ReadonlyArray<readonly [string, string]> = [];
+  static _LIVE_DEFAULTS: ReadonlyArray<readonly [LiveDefaultGroup, LiveDefaultProperty]> = [];
 
   /**
-   * When `True`, the layer is enabled. Overrides `PropertyBase.enabled`
+   * When `true`, the layer is enabled. Overrides `PropertyBase.enabled`
    * to read from the ldta chunk. Read / Write.
    */
   declare enabled: boolean;
@@ -166,25 +174,25 @@ export class Layer extends PropertyGroup {
   declare label: Label;
 
   /**
-   * When `True`, the layer is locked. This corresponds to the lock toggle
+   * When `true`, the layer is locked. This corresponds to the lock toggle
    * in the Layer panel. Read / Write.
    */
   declare locked: boolean;
 
-  /** When `True`, the layer was created as a null object. Read-only. */
+  /** When `true`, the layer was created as a null object. Read-only. */
   declare null_layer: boolean;
 
   /** The ID of the layer's parent layer. `0` if the layer has no parent. */
   declare _parent_id: number;
 
   /**
-   * When `True`, the layer is "shy", meaning that it is hidden in the
+   * When `true`, the layer is "shy", meaning that it is hidden in the
    * Layer panel if the composition's "Hide all shy layers" option is
    * toggled on. Read / Write.
    */
   declare shy: boolean;
 
-  /** When `True`, the layer is soloed. Read / Write. */
+  /** When `true`, the layer is soloed. Read / Write. */
   declare solo: boolean;
 
   /**
@@ -296,11 +304,11 @@ export class Layer extends PropertyGroup {
   // which could produce unexpected results or hit circular references.
   // `__hash__ = object.__hash__` is not carried over: instances are hashed by
   // identity already, which is what a Map/Set keyed by a Layer uses.
-  __eq__(other: any): boolean {
+  __eq__(other: unknown): boolean {
     return this === other;
   }
 
-  __setattr__(name: string, value: any): void {
+  __setattr__(name: string, value: unknown): void {
     // Layers set public instance attributes of their own, which
     // `PropertyGroup.__setattr__` would refuse.
     object_setattr(this, name, value);
@@ -326,12 +334,12 @@ export class Layer extends PropertyGroup {
     } = kw;
     // NOTE(port): TS cannot touch `this` before super(); the early self._ldta/_cmta/_layer_list/essential_property_uuids assignments move below it (the base __init__ never reads them) and new.target stands in for self in the match-name lookup.
 
-    let layer_type_raw: number;
+    let layer_type_raw: number | undefined;
     let match_name: string;
     try {
       layer_type_raw = _ldta.layer_type;
       const layer_type = LayerType.of(layer_type_raw);
-      match_name = getitem((new.target as typeof Layer)._LAYER_MATCH_NAMES, layer_type);
+      match_name = getitem(new.target._LAYER_MATCH_NAMES, layer_type);
     } catch (e) {
       if (!(e instanceof ValueError || e instanceof KeyError)) throw e;
       logger.warning(
@@ -371,7 +379,7 @@ export class Layer extends PropertyGroup {
     ldta: LdtaChunk;
     name: string;
     containing_comp: CompItem;
-    root_tdgp_extra?: any[] | null;
+    root_tdgp_extra?: Chunk[] | null;
     effect_param_defs?: Map<string, Map<string, Map<string, any>>> | null;
   }): Layer;
   static _new(kw: any): any {
@@ -382,7 +390,7 @@ export class Layer extends PropertyGroup {
     validate_string(name);
 
     const name_utf8 = new Utf8Chunk({ value: name });
-    const tdgp_chunks: any[] = [new TdsbChunk({}), TdsnChunk.new_()];
+    const tdgp_chunks: Chunk[] = [new TdsbChunk({}), TdsnChunk.new_()];
     if (py_bool(root_tdgp_extra)) tdgp_chunks.push(...root_tdgp_extra);
     // AE terminates every tdgp match-name stream with ADBE Group End
     // and rejects layers whose root tdgp lacks it ("missing data in
@@ -502,7 +510,7 @@ export class Layer extends PropertyGroup {
    * `"ParametricMeshLayer"`, or `"Layer"`. Read-only.
    */
   get layer_type(): string {
-    return (this.constructor as typeof Layer)._LAYER_TYPE_NAMES.get(LayerType.of(this._ldta.layer_type)) ?? "AVLayer";
+    return this.constructor._LAYER_TYPE_NAMES.get(LayerType.of(this._ldta.layer_type)) ?? "AVLayer";
   }
 
   /**
@@ -524,7 +532,7 @@ export class Layer extends PropertyGroup {
   /**
    * Whether the layer transforms in three dimensions.
    *
-   * `False` on the base {@link Layer}: only an {@link AVLayer} carries the
+   * `false` on the base {@link Layer}: only an {@link AVLayer} carries the
    * 3D switch, and cameras and lights are always 3D, so both override
    * this. Read-only.
    */
@@ -535,7 +543,7 @@ export class Layer extends PropertyGroup {
   /**
    * The layer's pixel dimensions, for denormalizing effect points.
    *
-   * `None` on the base {@link Layer}: `width` / `height` live on
+   * `null` on the base {@link Layer}: `width` / `height` live on
    * {@link AVLayer}, and a camera or light has neither, so nothing
    * normalized against a layer sits on one.
    */
@@ -646,18 +654,18 @@ export class Layer extends PropertyGroup {
   }
 
   /**
-   * `True` if the layer has a video switch in the Timeline panel.
+   * `true` if the layer has a video switch in the Timeline panel.
    *
-   * Always `False` for {@link CameraLayer} and {@link LightLayer} objects.
+   * Always `false` for {@link CameraLayer} and {@link LightLayer} objects.
    */
   get has_video(): boolean {
     return false;
   }
 
   /**
-   * `True` if the layer is an adjustment layer.
+   * `true` if the layer is an adjustment layer.
    *
-   * Always `False` for {@link CameraLayer} and {@link LightLayer} objects.
+   * Always `false` for {@link CameraLayer} and {@link LightLayer} objects.
    * Overridden in {@link AVLayer} to read from the binary chunk.
    */
   get adjustment_layer(): boolean {
@@ -665,9 +673,9 @@ export class Layer extends PropertyGroup {
   }
 
   /**
-   * `True` if the layer is an environment layer.
+   * `true` if the layer is an environment layer.
    *
-   * Always `False` for {@link CameraLayer} and {@link LightLayer} objects.
+   * Always `false` for {@link CameraLayer} and {@link LightLayer} objects.
    * Overridden in {@link AVLayer} to read from the binary chunk.
    */
   get environment_layer(): boolean {
@@ -675,7 +683,7 @@ export class Layer extends PropertyGroup {
   }
 
   /**
-   * When `True`, the layer is active at the current time.
+   * When `true`, the layer is active at the current time.
    *
    * Overrides {@link PropertyBase.active} to evaluate
    * {@link active_at_time} at {@link time}.
@@ -687,36 +695,41 @@ export class Layer extends PropertyGroup {
   /**
    * The layer's marker property.
    *
-   * A {@link py_aep.models.properties.property.Property | Property} with
+   * A {@link Property | Property} with
    * `match_name="ADBE Marker"` whose keyframes hold marker values.
-   * `None` when the layer has no markers.
+   * `null` when the layer has no markers.
    */
-  get marker(): Property | null {
-    let prop: any;
+  get marker(): Property<MarkerValue | null> | null {
+    let prop: Property | PropertyGroup;
     try {
       prop = this.__getitem__("ADBE Marker");
     } catch (e) {
       if (!(e instanceof KeyError)) throw e;
       return null;
     }
-    return prop as Property;
+    return prop;
   }
 
   /**
-   * A flat list of {@link MarkerValue} objects for this layer.
+   * A flat array of {@link MarkerValue} objects for this layer.
    *
    * Shortcut for accessing marker data without navigating the property
-   * tree. Returns an empty list when the layer has no markers.
+   * tree. Returns an empty array when the layer has no markers.
    *
    * @example
-   * ```python
-   * for marker in layer.markers:
-   *     print(marker.comment)
+   * ```ts
+   * import { parse } from "@bevyl-ai/ts-aep";
+   *
+   * const app = parse("project.aep");
+   * const layer = app.project.compositions[0].layers[0];
+   * for (const marker of layer.markers) {
+   *   console.log(marker.comment);
+   * }
    * ```
    */
   get markers(): MarkerValue[] {
     if (this.marker == null) return [];
-    return this.marker.keyframes.map((kf) => kf.value) as MarkerValue[];
+    return this.marker.keyframes.map((kf) => kf.value);
   }
 
   /**
@@ -739,7 +752,7 @@ export class Layer extends PropertyGroup {
   get transform(): PropertyGroup {
     const group = this.__getitem__("ADBE Transform Group");
     py_assert(group instanceof PropertyGroup);
-    return group as PropertyGroup;
+    return group;
   }
 
   /**
@@ -754,7 +767,7 @@ export class Layer extends PropertyGroup {
    * with `layer.effects.add_property(...)`. An empty group is falsy,
    * so `if layer.effects:` still means "has effects".
    *
-   * `None` on {@link CameraLayer} and {@link LightLayer}, the only layer kinds
+   * `null` on {@link CameraLayer} and {@link LightLayer}, the only layer kinds
    * AE gives no Effects group; every other layer kind always has one.
    */
   get effects(): PropertyGroup | null {
@@ -769,7 +782,7 @@ export class Layer extends PropertyGroup {
    * {@link PropertyGroup} representing one mask.
    *
    * Like {@link effects}, the group is returned even when it is empty (an
-   * empty group is falsy), and is `None` only on {@link CameraLayer} and
+   * empty group is falsy), and is `null` only on {@link CameraLayer} and
    * {@link LightLayer}, which AE gives no Masks group.
    */
   get masks(): PropertyGroup | null {
@@ -782,7 +795,7 @@ export class Layer extends PropertyGroup {
    * This is the Text `PropertyGroup` (match name `ADBE Text Properties`),
    * holding Source Text, Path Options, More Options and the Animators.
    *
-   * `None` on every layer that is not a {@link TextLayer}: unlike
+   * `null` on every layer that is not a {@link TextLayer}: unlike
    * {@link effects} and {@link masks}, this group is never synthesized for
    * other layer kinds because AE does not expose it on them.
    */
@@ -791,16 +804,16 @@ export class Layer extends PropertyGroup {
   }
 
   /**
-   * The child `PropertyGroup` for `match_name`, or `None` when this
+   * The child `PropertyGroup` for `match_name`, or `null` when this
    * layer kind does not have it.
    *
    * Missing top-level groups are synthesized per layer kind by
-   * `synthesize_layer_properties`, so a `None` here means the kind has
+   * `synthesize_layer_properties`, so a `null` here means the kind has
    * no such group at all, not that the `.aep` merely omitted an empty
    * one (AE writes the Effect / Mask Parade only once it has content).
    */
   _optional_group(match_name: string): PropertyGroup | null {
-    let group: any;
+    let group: Property | PropertyGroup;
     try {
       group = this.__getitem__(match_name);
     } catch (e) {
@@ -821,9 +834,9 @@ export class Layer extends PropertyGroup {
    * Run on save, so every way of changing the state is covered.
    */
   _write_out_moved_defaults(): void {
-    for (const [group_name, match_name] of (this.constructor as typeof Layer)._LIVE_DEFAULTS) {
-      const group = this.__getitem__(group_name) as PropertyGroup;
-      const prop = group.__getitem__(match_name) as Property;
+    for (const [group_name, match_name] of this.constructor._LIVE_DEFAULTS) {
+      const group = this.__getitem__(group_name);
+      const prop = group.__getitem__(match_name);
       if (prop._tdsb == null || !prop._tdsb.synthetic) continue;
       if (prop.is_modified) prop._ensure_materialized();
     }
@@ -859,7 +872,7 @@ export class Layer extends PropertyGroup {
   }
 
   /**
-   * The parent of this layer; can be `None`.
+   * The parent of this layer; can be `null`.
    *
    * Offset values are calculated to counterbalance any transforms above this layer
    * in the hierarchy, so that when you set the parent there is no apparent jump in
@@ -908,7 +921,7 @@ export class Layer extends PropertyGroup {
   }
 
   /**
-   * Parent this layer to `new_parent` (`None` to unparent), rewriting
+   * Parent this layer to `new_parent` (`null` to unparent), rewriting
    * its transform so `child_world` (its world matrix under the old
    * parent, at comp `time`) does not move.
    *
@@ -954,13 +967,13 @@ export class Layer extends PropertyGroup {
 
     const transform = this.transform;
 
-    const current = (match_name: string): any => {
-      const prop = transform.__getitem__(match_name) as Property;
+    const current = (match_name: "ADBE Anchor Point" | "ADBE Orientation" | "ADBE Scale"): number[] => {
+      const prop = transform.__getitem__(match_name);
       return prop.keyframes?.length > 0 ? prop.value_at_time(time) : prop.value;
     };
 
     // Decompose into AE transform components, keeping anchor fixed.
-    const anchor = current("ADBE Anchor Point") as number[];
+    const anchor = current("ADBE Anchor Point");
     const square_anchor = [anchor[0] * own_aspect, ...anchor.slice(1)];
 
     // Position and scale come straight from the local matrix - neither
@@ -968,7 +981,7 @@ export class Layer extends PropertyGroup {
     // Rotate X/Y/Z. `new_rz` is only used on the 2D path below, where the
     // orientation is divided out of the 3x3 first so it cannot leak into
     // the rotation (a layer switched from 3D to 2D can still carry one).
-    const orientation = current("ADBE Orientation") as number[];
+    const orientation = current("ADBE Orientation");
     let new_pos = decompose_transform(new_local, square_anchor)[0];
     new_pos = [new_pos[0] / new_space, ...new_pos.slice(1)];
     let [, new_scale, new_rz] = decompose_transform(
@@ -986,17 +999,17 @@ export class Layer extends PropertyGroup {
       new_scale = new_scale.map((component) => -Math.abs(component));
     }
 
-    const write_compensation = (match_name: string, new_value: any): void => {
+    const write_compensation = (match_name: "ADBE Position" | "ADBE Scale" | "ADBE Rotate Z", new_value: number | number[]): void => {
       // Only write values that actually changed to avoid materializing
       // synthetic properties unnecessarily. Keyframed scale / rotation
       // values are left untouched, matching ExtendScript (the layer
       // may visually jump for those).
-      const prop = transform.__getitem__(match_name) as Property;
+      const prop = transform.__getitem__(match_name);
       if (prop.keyframes?.length > 0) return;
       if (!py_eq(prop.value, new_value)) prop.value = new_value;
     };
 
-    const remap_separated_keyframes = (leader: Property, followers: Property[]): void => {
+    const remap_separated_keyframes = (leader: Property<number[]>, followers: Property<number>[]): void => {
       // Remap an animated separated Position into the new parent's space.
       //
       // A separated leader holds no keyframes of its own, so the generic
@@ -1013,7 +1026,7 @@ export class Layer extends PropertyGroup {
           const time = keyframe.time;
           let point: number[] | null = remapped.get(time) ?? null;
           if (point == null) {
-            point = remap.transform_point(leader.value_at_time(time) as number[]);
+            point = remap.transform_point(leader.value_at_time(time));
             remapped.set(time, point);
           }
           updates.push([keyframe, point[dimension]]);
@@ -1028,9 +1041,9 @@ export class Layer extends PropertyGroup {
     // scaled to 50% each key doubles, and under one scaled
     // [200, 50, 100] each key is divided per axis. Skipping them left
     // the layer 25 px out at one time and 62 px at another.
-    const scale_prop = transform.__getitem__("ADBE Scale") as Property;
+    const scale_prop = transform.__getitem__("ADBE Scale");
     if (scale_prop.keyframes?.length > 0) {
-      const scale_now = current("ADBE Scale") as number[];
+      const scale_now = current("ADBE Scale");
       const factors = Array.from(range(new_scale.length), (axis) =>
         axis < scale_now.length && scale_now[axis] !== 0
           ? new_scale[axis] / scale_now[axis]
@@ -1040,7 +1053,7 @@ export class Layer extends PropertyGroup {
       // `write_compensation` gives: an unchanged value is not written.
       if (factors.some((factor) => factor !== 1.0)) {
         for (const keyframe of scale_prop.keyframes) {
-          const components = keyframe.value as number[];
+          const components = keyframe.value;
           keyframe.value = components.map((component, axis) =>
             axis < factors.length ? component * factors[axis] : component,
           );
@@ -1052,7 +1065,7 @@ export class Layer extends PropertyGroup {
 
     // ExtendScript remaps every POSITION keyframe into the new parent's
     // space (measured in AE 2026).
-    const pos = transform.__getitem__("ADBE Position") as Property;
+    const pos = transform.__getitem__("ADBE Position");
     const separated = pos._separation_followers();
     if (separated != null) {
       // AE refuses `setValue` on a separated leader, but compensates
@@ -1067,13 +1080,13 @@ export class Layer extends PropertyGroup {
     } else if (pos.keyframes?.length > 0) {
       const remap = parent_remap;
       for (const kf of pos.keyframes) {
-        const kf_value = kf.value as number[];
+        const kf_value = kf.value;
         const dims = kf_value.length;
         kf.value = remap.transform_point(kf_value).slice(0, dims);
         for (const tangent_attr of ["in_spatial_tangent", "out_spatial_tangent"]) {
           const tangent = getattr(kf, tangent_attr);
           if (py_bool(tangent)) {
-            (kf as any)[tangent_attr] = remap
+            (kf as unknown as Record<string, unknown>)[tangent_attr] = remap
               .transform_vector(tangent)
               .slice(0, tangent.length);
           }
@@ -1089,10 +1102,10 @@ export class Layer extends PropertyGroup {
       // Position (a two-node camera's POI [900, 500, 0] under a null at
       // [700, 400, -100] turned 30 degrees about Y became
       // [123.2, 100, 186.6]).
-      const poi = transform.__getitem__("ADBE Anchor Point") as Property;
+      const poi = transform.__getitem__("ADBE Anchor Point");
       if (poi.keyframes?.length > 0) {
         for (const kf of poi.keyframes) {
-          const kf_value = kf.value as number[];
+          const kf_value = kf.value;
           kf.value = parent_remap.transform_point(kf_value).slice(0, kf_value.length);
         }
       } else {
@@ -1119,7 +1132,7 @@ export class Layer extends PropertyGroup {
       // A 2D layer has no Orientation to use, so AE puts the rotation
       // into Rotate Z (measured: a 2D child under a 30-degree parent
       // gets rotZ = -30 and orientation stays [0,0,0]).
-      const rotation = transform.__getitem__("ADBE Rotate Z") as Property;
+      const rotation = transform.__getitem__("ADBE Rotate Z");
       if (rotation.keyframes?.length > 0) {
         // AE offsets every rotation keyframe rather than giving up on
         // an animated one - keys of 15 and 75 under a 30-degree
@@ -1130,7 +1143,7 @@ export class Layer extends PropertyGroup {
         const offset =
           mod(compose_orientation([0.0, 0.0, 0.0], rotation_delta)[2] + 180.0, 360.0) - 180.0;
         for (const keyframe of rotation.keyframes) {
-          keyframe.value = (keyframe.value as number) + offset;
+          keyframe.value = keyframe.value + offset;
         }
         return;
       }
@@ -1147,10 +1160,10 @@ export class Layer extends PropertyGroup {
     // keyframed properties: a child with a keyframed Rotate Z would get
     // its position compensated but not its rotation, and jump by 362 px
     // in a case where AE does not move it at all.
-    const orientation_prop = transform.__getitem__("ADBE Orientation") as Property;
+    const orientation_prop = transform.__getitem__("ADBE Orientation");
     if (orientation_prop.keyframes?.length > 0) {
       for (const keyframe of orientation_prop.keyframes) {
-        keyframe.value = compose_orientation(keyframe.value as number[], rotation_delta);
+        keyframe.value = compose_orientation(keyframe.value, rotation_delta);
       }
       return;
     }
@@ -1170,7 +1183,7 @@ export class Layer extends PropertyGroup {
    * In this case, an offset is calculated and set in the child layer's transform
    * fields, to prevent the jump from occurring.
    *
-   * @param new_parent - The new parent layer, or `None` to unparent.
+   * @param new_parent - The new parent layer, or `null` to unparent.
    * @throws {@link ValueError} If `new_parent` is this layer itself, one of its descendants, or a
    *   layer in another composition.
    */
@@ -1182,7 +1195,7 @@ export class Layer extends PropertyGroup {
   /**
    * Return whether the layer is active at the given time.
    *
-   * For this method to return `True`, three conditions must be met:
+   * For this method to return `true`, three conditions must be met:
    *
    * 1. The layer must be `enabled`.
    * 2. No other layer in the {@link containing_comp} may be soloed unless
@@ -1265,7 +1278,7 @@ export class Layer extends PropertyGroup {
     comp._project._ensure_used_in_linked();
     const source = getattr(this, "source", null);
     if (source != null && "_used_in" in source) {
-      _av_layer()._unregister_source_usage(source, comp, { exclude: this as any });
+      _av_layer()._unregister_source_usage(source, comp, { exclude: this as unknown as AVLayer });
     }
 
     // Remove chunk block from comp's chunk list
@@ -1349,7 +1362,7 @@ export class Layer extends PropertyGroup {
     const cloned_list = cloned_block[0] as ListChunk;
 
     // Patch layer ID
-    const cloned_ldta = find_by_type(cloned_list.chunks, "ldta") as LdtaChunk;
+    const cloned_ldta = find_by_type(cloned_list.chunks, "ldta");
     // Layer IDs are unique project-wide, not per-comp.
     cloned_ldta.layer_id = into_comp._project._allocate_id();
     // AE points every effect's hidden -0000 param tdpi at the owning
@@ -1477,9 +1490,9 @@ export class Layer extends PropertyGroup {
     const src_transform = this.transform;
     const dst_transform = copy.transform;
     if (src_transform == null || dst_transform == null) return;
-    for (const match_name of (this.constructor as typeof Layer)._COMP_RELATIVE_TRANSFORM) {
-      let src_prop: any;
-      let dst_prop: any;
+    for (const match_name of this.constructor._COMP_RELATIVE_TRANSFORM) {
+      let src_prop: Property | PropertyGroup;
+      let dst_prop: Property | PropertyGroup;
       try {
         src_prop = src_transform.property(match_name);
         dst_prop = dst_transform.property(match_name);

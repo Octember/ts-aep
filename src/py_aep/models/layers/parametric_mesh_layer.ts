@@ -10,6 +10,7 @@ import {
   getattr,
   round,
   str,
+  type ClassAttributes,
 } from "../../../pyrt/index.ts";
 import { ChunkField } from "../descriptors.ts";
 import { label_index } from "../preferences.ts";
@@ -19,13 +20,13 @@ import type { Property } from "../properties/property.ts";
 import type { PropertyGroup } from "../properties/property_group.ts";
 
 /**
- * `type(None)` is NoneType, which is never `None` itself. Keeps the
+ * `type(None)` is NoneType, which is never `null` itself. Keeps the
  * `type(old) is not cls` check below true when an option is unset and no
  * class maps to the mesh type.
  */
 export const NoneType = Symbol("NoneType");
 
-export function _type_of(x: any): any {
+export function _type_of(x: { constructor: Function } | null | undefined): Function | symbol {
   return x == null ? NoneType : x.constructor;
 }
 
@@ -40,13 +41,13 @@ export function _type_of(x: any): any {
  * **Note:** This functionality was added in After Effects 26.0
  *
  * @example
- * ```python
- * from py_aep import parse
+ * ```ts
+ * import { parse } from "@bevyl-ai/ts-aep";
  *
- * app = parse("project.aep")
- * comp = app.project.compositions[0]
- * mesh = comp.parametric_mesh_layers[0]
- * print(mesh.name)
+ * const app = parse("project.aep");
+ * const comp = app.project.compositions[0];
+ * const mesh = comp.parametric_mesh_layers[0];
+ * console.log(mesh.name);
  * ```
  * @see https://ae-scripting.docsforadobe.dev/layer/parametricmeshlayer/
  */
@@ -63,8 +64,8 @@ export class ParametricMeshLayer extends AVLayer {
   /** The ParametricBevelOptions object represents the bevel options for a parametric mesh layer. */
   declare parametric_bevel_options: ParametricBevelOptions;
 
-  constructor(...args: any[]) {
-    super(...(args as [any]));
+  constructor(...args: ConstructorParameters<typeof AVLayer>) {
+    super(...args);
     this._update_options();
   }
 
@@ -76,7 +77,7 @@ export class ParametricMeshLayer extends AVLayer {
     duration: number;
     containing_comp: CompItem;
     mesh_type: ParametricMeshType;
-    effect_param_defs?: Map<string, any> | null;
+    effect_param_defs?: Map<string, unknown> | null;
   }): ParametricMeshLayer;
   static _new(kw: any): ParametricMeshLayer;
   static _new(kw: any): any {
@@ -106,7 +107,11 @@ export class ParametricMeshLayer extends AVLayer {
     // (tdsb=1) while the other mesh groups stay collapsed (tdsb=3, the
     // synthesized default). Override the active groups before the layer
     // is materialized so the written tdsb matches AE.
-    const active_groups = dict_get(_PARAMETRIC_MESH_ACTIVE_GROUPS, ParametricMeshType.to_binary(mesh_type), []);
+    const active_groups = dict_get<number, readonly string[], readonly string[]>(
+      _PARAMETRIC_MESH_ACTIVE_GROUPS,
+      ParametricMeshType.to_binary(mesh_type),
+      [],
+    );
     for (const child of layer.properties) {
       if (active_groups.includes(child.match_name) && child._tdsb != null) {
         child._tdsb._enable_flags = 1;
@@ -121,7 +126,7 @@ export class ParametricMeshLayer extends AVLayer {
     const old_options = getattr(this, "parametric_mesh_options", null);
     if (_type_of(old_options) !== options_cls) {
       try {
-        delete (this as any).parametric_mesh_options;
+        delete (this as { parametric_mesh_options?: unknown }).parametric_mesh_options;
       } catch (e) {
         if (!(e instanceof AttributeError)) throw e;
       }
@@ -134,7 +139,7 @@ export class ParametricMeshLayer extends AVLayer {
     const old_bevel = getattr(this, "parametric_bevel_options", null);
     if (_type_of(old_bevel) !== bevel_cls) {
       try {
-        delete (this as any).parametric_bevel_options;
+        delete (this as { parametric_bevel_options?: unknown }).parametric_bevel_options;
       } catch (e) {
         if (!(e instanceof AttributeError)) throw e;
       }
@@ -145,14 +150,14 @@ export class ParametricMeshLayer extends AVLayer {
   }
 
   /**
-   * `False` for Parametric Mesh layers: collapse transformation is
+   * `false` for Parametric Mesh layers: collapse transformation is
    * forced on and cannot be changed. Read-only.
    */
   get can_set_collapse_transformation(): boolean {
     return false;
   }
 
-  /** `False` for Parametric Mesh layers (time remapping is not supported). Read-only. */
+  /** `false` for Parametric Mesh layers (time remapping is not supported). Read-only. */
   get can_set_time_remap_enabled(): boolean {
     return false;
   }
@@ -203,7 +208,7 @@ export class ParaMeshField<T extends number | boolean = number> {
   }
 
   __get__(obj: ParametricMeshOptions | ParametricBevelOptions | null, objtype: Function): T {
-    if (obj == null) return this as any;
+    if (obj == null) return this as unknown as T;
     const value = obj._properties(this._property_name).value;
     return value as T;
   }
@@ -220,6 +225,7 @@ export class ParaMeshField<T extends number | boolean = number> {
  *     This functionality was added in After Effects 26.0
  */
 export class ParametricMeshOptions {
+  declare ["constructor"]: ClassAttributes<typeof ParametricMeshOptions>;
   // Annotation-only in Python; each subclass sets its own value.
   static _match_name: string;
 
@@ -233,13 +239,13 @@ export class ParametricMeshOptions {
 
   _properties(name: string): Property {
     if (this._group == null) {
-      this._group = this._layer.property((this.constructor as typeof ParametricMeshOptions)._match_name) as PropertyGroup;
+      this._group = this._layer.property(this.constructor._match_name) as PropertyGroup;
     }
     return this._group.property(name) as Property;
   }
 
   __repr__(): string {
-    const result = new Map<string, any>();
+    const result = new Map<string, unknown>();
     // NOTE(port): descriptors_of walks the MRO but vars(cls) is the class's own dict; same result because no base class declares descriptors.
     for (const [name] of descriptors_of(this.constructor)) {
       result.set(name, getattr(this, name));

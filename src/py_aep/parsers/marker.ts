@@ -6,7 +6,6 @@
 
 import type { ListChunk } from "../binary/chunk.ts";
 import type { TdmnChunk } from "../binary/property_chunks.ts";
-import type { NmhdChunk } from "../binary/misc_chunks.ts";
 import type { Utf8Chunk } from "../binary/scalar_chunks.ts";
 import { filter_by_list_type, filter_by_type, find_by_list_type, find_by_type } from "../binary/utils.ts";
 import { PropertyValueType } from "../enums/index.ts";
@@ -72,9 +71,9 @@ export function parse_marker(
   keyframe: Keyframe | null = null,
   frame_time = 0,
 ): MarkerValue {
-  const nmhd_chunk = find_by_type(nmrd_chunk.chunks, "NmHd") as NmhdChunk;
+  const nmhd_chunk = find_by_type(nmrd_chunk.chunks, "NmHd");
 
-  const utf8_chunks = filter_by_type(nmrd_chunk.chunks, "Utf8") as Utf8Chunk[];
+  const utf8_chunks = filter_by_type(nmrd_chunk.chunks, "Utf8");
 
   // Collect cue point param Utf8 chunks
   const param_utf8s: Utf8Chunk[] = utf8_chunks.slice(5);

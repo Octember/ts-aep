@@ -5,6 +5,7 @@
  */
 
 import { KeyError, TypeError_, ValueError, getitem, int, int_enum, repr, type EnumValue } from "../../pyrt/index.ts";
+import type { EnumHelpers } from "../../pyrt/enum.ts";
 
 /**
  * Label color for items, layers, keyframes and markers.
@@ -531,9 +532,9 @@ export const GpuAccelType = int_enum("GpuAccelType", {
    * @throws {@link ValueError} If the enum member has no known UUID mapping, or if a string value
    *   is not a valid UUID.
    */
-  to_binary(value: number | string): string {
+  to_binary(this: EnumHelpers<GpuAccelType>, value: number | string): string {
     if (this.has(value)) {
-      const uuid = _GPU_ENUM_TO_UUID.get(value as number) ?? null;
+      const uuid = _GPU_ENUM_TO_UUID.get(value) ?? null;
       if (uuid == null) {
         const known = [..._GPU_UUID_TO_ENUM]
           .map(([u, e]) => `${this.name_of(e)} (${u})`)
@@ -551,18 +552,18 @@ export const GpuAccelType = int_enum("GpuAccelType", {
       throw new TypeError_("expected string or bytes-like object, got '" + (value == null ? "NoneType" : typeof value) + "'");
     }
     // Python's `$` also matches before one trailing "\n"
-    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\n?$/i.test(value as string)) {
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\n?$/i.test(value)) {
       throw new ValueError(
         `expected a valid UUID string ` +
           `(xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx), got ${repr(value)}`,
       );
     }
-    return value as string;
+    return value;
   },
 });
 export type GpuAccelType = EnumValue<typeof GpuAccelType>;
 
-export const _GPU_UUID_TO_ENUM: Map<string, number> = new Map<string, number>([
+export const _GPU_UUID_TO_ENUM: Map<string, GpuAccelType> = new Map<string, GpuAccelType>([
   ["7ee0ab59-822d-44cc-ac10-16279d041016", GpuAccelType.CUDA],
   ["f33089e2-1ede-47c1-8a9e-b232bb1cc1a4", GpuAccelType.SOFTWARE],
   ["6ed1497e-17ad-4a5b-846f-52bb81e20104", GpuAccelType.METAL],
@@ -570,7 +571,7 @@ export const _GPU_UUID_TO_ENUM: Map<string, number> = new Map<string, number>([
   ["c4471277-d5d1-4ea7-a36c-b93ac76dfd41", GpuAccelType.VULKAN],
   ["cd99cfc1-bf65-4cb7-ab70-a8f5ea50e8f4", GpuAccelType.DIRECTX],
 ]);
-export const _GPU_ENUM_TO_UUID: Map<number, string> = new Map<number, string>(
+export const _GPU_ENUM_TO_UUID: Map<GpuAccelType, string> = new Map<GpuAccelType, string>(
   [..._GPU_UUID_TO_ENUM].map(([k, v]) => [v, k] as const),
 );
 

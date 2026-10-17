@@ -8,8 +8,19 @@
  * ExtendScript `propertyValueType`; `cv` is `canVaryOverTime`.
  */
 
+export interface TextAnimatorPoolEntry {
+  mn: string;
+  name: string;
+  value: number | number[];
+  pvt: number;
+  min: number | null;
+  max: number | null;
+  units: string | null;
+  cv: boolean;
+}
+
 // match_name, name, value, pvt, min, max, units, cv
-export const TEXT_ANIMATOR_POOL: Record<string, any>[] = [
+export const TEXT_ANIMATOR_POOL: TextAnimatorPoolEntry[] = [
   {
     "mn": "ADBE Text Anchor Point 3D",
     "name": "Anchor Point",

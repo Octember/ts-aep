@@ -50,7 +50,7 @@ export type EnumHelpers<V> = {
 
 export type EnumValue<E> = E extends EnumHelpers<infer V> ? V : never;
 
-export function py_enum<const M extends Record<string, unknown>, X extends Record<string, any> = {}>(
+export function py_enum<const M extends Record<string, unknown>, X extends Record<string, unknown> = {}>(
   name: string,
   members: M,
   methods?: X & ThisType<Resolved<M> & EnumHelpers<Resolved<M>[keyof M]> & X>,
@@ -69,7 +69,7 @@ export function py_enum<const M extends Record<string, unknown>, X extends Recor
       canonical.push(v);
     }
   }
-  const self: any = Object.fromEntries(by_name);
+  const self = Object.fromEntries(by_name);
   const helpers: EnumHelpers<V> = {
     __name__: name,
     of(value: unknown): V {
@@ -103,7 +103,7 @@ export function py_enum<const M extends Record<string, unknown>, X extends Recor
       Object.defineProperty(self, k, { ...v, enumerable: false });
     }
   }
-  return Object.freeze(self);
+  return Object.freeze(self) as Resolved<M> & EnumHelpers<Resolved<M>[keyof M]> & X;
 }
 
 /** `class X(IntEnum)` */

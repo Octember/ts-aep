@@ -1933,7 +1933,7 @@ describe("TestLdatItem", () => {
     expect(item.time_units).toBe(30 * 256);
     expect(item.in_interpolation_type).toBe(2);
     expect(item.out_interpolation_type).toBe(1);
-    expect(approx(item.kf_data.value, [50.0])).toBe(true);
+    expect(approx((item.kf_data as KfMultiDimensional).value, [50.0])).toBe(true);
     expect(py_eq(item.tobytes(), data)).toBe(true);
   });
 
@@ -1944,7 +1944,7 @@ describe("TestLdatItem", () => {
     const data = bytes_.concat(_build_item(LdatItemType.color), payload);
 
     const item = LdatItem.frombytes(data, { item_type: LdatItemType.color });
-    expect(approx(item.kf_data.value, [0.5, 0.6, 0.7, 1.0])).toBe(true);
+    expect(approx((item.kf_data as KfColor).value, [0.5, 0.6, 0.7, 1.0])).toBe(true);
     expect(py_eq(item.tobytes(), data)).toBe(true);
   });
 

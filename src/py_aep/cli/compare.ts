@@ -234,8 +234,8 @@ export function _chunk_floats(chunk: any): number[] | null {
   }
   if (ct === "ldat") {
     const items = chunk.items;
-    if (py_bool(items) && items.every((i: any) => hasattr(i, "x") && hasattr(i, "y"))) {
-      return items.flatMap((i: any) => [i.x, i.y]);
+    if (py_bool(items) && items.every((i: { x: number; y: number }) => hasattr(i, "x") && hasattr(i, "y"))) {
+      return items.flatMap((i: { x: number; y: number }) => [i.x, i.y]);
     }
   }
   return null;
@@ -250,7 +250,7 @@ export function _with_floats(chunk: any, floats: number[]): any {
   } else if (ct === "shph") {
     [clone.top_left_x, clone.top_left_y, clone.bottom_right_x, clone.bottom_right_y] = floats;
   } else if (ct === "ldat") {
-    for (const [idx, item] of (clone.items as any[]).entries()) {
+    for (const [idx, item] of (clone.items as { x: number; y: number }[]).entries()) {
       item.x = floats[2 * idx];
       item.y = floats[2 * idx + 1];
     }
@@ -268,7 +268,7 @@ export const _FLOAT_TAG_RE = /<float>([^<]*)<\/float>/g;
  * chunk, so the numeric tolerance applied to cdat/shph/ldat cannot reach
  * them; AE and py_aep round an 8-bit colour to adjacent float32 values.
  */
-export function _gradient_xml_only_float_diff(s1: any, s2: any): boolean {
+export function _gradient_xml_only_float_diff(s1: string | String, s2: string | String): boolean {
   // `_NulTailStr` (a str subclass) arrives as a String object.
   if (!(typeof s1 === "string" || s1 instanceof String) || !(typeof s2 === "string" || s2 instanceof String)) return false;
   s1 = String(s1);
@@ -353,7 +353,7 @@ export const parse_aep_chunks = extract_leaf_chunks;
  * @param typed1 - Optional decoded chunks for file 1 (enables float-tolerant comparison of
  *   coordinate fields).
  * @param typed2 - Optional decoded chunks for file 2.
- * @param exact - When `True`, disable float tolerance (byte-exact).
+ * @param exact - When `true`, disable float tolerance (byte-exact).
  * @returns Tuple of (differences, paths only in data1, paths only in data2, paths of the
  *   float-precision-only differences suppressed).
  */
@@ -470,7 +470,7 @@ export function compare_structure(file1: Path, file2: Path): StructuralDifferenc
  * The first file is treated as the reference.
  *
  * @param files - List of AEP file paths (first = reference).
- * @param exact - When `True`, disable float tolerance (byte-exact); otherwise chunks differing only
+ * @param exact - When `true`, disable float tolerance (byte-exact); otherwise chunks differing only
  *   in float-precision coordinates across all present files are suppressed, matching two-file mode.
  * @returns Tuple of (chunk differences, missing chunk info, parsed data per file, paths of the
  *   float-precision-only chunk differences suppressed).
@@ -579,18 +579,18 @@ export function print_results(
   print(`${"=".repeat(80)}\n`);
 
   const has_any =
-    differences?.length > 0 || only_in_file1?.length > 0 || only_in_file2?.length > 0 || structural_diffs?.length > 0;
+    differences?.length > 0 || only_in_file1?.length > 0 || only_in_file2?.length > 0 || structural_diffs?.length! > 0;
   if (!has_any) {
     print("No differences found!");
     return;
   }
 
   // Print structural differences
-  if (structural_diffs?.length > 0) {
+  if (structural_diffs?.length! > 0) {
     print(`\n${"─".repeat(40)}`);
-    print(`Structural differences (${structural_diffs.length}):`);
+    print(`Structural differences (${structural_diffs!.length}):`);
     print(`${"─".repeat(40)}`);
-    for (const sd of structural_diffs) {
+    for (const sd of structural_diffs!) {
       if (sd.count1 === -1) {
         print(`\n[${sd.path}] type mismatch: ${sd.children1[0]} vs ${sd.children2[0]}`);
       } else {
@@ -674,8 +674,8 @@ export function print_results(
   const total_byte_diffs = sum(differences.map((d) => d.byte_diffs.length));
   print(`\n${"=".repeat(80)}`);
   print("Summary:");
-  if (structural_diffs?.length > 0) {
-    print(`  Structural differences: ${structural_diffs.length}`);
+  if (structural_diffs?.length! > 0) {
+    print(`  Structural differences: ${structural_diffs!.length}`);
   }
   print(`  Chunks with differences: ${differences.length}`);
   print(`  Total byte differences: ${total_byte_diffs}`);
@@ -749,10 +749,10 @@ export function print_multi_results(
         );
 
         // Context display
-        if (context > 0 && all_data?.length > 0) {
+        if (context > 0 && all_data?.length! > 0) {
           for (let i = 0, n = files.length; i < n; i++) {
             const label = i === 0 ? "ref" : `[${i}]`;
-            const data = dict_get(all_data[i], chunk_diff.path, b(""));
+            const data = dict_get(all_data![i], chunk_diff.path, b(""));
             if (!data?.length) continue;
             print(_format_context_line(label, data, diff.offset, context));
           }

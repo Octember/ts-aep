@@ -147,14 +147,14 @@ descriptor(FeatherPoint, "rel_corner_angle", new ChunkField<number>("_fp", "corn
  *     created.
  *
  * @example
- * ```python
- * from py_aep import parse
+ * ```ts
+ * import { parse } from "@bevyl-ai/ts-aep";
  *
- * app = parse("project.aep")
- * comp = app.project.compositions[0]
- * shape_layer = comp.shape_layers[0]
- * shape_prop = shape_layer.content.property("ADBE Vector Shape - Group").property("ADBE Vector Shape")
- * print(shape_prop.value.vertices)
+ * const app = parse("project.aep");
+ * const comp = app.project.compositions[0];
+ * const shape_layer = comp.shape_layers[0];
+ * const shape_prop = shape_layer.content.property("ADBE Vector Shape - Group").property("ADBE Vector Shape");
+ * console.log(shape_prop.value.vertices);
  * ```
  * @see https://ae-scripting.docsforadobe.dev/other/shape/
  */
@@ -169,7 +169,7 @@ export class Shape {
   declare _detached: boolean;
   declare _points: ShapePoint[] | null;
 
-  /** List of variable-width mask feather points. */
+  /** Array of variable-width mask feather points. */
   declare feather_points: FeatherPoint[];
 
   /**
@@ -185,9 +185,9 @@ export class Shape {
    * @param out_tangents - Outgoing tangent offsets relative to each vertex, same length as
    *   `vertices`. Defaults to `[0, 0]` (straight line out) for every vertex.
    * @param kw - Keyword arguments:
-   * - `closed`: When `True`, the first and last vertices are connected.
+   * - `closed`: When `true`, the first and last vertices are connected.
    * - `feather_points`: Variable-width mask feather points.
-   * @throws {@link ValueError} If the tangent lists do not match the vertices, or a coordinate (or
+   * @throws {@link ValueError} If the tangent arrays do not match the vertices, or a coordinate (or
    *   a vertex plus its tangent) is not a finite float32: paths are stored as single-precision
    *   floats.
    */
@@ -217,7 +217,7 @@ export class Shape {
     // can rebuild them; a parsed one shares them with its file chunks.
     this._detached = true;
     this.feather_points = feather_points ?? [];
-    /** List of variable-width mask feather points. */
+    /** Array of variable-width mask feather points. */
 
     const verts = vertices ?? [];
     const n = verts.length;
@@ -342,10 +342,10 @@ export class Shape {
   _roto_tangents(): [number[][], number[][]] | null {
     /**
      * The tangents AE draws the path with when its mask is RotoBezier
-     * (`resolvers.roto_bezier`), or `None` for any other shape.
+     * (`resolvers.roto_bezier`), or `null` for any other shape.
      */
     if (!this._is_roto_bezier()) return null;
-    const prop = this._mask_path as Property;
+    const prop = this._mask_path!;
     const [width, height] = (prop._containing_layer as AVLayer)._mask_scale;
     const vertices = this.vertices;
     let tensions = this._tensions;
@@ -527,8 +527,8 @@ export class Shape {
   }
 
   /**
-   * When `True`, the first and last vertices are connected to form a closed
-   * curve. When `False`, the closing segment is not drawn.
+   * When `true`, the first and last vertices are connected to form a closed
+   * curve. When `false`, the closing segment is not drawn.
    */
   get closed(): boolean {
     if (this._shph != null) return !this._shph.open;

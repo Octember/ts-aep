@@ -107,7 +107,8 @@ export function _get_struct(full_fmt: string): struct.Struct {
  *
  * @throws {@link IOError} If fewer bytes are available than the format requires.
  */
-export function read_fmt(fmt: string, fp: IO, endian = ">"): any[] {
+export function read_fmt<F extends string>(fmt: F, fp: IO, endian?: string): struct.Unpacked<F>;
+export function read_fmt(fmt: string, fp: IO, endian = ">"): struct.Unpacked<string> {
   const s = _get_struct(endian + fmt);
   const data = fp.read(s.size);
   if (data.length < s.size) {
@@ -123,10 +124,11 @@ export function read_fmt(fmt: string, fp: IO, endian = ">"): any[] {
  */
 // Python's keyword-only `endian` follows `*args`; in TS it is a trailing plain
 // `{ endian }` options object (struct values are never plain objects).
-export function write_fmt(fp: IO, fmt: string, ...args: any[]): number {
+export type WriteFmtOptions = { endian?: string };
+export function write_fmt(fp: IO, fmt: string, ...args: (struct.PackValue | WriteFmtOptions)[]): number {
   const last = args[args.length - 1];
-  const opts = last !== null && typeof last === "object" && Object.getPrototypeOf(last) === Object.prototype ? args.pop() : {};
-  const data = _get_struct((opts.endian ?? ">") + fmt).pack(...args);
+  const opts: WriteFmtOptions = last !== null && typeof last === "object" && Object.getPrototypeOf(last) === Object.prototype ? (args.pop() as WriteFmtOptions) : {};
+  const data = _get_struct((opts.endian ?? ">") + fmt).pack(...(args as struct.PackValue[]));
   fp.write(data);
   return data.length;
 }

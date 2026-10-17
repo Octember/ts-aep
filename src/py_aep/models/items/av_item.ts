@@ -3,7 +3,7 @@
 import type { ListChunk } from "../../binary/chunk.ts";
 import { build_pin_list } from "../../binary/mutations.ts";
 import type { CmtaChunk, IdtaChunk } from "../../binary/item_chunks.ts";
-import type { U1Chunk, Utf8Chunk } from "../../binary/scalar_chunks.ts";
+import type { Utf8Chunk } from "../../binary/scalar_chunks.ts";
 import { find_by_list_type, find_by_type, index_by_identity } from "../../binary/utils.ts";
 import { ChunkField } from "../descriptors.ts";
 import { auto_name } from "../naming.ts";
@@ -17,6 +17,7 @@ import {
   int,
   py_assert,
   type PathLike,
+  type ClassAttributes,
 } from "../../../pyrt/index.ts";
 import type { Project } from "../project.ts";
 import type { Viewer } from "../viewer/viewer.ts";
@@ -193,6 +194,7 @@ export interface AVItem {
   width: number;
 }
 export class AVItem extends Item {
+  declare ["constructor"]: ClassAttributes<typeof AVItem>;
   // Python: annotation-only attributes, with `"""…"""` attribute docstrings.
   // NOTE(port): subclasses (composition.ts, footage.ts) override some of these with accessors;
   // `declare` emits no runtime field, so the prototype accessors apply and tsc reports no TS2610.
@@ -212,9 +214,9 @@ export class AVItem extends Item {
   declare _viewer: Viewer | null;
 
   /**
-   * When `True`, a proxy is used for the item. Read / Write.
+   * When `true`, a proxy is used for the item. Read / Write.
    *
-   * It is set to `True` by all the `set_proxy` methods, and to `False` by
+   * It is set to `true` by all the `set_proxy` methods, and to `false` by
    * the `set_proxy_to_none()` method.
    */
   declare use_proxy: boolean;
@@ -285,10 +287,10 @@ export class AVItem extends Item {
   }
 
   /**
-   * When `True`, the AVItem has an audio component.
+   * When `true`, the AVItem has an audio component.
    *
    * In a {@link CompItem}, the value is linked to the composition.
-   * In a {@link py_aep.models.items.footage.FootageItem | FootageItem},
+   * In a {@link FootageItem | FootageItem},
    * the value is linked to the `main_source` or `proxy_source` object.
    */
   get has_audio(): boolean {
@@ -296,25 +298,25 @@ export class AVItem extends Item {
   }
 
   /**
-   * `True` if the item has a video component.
+   * `true` if the item has a video component.
    *
    * An AVItem has video when it has non-zero dimensions (`width > 0`
-   * and `height > 0`). In a {@link CompItem}, the value is always `True`.
-   * In a {@link py_aep.models.items.footage.FootageItem | FootageItem},
+   * and `height > 0`). In a {@link CompItem}, the value is always `true`.
+   * In a {@link FootageItem | FootageItem},
    * the value depends on the footage source (e.g. audio-only files
-   * return `False`).
+   * return `false`).
    */
   get has_video(): boolean {
     return this.width > 0 && this.height > 0;
   }
 
   /**
-   * When `True`, the AVItem is a placeholder, or represents footage
+   * When `true`, the AVItem is a placeholder, or represents footage
    * with a source file that could not be found when the project was last
    * saved. Read-only.
    *
-   * Always `False` for a {@link CompItem}; a
-   * {@link py_aep.models.items.footage.FootageItem | FootageItem} reports the
+   * Always `false` for a {@link CompItem}; a
+   * {@link FootageItem | FootageItem} reports the
    * state of its `main_source` (see the `FootageItem` override).
    */
   get footage_missing(): boolean {
@@ -322,11 +324,11 @@ export class AVItem extends Item {
   }
 
   /**
-   * `True` if the item can be used as an alternate source when setting
-   * {@link py_aep.models.properties.property.Property.alternate_source | Property.alternate_source}.
+   * `true` if the item can be used as an alternate source when setting
+   * {@link Property.alternate_source | Property.alternate_source}.
    * Read-only.
    *
-   * A {@link CompItem} or a {@link py_aep.models.items.footage.FootageItem | FootageItem}
+   * A {@link CompItem} or a {@link FootageItem | FootageItem}
    * with a video component can be used as an alternate source; see the
    * `FootageItem` override for footage restrictions.
    */
@@ -395,7 +397,7 @@ export class AVItem extends Item {
   /**
    * Set a placeholder as the proxy source.
    *
-   * @param name - The placeholder name. `None` becomes `Missing Name`. An empty string becomes
+   * @param name - The placeholder name. `null` becomes `Missing Name`. An empty string becomes
    *   `Placeholder`.
    * @param width - Width in pixels (4-30000).
    * @param height - Height in pixels (4-30000).
@@ -423,7 +425,7 @@ export class AVItem extends Item {
    * Set a solid as the proxy source.
    *
    * @param color - Solid color as [R, G, B] in 0.0-1.0 range.
-   * @param name - The solid name. Pass `None` to auto-generate a name from the color (e.g.
+   * @param name - The solid name. Pass `null` to auto-generate a name from the color (e.g.
    *   `Red Solid 1`). An empty string becomes `????`.
    * @param width - Width in pixels (1-30000).
    * @param height - Height in pixels (1-30000).
@@ -526,7 +528,7 @@ export class AVItem extends Item {
     // Link the source to its color record, as parsing does, so the
     // version fit and the color-management setters reach it.
     source._clrs = find_by_list_type(pin.chunks, "CLRS");
-    source._linl = find_by_type(source._clrs.chunks, "linl") as U1Chunk;
+    source._linl = find_by_type(source._clrs.chunks, "linl");
     return pin;
   }
 
@@ -547,7 +549,7 @@ export class AVItem extends Item {
   _set_proxy(source: FileSource | SolidSource | PlaceholderSource): void {
     this._replace_pin(
       this._proxy_pin_index,
-      (this.constructor as typeof AVItem)._pin_for_source(source),
+      this.constructor._pin_for_source(source),
     );
     this._proxy_source = source;
     source._join_project(this._project);

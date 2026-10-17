@@ -6,12 +6,12 @@ import type { Viewer } from "./viewer.ts";
  * The `View` object represents a specific view.
  *
  * @example
- * ```python
- * from py_aep import parse
+ * ```ts
+ * import { parse } from "@bevyl-ai/ts-aep";
  *
- * app = parse("project.aep")
- * view = app.active_viewer.views[0]
- * print(view.options)
+ * const app = parse("project.aep");
+ * const view = app.active_viewer.views[0];
+ * console.log(view.options);
  * ```
  * @see https://ae-scripting.docsforadobe.dev/other/view/
  */
@@ -26,7 +26,7 @@ export class View {
   }
 
   /**
-   * When `True`, indicates if the view is the active view in its
+   * When `true`, indicates if the view is the active view in its
    * viewer. Read-only.
    *
    * **Note:** The active locked view index is not persisted in the binary

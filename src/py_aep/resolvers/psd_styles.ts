@@ -13,9 +13,9 @@
  *
  * - Parameter values are imported verbatim (the master `Scl ` scale factor is
  *   ignored, as are contours, anti-alias flags and dialog bookkeeping).
- * - A style with more than one instance (a `<style>Multi` list) is dropped
+ * - A style with more than one instance (a `<style>Multi` array) is dropped
  *   entirely - AE does not import even a representable instance. A one-element
- *   `Multi` list imports as a normal single style.
+ *   `Multi` array imports as a normal single style.
  * - A single stroke imports regardless of paint type: the gradient fill itself
  *   is dropped and the descriptor's color imported.
  */
@@ -95,7 +95,7 @@ export class PsdLayerStyles {
   disabled: readonly string[];
 
   /**
-   * `True` when the layer carries blend-options tagged blocks
+   * `true` when the layer carries blend-options tagged blocks
    * (`iOpa`/`infx`/`brst`). AE enables the container + Blend Options chain
    * (`tdsb` 0x01) for these layers even when no style is enabled.
    */
@@ -159,11 +159,14 @@ export class _Reader {
   }
 }
 
-export function _parse_item(reader: _Reader, os_type: string): any {
+/** A parsed descriptor value: Objc/GlbO become Maps, VlLs arrays, tdta/alis null. */
+export type _Value = number | string | boolean | null | _Value[] | Map<string, _Value>;
+
+export function _parse_item(reader: _Reader, os_type: string): _Value {
   if (["Objc", "GlbO"].includes(os_type)) {
     reader.ustr(); // name from classID (unused)
     const cls = reader.key();
-    const out = new Map<string, any>([["_class", cls]]);
+    const out = new Map<string, _Value>([["_class", cls]]);
     for (let i = 0, n = reader.u4(); i < n; i++) {
       const key = reader.key();
       out.set(key, _parse_item(reader, decode(reader.raw(4), "latin-1")));
@@ -209,7 +212,7 @@ export function _parse_item(reader: _Reader, os_type: string): any {
   throw new ValueError(`unhandled descriptor OSType ${repr(os_type)}`);
 }
 
-export function _parse_effects_descriptor(body: Uint8Array): Map<string, any> {
+export function _parse_effects_descriptor(body: Uint8Array): Map<string, _Value> {
   /** Parse an `lmfx`/`lfx2` block body: version u4s (ending 16) + root Objc. */
   const reader = new _Reader(body);
   let found = false;
@@ -325,7 +328,7 @@ export const _STROKE_POSITION = new Map<string, number>([
 
 /** Python `repr()` of a parsed descriptor value (dicts print as `{'k': v}`). */
 // NOTE(port): int/float — integral values are plain numbers by design (RULEBOOK §4); a whole-valued double prints as "5" not "5.0" in unsupported-style error messages.
-export function _repr(value: any): string {
+export function _repr(value: _Value): string {
   if (value instanceof Map) {
     return `{${[...value].map(([k, v]) => `${repr(k)}: ${_repr(v)}`).join(", ")}}`;
   }
@@ -333,51 +336,51 @@ export function _repr(value: any): string {
   return repr(value);
 }
 
-export function _enum(table: Map<string, number>): (value: any) => number {
-  return function convert(value: any): number {
+export function _enum(table: Map<string, number>): (value: _Value) => number {
+  return function convert(value: _Value): number {
     // Map.get, not a plain-object lookup: descriptor strings such as
     // "constructor" must not reach Object.prototype.
-    const hit = table.get(value);
+    const hit = table.get(value as string);
     if (hit === undefined) throw new UnsupportedStyleError(`unmapped enum value ${_repr(value)}`);
     return hit;
   };
 }
 
-export function _number(value: any): number {
+export function _number(value: _Value): number {
   if (typeof value !== "number") {
     throw new UnsupportedStyleError(`expected a number, got ${_repr(value)}`);
   }
   return value;
 }
 
-export function _bool01(value: any): number {
+export function _bool01(value: _Value): number {
   return py_bool(value) ? 1.0 : 0.0;
 }
 
 /** Python int/float/bool operand for `/`: bool counts as 0/1, anything else raises. */
 // NOTE(port): bool->int, number passthrough, everything else TypeError, exactly Python's `/` operand rules for descriptor values
-export function _arith(value: any): number {
+export function _arith(value: _Value): number {
   if (typeof value === "number") return value;
   if (typeof value === "boolean") return value ? 1 : 0;
   throw new TypeError_(`unsupported operand type for /: ${repr(value)}`);
 }
 
 /** Python `obj[key]` for a descriptor value: only dicts (Maps) are subscriptable here. */
-export function _subscript(obj: any, key: string): any {
+export function _subscript(obj: _Value, key: string): _Value {
   if (obj instanceof Map) return getitem(obj, key);
   throw new TypeError_(`${repr(obj)} is not subscriptable with ${repr(key)}`);
 }
 
 /** Python `for x in value` over a parsed descriptor value. */
 // NOTE(port): list, dict keys, str chars (by code point) cover every type the descriptor parser yields; others raise TypeError like Python
-export function _py_iter(value: any): any[] {
+export function _py_iter(value: _Value): _Value[] {
   if (Array.isArray(value)) return value;
   if (value instanceof Map) return [...value.keys()];
   if (typeof value === "string") return Array.from(value);
   throw new TypeError_(`${repr(value)} object is not iterable`);
 }
 
-export function _color(value: any): number[] {
+export function _color(value: _Value): number[] {
   if (!(value instanceof Map) || (value.get("_class") ?? null) !== "RGBC") {
     throw new UnsupportedStyleError(`unsupported color model ${_repr(value)}`);
   }
@@ -389,14 +392,14 @@ export function _color(value: any): number[] {
   ];
 }
 
-export function _point(value: any): number[] {
+export function _point(value: _Value): number[] {
   if (!(value instanceof Map)) {
     throw new UnsupportedStyleError(`expected a point, got ${_repr(value)}`);
   }
   return [_number(getitem(value, "Hrzn")), _number(getitem(value, "Vrtc"))];
 }
 
-export function _gradient(value: any): Gradient {
+export function _gradient(value: _Value): Gradient {
   if (!(value instanceof Map) || (value.get("_class") ?? null) !== "Grdn") {
     throw new UnsupportedStyleError(`expected a gradient, got ${_repr(value)}`);
   }
@@ -435,9 +438,9 @@ export function _gradient(value: any): Gradient {
 export class _Param {
   descriptor_key: string;
   suffix: string;
-  convert: (value: any) => StyleValue;
+  convert: (value: _Value) => StyleValue;
 
-  constructor(descriptor_key: string, suffix: string, convert: (value: any) => StyleValue) {
+  constructor(descriptor_key: string, suffix: string, convert: (value: _Value) => StyleValue) {
     this.descriptor_key = descriptor_key;
     this.suffix = suffix;
     this.convert = convert;
@@ -591,14 +594,14 @@ export const _MULTI_KEYS = new Map<string, string>(
   [..._STYLES].map(([key, [prefix]]): [string, string] => [`${prefix}Multi`, key]),
 );
 
-export function _style_instances(descriptor: Map<string, any>): Map<string, any[]> {
+export function _style_instances(descriptor: Map<string, _Value>): Map<string, _Value[]> {
   /**
    * Collect style instances per descriptor style key.
    *
    * Single-instance styles appear as a plain object under the style key,
-   * multi-instance ones as a list under the `<style>Multi` key.
+   * multi-instance ones as an array under the `<style>Multi` key.
    */
-  const instances = new Map<string, any[]>();
+  const instances = new Map<string, _Value[]>();
   for (const [key, value] of descriptor) {
     if (_STYLES.has(key)) {
       setdefault(instances, key, []).push(value);
@@ -633,7 +636,7 @@ export const _GRADIENT_SMOOTHNESS_PREFIXES: ReadonlySet<string> = new Set([
 export function _convert_style(
   prefix: string,
   params: readonly _Param[],
-  instance: Map<string, any>,
+  instance: Map<string, _Value>,
 ): Map<string, StyleValue> {
   const values = new Map<string, StyleValue>();
   for (const param of params) {
@@ -641,7 +644,7 @@ export function _convert_style(
     try {
       values.set(
         `${prefix}/${param.suffix}`,
-        param.convert(instance.get(param.descriptor_key)),
+        param.convert(instance.get(param.descriptor_key)!),
       );
     } catch (exc) {
       if (!(exc instanceof UnsupportedStyleError)) throw exc;
@@ -651,7 +654,7 @@ export function _convert_style(
       // enum) does not silently leave the leaf at its default.
       warn(
         `style parameter ${prefix}/${param.suffix} was skipped ` +
-          `(${(exc as Error).message}); the imported style keeps the AE default`,
+          `(${exc.message}); the imported style keeps the AE default`,
       );
       continue;
     }
@@ -752,7 +755,7 @@ export function parse_layer_styles(
    *
    * @param leaf - A `PsdLayer` from `read_psd_layers` (carries the raw blocks).
    * @param global_light - The document global light from `read_global_light`.
-   * @returns The resolved styles, or `None` when the layer has no style-related blocks at all or
+   * @returns The resolved styles, or `null` when the layer has no style-related blocks at all or
    *   its descriptor cannot be decoded (the layer then keeps the plain disabled skeleton; a warning
    *   is emitted so the style loss is visible).
    */
@@ -766,7 +769,7 @@ export function parse_layer_styles(
     blocks.fill_opacity != null ||
     !!blocks.blend_interior ||
     blocks.channel_restrictions?.length > 0;
-  let descriptor = new Map<string, any>();
+  let descriptor = new Map<string, _Value>();
   if (blocks.effects != null) {
     try {
       descriptor = _parse_effects_descriptor(blocks.effects);
@@ -786,7 +789,7 @@ export function parse_layer_styles(
   let imported_any = false;
   for (const [key, instances] of _style_instances(descriptor)) {
     const [prefix, params] = getitem(_STYLES, key);
-    const present_instances = instances.filter((inst) => inst instanceof Map) as Map<string, any>[];
+    const present_instances = instances.filter((inst) => inst instanceof Map);
     if (present_instances.length > 1) {
       // AE drops a multi-instance style entirely, even when every
       // instance is representable.
@@ -832,7 +835,7 @@ export function has_enabled_styles(node: PsdLayer | PsdGroup): boolean {
    */
   const blocks = node.style_blocks;
   if (blocks == null || blocks.effects == null) return false;
-  let descriptor: Map<string, any>;
+  let descriptor: Map<string, _Value>;
   try {
     descriptor = _parse_effects_descriptor(blocks.effects);
   } catch (exc) {
@@ -843,8 +846,8 @@ export function has_enabled_styles(node: PsdLayer | PsdGroup): boolean {
 }
 
 export function* _enabled_instances(
-  descriptor: Map<string, any>,
-): Generator<[string, Map<string, any>]> {
+  descriptor: Map<string, _Value>,
+): Generator<[string, Map<string, _Value>]> {
   /** `(key, instance)` of every enabled style instance in a descriptor. */
   for (const [key, instances] of _style_instances(descriptor)) {
     for (const instance of instances) {
@@ -907,10 +910,10 @@ export function _pads(reach: number, anti_aliased: boolean, shift = 0.0): [numbe
   return [lead, Math.floor(reach + shift)];
 }
 
-export function _bevel_pads(instance: Map<string, any>, name: string): [number, number] | null {
+export function _bevel_pads(instance: Map<string, _Value>, name: string): [number, number] | null {
   const style = dict_get(instance, "bvlS", "InrB");
   if (style === "InrB") return null;
-  const size = float(dict_get(instance, "blur", 0));
+  const size = float(dict_get(instance, "blur", 0) as number);
   let height: number;
   if (style === "OtrB") {
     height = size;
@@ -929,7 +932,7 @@ export function _bevel_pads(instance: Map<string, any>, name: string): [number, 
   } else {
     reach = height + 4;
   }
-  const softening = float(dict_get(instance, "Sftn", 0));
+  const softening = float(dict_get(instance, "Sftn", 0) as number);
   if (softening > 0) {
     reach += Math.max(softening, 2) - 0.5;
   }
@@ -941,7 +944,7 @@ export function _bevel_pads(instance: Map<string, any>, name: string): [number, 
 
 export function _instance_box(
   key: string,
-  instance: Map<string, any>,
+  instance: Map<string, _Value>,
   bounds: _Box,
   global_angle: number,
   name: string,
@@ -954,21 +957,21 @@ export function _instance_box(
   if (key === "DrSh" || key === "OrGl") {
     const precise = key === "OrGl" && (instance.get("GlwT") ?? null) === "PrBL";
     const reach = _blur_reach(
-      float(dict_get(instance, "blur", 0)),
-      float(dict_get(instance, "Ckmt", 0)),
+      float(dict_get(instance, "blur", 0) as number),
+      float(dict_get(instance, "Ckmt", 0) as number),
       precise,
     );
     [lead, trail] = _pads(reach, py_bool(dict_get(instance, "AntA", false)));
     if (key === "DrSh") {
       const angle = radians(
-        py_bool(instance.get("uglg")) ? global_angle : float(dict_get(instance, "lagl", 0)),
+        py_bool(instance.get("uglg")) ? global_angle : float(dict_get(instance, "lagl", 0) as number),
       );
-      const distance = float(dict_get(instance, "Dstn", 0));
+      const distance = float(dict_get(instance, "Dstn", 0) as number);
       dx = _round_away(-Math.cos(angle) * distance);
       dy = _round_away(Math.sin(angle) * distance);
     }
   } else if (key === "FrFX") {
-    const size = float(dict_get(instance, "Sz  ", 0));
+    const size = float(dict_get(instance, "Sz  ", 0) as number);
     const position = dict_get(instance, "Styl", "OutF");
     if (position === "InsF") return null;
     const reach = position === "OutF" ? size : float(Math.ceil(size / 2));
@@ -999,7 +1002,7 @@ export function merged_styles_bounds(node: PsdLayer, global_angle: number): _Box
   const bounds = node.bounds;
   const blocks = node.style_blocks;
   if (blocks == null || blocks.effects == null) return bounds;
-  let descriptor: Map<string, any>;
+  let descriptor: Map<string, _Value>;
   try {
     descriptor = _parse_effects_descriptor(blocks.effects);
   } catch (exc) {

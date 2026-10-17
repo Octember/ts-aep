@@ -29,10 +29,10 @@ export class _StringChunkBase extends Chunk {
   static read(
     fp: IO,
     size: number,
-    kwargs: { chunk_type?: string; [k: string]: any } = {},
+    kwargs: { chunk_type?: string; [k: string]: unknown } = {},
   ): _StringChunkBase {
     const { chunk_type = "" } = kwargs;
-    const cls: any = this;
+    const cls = this;
     const raw = read_bytes(fp, size);
     return new cls({ chunk_type, value: decode(raw, cls._ENCODING) });
   }

@@ -2,7 +2,6 @@ import { at, getattr, getitem, py_or, sorted } from "../../pyrt/index.ts";
 import { ContainerChunk, ListChunk } from "../binary/chunk.ts";
 import type { Chunk } from "../binary/chunk.ts";
 import { LdatChunk } from "../binary/ldat_chunks.ts";
-import type { Lhd3Chunk } from "../binary/ldat_chunks.ts";
 import { LRDR_CHILD_ORDER, build_rq_settings_list } from "../binary/mutations.ts";
 import { ROUT_ITEMS_PER_RQ_ITEM, ArsiChunk, RoutChunk } from "../binary/render_chunks.ts";
 import type { RenderSettingsItem, RoutItem } from "../binary/render_chunks.ts";
@@ -12,6 +11,7 @@ import type { CompItem } from "../models/items/composition.ts";
 import { RenderQueue } from "../models/renderqueue/render_queue.ts";
 import { RenderQueueItem } from "../models/renderqueue/render_queue_item.ts";
 import type { Project } from "../models/project.ts";
+import type { OutputModule } from "../models/renderqueue/output_module.ts";
 import { parse_output_module } from "./output_module.ts";
 
 /**
@@ -58,7 +58,7 @@ export function parse_render_queue(root_chunks: Chunk[], project: Project): Rend
     [list_settings_chunk] = build_rq_settings_list({ synthetic: true });
     lrdr_child_chunks.push(list_settings_chunk);
   }
-  const settings_lhd3 = find_by_type(list_settings_chunk.chunks, "lhd3") as Lhd3Chunk;
+  const settings_lhd3 = find_by_type(list_settings_chunk.chunks, "lhd3");
 
   // Legacy/minimal files may omit the queue scaffolding (Rout, LItm,
   // LSIf/ARsi). Substitute synthetic placeholders attached to the tree so
@@ -66,7 +66,7 @@ export function parse_render_queue(root_chunks: Chunk[], project: Project): Rend
   // synthetic chunks, so untouched files round-trip byte-identically.
   let rout_chunk: RoutChunk;
   try {
-    rout_chunk = find_by_type(lrdr_child_chunks, "Rout") as RoutChunk;
+    rout_chunk = find_by_type(lrdr_child_chunks, "Rout");
   } catch (e) {
     if (!(e instanceof ChunkNotFoundError)) throw e;
     synthesized = true;
@@ -95,7 +95,7 @@ export function parse_render_queue(root_chunks: Chunk[], project: Project): Rend
   }
   let arsi_chunk: ArsiChunk;
   try {
-    arsi_chunk = find_by_type(lsif_chunk.chunks, "ARsi") as ArsiChunk;
+    arsi_chunk = find_by_type(lsif_chunk.chunks, "ARsi");
   } catch (e) {
     if (!(e instanceof ChunkNotFoundError)) throw e;
     arsi_chunk = new ArsiChunk({ synthetic: true });
@@ -128,14 +128,14 @@ export function parse_render_queue(root_chunks: Chunk[], project: Project): Rend
     // add() flips it to non-synthetic. (AE may instead write an empty ldat
     // with count==0; reuse it when present.)
     try {
-      settings_ldat = find_by_type(list_settings_chunk.chunks, "ldat") as LdatChunk;
+      settings_ldat = find_by_type(list_settings_chunk.chunks, "ldat");
     } catch (e) {
       if (!(e instanceof ChunkNotFoundError)) throw e;
       settings_ldat = new LdatChunk({ chunk_type: "ldat", synthetic: true });
       list_settings_chunk.chunks.push(settings_ldat);
     }
   } else {
-    settings_ldat = find_by_type(list_settings_chunk.chunks, "ldat") as LdatChunk;
+    settings_ldat = find_by_type(list_settings_chunk.chunks, "ldat");
   }
 
   const render_queue = new RenderQueue({
@@ -191,7 +191,7 @@ export function parse_render_queue_items(
   for (const chunk of litm_chunk.chunks) {
     if (chunk instanceof ContainerChunk && chunk.chunk_type === "RCom") {
       rcom_container = chunk;
-      rcom_utf8 = find_by_type(chunk.chunks, "Utf8") as Utf8Chunk;
+      rcom_utf8 = find_by_type(chunk.chunks, "Utf8");
     } else if (chunk instanceof ListChunk) {
       if (chunk.list_type === "list") {
         list_chunk = chunk;
@@ -244,7 +244,7 @@ export function parse_render_queue_item(
   project: Project,
   render_queue: RenderQueue,
 ): RenderQueueItem {
-  const om_ldat = find_by_type(list_chunk.chunks, "ldat") as LdatChunk;
+  const om_ldat = find_by_type(list_chunk.chunks, "ldat");
   const om_ldat_items = om_ldat.items;
 
   const comp_id = ldat_body.comp_id;
@@ -266,7 +266,7 @@ export function parse_render_queue_item(
     output_modules: [],
   });
 
-  const output_modules = [];
+  const output_modules: OutputModule[] = [];
   for (const [om_index, group] of om_groups.entries()) {
     const output_module = parse_output_module(
       group,

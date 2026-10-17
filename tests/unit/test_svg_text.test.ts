@@ -317,7 +317,7 @@ test("test_glyphs_handles_font_without_unicode_cmap", () => {
   // Regression: getBestCmap() returns None for symbol fonts; _glyphs used to
   // crash with AttributeError, taking down the whole read_svg(). It must now
   // map every char to no glyph so the run is simply dropped.
-  const [names, advances, upm, _] = _glyphs(new _NoCmapFont(), "AB");
+  const [names, advances, upm, _] = _glyphs(new _NoCmapFont() as unknown as Parameters<typeof _glyphs>[0], "AB");
   expect(py_eq(names, [null, null])).toBe(true);
   expect(py_eq(advances, [0.0, 0.0])).toBe(true);
 });

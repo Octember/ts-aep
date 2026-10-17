@@ -17,6 +17,7 @@
 
 import * as host from "../../pyrt/host.ts";
 import { parse, YAMLError, isMap, isSeq, isScalar } from "yaml";
+import type { Document, DocumentOptions, ParseOptions, SchemaOptions, ToJSOptions } from "yaml";
 import {
   Path,
   lru_cache,
@@ -57,6 +58,9 @@ export class _OcioLoader {
   } as const;
 }
 
+/** A parsed OCIO yaml mapping (`mapAsMap`): values are yaml-dynamic. */
+export type OcioNode = Map<string, any>;
+
 /**
  * `_ignore_tag(loader, suffix, node)`: the empty-prefix multi-constructor.
  *
@@ -70,9 +74,9 @@ export class _OcioLoader {
  * (warning silenced by `logLevel: "error"`), which yields the same untagged
  * values as this constructor. `loader` is the yaml `Document`.
  */
-export function _ignore_tag(loader: any, suffix: string, node: any): any {
+export function _ignore_tag(loader: Document, suffix: string, node: unknown): unknown {
   if (isMap(node) || isSeq(node) || isScalar(node)) {
-    return node.toJS(loader, { mapAsMap: true } as any);
+    return node.toJS(loader, { mapAsMap: true } as ToJSOptions);
   }
   return null;
 }
@@ -80,7 +84,7 @@ export function _ignore_tag(loader: any, suffix: string, node: any): any {
 /**
  * `@lru_cache(maxsize=8) def _load_config_cached(config_path, _stamp)`.
  *
- * Parses a `.ocio` file and returns its top-level mapping, or `None` if it
+ * Parses a `.ocio` file and returns its top-level mapping, or `null` if it
  * cannot be read or parsed.
  *
  * NOTE(port): pyrt `lru_cache` keys object arguments by identity and never
@@ -89,36 +93,36 @@ export function _ignore_tag(loader: any, suffix: string, node: any): any {
  * `maxsize=8` eviction is unobservable: results are pure functions of the key.
  */
 export const _load_config_cached = lru_cache(
-  (config_path: string, _mtime_ns: bigint, _size: number): Map<string, any> | null => {
-    let doc: any;
+  (config_path: string, _mtime_ns: bigint, _size: number): OcioNode | null => {
+    let doc: unknown;
     try {
       doc = parse(decode(new Path(config_path).read_bytes(), "utf-8"), {
         ..._OcioLoader.options,
-      } as any);
-    } catch (e: any) {
+      } as ParseOptions & DocumentOptions & SchemaOptions & ToJSOptions);
+    } catch (e: unknown) {
       // `except (OSError, yaml.YAMLError)`; node fs errors carry a `code`.
-      if (!(e instanceof OSError || e instanceof YAMLError || e?.code)) throw e;
+      if (!(e instanceof OSError || e instanceof YAMLError || (e as { code?: unknown } | null)?.code)) throw e;
       return null;
     }
     return doc instanceof Map ? doc : null;
   },
 );
 
-/** `(mtime_ns, size)` cache key for `config_path`, or `None` if unreadable. */
+/** `(mtime_ns, size)` cache key for `config_path`, or `null` if unreadable. */
 export function _config_stamp(config_path: Path): [bigint, number] | null {
-  let st: any;
+  let st: host.HostBigStats;
   try {
     st = host.fs.statSync(config_path.path, { bigint: true });
-  } catch (e: any) {
+  } catch (e: unknown) {
     // `except OSError`: node fs errors carry a `code`.
-    if (!e?.code) throw e;
+    if (!(e as { code?: unknown } | null)?.code) throw e;
     return null;
   }
   return [st.mtimeNs, Number(st.size)];
 }
 
 /**
- * Parse a `.ocio` config, or `None` if it cannot be read or parsed.
+ * Parse a `.ocio` config, or `null` if it cannot be read or parsed.
  *
  * Memoized on `(path, mtime, size)`: parsing a real config is expensive
  * (~350ms for AE's bundled ACES 1.2) and every color-space read and write
@@ -126,10 +130,10 @@ export function _config_stamp(config_path: Path): [bigint, number] | null {
  * otherwise re-parse the same unchanged file once per access. The stamp
  * keeps an edited config from going stale.
  *
- * The returned dict is shared with every other caller - treat it as
+ * The returned Map is shared with every other caller - treat it as
  * read-only.
  */
-export function _load_config(config_path: Path): Map<string, any> | null {
+export function _load_config(config_path: Path): OcioNode | null {
   const stamp = _config_stamp(config_path);
   if (stamp == null) return null;
   return _load_config_cached(config_path.path, stamp[0], stamp[1]);
@@ -177,7 +181,7 @@ export function list_config_color_spaces(config_path: Path): string[] {
  * `<install>/Support Files/OpenColorIO-Configs/<name>/`.
  *
  * @param config - The `ocio_configuration_file` value.
- * @returns The resolved `.ocio` path, or `None` if it cannot be located.
+ * @returns The resolved `.ocio` path, or `null` if it cannot be located.
  */
 export function resolve_ocio_config(config: string): Path | null {
   if (!config) return null;
@@ -200,7 +204,7 @@ export function resolve_ocio_config(config: string): Path | null {
  * depend on whether the name is a direct colorspace, a role/alias, or a
  * `display/view` pair, and only the config can tell those apart.
  *
- * @param config - The project's `ocio_configuration_file` value (`None` when
+ * @param config - The project's `ocio_configuration_file` value (`null` when
  *   there is no project to read it from).
  * @param purpose - Completes the error message, e.g.
  *   `"build the color-profile envelope for 'ACEScg'"`.
@@ -287,7 +291,7 @@ export class _ConfigIndex {
   ) {}
 
   /** Tuple unpacking: `families, aliases, roles, displays = index`. */
-  *[Symbol.iterator](): Generator<unknown> {
+  *[Symbol.iterator](): Generator<Map<string, string> | Map<string, string[]>> {
     yield this.families;
     yield this.aliases;
     yield this.roles;
@@ -430,7 +434,7 @@ export const _guid_table_cached = lru_cache(
 /**
  * Reverse-map a 16-byte `output_profile_id` to its OCIO color-space name.
  *
- * Returns `None` if no assignable color space in the config produces
+ * Returns `null` if no assignable color space in the config produces
  * `profile_id`. The `Guid` of every candidate (~600 two-stage MurmurHash3
  * computations for AE's bundled ACES 1.2) is memoized per config like
  * `_load_config`, so repeated reads are dict lookups.
@@ -511,7 +515,7 @@ export function ocio_output_profile_id(config_path: Path, color_space: string): 
  * always, a `regex` rule by search, a `pattern` + `extension` rule by glob
  * (the extension case-insensitively).
  */
-export function _rule_matches(rule: Map<string, any>, file_path: string): boolean {
+export function _rule_matches(rule: OcioNode, file_path: string): boolean {
   if ((rule.get("name") ?? null) === "Default") return true;
   const regex = rule.get("regex") ?? null;
   if (typeof regex === "string") {
@@ -613,7 +617,7 @@ export function fnmatchcase(name: string, pat: string): boolean {
  * @param config_path - The resolved `.ocio` config path.
  * @param file_path - The imported file's path.
  *
- * @returns The envelope, or `None` when no rule matches and the config has no
+ * @returns The envelope, or `null` when no rule matches and the config has no
  *   `default` role.
  */
 export function ocio_input_envelope(config_path: Path, file_path: string): string | null {
@@ -622,7 +626,7 @@ export function ocio_input_envelope(config_path: Path, file_path: string): strin
   const index = _config_index(config_path);
   const rules = doc.get("file_rules") ?? null;
   if (py_bool(rules)) {
-    for (const rule of rules as any[]) {
+    for (const rule of rules as unknown[]) {
       if (!(rule instanceof Map) || !_rule_matches(rule, file_path)) continue;
       const color_space = rule.get("colorspace") ?? null;
       if (typeof color_space !== "string") return null;

@@ -58,7 +58,7 @@ export function latin1(c: Uint8Array): string {
 
 // Python's dataclass repr uses repr() on each field; dicts and lists need to
 // recurse so nested Maps print like Python dicts.
-export function repr_field(x: any): string {
+export function repr_field(x: unknown): string {
   if (x instanceof Map) {
     return `{${[...x].map(([k, v]) => `${repr_field(k)}: ${repr_field(v)}`).join(", ")}}`;
   }
@@ -101,16 +101,16 @@ export function enum_repr(E: any, v: any): string {
 /**
  * Safely traverse parsed COS data by successive keys.
  *
- * Each key is tried as a dict string key first and then as a list
- * index. Returns `None` when any step along the path is missing.
+ * Each key is tried as a Map string key first and then as an array
+ * index. Returns `null` when any step along the path is missing.
  *
  * @example
  * :
  *
  * cos_get(data, "1", "1", 0, "0", "0")  // -\> text string
  */
-export function cos_get(data: any, ...keys: (string | number)[]): any {
-  let cur: any = data;
+export function cos_get(data: unknown, ...keys: (string | number)[]): CosValue {
+  let cur: unknown = data;
   for (const key of keys) {
     if (cur == null) return null;
     if (cur instanceof Map) {
@@ -140,28 +140,28 @@ export function cos_get(data: any, ...keys: (string | number)[]): any {
  * (resolvers/text_composition.py).
  */
 export function run_spans(
-  doc: Map<string, any>,
+  doc: CosDict,
   doc_key: string,
   style_key: string | null,
-): [number, number, Map<string, any>][] {
+): [number, number, CosDict][] {
   const runs = cos_get(doc, "0", doc_key, "0");
-  const spans: [number, number, Map<string, any>][] = [];
+  const spans: [number, number, CosDict][] = [];
   if (!Array.isArray(runs)) return spans;
   let pos = 0;
   for (const run of runs) {
-    const length: any = run instanceof Map ? run.get("1") ?? null : null;
+    const length: unknown = run instanceof Map ? run.get("1") ?? null : null;
     // Python `isinstance(True, int)` is True, so booleans count as lengths 1/0 (`int()` below).
     const is_int = typeof length === "boolean" || (typeof length === "number" && Number.isInteger(length));
     if (!is_int) continue;
     const n = int(length);
     if (n < 0) continue;
-    let payload: any;
+    let payload: CosValue;
     if (style_key == null) {
       payload = cos_get(run, "0");
     } else {
       payload = cos_get(run, "0", "0", style_key);
     }
-    spans.push([pos, pos + n, payload instanceof Map ? payload : new Map<string, any>()]);
+    spans.push([pos, pos + n, payload instanceof Map ? payload : new Map<string, CosValue>()]);
     pos += n;
   }
   return spans;
@@ -186,12 +186,17 @@ export const TokenType = py_enum("TokenType", {
 });
 export type TokenType = EnumValue<typeof TokenType>;
 
+/** A parsed COS tree node: number, string, bytes, bool, null, CosDict, CosValue[] or an indirect-object wrapper. Dynamic by nature. */
+export type CosValue = any;
+/** A parsed COS dictionary. */
+export type CosDict = Map<string, CosValue>;
+
 /** `@dataclass class Token` */
 export class Token {
   declare type: TokenType;
-  declare value: any;
+  declare value: CosValue;
 
-  constructor(type: TokenType, value: any = null) {
+  constructor(type: TokenType, value: CosValue = null) {
     this.type = type;
     this.value = value;
   }
@@ -200,7 +205,7 @@ export class Token {
     return `Token(type=${enum_repr(TokenType, this.type)}, value=${repr_field(this.value)})`;
   }
 
-  __eq__(other: any): boolean {
+  __eq__(other: unknown): boolean {
     return other instanceof Token && this.type === other.type && py_eq(this.value, other.value);
   }
 }
@@ -209,9 +214,9 @@ export class Token {
 export class IndirectObject {
   declare object_number: number;
   declare generation_number: number;
-  declare data: any;
+  declare data: CosValue;
 
-  constructor(object_number: number, generation_number: number, data: any) {
+  constructor(object_number: number, generation_number: number, data: CosValue) {
     this.object_number = object_number;
     this.generation_number = generation_number;
     this.data = data;
@@ -221,7 +226,7 @@ export class IndirectObject {
     return `IndirectObject(object_number=${repr(this.object_number)}, generation_number=${repr(this.generation_number)}, data=${repr_field(this.data)})`;
   }
 
-  __eq__(other: any): boolean {
+  __eq__(other: unknown): boolean {
     return (
       other instanceof IndirectObject &&
       this.object_number === other.object_number &&
@@ -245,7 +250,7 @@ export class IndirectReference {
     return `IndirectReference(object_number=${repr(this.object_number)}, generation_number=${repr(this.generation_number)})`;
   }
 
-  __eq__(other: any): boolean {
+  __eq__(other: unknown): boolean {
     return (
       other instanceof IndirectReference &&
       this.object_number === other.object_number &&
@@ -308,17 +313,17 @@ export class CosName {
     return `CosName(value=${repr(this.value)})`;
   }
 
-  __eq__(other: any): boolean {
+  __eq__(other: unknown): boolean {
     return other instanceof CosName && py_eq(this.value, other.value);
   }
 }
 
 /** `@dataclass class Stream` */
 export class Stream {
-  declare dictionary: Map<string, any>;
+  declare dictionary: CosDict;
   declare data: Uint8Array;
 
-  constructor(dictionary: Map<string, any>, data: Uint8Array) {
+  constructor(dictionary: CosDict, data: Uint8Array) {
     this.dictionary = dictionary;
     this.data = data;
   }
@@ -327,7 +332,7 @@ export class Stream {
     return `Stream(dictionary=${repr_field(this.dictionary)}, data=${repr_bytes(this.data)})`;
   }
 
-  __eq__(other: any): boolean {
+  __eq__(other: unknown): boolean {
     return other instanceof Stream && py_eq(this.dictionary, other.dictionary) && py_eq(this.data, other.data);
   }
 }
@@ -343,7 +348,7 @@ export class CosParser {
     this.lookahead = new Token(TokenType.Eof);
   }
 
-  parse(): any {
+  parse(): CosValue {
     this.lex();
     if (this.lookahead.type === TokenType.Identifier) return this.parse_dict_content();
 
@@ -353,7 +358,7 @@ export class CosParser {
     return [val, ...this.parse_array_content()];
   }
 
-  parse_value(): any {
+  parse_value(): CosValue {
     if (this.lookahead.type === TokenType.Identifier) {
       const val = new CosName(this.lookahead.value);
       this.lex();
@@ -397,7 +402,7 @@ export class CosParser {
 
     if (this.lookahead.type === TokenType.ObjectStart) {
       this.lex();
-      let val: any = this.parse_dict_content();
+      let val: CosValue = this.parse_dict_content();
       this.expect(TokenType.ObjectEnd);
       this.lex();
       if (this.lookahead.type === TokenType.Stream) {
@@ -429,8 +434,8 @@ export class CosParser {
     this.file.seek(pos);
   }
 
-  parse_dict_content(): Map<string, any> {
-    const value = new Map<string, any>();
+  parse_dict_content(): CosDict {
+    const value = new Map<string, CosValue>();
     while (true) {
       if (this.lookahead.type === TokenType.Eof || this.lookahead.type === TokenType.ObjectEnd) {
         break;
@@ -446,8 +451,8 @@ export class CosParser {
     return value;
   }
 
-  parse_array_content(): any[] {
-    const value: any[] = [];
+  parse_array_content(): CosValue[] {
+    const value: CosValue[] = [];
     while (true) {
       if (this.lookahead.type === TokenType.Eof || this.lookahead.type === TokenType.ArrayEnd) {
         break;
@@ -539,7 +544,7 @@ export class CosParser {
   expect_char(exp: Uint8Array, head: Uint8Array): void {
     const char = this.get_char();
     if (char == null || !bytes_eq(char, exp)) {
-      this.raise_lex(concat(head, char?.length > 0 ? char : bytes_.EMPTY), concat(head, exp));
+      this.raise_lex(concat(head, char?.length! > 0 ? char! : bytes_.EMPTY), concat(head, exp));
     }
   }
 

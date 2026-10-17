@@ -215,7 +215,7 @@ export class Curves {
    */
   static _from_binary(chunk: CurvesArbpChunk): Curves {
     // `cls.__new__(cls)`: an instance without running `__init__`.
-    const obj = Object.create(this.prototype) as Curves;
+    const obj: Curves = Object.create(this.prototype);
     obj._version = chunk.version;
     obj._mode = chunk.mode;
     obj._channels = new Map();
@@ -288,7 +288,7 @@ export class Curves {
    * One channel's curve at `x` in 0..1, on its own (not through the
    * master): the spline through its points, or its map read linearly
    * when drawn with the pencil. Clamped to 0..1 unless `clamp` is
-   * `False`, which leaves the spline's overshoot between the points.
+   * `false`, which leaves the spline's overshoot between the points.
    *
    * @throws {@link ValueError} If `channel` is not one of `CURVES_CHANNELS`, or `x` is not a finite
    *   number.

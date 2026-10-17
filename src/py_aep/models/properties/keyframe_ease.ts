@@ -1,28 +1,31 @@
 import { float, getattr } from "../../../pyrt/index.ts";
 import { _validate_number, validate_f8 } from "../validators.ts";
 
+/** Backing keyframe-data chunk body: per-direction speed/influence fields. */
+type KeyframeData = Record<string, number | number[]>;
+
 /**
  * The `KeyframeEase` object encapsulates the keyframe ease settings of a
  * layer's AE property. Keyframe ease is determined by the `speed` and
  * `influence` values.
  *
  *
- * ```python
- * from py_aep import parse
+ * ```ts
+ * import { parse } from "@bevyl-ai/ts-aep";
  *
- * app = parse("project.aep")
- * comp = app.project.compositions[0]
- * position = comp.layers[0].transform.property("ADBE Position")
- * keyframe = position.keyframes[0]
- * print(keyframe.out_temporal_ease[0].speed)
- * print(keyframe.out_temporal_ease[0].influence)
+ * const app = parse("project.aep");
+ * const comp = app.project.compositions[0];
+ * const position = comp.layers[0].transform.property("ADBE Position");
+ * const keyframe = position.keyframes[0];
+ * console.log(keyframe.out_temporal_ease[0].speed);
+ * console.log(keyframe.out_temporal_ease[0].influence);
  * ```
  *
  * @see https://ae-scripting.docsforadobe.dev/other/keyframeease/
  * @example
  */
 export class KeyframeEase {
-  declare _kf_data: any;
+  declare _kf_data: object | null;
   declare _dimension_index: number;
   declare _direction: string;
   declare _speed_factor: number;
@@ -51,13 +54,13 @@ export class KeyframeEase {
    * @param speed_factor - Unit-conversion factor applied to the raw speed.
    */
   static _from_binary(
-    kf_data: any,
+    kf_data: object | null,
     dimension_index: number,
     direction: string,
     speed_factor: number = 1.0,
   ): KeyframeEase {
     // `cls.__new__(cls)`: skip `__init__`, the backing data is supplied.
-    const obj = Object.create(this.prototype) as KeyframeEase;
+    const obj: KeyframeEase = Object.create(this.prototype);
     obj._kf_data = kf_data;
     obj._dimension_index = dimension_index;
     obj._direction = direction;
@@ -88,8 +91,8 @@ export class KeyframeEase {
       getattr(this._kf_data, `${this._direction}_speed`)[this._dimension_index] = raw_speed;
       getattr(this._kf_data, `${this._direction}_influence`)[this._dimension_index] = raw_influence;
     } else {
-      this._kf_data[`${this._direction}_speed`] = raw_speed;
-      this._kf_data[`${this._direction}_influence`] = raw_influence;
+      (this._kf_data as KeyframeData)[`${this._direction}_speed`] = raw_speed;
+      (this._kf_data as KeyframeData)[`${this._direction}_influence`] = raw_influence;
     }
   }
 
@@ -125,7 +128,7 @@ export class KeyframeEase {
     if (this._is_array()) {
       getattr(this._kf_data, field_name)[this._dimension_index] = binary_value;
     } else {
-      this._kf_data[field_name] = binary_value;
+      (this._kf_data as KeyframeData)[field_name] = binary_value;
     }
   }
 
@@ -161,7 +164,7 @@ export class KeyframeEase {
     if (this._is_array()) {
       getattr(this._kf_data, field_name)[this._dimension_index] = binary_value;
     } else {
-      this._kf_data[field_name] = binary_value;
+      (this._kf_data as KeyframeData)[field_name] = binary_value;
     }
   }
 }

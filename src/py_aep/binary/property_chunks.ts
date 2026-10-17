@@ -420,7 +420,7 @@ export class CdatChunk extends Chunk {
   static read(
     fp: IO,
     size: number,
-    kw: { chunk_type?: string; is_le?: boolean } & Record<string, any> = {},
+    kw: { chunk_type?: string; is_le?: boolean } & Record<string, unknown> = {},
   ): CdatChunk {
     const { chunk_type = "", is_le = false } = kw;
     const count = floordiv(size, 8);
@@ -481,7 +481,7 @@ export class TdumChunk extends Chunk {
   static read(
     fp: IO,
     size: number,
-    kw: { chunk_type?: string; is_color?: boolean; is_integer?: boolean } & Record<string, any> = {},
+    kw: { chunk_type?: string; is_color?: boolean; is_integer?: boolean } & Record<string, unknown> = {},
   ): TdumChunk {
     const { chunk_type = "", is_color = false } = kw;
     let { is_integer = false } = kw;
@@ -546,7 +546,7 @@ export class OtdaChunk extends Chunk {
   declare chunk_type: string;
   declare values: number[];
 
-  static read(fp: IO, size: number, kw: { chunk_type?: string } & Record<string, any> = {}): OtdaChunk {
+  static read(fp: IO, size: number, kw: { chunk_type?: string } & Record<string, unknown> = {}): OtdaChunk {
     const { chunk_type = "" } = kw;
     const raw = read_bytes(fp, size);
     const n = floordiv(size, 8);
@@ -583,7 +583,7 @@ export class TdmnChunk extends _StringChunkBase {
   declare chunk_type: string;
   static _ENCODING = "UTF-8";
 
-  static read(fp: IO, size: number, kw: { chunk_type?: string } & Record<string, any> = {}): TdmnChunk {
+  static read(fp: IO, size: number, kw: { chunk_type?: string } & Record<string, unknown> = {}): TdmnChunk {
     const { chunk_type = "" } = kw;
     const raw = read_bytes(fp, size);
     return new this({ chunk_type, value: decode(bytes_.rstrip(raw, b("\x00")), "UTF-8") });
@@ -692,7 +692,7 @@ export class CurvesRecordItem extends FmtItem {
   get points(): [number, number][] {
     const values = struct.unpack(`>${2 * _CURVES_SLOTS}h`, this._point_slots);
     const count = Math.min(this.count, _CURVES_SLOTS);
-    return Array.from({ length: count }, (_, i) => [values[2 * i], values[2 * i + 1]] as [number, number]);
+    return Array.from({ length: count }, (_, i): [number, number] => [values[2 * i], values[2 * i + 1]]);
   }
 }
 define(CurvesRecordItem, {
@@ -735,7 +735,7 @@ export class CurvesArbpChunk extends Chunk {
     }
     const chunk = this.read(new BytesIO(arbp.data), arbp.data.length, { chunk_type: "aRbp" });
     py_assert(chunk instanceof this);
-    return chunk as CurvesArbpChunk;
+    return chunk;
   }
 }
 define(CurvesArbpChunk, {

@@ -22,6 +22,7 @@ import { getattr, py_bool } from "../../pyrt/index.ts";
 import { LayerType, PropertyControlType, PropertyValueType } from "../enums/index.ts";
 import { _CAMERA_NO_EXPRESSION, _CANSETEXPR_2D_ONLY, _CANSETEXPR_3D_ONLY, _CANSETEXPR_EXTRUSION_DEPTHS, _CANSETEXPR_FALSE_OVERRIDES, _CANSETEXPR_RENDERER_3D_ONLY, _LIGHT_AMBIENT_NO_EXPRESSION, _LIGHT_ENVIRONMENT_NO_EXPRESSION, _LIGHT_NO_EXPRESSION, _LIGHT_PARALLEL_NO_EXPRESSION, _LIGHT_POINT_NO_EXPRESSION, _LIGHT_SPOT_NO_EXPRESSION, _MODEL_LAYER_HIDDEN_MATERIALS, _PARAMETRIC_MESH_CHECKBOX_STREAMS, _PARAMETRIC_MESH_GROUP_TYPE, _PARAMETRIC_MESH_NO_EXPRESSION } from "../models/properties/overrides.ts";
 import type { Property } from "../models/properties/property.ts";
+import type { Layer } from "../models/layers/layer.ts";
 
 // PVT sets where can_set_expression is always True / False regardless
 // of other signals.
@@ -217,7 +218,7 @@ export function resolve_can_set_expression(prop: Property): boolean {
 }
 
 /** Determine can_set_expression for a property on a light layer. */
-export function _can_set_expression_light(layer: any, mn: string): boolean {
+export function _can_set_expression_light(layer: Layer, mn: string): boolean {
   if (_LIGHT_NO_EXPRESSION.has(mn)) {
     return false;
   }
@@ -255,7 +256,7 @@ export function _can_set_expression_light(layer: any, mn: string): boolean {
  */
 export function _can_set_expression_parametric_mesh(
   prop: Property,
-  layer: any,
+  layer: Layer,
   mn: string,
 ): boolean | null {
   if (_PARAMETRIC_MESH_NO_EXPRESSION.has(mn)) {
