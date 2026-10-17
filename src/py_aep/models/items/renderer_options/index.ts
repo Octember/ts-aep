@@ -10,7 +10,6 @@ import { Cinema4DRendererOptions } from "./cinema_4d.ts";
 import { ClassicRendererOptions } from "./classic.ts";
 import { RayTracedRendererOptions } from "./ray_traced.ts";
 import { RendererOptionsBase } from "./renderer_options_base.ts";
-import { dict_get } from "../../../../pyrt/index.ts";
 import type { Chunk } from "../../../binary/chunk.ts";
 import type { CompItem } from "../composition.ts";
 
@@ -37,7 +36,7 @@ export const _WRAPPERS: Map<Function, typeof RendererOptionsBase> = new Map<Func
  * so a future renderer reads as "no options exposed" rather than raising.
  */
 export function renderer_options_for(body: Chunk, comp: CompItem): RendererOptions {
-  const wrapper_cls = dict_get(_WRAPPERS, body.constructor, RendererOptionsBase);
+  const wrapper_cls = _WRAPPERS.get(body.constructor) ?? RendererOptionsBase;
   return new wrapper_cls({ body, comp });
 }
 

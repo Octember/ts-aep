@@ -606,7 +606,7 @@ export function _style_instances(descriptor: Map<string, _Value>): Map<string, _
     if (_STYLES.has(key)) {
       setdefault(instances, key, []).push(value);
     } else if (_MULTI_KEYS.has(key) && Array.isArray(value)) {
-      setdefault(instances, getitem(_MULTI_KEYS, key), []).push(...value);
+      setdefault(instances, _MULTI_KEYS.get(key), []).push(...value);
     }
   }
   return instances;
@@ -644,7 +644,7 @@ export function _convert_style(
     try {
       values.set(
         `${prefix}/${param.suffix}`,
-        param.convert(getitem(instance, param.descriptor_key)),
+        param.convert(instance.get(param.descriptor_key)),
       );
     } catch (exc) {
       if (!(exc instanceof UnsupportedStyleError)) throw exc;

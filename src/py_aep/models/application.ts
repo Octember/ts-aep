@@ -5,12 +5,10 @@ import { LEGACY_NAME_FORMAT } from "../binary/chunk.ts";
 import type { HeadChunk } from "../binary/item_chunks.ts";
 import { ChunkField } from "./descriptors.ts";
 import { validate_ae_version, validate_u1 } from "./validators.ts";
-import type { Project } from "./project.ts";
 import type { Preferences } from "./preferences.ts";
 import type { Viewer } from "./viewer/viewer.ts";
-import { deferred, descriptor, int, repr, split, str, ValueError, type Path } from "../../pyrt/index.ts";
-
-const _project = deferred<typeof import("./project.ts")>("py_aep/models/project");
+import { descriptor, int, repr, split, str, ValueError, type Path } from "../../pyrt/index.ts";
+import { Project } from "./project.ts";
 
 // Version-gated parts After Effects expects from the format version alone,
 // whatever the file holds. Measured on AE 2026: projects relabelled across
@@ -132,7 +130,7 @@ export class Application {
    * See `py_aep.new`.
    */
   static _new(version: string, ae_preferences_dir: Path | null = null, platform: string | null = null): Application {
-    const project = _project().Project._new(version, ae_preferences_dir, platform);
+    const project = Project._new(version, ae_preferences_dir, platform);
     return new this({ _head: project._head, project, active_viewer: null });
   }
 

@@ -24,7 +24,7 @@ import type { Layer } from "../models/layers/layer.ts";
 import type { LightLayer } from "../models/layers/light_layer.ts";
 import type { Property } from "../models/properties/property.ts";
 import type { PropertyGroup } from "../models/properties/property_group.ts";
-import { NotImplementedError, ValueError, degrees, float, float_repr, hasattr, max, min, mod, py_bool, py_or, repr, sum, hypot } from "../../pyrt/index.ts";
+import { NotImplementedError, ValueError, degrees, float, float_repr, hasattr, max, min, mod, py_bool, repr, sum, hypot } from "../../pyrt/index.ts";
 
 export const _DEG2RAD = Math.PI / 180.0;
 export const _RAD2DEG = 180.0 / Math.PI;
@@ -659,7 +659,8 @@ export function rotation_part(matrix: Mat4): Mat4 {
   rows[3][3] = 1.0;
   for (let column = 0; column < 3; column++) {
     const axis = [0, 1, 2].map((row) => matrix.__getitem__(row)[column]);
-    const length = py_or(_vec3_norm(axis), 1.0);
+    const norm = _vec3_norm(axis);
+    const length = norm !== 0 ? norm : 1.0;
     for (let row = 0; row < 3; row++) rows[row][column] = axis[row] / length;
   }
   const normalized = new Mat4(rows);

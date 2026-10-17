@@ -10,7 +10,7 @@
  *         my_flag = BitField("_flags", 3)  # bit 3 (no annotation)
  */
 
-import { and, and_not, getattr, lshift, or, py_bool } from "../../pyrt/index.ts";
+import { and, and_not, getattr, lshift, or } from "../../pyrt/index.ts";
 
 /**
  * Descriptor mapping a single bit in a raw-byte attrs field to a bool.
@@ -29,7 +29,7 @@ export class BitField {
   }
 
   __get__(obj: object, objtype: Function | null = null): boolean {
-    return py_bool(and(getattr(obj, this.byte_field), this.mask));
+    return and(getattr(obj, this.byte_field), this.mask) !== 0;
   }
 
   __set__(obj: object, value: boolean): void {

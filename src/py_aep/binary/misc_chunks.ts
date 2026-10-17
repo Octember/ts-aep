@@ -7,7 +7,7 @@
  */
 
 import { uuid4_bytes } from "../../pyrt/uuid.ts";
-import { define, field, b, bytes_, decode, dict_get, encode, getattr, len, py_assert, py_or, round, descriptor, TypeError_, ValueError } from "../../pyrt/index.ts";
+import { define, field, b, bytes_, decode, encode, getattr, len, py_assert, round, descriptor, TypeError_, ValueError } from "../../pyrt/index.ts";
 import type { IO } from "../../pyrt/index.ts";
 import { read_bytes } from "./bin_utils.ts";
 import { BitField } from "./bitfield.ts";
@@ -376,7 +376,7 @@ export class NmhdChunk extends Chunk {
 
   /** Duration in seconds. */
   get duration_seconds(): number {
-    return this.duration_value / py_or(this.duration_scale, 600);
+    return this.duration_value / (this.duration_scale || 600);
   }
 
   set duration_seconds(value: number) {
@@ -585,7 +585,7 @@ export class PardChunk extends Chunk {
     const header = read_bytes(fp, 16);
     const control_type = header[15];
     fp.seek(-16, 1);
-    const variant_cls = dict_get(_PARD_VARIANTS, control_type, PardChunk);
+    const variant_cls = _PARD_VARIANTS.get(control_type) ?? PardChunk;
     if (variant_cls === PardChunk) return new this({ chunk_type, data: read_bytes(fp, size) });
     return variant_cls.read(fp, size, { chunk_type }) as PardChunk;
   }

@@ -528,7 +528,7 @@ export class OutputModule {
    * `SET_PROXY`. Read-only.
    */
   get post_render_target_comp(): CompItem {
-    const comp_id = py_or(this._om_ldat.post_render_target_comp_id, null);
+    const comp_id = this._om_ldat.post_render_target_comp_id || null;
     if (comp_id == null || ([PostRenderAction.NONE, PostRenderAction.IMPORT] as number[]).includes(this.post_render_action)) {
       return this._parent_rqi.comp;
     }
@@ -605,7 +605,7 @@ export class OutputModule {
   /** Output audio setting (the On and Auto flags of the settings). */
   get _output_audio(): OutputAudio {
     const ldat = this._om_ldat;
-    return map_output_audio(py_bool(ldat.output_audio), py_bool(ldat.output_audio_auto));
+    return map_output_audio(ldat.output_audio !== 0, ldat.output_audio_auto !== 0);
   }
 
   set _output_audio(value: OutputAudio) {
@@ -963,7 +963,7 @@ export class OutputModule {
     const is_rgba = this._om_ldat.channels === int(OutputChannels.RGBA);
     const target = is_rgba ? _DEPTH_PLUS : _DEPTH_MINUS;
     if (target.has(depth_val)) {
-      this._roou.depth = getitem(target, depth_val);
+      this._roou.depth = target.get(depth_val);
     }
   }
 
@@ -1037,7 +1037,7 @@ export class OutputModule {
       }
       roou.audio_encoding = roou.audio_bit_depth === 4 ? 3 : 2;
     } else if (_AUDIO_ENCODINGS.has(roou.audio_bit_depth)) {
-      roou.audio_encoding = getitem(_AUDIO_ENCODINGS, roou.audio_bit_depth);
+      roou.audio_encoding = _AUDIO_ENCODINGS.get(roou.audio_bit_depth);
     }
   }
 
@@ -1054,8 +1054,8 @@ export class OutputModule {
    */
   get _effective_dimensions(): [number, number] {
     const comp = this._parent_rqi.comp;
-    const res_x = py_or(this._parent_rqi._ldat.resolution_x, 1);
-    const res_y = py_or(this._parent_rqi._ldat.resolution_y, 1);
+    const res_x = this._parent_rqi._ldat.resolution_x || 1;
+    const res_y = this._parent_rqi._ldat.resolution_y || 1;
 
     let w = Math.ceil(comp.width / res_x);
     let h = Math.ceil(comp.height / res_y);
@@ -1138,7 +1138,7 @@ export class OutputModule {
   get _output_color_space(): string | null {
     return map_output_color_space(
       this._om_ldat.output_profile_id,
-      py_bool(this._om_ldat.output_color_space_working),
+      this._om_ldat.output_color_space_working !== 0,
       this._project.working_space,
     );
   }

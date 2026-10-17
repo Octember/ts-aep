@@ -260,7 +260,7 @@ export function _line_advances(node: Dict): number[] {
  * write invalidates it via `TextDocument._mark_layout_dirty`.
  */
 export function _fresh_composed_spans(doc: TextDocument): [number, number][] | null {
-  if (getattr(doc, "_composition_calibrated", null) !== true) return null;
+  if ((doc?._composition_calibrated ?? null) !== true) return null;
   if (doc.__dict__.has("_composed_cache")) {
     const memo: [number, number][] | null = doc.__dict__.get("_composed_cache");
     return memo;
@@ -288,12 +288,12 @@ export function _fresh_composed_spans(doc: TextDocument): [number, number][] | n
  * the AE-parity clamp semantics) remains.
  */
 export function _composed_line_spans(doc: TextDocument): [number, number][] | null {
-  if (!getattr(doc, "box_text", false)) {
+  if (!doc?.box_text) {
     const para = _para_run_spans(doc);
     if (!para.length) return null;
     return para.map(([start, end]): [number, number] => [start, end]);
   }
-  if (getattr(doc, "_layout_dirty", false)) {
+  if (doc?._layout_dirty) {
     const fresh = _fresh_composed_spans(doc);
     if (fresh != null) return fresh;
   }
@@ -527,7 +527,7 @@ export const _NON_LAYOUT_CHAR_KEYS: ReadonlySet<string> = new Set(["53", "54", "
  * without the hook are skipped.
  */
 export function _mark_layout_dirty(doc: TextDocument): void {
-  const mark = getattr(doc, "_mark_layout_dirty", null);
+  const mark = doc?._mark_layout_dirty ?? null;
   if (mark != null) mark.call(doc);
 }
 
@@ -834,7 +834,7 @@ export function _splice_text(
   }
 
   inner.set("0", new_raw);
-  const rebuild_lines = getattr(doc, "_rebuild_line_count_runs", null);
+  const rebuild_lines = doc?._rebuild_line_count_runs ?? null;
   if (rebuild_lines != null) rebuild_lines.call(doc, parts);
   _refresh_style_aliases(doc);
 }
@@ -1269,7 +1269,7 @@ export class CharacterRange extends _TextRange {
   }
 
   _propagate(): void {
-    const propagate = getattr(this._doc_ref, "_propagate_cos", null);
+    const propagate = this._doc_ref?._propagate_cos ?? null;
     if (propagate != null) propagate.call(this._doc_ref);
   }
 
@@ -1365,7 +1365,7 @@ export class CharacterRange extends _TextRange {
         if (style instanceof Map) {
           const index = style.get("0") ?? null;
           if (typeof index === "number" && Number.isInteger(index) && needed.has(index)) {
-            style.set("0", getitem(target_index, getitem(needed, index)));
+            style.set("0", getitem(target_index, needed.get(index)));
           }
         }
       }

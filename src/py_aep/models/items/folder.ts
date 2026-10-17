@@ -6,14 +6,12 @@ import { Utf8Chunk } from "../../binary/scalar_chunks.ts";
 import { auto_name } from "../naming.ts";
 import { label_index } from "../preferences.ts";
 import { validate_name, validate_string } from "../validators.ts";
-import type { CompItem } from "./composition.ts";
 import { FootageItem } from "./footage.ts";
 import { Item } from "./item.ts";
 import type { Project } from "../project.ts";
 import type { Viewer } from "../viewer/viewer.ts";
-import { ValueError, StopIteration, py_cmp, repr, sorted, deferred } from "../../../pyrt/index.ts";
-
-const _composition = deferred<typeof import("./composition.ts")>("py_aep/models/items/composition");
+import { ValueError, StopIteration, py_cmp, repr, sorted } from "../../../pyrt/index.ts";
+import { CompItem } from "./composition.ts";
 
 /**
  * The `FolderItem` object corresponds to a folder in your Project panel. It
@@ -81,7 +79,7 @@ export class FolderItem extends Item {
 
   /** All the compositions in the project. */
   get compositions(): CompItem[] {
-    return this.items.filter((item) => item instanceof _composition().CompItem) as CompItem[];
+    return this.items.filter((item) => item instanceof CompItem) as CompItem[];
   }
 
   /** All the folders in the project. */
@@ -232,10 +230,10 @@ export class FolderItem extends Item {
 
     if (name == null) {
       const existing = new Set([...this._project.items.values()].map((item) => item.name));
-      name = auto_name(_composition().CompItem._auto_name, existing);
+      name = auto_name(CompItem._auto_name, existing);
     }
 
-    const comp = _composition().CompItem._new(
+    const comp = CompItem._new(
       name,
       width,
       height,

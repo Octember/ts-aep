@@ -1,7 +1,7 @@
 import { ViewerType } from "../../enums/index.ts";
 import { ChunkField } from "../descriptors.ts";
 import { _validate_number } from "../validators.ts";
-import { descriptor, py_bool } from "../../../pyrt/index.ts";
+import { descriptor } from "../../../pyrt/index.ts";
 import type { AsciiChunk, U1Chunk } from "../../binary/scalar_chunks.ts";
 import type { View } from "./view.ts";
 
@@ -74,7 +74,7 @@ export class Viewer {
    * Read-only.
    */
   get active(): boolean {
-    return this._foac != null && py_bool(this._foac.value) && this._fiac != null && py_bool(this._fiac.value);
+    return this._foac != null && this._foac.value !== 0 && this._fiac != null && this._fiac.value !== 0;
   }
 }
 

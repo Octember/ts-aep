@@ -87,9 +87,16 @@ unless `b` has side effects that later code depends on.
   Otherwise `m.has(k) ? m.get(k) : d`.
 - Only when `m` is certainly a `Map`. `dict_get` on an `any` from a COS tree is
   a Map in practice, but if a non-Map can reach it, keep the call.
-- `getitem(m, k)` raises `KeyError`. Rewrite to `m.get(k)!` only where the key
-  is provably present (an `m.has(k)` guard right before, or `k` came from
-  iterating `m`). Otherwise keep it.
+- `getitem(m, k)` raises `KeyError`. Rewrite to `m.get(k)` only where the key
+  is provably present (an `m.has(k)` guard or early exit, or `k` came from
+  iterating `m`) and nothing between the proof and the read can remove it: no
+  `delete`/`clear`/`dict_pop`, no reassignment of `m` or `k`, and no call other
+  than `get`/`has` (any call might delete through an alias). Otherwise keep it.
+- `getattr(x, "p", null)` → `x?.p ?? null` (`x.p` when `x` is non-null) when
+  `p` is declared on `x`'s type. Never when `x` can be a class with
+  `__getattr__` (`PropertyGroup`, layers, …): `getattr` checks `p in x` first,
+  so an unset `declare` field yields the default, while a plain read falls
+  through to the proxy and throws.
 - `setdefault` / `dict_pop`: keep (they are already one call; the native form
   is longer).
 
@@ -155,6 +162,15 @@ is not provable from the code, keep `int`.
 Drop pyrt names that are no longer used in the file. Keep import order
 otherwise.
 
+A `deferred(...)` cycle breaker becomes a static import when the target
+module cannot reach the importing one through value imports (type-only
+imports are erased and don't count), counting static imports already added
+during the same run. The target then fully evaluates before the importer, and
+it cannot observe a half-initialized module: every module still evaluating
+reaches the importer, so the target reaching one would mean it reaches the
+importer. `tools/codemods/acyclic_deferred.ts`
+applies this; rerun `bun tools/gen_deferred_modules.ts` afterwards.
+
 ## Pass 2: docstrings to TSDoc
 
 `tools/codemods/pass2_tsdoc.ts` rewrites comments only (`tools/tsdoc_lint.ts`
@@ -198,7 +214,8 @@ Each of these changes structure and needs its own guide section first:
   class fields and accessors (decorators or explicit getters/setters).
 - `int_enum` / `py_enum` → TS `enum` or `as const` objects (touches public
   API through `E.of`, `E.name_of`).
-- `deferred(...)` cycle breakers → restructured imports.
+- The remaining `deferred(...)` cycle breakers (real cycles) → restructured
+  imports.
 - `__getattr__` / `py_object` proxies, `__eq__`/`__len__` dunders → explicit
   methods.
 - snake_case internals → camelCase (public names stay until an API decision).

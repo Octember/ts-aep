@@ -28,10 +28,8 @@ import {
   Path,
   RuntimeError,
   format,
-  getattr,
   int,
   len,
-  py_and,
   py_bool,
   repr,
   round,
@@ -234,7 +232,7 @@ export function build_property_node(prop: Property): Node {
     attrs.set("animated", true);
     attrs.set("keyframes", prop.keyframes.length);
   }
-  if (py_bool(py_and(prop.expression_enabled, prop.expression))) attrs.set("expression", true);
+  if (prop.expression_enabled && prop.expression) attrs.set("expression", true);
   if (prop.value != null && !prop._animated) {
     // Format value for display
     if (Array.isArray(prop.value)) {
@@ -281,7 +279,7 @@ export function build_render_queue_item_node(item: RenderQueueItem, index: numbe
 
   // Try to find the comp name
   const comp = item.comp;
-  attrs.set("comp", getattr(comp, "name", null));
+  attrs.set("comp", comp?.name ?? null);
 
   const children: Node[] = [];
   for (const om of item.output_modules) {

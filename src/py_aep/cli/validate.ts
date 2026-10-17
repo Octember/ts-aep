@@ -999,7 +999,7 @@ export function compare_keyframe(
     ["outTemporalEase", "out_temporal_ease"],
   ]) {
     if (expected_kf.has(ease_key)) {
-      const exp_ease = getitem(expected_kf, ease_key);
+      const exp_ease = expected_kf.get(ease_key);
       const parsed_ease = dict_get(parsed_kf, parsed_key, []);
       if (len(exp_ease) !== len(parsed_ease)) {
         result.add_diff(`${path}.${ease_key}.length`, len(exp_ease), len(parsed_ease), "keyframes");

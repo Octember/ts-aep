@@ -11,12 +11,10 @@ import { ChunkField } from "../descriptors.ts";
 import type { CompItem } from "../items/composition.ts";
 import type { Project } from "../project.ts";
 import { _validate_number, validate_bool, validate_positive_int, validate_positive_number, validate_sequence, validate_string } from "../validators.ts";
-import type { OutputModule } from "./output_module.ts";
 import { SettingsView, type SettingsSpec, settings_to_number, settings_to_string } from "./settings.ts";
 import type { RenderQueue } from "./render_queue.ts";
 import {
   deepcopy,
-  deferred,
   descriptor,
   float,
   float_repr,
@@ -30,9 +28,8 @@ import {
   str,
   ValueError,
 } from "../../../pyrt/index.ts";
-
-const _output_module = deferred<typeof import("./output_module.ts")>("py_aep/models/renderqueue/output_module");
-const _parsers_output_module = deferred<typeof import("../../parsers/output_module.ts")>("py_aep/parsers/output_module");
+import { OutputModule } from "./output_module.ts";
+import { parse_output_module } from "../../parsers/output_module.ts";
 
 // NOTE(port): the epoch is a UTC `Date`; Python's naive datetime(1904, 1, 1) is the same wall-clock instant.
 export const _AEP_EPOCH = new Date(Date.UTC(1904, 0, 1));
@@ -282,7 +279,7 @@ export class RenderQueueItem {
    * @returns The newly created {@link OutputModule}.
    */
   add(): OutputModule {
-    const [om, lom_chunks] = _output_module().OutputModule._new({
+    const [om, lom_chunks] = OutputModule._new({
       render_settings_ldat: this._ldat,
       parent: this,
     });
@@ -909,7 +906,7 @@ export class RenderQueueItem {
 
     const output_modules: OutputModule[] = [];
     for (const [i, om_group] of om_groups.entries()) {
-      const om = _parsers_output_module().parse_output_module(om_group, new_om_ldat.items[i], new_item);
+      const om = parse_output_module(om_group, new_om_ldat.items[i], new_item);
       output_modules.push(om);
     }
     new_item._output_modules = output_modules;

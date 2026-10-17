@@ -9,7 +9,6 @@ import { ChunkNotFoundError, filter_by_list_type, filter_by_type, find_by_list_t
 import { VF_AXIS_PREFIX } from "../data/match_names.ts";
 import { _suppress_materialization } from "../models/descriptors.ts";
 import { MaskPropertyGroup } from "../models/properties/mask_property_group.ts";
-import type { Property } from "../models/properties/property.ts";
 import { PropertyGroup } from "../models/properties/property_group.ts";
 import type { CompItem } from "../models/items/composition.ts";
 import type { Layer } from "../models/layers/layer.ts";
@@ -18,9 +17,8 @@ import { parse_markers } from "./marker.ts";
 import { parse_property } from "./property_value.ts";
 import { parse_gradient, parse_orientation, parse_shape, parse_text_document } from "./specialized_properties.ts";
 import { get_chunks_by_match_name, get_match_name_runs } from "./utils.ts";
-import { deferred, dict_get, enumerate, warn, zip } from "../../pyrt/index.ts";
-
-const _property = deferred<typeof import("../models/properties/property.ts")>("py_aep/models/properties/property");
+import { dict_get, enumerate, warn, zip } from "../../pyrt/index.ts";
+import { Property, _EssentialOverrideProperty } from "../models/properties/property.ts";
 
 // `logging.getLogger(__name__)`: this module logs nothing today, so only the
 // warning path is wired to pyrt `warn`.
@@ -377,9 +375,9 @@ export function _reclass_override_leaves(group: PropertyGroup): void {
   for (const child of group.properties) {
     if (child instanceof PropertyGroup) {
       _reclass_override_leaves(child);
-    } else if (child.constructor === _property().Property) {
+    } else if (child.constructor === Property) {
       // NOTE(port): setPrototypeOf is the JS twin of `child.__class__ = ...`; same semantics, only a V8 perf cost.
-      Object.setPrototypeOf(child, _property()._EssentialOverrideProperty.prototype);
+      Object.setPrototypeOf(child, _EssentialOverrideProperty.prototype);
     }
   }
 }

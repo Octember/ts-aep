@@ -15,9 +15,7 @@ import {
   concat,
   decode,
   define,
-  deferred,
   descriptor,
-  dict_get,
   encode,
   field,
   int,
@@ -31,7 +29,7 @@ import { BitField } from "./bitfield.ts";
 import { Chunk } from "./chunk.ts";
 import { ascii_field, bool_field, bytes_field, f4_field, f8_field, s2_field, s4_field, str_field, u1_field, u2_field, u4_field, u8_field } from "./fmt_field.ts";
 import { register } from "./registry.ts";
-const _render_chunks = deferred<typeof import("./render_chunks.ts")>("py_aep/binary/render_chunks");
+import { CineonRoptChunk } from "./render_chunks.ts";
 
 // ---------------------------------------------------------------------------
 // sspc - source footage settings (184+ bytes)
@@ -745,7 +743,7 @@ export function build_psd_layer_opti_data(
  * writes this exact 48-byte body for every DPX and Cineon item.
  */
 export function build_dpx_opti_data(): Uint8Array {
-  return new (_render_chunks().CineonRoptChunk)().tobytes();
+  return new CineonRoptChunk().tobytes();
 }
 
 /** Length of the `oEXR` opti body AE 2026 writes for every OpenEXR file. */
@@ -937,7 +935,7 @@ export class OptiChunk extends Chunk {
     if (!asset_type && asset_type_int === 2) {
       return PlaceholderOptiChunk.read(fp, size, { chunk_type });
     }
-    const variant_cls = dict_get(_OPTI_VARIANTS, asset_type, OptiChunk)!;
+    const variant_cls = (_OPTI_VARIANTS.get(asset_type) ?? OptiChunk)!;
     if (variant_cls === OptiChunk) {
       return new this({ chunk_type, data: read_bytes(fp, size) });
     }

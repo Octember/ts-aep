@@ -6,7 +6,7 @@
  * is the 4-char code stored in `SspcChunk.source_format_type`.
  */
 
-import { ValueError, dict_get, repr } from "../../pyrt/index.ts";
+import { ValueError, repr } from "../../pyrt/index.ts";
 import { ImportAsType } from "../enums/index.ts";
 
 /** Static per-format defaults for footage import. */
@@ -272,7 +272,7 @@ export const EPS_COMP_EXTENSIONS: ReadonlySet<string> = new Set<string>([".eps"]
  *   import support.
  */
 export function get_import_as_types(suffix: string): ReadonlySet<ImportAsType> {
-  return dict_get(_IMPORT_AS_TYPES, suffix.toLowerCase(), new Set<ImportAsType>());
+  return _IMPORT_AS_TYPES.get(suffix.toLowerCase()) ?? new Set<ImportAsType>();
 }
 
 /**
