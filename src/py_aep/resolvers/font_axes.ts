@@ -51,12 +51,13 @@ export function read_design_axes(font_file: _PathLike, font_number: number = 0):
   const opened = fontkit.create(host.fs.readFileSync(String(font_file)));
   // TODO(port): fontTools raises on an out-of-range fontNumber; here an
   // out-of-range index yields undefined and fails later on property access.
-  const font: fontkit.Font | undefined = opened.fonts != null ? opened.fonts[font_number] : opened;
-  if (font == null) {
+  const faces = opened.fonts;
+  if (faces != null && faces[font_number] == null) {
     throw new Error(
-      `specify a font number between 0 and ${opened.fonts!.length - 1} (inclusive)`,
+      `specify a font number between 0 and ${faces.length - 1} (inclusive)`,
     );
   }
+  const font = faces != null ? faces[font_number] : opened;
   try {
     if (!("fvar" in font.directory.tables)) {
       throw new ValueError(`${String(font_file)} is not a variable font (it has no fvar table).`);

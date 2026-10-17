@@ -71,9 +71,12 @@ export function collect_gradients(root: Element): Map<string, GradientDef> {
     const seen = new Set<string>();
     // `ref` is reassigned while walking the href chain, so it stays a `let`.
     let ref = gd.href;
-    while (ref && defs.has(ref) && !seen.has(ref)) {
+    while (ref && !seen.has(ref)) {
+      const parent = defs.get(ref);
+      if (parent === undefined) {
+        break;
+      }
       seen.add(ref);
-      const parent = defs.get(ref)!;
       if (!gd.stops?.length) {
         gd.stops = [...parent.stops];
       }

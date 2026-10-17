@@ -17,7 +17,7 @@
  *   parameter (see `_ArcSpline`).
  */
 
-import { ZeroDivisionError, at, floordiv, getitem, int, max, min, mod, radians, range, sorted, sum, tkey, zip } from "../../pyrt/index.ts";
+import { IndexError, ZeroDivisionError, at, floordiv, getitem, int, max, min, mod, radians, range, sorted, sum, tkey, zip } from "../../pyrt/index.ts";
 import { KeyframeInterpolationType } from "../enums/index.ts";
 import { ORIENTATION_KIND, SHAPE_KIND, type ParallelKind } from "../models/properties/parallel.ts";
 import { Shape } from "../models/properties/shape.ts";
@@ -825,7 +825,8 @@ export function _arc_spline(curve: _Curve, accuracy: number): _ArcSpline {
   const spline = new _ArcSpline(curve, accuracy);
   _arc_spline_cache.set(key, spline);
   if (_arc_spline_cache.size > 1024) {
-    _arc_spline_cache.delete(_arc_spline_cache.keys().next().value as string);
+    const oldest = _arc_spline_cache.keys().next();
+    if (!oldest.done) _arc_spline_cache.delete(oldest.value);
   }
   return spline;
 }
@@ -1183,7 +1184,9 @@ export function _spatial_tangents(keyframes: Keyframe[], first: number, last: nu
       continue;
     }
     const zero = new Array<number>((kf._stored_value as number[]).length).fill(0.0);
-    result.set(i, [kf.out_spatial_tangent!?.length > 0 ? kf.out_spatial_tangent! : zero, kf.in_spatial_tangent!?.length > 0 ? kf.in_spatial_tangent! : zero]);
+    const out_tangent = kf.out_spatial_tangent;
+    const in_tangent = kf.in_spatial_tangent;
+    result.set(i, [out_tangent != null && out_tangent.length > 0 ? out_tangent : zero, in_tangent != null && in_tangent.length > 0 ? in_tangent : zero]);
   }
   return result;
 }
@@ -1599,7 +1602,9 @@ export function _subdivision_cuts(segment_count: number, target_count: number): 
   const pieces: [number, number, number][] = [];
   for (let index = 0; index < segment_count; index++) pieces.push([index, 0.0, 1.0]);
   while (pieces.length < target_count) {
-    const [index, start, end] = pieces.shift()!;
+    const piece = pieces.shift();
+    if (piece === undefined) throw new IndexError("pop from an empty deque");
+    const [index, start, end] = piece;
     const middle = (start + end) / 2.0;
     pieces.push([index, start, middle]);
     pieces.push([index, middle, end]);

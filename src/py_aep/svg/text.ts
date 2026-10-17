@@ -235,7 +235,7 @@ export function _glyphs(font: FontkitFont, text: string): TextGlyphs {
   const names: (number | null)[] = [];
   const advances: number[] = [];
   for (const ch of text) {
-    const gid: number = cmap == null ? 0 : cmap.lookup(ch.codePointAt(0)!);
+    const gid: number = cmap == null ? 0 : cmap.lookup(ch.codePointAt(0) ?? 0);
     const gname = gid !== 0 ? gid : null;
     names.push(gname);
     advances.push(_in_glyph_set(glyph_set, gname) ? glyph_set.getGlyph(gname).advanceWidth : 0.0);
@@ -366,7 +366,7 @@ export function _arc_lengths(pts: [number, number][]): number[] {
   const cum = [0.0];
   for (let i = 1; i < pts.length; i++) {
     cum.push(
-      cum.at(-1)! + hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]),
+      cum[cum.length - 1] + hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]),
     );
   }
   return cum;
@@ -378,7 +378,7 @@ export function _point_at(
   cum: number[],
   dist: number,
 ): [number, number, number] {
-  dist = Math.max(0.0, Math.min(dist, cum.at(-1)!));
+  dist = Math.max(0.0, Math.min(dist, cum[cum.length - 1]));
   let i = 1;
   while (i < cum.length - 1 && cum[i] < dist) i += 1;
   const [x0, y0] = pts[i - 1];
@@ -421,7 +421,7 @@ export function outline_text_path(
   const pts = _polyline(path[0]);
   if (pts.length < 2) return [];
   const cum = _arc_lengths(pts);
-  const total = cum.at(-1)!;
+  const total = cum[cum.length - 1];
   const [names, advances, units_per_em, glyph_set] = _glyphs(
     _load_font(font_path, font_number),
     text,

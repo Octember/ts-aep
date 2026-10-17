@@ -39,7 +39,7 @@ export function resolve_essential_property_controllers(layer: AVLayer): Essentia
   const source = layer.source;
   if (!(source instanceof _composition().CompItem)) return [];
   const by_uuid = new Map(source.motion_graphics_controllers.map((c) => [c.uuid, c] as const));
-  return uuids.filter((uuid) => by_uuid.has(uuid)).map((uuid) => by_uuid.get(uuid)!);
+  return uuids.map((uuid) => by_uuid.get(uuid)).filter((c) => c !== undefined);
 }
 
 /**

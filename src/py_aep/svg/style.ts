@@ -120,8 +120,9 @@ export function _split_declarations(
       // Drop the CSS `!important` priority flag so it does not leak into
       // the value and break downstream color/number parsing.
       const flag = _IMPORTANT_RE.exec(val);
-      out.set(key, strip(flag != null ? val.slice(0, flag.index) : val));
-      if (flag != null) important.set(key, out.get(key)!);
+      const value = strip(flag != null ? val.slice(0, flag.index) : val);
+      out.set(key, value);
+      if (flag != null) important.set(key, value);
     }
   }
   return [out, important];
@@ -199,7 +200,8 @@ export function resolve_properties(
 
   // Presentation attributes (weakest author level).
   for (const key of _TRACKED) {
-    if (attrs.has(key)) style.set(key, strip(attrs.get(key)!));
+    const value = attrs.get(key);
+    if (value !== undefined) style.set(key, strip(value));
   }
 
   // Matching CSS rules, applied in (specificity, order) ascending so the
