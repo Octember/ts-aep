@@ -8,7 +8,7 @@ import * as fs from "node:fs";
 const base = process.argv[2] ?? "HEAD";
 const files = execFileSync("git", ["diff", "--name-only", base, "--", "src"], { encoding: "utf8" })
   .split("\n")
-  .filter((f) => f.endsWith(".ts") && fs.existsSync(f));
+  .filter((f) => f.endsWith(".ts") && !f.endsWith(".d.ts") && fs.existsSync(f));
 const emit = (f: string, text: string) =>
   ts.transpileModule(text, {
     fileName: f,
