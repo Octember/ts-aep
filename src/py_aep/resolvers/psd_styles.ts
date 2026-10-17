@@ -115,7 +115,7 @@ export class PsdLayerStyles {
     this.blend_options = blend_options;
   }
 
-  *[Symbol.iterator](): Generator<unknown> {
+  *[Symbol.iterator](): Generator<Map<string, StyleValue> | readonly string[] | boolean> {
     yield this.values;
     yield this.enabled;
     yield this.dropped;
@@ -446,7 +446,7 @@ export class _Param {
     this.convert = convert;
   }
 
-  *[Symbol.iterator](): Generator<unknown> {
+  *[Symbol.iterator](): Generator<string | ((value: _Value) => StyleValue)> {
     yield this.descriptor_key;
     yield this.suffix;
     yield this.convert;

@@ -130,7 +130,7 @@ export function has(cls: Function): boolean {
 /** Pass as the constructor argument to skip attrs' `__init__` (a hand-written `__init__` sets fields itself). */
 export const NO_INIT: unique symbol = Symbol("NO_INIT");
 
-function is_factory(d: unknown): d is Factory {
+function is_factory(d: Attribute["default"]): d is Factory {
   return !!d && typeof d === "object" && "__factory__" in d;
 }
 
@@ -139,7 +139,8 @@ function default_of(a: Attribute): unknown {
 }
 
 /** A generated `__init__`: sets every field and returns how many keys of `kw` it consumed. */
-type Init = (self: any, kw: Record<string, any>) => number;
+type Kw = Record<string, any>;
+type Init = (self: Kw, kw: Kw) => number;
 const INITS = new WeakMap<Function, Init | null>();
 
 /**
@@ -148,7 +149,7 @@ const INITS = new WeakMap<Function, Init | null>();
  * strict CSP).
  */
 function compile_init(cls: Function): Init | null {
-  const defs: unknown[] = [];
+  const defs: Attribute["default"][] = [];
   const body = ["let m = 0, v;"];
   for (const a of fields(cls)) {
     const name = JSON.stringify(a.name);
@@ -178,7 +179,7 @@ function compile_init(cls: Function): Init | null {
  * count shows an unexpected one (or codegen is blocked), `attrs_init_slow`
  * runs to raise attrs' error.
  */
-export function attrs_init(self: any, cls: Function, kw: Record<string, any>): void {
+export function attrs_init(self: Kw, cls: Function, kw: Kw): void {
   let init = INITS.get(cls);
   if (init === undefined) INITS.set(cls, (init = compile_init(cls)));
   let n = 0;
@@ -186,7 +187,7 @@ export function attrs_init(self: any, cls: Function, kw: Record<string, any>): v
   if (init === null || init(self, kw) !== n) attrs_init_slow(self, cls, kw);
 }
 
-function attrs_init_slow(self: any, cls: Function, kw: Record<string, any>): void {
+function attrs_init_slow(self: Kw, cls: Function, kw: Kw): void {
   const attrs = fields(cls);
   const seen = new Set<string>();
   for (const a of attrs) {

@@ -304,7 +304,7 @@ export function _ascender_ratio(ps_name: string): number {
       // fontkit. fontkit's create returns a FontCollection for .ttc files, so the
       // face is picked with `.fonts[face_index]`.
       const opened = fontkit.create(host.fs.readFileSync(str(path)));
-      font = "fonts" in opened ? at(opened.fonts, face_index) : opened;
+      font = opened.fonts ? at(opened.fonts, face_index) : opened;
     } catch (exc) {
       if (!(exc instanceof Object) || !_is_font_open_error(exc)) throw exc;
       throw Object.assign(

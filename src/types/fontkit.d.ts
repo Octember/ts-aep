@@ -57,6 +57,16 @@ declare module "fontkit" {
     readonly numGlyphs: number;
     readonly directory: { tag: string; numTables: number; tables: Record<string, TableEntry> };
     readonly variationAxes: Record<string, VariationAxis>;
+    /**
+     * Faces of a collection (`.ttc`). Absent on a single-face font. `create`
+     * returns one object for both, and callers pick `fonts[i]` for a collection.
+     */
+    readonly fonts?: Font[];
+    /**
+     * Internal Unicode cmap. Reading it throws when the font has no supported
+     * cmap subtable (symbol faces such as Wingdings).
+     */
+    readonly _cmapProcessor: { lookup(codePoint: number): number };
     /** Tables decode lazily into properties named by tag; absent when the font has no such table. */
     readonly name?: { records: Record<string, Record<string, string>> };
     readonly hhea?: { ascent: number; descent: number; lineGap: number };
@@ -68,7 +78,7 @@ declare module "fontkit" {
   }
 
   /** A `.ttc` / `.dfont` collection: `create` returns this for collection files. */
-  export interface FontCollection {
+  export interface FontCollection extends Font {
     readonly fonts: Font[];
     getFont(postscriptName: string): Font | null;
   }

@@ -23,7 +23,7 @@ import { ORIENTATION_KIND, SHAPE_KIND, type ParallelKind } from "../models/prope
 import { Shape } from "../models/properties/shape.ts";
 import { keyframe_tensions } from "./roto_bezier.ts";
 import { _euler_xyz } from "./transform.ts";
-import type { Keyframe } from "../models/properties/keyframe.ts";
+import type { Keyframe, PropertyValue } from "../models/properties/keyframe.ts";
 import type { KeyframeEase } from "../models/properties/keyframe_ease.ts";
 
 
@@ -770,7 +770,7 @@ export class _ArcSpline {
     }
     const [samples, length] = _arc_samples(curve);
     this.length = length;
-    const points: _Point2[] = samples.map(([t, s]) => [this.length * t, s] as _Point2);
+    const points: _Point2[] = samples.map(([t, s]): _Point2 => [this.length * t, s]);
     const last = points.length - 1;
     const knots: _Point2[] = [];
     _fit_cubics(
@@ -783,7 +783,7 @@ export class _ArcSpline {
       knots,
     );
     const inverse = this.length !== 0.0 ? 1.0 / this.length : 0.0;
-    this._knots = knots.slice(0, -1).map(([x, y]) => [inverse * x, y / scale] as _Point2);
+    this._knots = knots.slice(0, -1).map(([x, y]): _Point2 => [inverse * x, y / scale]);
     this._knots.push([1.0, knots[knots.length - 1][1] / scale]);
     this.length = this.length / scale;
   }
@@ -1495,7 +1495,7 @@ export function euler_to_quaternion(angles: number[]): [number, number, number, 
  * The extraction itself is `_euler_xyz`, which this feeds the quaternion's
  * rotation matrix; only the elements it needs are built.
  */
-export function quaternion_to_euler(q: [number, number, number, number]): number[] {
+export function quaternion_to_euler(q: readonly number[]): number[] {
   let [x, y, z, w] = q;
   const norm = Math.sqrt(x * x + y * y + z * z + w * w);
   if (norm > 0) {
@@ -1537,7 +1537,7 @@ export function slerp_orientation(start: number[], end: number[], progress: numb
   if (dot > 0.9995) {
     // Nearly parallel: sin(theta) underflows, and a normalized linear
     // blend is within float noise of the arc.
-    const blend = q0.map((a, i) => a + (q1[i] - a) * progress) as [number, number, number, number];
+    const blend = q0.map((a, i) => a + (q1[i] - a) * progress);
     return quaternion_to_euler(blend);
   }
   // NOTE(port): platform libm — CPython's own math.* results vary by platform libm; V8 (fdlibm) may differ in the last ulp.
@@ -1546,7 +1546,7 @@ export function slerp_orientation(start: number[], end: number[], progress: numb
   const s0 = Math.sin((1.0 - progress) * theta) / sin_theta;
   const s1 = Math.sin(progress * theta) / sin_theta;
   return quaternion_to_euler(
-    q0.map((a, i) => a * s0 + q1[i] * s1) as [number, number, number, number],
+    q0.map((a, i) => a * s0 + q1[i] * s1),
   );
 }
 
@@ -1861,19 +1861,19 @@ export function interpolate_keyframes(
   value_kind: ParallelKind | null = null,
   metric: ArcMetric = _DEFAULT_ARC_METRIC,
   is_color = false,
-): number[] | number | Shape | null {
+): PropertyValue {
   if (!keyframes?.length) return null;
 
   const n = keyframes.length;
 
   // Before first keyframe or single keyframe
   if (n === 1 || time <= keyframes[0]._layer_time) {
-    return keyframes[0]._stored_value as number[] | number | Shape | null;
+    return keyframes[0]._stored_value;
   }
 
   // After last keyframe
   if (time >= keyframes[keyframes.length - 1]._layer_time) {
-    return keyframes[keyframes.length - 1]._stored_value as number[] | number | Shape | null;
+    return keyframes[keyframes.length - 1]._stored_value;
   }
 
   // Find the segment
@@ -1893,11 +1893,11 @@ export function interpolate_keyframes(
   const t1 = kf_right._layer_time;
 
   // At exactly a keyframe time
-  if (Math.abs(time - t0) < 1e-12) return kf_left._stored_value as number[] | number | Shape | null;
-  if (Math.abs(time - t1) < 1e-12) return kf_right._stored_value as number[] | number | Shape | null;
+  if (Math.abs(time - t0) < 1e-12) return kf_left._stored_value;
+  if (Math.abs(time - t1) < 1e-12) return kf_right._stored_value;
 
-  const v0 = kf_left._stored_value as any;
-  const v1 = kf_right._stored_value as any;
+  const v0 = kf_left._stored_value;
+  const v1 = kf_right._stored_value;
   const out_type = kf_left.out_interpolation_type;
   const in_type = kf_right.in_interpolation_type;
 

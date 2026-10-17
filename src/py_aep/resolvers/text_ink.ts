@@ -75,7 +75,7 @@ export function _open_face(path: string, face_index: number): fontkit.Font {
   // NOTE(port): fontTools `TTFont(fontNumber=...)` picks a face of a .ttc;
   // fontkit exposes collection faces through `.fonts`; a plain font is its own face.
   const opened = fontkit.create(host.fs.readFileSync(path));
-  return "fonts" in opened ? at(opened.fonts, face_index) : opened;
+  return opened.fonts ? at(opened.fonts, face_index) : opened;
 }
 
 /** `(font, is_cff, outline bounds by glyph id)` for a PostScript name, cached; the bounds fill in as glyphs are measured. */

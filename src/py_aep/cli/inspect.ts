@@ -247,26 +247,35 @@ export function _dump_chunk(path: Path, chunk_path: string): number {
 // codes are identical; only help/usage/error text on stdout/stderr differs.
 export const NEGATIVE_NUMBER = /^-\d+$|^-\d*\.\d+$/;
 
+/** A parsed-argument value: what an argument converter returns or defaults to
+ * (`aep-inspect` arguments parse to a string, an int, a boolean or a Path). */
+export type ArgValue = string | number | boolean | null | Path;
+
 export type ArgSpec = {
   dest: string;
   flag: string | null;
   positional: boolean;
   store_true: boolean;
-  type_: ((s: string) => unknown) | null;
-  default_: unknown;
+  type_: ((s: string) => ArgValue) | null;
+  default_: ArgValue;
   metavar: string | null;
   help: string;
 };
 
 export type ArgumentOptions = {
   action?: string;
-  type?: (s: string) => unknown;
-  default?: unknown;
+  type?: (s: string) => ArgValue;
+  default?: ArgValue;
   metavar?: string;
   help?: string;
 };
 
-export class ArgumentParser {
+/** argparse's `Namespace`: dest name to parsed value, shaped dynamically by
+ * the declared arguments. Genuinely dynamic (pass 4: `any` only behind a
+ * named alias); the parser's type argument types the `parse_args` return. */
+export type Namespace = any;
+
+export class ArgumentParser<T = Namespace> {
   private readonly prog: string;
   private readonly description: string;
   private readonly epilog: string;
@@ -319,8 +328,8 @@ export class ArgumentParser {
     return lines.join("\n") + this.epilog.replaceAll("%(prog)s", this.prog);
   }
 
-  parse_args(argv: string[] = process.argv.slice(2)): Record<string, any> {
-    const out: Record<string, any> = {};
+  parse_args(argv: string[] = process.argv.slice(2)): T {
+    const out: Namespace = {};
     for (const s of this.specs) out[s.dest] = s.default_;
     const rest: string[] = [];
     for (let i = 0; i < argv.length; i++) {
@@ -382,7 +391,20 @@ export const argparse = { ArgumentParser, RawDescriptionHelpFormatter: "RawDescr
 
 /** CLI entry point for aep-inspect command. */
 export function main(): number {
-  const parser = new argparse.ArgumentParser({
+  // The argparse Namespace of this subcommand (one type per subcommand,
+  // declared where its arguments are): `file` is the positional the
+  // `(s: string) => new Path(s)` converter produces; `--depth`/`--item` parse
+  // via `int` (defaults -1/null), `--dump` via `str` (default null), and
+  // `--tree`/`--list` are store_true flags (default false).
+  type InspectArgs = {
+    file: Path;
+    tree: boolean;
+    depth: number;
+    item: number | null;
+    list: boolean;
+    dump: string | null;
+  };
+  const parser = new argparse.ArgumentParser<InspectArgs>({
     prog: "aep-inspect",
     description: "Inspect After Effects project file (.aep) structure.",
     formatter_class: argparse.RawDescriptionHelpFormatter,

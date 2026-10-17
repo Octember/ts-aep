@@ -138,7 +138,7 @@ export const NAME_KEYS = new Map<number, string>([
  */
 export function _name(font: fontkit.Font, ...ids: number[]): string | null {
   // `table = font.get("name"); if table is None: return None`
-  let table: unknown;
+  let table: fontkit.Font["name"] | null;
   try {
     table = font.name;
   } catch (e) {
@@ -203,7 +203,7 @@ export function* _iter_faces(path: Path): Generator<[number, fontkit.Font]> {
   try {
     const opened = fontkit.create(
       host.fs.readFileSync(path.toString()),
-    ) as fontkit.Font & { fonts?: fontkit.Font[] };
+    );
     if (path.suffix.toLowerCase() === ".ttc") {
       fonts = [...opened.fonts!];
     } else {
@@ -337,7 +337,7 @@ export function _index_file(
       setdefault(
         setdefault(idx, family.toLowerCase(), new Map<string, [Path, number]>()),
         subfamily.toLowerCase(),
-        [path, face] as [Path, number],
+        [path, face],
       );
     }
   }
@@ -427,7 +427,7 @@ export function resolve_font(
   }
   // No requested family is installed: fall back to the generic chain (the
   // requested generic, or sans-serif for an unknown family).
-  for (const candidate of (_GENERIC_FALLBACKS.get(generic || "sans-serif") ?? [] as readonly string[])) {
+  for (const candidate of (_GENERIC_FALLBACKS.get(generic || "sans-serif") ?? ([] satisfies readonly string[]))) {
     const styles = _index.get(candidate) ?? null;
     if (styles?.size! > 0) {
       return _pick(styles!, bold, italic);

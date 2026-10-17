@@ -53,9 +53,15 @@ export function* range(a: number, b?: number, step = 1): Generator<number> {
 
 /** `zip(a, b, ...)` (shortest; `strict` raises on length mismatch). */
 export function zip<T extends unknown[][]>(...arrays: T): { [K in keyof T]: T[K][number] }[] {
-  const n = Math.min(...arrays.map((a) => a.length));
+  let n = Infinity;
+  for (const a of arrays) n = Math.min(n, a.length);
+  if (n === Infinity) n = 0;
   const out: any[] = [];
-  for (let i = 0; i < n; i++) out.push(arrays.map((a) => a[i]));
+  for (let i = 0; i < n; i++) {
+    const row = [];
+    for (const a of arrays) row.push(a[i]);
+    out.push(row);
+  }
   return out;
 }
 
@@ -166,7 +172,8 @@ export function getitem<K, V>(d: Map<K, V>, k: K): V {
 
 /** `d.get(k, default)` on a Map (None, not undefined, when absent). */
 export function dict_get<K, V, D = null>(d: Map<K, V>, k: K, dflt: D = null as D): V | D {
-  return d.has(k) ? d.get(k)! : dflt;
+  const v = d.get(k);
+  return v !== undefined || d.has(k) ? v! : dflt;
 }
 
 /** `d.setdefault(k, v)` */
@@ -491,7 +498,13 @@ export function copy<T>(x: T): T {
 export function lru_cache<A extends unknown[], R>(fn: (...args: A) => R): ((...args: A) => R) & { cache_clear(): void } {
   const roots = new Map<unknown, unknown>();
   const RESULT = Symbol("result");
+  const single = new Map<A[0], R>();
   const wrapped = (...args: A): R => {
+    if (args.length === 1) {
+      let r = single.get(args[0]);
+      if (r === undefined && !single.has(args[0])) single.set(args[0], (r = fn(...args)));
+      return r!;
+    }
     let node: Map<any, any> = roots;
     for (const a of args) {
       let next = node.get(a);
@@ -501,5 +514,10 @@ export function lru_cache<A extends unknown[], R>(fn: (...args: A) => R): ((...a
     if (!node.has(RESULT)) node.set(RESULT, fn(...args));
     return node.get(RESULT);
   };
-  return Object.assign(wrapped, { cache_clear: () => roots.clear() });
+  return Object.assign(wrapped, {
+    cache_clear: () => {
+      roots.clear();
+      single.clear();
+    },
+  });
 }

@@ -103,9 +103,7 @@ export function _load_font(path: Path, font_number = 0): FontkitFont {
   let font: FontkitFont | null = _font_cache.get(key) ?? null;
   if (font == null) {
     // NOTE(port): lazy=True only defers table parsing (no result difference); a .ttc resolves its face through `.fonts`.
-    const opened = fontkit.create(host.fs.readFileSync(fspath(path)) as never) as unknown as FontkitFont & {
-      fonts?: FontkitFont[];
-    };
+    const opened = fontkit.create(host.fs.readFileSync(fspath(path)));
     font = opened.fonts ? opened.fonts[font_number] : opened;
     _font_cache.set(key, font);
   }

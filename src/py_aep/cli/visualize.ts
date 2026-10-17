@@ -36,6 +36,7 @@ import {
   str,
   json_dumps,
   pyfloat,
+  type PyFloat,
 } from "../../pyrt/index.ts";
 
 import type { Application } from "../models/application.ts";
@@ -47,10 +48,10 @@ import type { OutputModule } from "../models/renderqueue/output_module.ts";
 import type { RenderQueueItem } from "../models/renderqueue/render_queue_item.ts";
 
 /** `TextIO` as used by the formatters: anything with `write(str)`. */
-export type TextIO = { write(s: string): unknown };
+export type TextIO = { write(s: string): void };
 
 /** A node attribute value: scalars, floats or small arrays; `null` entries are skipped when printing. */
-export type AttrValue = unknown;
+export type AttrValue = string | number | boolean | null | PyFloat | readonly number[];
 
 /** A node of the uniform tree the formatters consume (a `Map` of attributes plus children). */
 export type Node = {
@@ -577,15 +578,15 @@ export function parse_args(argv: string[]): Args {
   const args: Args = { aep_file: "", format: "text", depth: null, no_properties: false, output: null };
   const positionals: string[] = [];
 
-  const apply = (long: string, value: string | null): void => {
+  const apply = (long: string, value: string): void => {
     if (long === "--format") {
-      if (!choices.includes(value as string)) {
+      if (!choices.includes(value)) {
         fail(`argument --format/-f: invalid choice: ${repr(value)} (choose from ${choices.map((c) => repr(c)).join(", ")})`);
       }
-      args.format = value as string;
+      args.format = value;
     } else if (long === "--depth") {
       try {
-        args.depth = int(value as string);
+        args.depth = int(value);
       } catch (e) {
         fail(`argument --depth/-d: invalid int value: ${repr(value)}`);
       }
