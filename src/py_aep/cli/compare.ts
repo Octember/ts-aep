@@ -47,7 +47,7 @@ import {
 } from "../../pyrt/index.ts";
 
 // NOTE(port): print(*args) with default sep=" " and end="\n"; console.log of one pre-joined string appends the same newline.
-export function print(...args: unknown[]): void {
+export function print(...args: string[]): void {
   console.log(args.map((a) => str(a)).join(" "));
 }
 
@@ -217,13 +217,22 @@ export function _floats_close(a: number, b_: number): boolean {
 }
 
 /**
+ * A decoded leaf chunk read by its `chunk_type` at runtime (Python duck
+ * typing): `_chunk_floats` / `_with_floats` reach the `cdat` `values`, `shph`
+ * bounds and `ldat` `items` fields under chunk-type string guards, and a
+ * `Utf8` chunk's `.value` likewise. Genuinely dynamic (pass 4: `any` only
+ * behind a named alias), so the duck-typed fields type-check at their reads.
+ */
+export type FloatChunk = any;
+
+/**
  * Return a chunk's coordinate float fields, or None if it has none.
  *
  * Covers the float-bearing leaf chunks whose values AE and py_aep may
  * encode with slightly different rounding: `cdat` (doubles), `shph`
  * (bounding-box f4), and `ldat` shape-point lists (f4 x/y).
  */
-export function _chunk_floats(chunk: any): number[] | null {
+export function _chunk_floats(chunk: FloatChunk): number[] | null {
   const ct = getattr(chunk, "chunk_type", null);
   if (ct === "cdat") {
     const values = [...chunk.values];
@@ -242,7 +251,7 @@ export function _chunk_floats(chunk: any): number[] | null {
 }
 
 /** Return a copy of `chunk` with its coordinate floats replaced. */
-export function _with_floats(chunk: any, floats: number[]): any {
+export function _with_floats(chunk: FloatChunk, floats: number[]): FloatChunk {
   const clone = deepcopy(chunk);
   const ct = clone.chunk_type;
   if (ct === "cdat") {
@@ -250,7 +259,7 @@ export function _with_floats(chunk: any, floats: number[]): any {
   } else if (ct === "shph") {
     [clone.top_left_x, clone.top_left_y, clone.bottom_right_x, clone.bottom_right_y] = floats;
   } else if (ct === "ldat") {
-    for (const [idx, item] of (clone.items as { x: number; y: number }[]).entries()) {
+    for (const [idx, item] of clone.items.entries()) {
       item.x = floats[2 * idx];
       item.y = floats[2 * idx + 1];
     }
@@ -302,7 +311,7 @@ export function _gradient_xml_only_float_diff(s1: string | String, s2: string | 
  * tolerance (so the byte difference is float-precision noise, not a real
  * change). Non-float bytes must still match exactly.
  */
-export function _only_float_diff(c1: any, c2: any): boolean {
+export function _only_float_diff(c1: FloatChunk, c2: FloatChunk): boolean {
   const ct = getattr(c1, "chunk_type", null);
   if (ct !== getattr(c2, "chunk_type", null)) return false;
   if (ct === "Utf8") {
@@ -325,7 +334,7 @@ export function _only_float_diff(c1: any, c2: any): boolean {
  * that contains it (so the multi-file diff is float-precision noise). Files
  * byte-identical to the reference do not count as a difference.
  */
-export function _multi_only_float_diff(all_typed: Map<string, any>[], present: number[], path: string): boolean {
+export function _multi_only_float_diff(all_typed: Map<string, Chunk>[], present: number[], path: string): boolean {
   const ref = all_typed[present[0]].get(path) ?? null;
   if (ref == null) return false;
   const ref_bytes = ref.tobytes();
@@ -360,8 +369,8 @@ export const parse_aep_chunks = extract_leaf_chunks;
 export function _compare_chunk_dicts(
   data1: Map<string, Uint8Array>,
   data2: Map<string, Uint8Array>,
-  typed1: Map<string, any> | null = null,
-  typed2: Map<string, any> | null = null,
+  typed1: Map<string, Chunk> | null = null,
+  typed2: Map<string, Chunk> | null = null,
   exact = false,
 ): [ChunkDifference[], string[], string[], string[]] {
   const paths1 = new Set(data1.keys());
@@ -780,7 +789,7 @@ export function to_json_output(
   only_in_file1: string[],
   only_in_file2: string[],
   suppressed = 0,
-): Record<string, any> {
+) {
   return {
     file1: str(file1),
     file2: str(file2),

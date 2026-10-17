@@ -36,8 +36,11 @@ import {
   PureWindowsPath,
 } from "../../pyrt/index.ts";
 
-/** A Python `dict`. Both the JSON side and the to_dict side are Maps (rulebook §3). */
-export type Dict = Map<any, any>;
+/** A Python `dict`. Both the JSON side and the to_dict side are Maps (rulebook §3).
+ * Keys are field names (strings) — maps keyed by item ids (numbers) are typed
+ * `Map<number, …>` at their declarations. Values are genuinely dynamic
+ * (parsed JSON/model trees: pass 4, `any` only behind a named alias). */
+export type Dict = Map<string, any>;
 
 // Fields to skip to avoid circular references.
 // Back-references: containing_comp, parent_folder, parent (OutputModule),
@@ -121,7 +124,7 @@ export function _property_accessors(cls: Function): string[] {
  *
  * Results are cached per type since field names are class-level metadata.
  */
-export function _get_field_names(obj: any): readonly string[] | null {
+export function _get_field_names(obj: ToDictValue): readonly string[] | null {
   const cls = obj.constructor;
   if (_field_names_cache.has(cls)) return _field_names_cache.get(cls)!;
 
@@ -141,7 +144,7 @@ export function _get_field_names(obj: any): readonly string[] | null {
     // ChunkField (binary-backed) and CosField (COS-dict-backed)
     // descriptors both expose a backing-store attribute name.
     const is_descriptor = "chunk_attr" in attr || "dict_attr" in attr;
-    if (is_descriptor && typeof (attr as { __get__?: unknown }).__get__ === "function") names.add(name);
+    if (is_descriptor && typeof attr.__get__ === "function") names.add(name);
   }
   if (names.size > 0) {
     const result = sorted(names);
@@ -184,8 +187,16 @@ export function _get_property_names(cls: Function): readonly string[] {
 
 export const _PRIMITIVE_TYPES: readonly string[] = ["number", "bigint", "string", "boolean"];
 
+/**
+ * Any value `to_dict` serializes: a primitive, a `PyFloat`, a model instance,
+ * a chunk, a Map/list tree — the serializer dynamically shapes its output
+ * after the object graph it walks (genuinely dynamic: pass 4, `any` only
+ * behind a named alias).
+ */
+export type ToDictValue = any;
+
 /** Convert dataclass/enum to dict recursively, skipping circular reference fields. */
-export function to_dict(obj: any): any {
+export function to_dict(obj: ToDictValue): ToDictValue {
   return _to_dict(obj, new Map());
 }
 
@@ -204,7 +215,7 @@ export function to_dict(obj: any): any {
  * `result` before recursing also means a reference cycle yields the shared dict
  * instead of recursing forever.
  */
-export function _to_dict(obj: any, memo: Map<any, [any, any]>): any {
+export function _to_dict(obj: ToDictValue, memo: Map<object, [object, ToDictValue]>): ToDictValue {
   // Fast path for primitive types (majority of recursive calls).
   // Enum members are plain values in the TS port (pyrt enum.ts), so the
   // `isinstance(obj, Enum)` branch returns `obj.value` through this path.
@@ -236,7 +247,7 @@ export function _to_dict(obj: any, memo: Map<any, [any, any]>): any {
     memo.set(obj, [obj, result]);
     for (const name of field_names) {
       if (SKIP_FIELDS.has(name)) continue;
-      let value: any;
+      let value: ToDictValue;
       try {
         value = obj[name];
       } catch (e) {
@@ -251,7 +262,7 @@ export function _to_dict(obj: any, memo: Map<any, [any, any]>): any {
     // Include @property attributes (non-private, non-skipped)
     for (const name of _get_property_names(obj.constructor)) {
       if (result.has(name)) continue;
-      let value: any;
+      let value: ToDictValue;
       try {
         value = obj[name];
       } catch (e) {
@@ -294,12 +305,12 @@ export function _normalize_keys(d: Dict): Dict {
  * @param tolerance - Float comparison tolerance.
  * @returns True if values match.
  */
-export function compare_values(expected: any, parsed: any, tolerance = 0.001): boolean {
+export function compare_values(expected: ToDictValue, parsed: ToDictValue, tolerance = 0.001): boolean {
   if (expected == null && parsed == null) return true;
   if (expected == null || parsed == null) return false;
   if (typeof expected === "boolean" && typeof parsed === "boolean") return expected === parsed;
   // `isinstance(x, (int, float))` also holds for bool (and a bigint int).
-  const is_num = (x: unknown): boolean => is_real(x) || typeof x === "boolean" || typeof x === "bigint";
+  const is_num = (x: ToDictValue): boolean => is_real(x) || typeof x === "boolean" || typeof x === "bigint";
   if (is_num(expected) && is_num(parsed)) {
     return isclose(Number(expected), Number(parsed), tolerance, tolerance);
   }
@@ -332,9 +343,9 @@ export class ValidationResult {
   }
 
   /** Add a difference. */
-  add_diff(path: string, expected: unknown, parsed: unknown, category = "other"): void {
+  add_diff(path: string, expected: ToDictValue, parsed: ToDictValue, category = "other"): void {
     this.differences.push(`${path}: expected ${repr(expected)}, got ${repr(parsed)}`);
-    this.categories.set(category, ((this.categories.get(category) ?? 0) as number) + 1);
+    this.categories.set(category, (this.categories.get(category) ?? 0) + 1);
   }
 
   /** Add a warning. */
@@ -476,7 +487,7 @@ export function _compare_children_by_match_name(
       continue;
     }
 
-    const idx = (match_name_idx.get(exp_match_name) ?? 0) as number;
+    const idx = (match_name_idx.get(exp_match_name) ?? 0);
     let parsed_prop: Dict;
     if (idx < candidates.length) {
       parsed_prop = candidates![idx];
@@ -634,7 +645,7 @@ export function compare_layer(
   // Compare lightSource (Layer reference -> compare by layer index)
   if (expected_layer.has("lightSource")) {
     const exp_ls = getitem(expected_layer, "lightSource");
-    const parsed_ls_id = dict_get(parsed_layer, "_light_source_id", 0) as number;
+    const parsed_ls_id = dict_get(parsed_layer, "_light_source_id", 0);
     if (exp_ls == null) {
       if (parsed_ls_id !== 0) {
         result.add_diff(`${path}.lightSource`, null, parsed_ls_id, "layers");
@@ -744,8 +755,8 @@ export function compare_property(
   }
 
   // Compare individual keyframes
-  const exp_keyframes = dict_get(expected_prop, "keyframes", []) as Dict[];
-  const parsed_keyframes = dict_get(parsed_prop, "keyframes", []) as Dict[];
+  const exp_keyframes = dict_get(expected_prop, "keyframes", []);
+  const parsed_keyframes = dict_get(parsed_prop, "keyframes", []);
   for (const [ki, [exp_kf, parsed_kf]] of zip(exp_keyframes, parsed_keyframes).entries()) {
     compare_keyframe(exp_kf, parsed_kf, `${path}.keyframes[${ki}]`, result);
   }
@@ -1213,15 +1224,15 @@ export function compare_comp_item(
   _compare_fields(expected_item, parsed_comp, comp_mappings, path, "composition", result, "CompItem");
 
   // Compare layer counts
-  const exp_layers = dict_get(expected_item, "layers", []) as Dict[];
-  const parsed_layers = dict_get(parsed_comp, "layers", []) as Dict[];
+  const exp_layers = dict_get(expected_item, "layers", []);
+  const parsed_layers = dict_get(parsed_comp, "layers", []);
   if (exp_layers.length !== parsed_layers.length) {
     result.add_diff(`${path}.numLayers`, exp_layers.length, parsed_layers.length, "composition");
   }
 
   // Compare each layer
-  const comp_duration = dict_get(expected_item, "duration", 60.0) as number;
-  const frame_rate = dict_get(expected_item, "frameRate", 24.0) as number;
+  const comp_duration = dict_get(expected_item, "duration", 60.0);
+  const frame_rate = dict_get(expected_item, "frameRate", 24.0);
   for (const [i, [exp_layer, parsed_layer]] of zip(exp_layers, parsed_layers).entries()) {
     compare_layer(exp_layer, parsed_layer, `${path}.layers[${i}]`, comp_duration, frame_rate, result);
   }
@@ -1231,7 +1242,7 @@ export function compare_comp_item(
     dict_get(expected_item, "markers", []),
     dict_get(parsed_comp, "markers", []),
     path,
-    dict_get(expected_item, "frameRate", 24.0) as number,
+    dict_get(expected_item, "frameRate", 24.0),
     result,
   );
 
@@ -1244,7 +1255,7 @@ export function compare_comp_item(
 
 export function compare_folder_hierarchy(
   expected_items: Dict[],
-  parsed_items: Dict,
+  parsed_items: Map<number, Dict>,
   result: ValidationResult,
 ): void {
   /** Compare folder hierarchy. */
@@ -1355,8 +1366,8 @@ export function compare_footage_item(
     result.track_field("FootageSource", "missing_footage_path", exp_source.has("missingFootagePath"));
     // FileSource-specific fields
     if (exp_source.has("filePath")) {
-      const exp_file = getitem(exp_source, "filePath") as string;
-      const parsed_file = dict_get(parsed_source, "file", "") as string;
+      const exp_file: ToDictValue = getitem(exp_source, "filePath");
+      const parsed_file: ToDictValue = dict_get(parsed_source, "file", "");
       // Compare only the filename portion. PureWindowsPath splits on
       // both / and \ on every host OS (AE stores Windows-style paths,
       // and a parsed sequence frame path mixes the two); plain Path
@@ -1481,8 +1492,8 @@ export function compare_render_queue(
   verbose = false,
 ): void {
   /** Compare render queue items. */
-  const expected_items = dict_get(expected_rq, "items", []) as Dict[];
-  const parsed_items = dict_get(parsed_rq, "items", []) as Dict[];
+  const expected_items: Dict[] = dict_get(expected_rq, "items", []);
+  const parsed_items: Dict[] = dict_get(parsed_rq, "items", []);
 
   if (expected_items.length !== parsed_items.length) {
     result.add_diff("RenderQueue.numItems", expected_items.length, parsed_items.length, "renderqueue");
@@ -1524,8 +1535,8 @@ export function compare_render_queue(
     }
 
     // Compare output modules
-    const exp_oms = dict_get(exp_item, "outputModules", []) as Dict[];
-    const parsed_oms = dict_get(parsed_item, "output_modules", []) as Dict[];
+    const exp_oms: Dict[] = dict_get(exp_item, "outputModules", []);
+    const parsed_oms: Dict[] = dict_get(parsed_item, "output_modules", []);
 
     if (exp_oms.length !== parsed_oms.length) {
       result.add_diff(`${path}.numOutputModules`, exp_oms.length, parsed_oms.length, "renderqueue");
@@ -1551,7 +1562,7 @@ export function compare_render_queue(
       // Compare output module file (path comparison)
       result.track_field("OutputModule", "file", exp_om.has("file"));
       if (exp_om.has("file")) {
-        const exp_file = getitem(exp_om, "file") as string;
+        const exp_file = getitem(exp_om, "file");
         const parsed_file = dict_get(parsed_om, "file", "");
         if (exp_file && py_bool(parsed_file)) {
           // See the footage-source note: PureWindowsPath keeps
@@ -1594,7 +1605,7 @@ export function compare_viewer(
   };
   _compare_fields(expected_viewer, parsed_viewer, viewer_mappings, "Viewer", "viewer", result, "Viewer");
 
-  const exp_views = dict_get(expected_viewer, "views", []) as Dict[];
+  const exp_views: Dict[] = dict_get(expected_viewer, "views", []);
   const parsed_views: Dict[] = dict_get(parsed_viewer, "views", []);
   if (exp_views.length !== parsed_views.length) {
     result.add_diff("Viewer.views.length", exp_views.length, parsed_views.length, "viewer");
@@ -1603,8 +1614,8 @@ export function compare_viewer(
   for (const [i, [exp_view, parsed_view]] of zip(exp_views, parsed_views).entries()) {
     const path = `Viewer.views[${i}]`;
 
-    const exp_opts = dict_get(exp_view, "options", new Map()) as Dict;
-    const parsed_opts = dict_get(parsed_view, "options", new Map()) as Dict;
+    const exp_opts = dict_get(exp_view, "options", new Map());
+    const parsed_opts = dict_get(parsed_view, "options", new Map());
     const opts_path = `${path}.options`;
     const opts_mappings: Record<string, string> = {
       channels: "channels",
@@ -1653,12 +1664,12 @@ export function validate_aep(
   compare_project_level(expected, parsed, result);
 
   // Get expected items
-  const expected_items = dict_get(expected, "items", []);
+  const expected_items: Dict[] = dict_get(expected, "items", []);
   const comps = expected_items.filter((i: Dict) => (i.get("itemType") ?? null) === "CompItem");
 
   // Compare compositions
   if (verbose) console.log("\n=== Comparing Compositions ===");
-  const parsed_by_id = new Map<any, any>(project.compositions.map((comp: any) => [comp.id, to_dict(comp)]));
+  const parsed_by_id = new Map<number, ToDictValue>(project.compositions.map((comp) => [comp.id, to_dict(comp)]));
 
   for (const exp_item of comps) {
     const item_id = getitem(exp_item, "id");
@@ -1691,8 +1702,8 @@ export function validate_aep(
   // Compare footage items
   if (verbose) console.log("\n=== Comparing Footage Items ===");
   const expected_footage = expected_items.filter((i: Dict) => (i.get("itemType") ?? null) === "FootageItem");
-  const parsed_items_dict: Dict = dict_get(parsed, "items", new Map());
-  const parsed_footage_by_id = new Map<unknown, Dict>();
+  const parsed_items_dict: Map<number, Dict> = dict_get(parsed, "items", new Map());
+  const parsed_footage_by_id = new Map<number, Dict>();
   for (const [item_id, item] of parsed_items_dict) {
     if (dict_get(item, "type_name") === "Footage") parsed_footage_by_id.set(item_id, item);
   }
@@ -1757,7 +1768,7 @@ export function print_results(
   let filtered_diffs = result.differences;
   if (category_filter) {
     // Filter by category prefix
-    const needle = (category_filter as string).toLowerCase();
+    const needle = category_filter.toLowerCase();
     filtered_diffs = result.differences.filter((d) => d.toLowerCase().includes(needle));
   }
 
