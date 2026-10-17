@@ -17,8 +17,6 @@ import { _USE_VALUE, PropSpec } from "../../synthesis/property.ts";
 import { ChunkField } from "../descriptors.ts";
 import { TextDocument } from "../text/text_document.ts";
 import { _validate_number, validate_bool, validate_enum, validate_f8, validate_name, validate_number, validate_sequence, validate_text } from "../validators.ts";
-import type { AVItem } from "../items/av_item.ts";
-import type { FootageItem } from "../items/footage.ts";
 import type { FolderItem } from "../items/folder.ts";
 import type { CompItem } from "../items/composition.ts";
 import type { AVLayer } from "../layers/av_layer.ts";
@@ -37,10 +35,10 @@ import { type MaskPropertyGroup } from "./mask_property_group.ts";
 import { deferred, deepcopy, dict_get, getitem, isclose, py_bool, py_eq, sorted, warn, int, round, floordiv, TypeError_, ValueError, KeyError, IndexError, AttributeError, NotImplementedError, py_assert, repr, hasattr, getattr, min, max, range, zip, len, float, lshift, rshift, and, or, b, descriptor, list_mul, type_name } from "../../../pyrt/index.ts";
 
 const _property_group = deferred<typeof import("./property_group.ts")>("py_aep/models/properties/property_group");
-const _av_item = deferred<typeof import("../items/av_item.ts")>("py_aep/models/items/av_item");
-const _footage = deferred<typeof import("../items/footage.ts")>("py_aep/models/items/footage");
+import { AVItem } from "../items/av_item.ts";
+import { FootageItem } from "../items/footage.ts";
+import { resolve_essential_property_controller, resolve_essential_property_source } from "../../resolvers/essential_properties.ts";
 const _folder = deferred<typeof import("../items/folder.ts")>("py_aep/models/items/folder");
-const _essential_properties = deferred<typeof import("../../resolvers/essential_properties.ts")>("py_aep/resolvers/essential_properties");
 
 export const logger = {
   debug(_m: string) {},
@@ -2783,7 +2781,7 @@ export class Property extends PropertyBase {
         "This property does not support media replacement " + "(can_set_alternate_source is False).",
       );
     }
-    if (!(source instanceof _av_item().AVItem)) {
+    if (!(source instanceof AVItem)) {
       throw new TypeError_(`alternate source must be an AVItem, not ${type_name(source)}`);
     }
     if (this._composition == null || !this._composition._project.items.has(source.id)) {
@@ -2797,7 +2795,7 @@ export class Property extends PropertyBase {
           "alternate source (is_media_replacement_compatible is False).",
       );
     }
-    if (source instanceof _footage().FootageItem) {
+    if (source instanceof FootageItem) {
       this._blsi.value = this._build_replacement_wrapper(source).id;
     } else {
       this._blsi.value = source.id;
@@ -2852,7 +2850,7 @@ export class Property extends PropertyBase {
    * source-property path by match name.
    */
   get essential_property_source(): Property | PropertyGroup | AVLayer | null {
-    return _essential_properties().resolve_essential_property_source(this);
+    return resolve_essential_property_source(this);
   }
 
   /** `True` if the property is the Menu property of a Dropdown Menu Control effect. */
@@ -4530,7 +4528,7 @@ export class _EssentialOverrideProperty extends Property {
   _override_controller_name(): string | null {
     const cached = this._ov_ctrl_name !== undefined ? this._ov_ctrl_name : _UNSET;
     if (cached !== _UNSET) return cached as string | null;
-    const controller = _essential_properties().resolve_essential_property_controller(this);
+    const controller = resolve_essential_property_controller(this);
     const name = controller != null ? controller.name : null;
     this._ov_ctrl_name = name;
     return name;

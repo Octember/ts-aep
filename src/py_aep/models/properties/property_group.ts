@@ -471,7 +471,7 @@ export class PropertyGroup extends PropertyBase {
     // Insert into parent's chunk tree (before parent's group end).
     let _tdmn: TdmnChunk | null = null;
     if (parent_property != null) {
-      const parent_tdgp = parent_property?._tdgp ?? null;
+      const parent_tdgp = getattr(parent_property, "_tdgp", null);
       if (parent_tdgp != null) {
         _tdmn = new TdmnChunk({
           value: match_name,

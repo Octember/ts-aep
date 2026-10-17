@@ -35,11 +35,15 @@ function run(): { edits: number; kept: Map<string, number> } {
 
   // Types whose Python truth is not "is not None": anything with __len__ / __bool__, PyFloat, containers.
   const truthProbes: ts.Type[] = [];
+  // Proxied classes: a plain read of a missing name throws, where getattr's `in` check returns the default.
+  const proxyProbes: ts.Type[] = [];
   for (const f of program.getSourceFiles().filter((f) => f.fileName.startsWith(path.join(ROOT, "src/")))) {
     const visit = (n: ts.Node) => {
       if (ts.isClassDeclaration(n) && n.name) {
-        const special = n.members.some((m) => m.name && ts.isIdentifier(m.name) && ["__len__", "__bool__"].includes(m.name.text));
-        if (special || n.name.text === "PyFloat") truthProbes.push(checker.getDeclaredTypeOfSymbol(checker.getSymbolAtLocation(n.name)!));
+        const has = (name: string) => n.members.some((m) => m.name && ts.isIdentifier(m.name) && m.name.text === name);
+        const declared = checker.getDeclaredTypeOfSymbol(checker.getSymbolAtLocation(n.name)!);
+        if (has("__len__") || has("__bool__") || n.name.text === "PyFloat") truthProbes.push(declared);
+        if (has("__getattr__")) proxyProbes.push(declared);
       }
       ts.forEachChild(n, visit);
     };
@@ -486,6 +490,8 @@ function run(): { edits: number; kept: Map<string, number> } {
         if (t.flags & (ts.TypeFlags.Any | ts.TypeFlags.Unknown)) return keep("getattr:untyped"), null;
         const prop = checker.getPropertyOfType(checker.getNonNullableType(t), a[1].text);
         if (!prop) return keep("getattr:duck-typed"), null;
+        const recv = checker.getApparentType(checker.getNonNullableType(t));
+        if (proxyProbes.some((p) => isAssignable(p, recv) || isAssignable(recv, p))) return keep("getattr:proxied"), null;
         const access = obj.kind === ts.SyntaxKind.ThisKeyword || nonNull(obj) ? `${atom(obj)}.${a[1].text}` : `${atom(obj)}?.${a[1].text}`;
         if (d.kind === ts.SyntaxKind.NullKeyword) {
           const p = call.parent;

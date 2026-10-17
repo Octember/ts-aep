@@ -44,10 +44,10 @@ import type { PropertyGroup } from "../models/properties/property_group.ts";
 import { deferred, dict_get, py_bool, py_eq, float, int, json_dumps } from "../../pyrt/index.ts";
 
 const _composition = deferred<typeof import("../models/items/composition.ts")>("py_aep/models/items/composition");
-const _footage = deferred<typeof import("../models/items/footage.ts")>("py_aep/models/items/footage");
+import { FootageItem } from "../models/items/footage.ts";
+import { SolidSource } from "../models/sources/solid.ts";
+import { TextDocument } from "../models/text/text_document.ts";
 const _layer = deferred<typeof import("../models/layers/layer.ts")>("py_aep/models/layers/layer");
-const _solid = deferred<typeof import("../models/sources/solid.ts")>("py_aep/models/sources/solid");
-const _text_document = deferred<typeof import("../models/text/text_document.ts")>("py_aep/models/text/text_document");
 
 // AE stores this in a CPrp path node's index to mean "match by name".
 export const _BY_NAME_INDEX = 0xffffffff;
@@ -306,7 +306,7 @@ export function font_caps_json(prop: Property): string {
   const value: any = prop.value;
   let font: any = "";
   let size: number = 0;
-  if (value instanceof _text_document().TextDocument) {
+  if (value instanceof TextDocument) {
     font = value.font || "";
     const fs = value.font_size;
     if (fs != null) size = Number.isInteger(float(fs)) ? int(fs) : fs;
@@ -353,8 +353,8 @@ export function can_add_layer(layer: AVLayer, comp: CompItem): boolean {
   if (layer.containing_comp !== comp) return false;
   if (!layer.has_video || layer.adjustment_layer || layer.null_layer) return false;
   const source: any = layer.source;
-  if (source instanceof _footage().FootageItem) {
-    if (source.main_source instanceof _solid().SolidSource) return false;
+  if (source instanceof FootageItem) {
+    if (source.main_source instanceof SolidSource) return false;
   } else if (!(source instanceof _composition().CompItem)) {
     return false;
   }

@@ -118,7 +118,7 @@ export class ParametricMeshLayer extends AVLayer {
   /** Update the parametric mesh options from the layer's current state. */
   _update_options(): void {
     const options_cls = OPTION_TYPES.get(this._ldta.light_and_mesh_type) ?? null;
-    const old_options = this.parametric_mesh_options ?? null;
+    const old_options = getattr(this, "parametric_mesh_options", null);
     if (_type_of(old_options) !== options_cls) {
       try {
         delete (this as any).parametric_mesh_options;
@@ -131,7 +131,7 @@ export class ParametricMeshLayer extends AVLayer {
     }
 
     const bevel_cls = BEVEL_OPTION_TYPES.get(this._ldta.light_and_mesh_type) ?? null;
-    const old_bevel = this.parametric_bevel_options ?? null;
+    const old_bevel = getattr(this, "parametric_bevel_options", null);
     if (_type_of(old_bevel) !== bevel_cls) {
       try {
         delete (this as any).parametric_bevel_options;

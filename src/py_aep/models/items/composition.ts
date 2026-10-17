@@ -64,9 +64,9 @@ import type { Project } from "../project.ts";
 import type { MarkerValue } from "../properties/marker.ts";
 
 const _item = deferred<typeof import("../../parsers/item.ts")>("py_aep/parsers/item");
-const _layer = deferred<typeof import("../../parsers/layer.ts")>("py_aep/parsers/layer");
+import { parse_layer } from "../../parsers/layer.ts";
+import { renderer_options_for } from "./renderer_options/index.ts";
 const _composition = deferred<typeof import("../../parsers/composition.ts")>("py_aep/parsers/composition");
-const _renderer_options = deferred<typeof import("./renderer_options/index.ts")>("py_aep/models/items/renderer_options/index");
 
 // The binary prin chunk stores internal plugin match_names (e.g. ADBE Escher)
 // but ExtendScript exposes different module names (e.g. ADBE Advanced 3d).
@@ -1311,7 +1311,7 @@ export class CompItem extends AVItem {
 
     const parsed_layers: Layer[] = [];
     for (const layer_chunk of layer_chunks) {
-      parsed_layers.push(_layer().parse_layer(layer_chunk, this, effect_param_defs));
+      parsed_layers.push(parse_layer(layer_chunk, this, effect_param_defs));
     }
 
     this._layers = parsed_layers;
@@ -1771,7 +1771,7 @@ export class CompItem extends AVItem {
    * ```
    */
   get renderer_options(): RendererOptions {
-    return _renderer_options().renderer_options_for(this._prda, this);
+    return renderer_options_for(this._prda, this);
   }
 
   set renderer_options(value: Map<string, any>) {
@@ -2524,7 +2524,7 @@ export class CompItem extends AVItem {
     for (const block of final_blocks) {
       new_comp._item_list.chunks.splice(insert_at, 0, ...block);
       insert_at += block.length;
-      const new_layer = _layer().parse_layer(block[0] as ListChunk, new_comp, effect_defs);
+      const new_layer = parse_layer(block[0] as ListChunk, new_comp, effect_defs);
       new_comp._layers.push(new_layer);
     }
     new_comp._invalidate_layer_cache();

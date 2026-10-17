@@ -8,15 +8,11 @@ import { find_by_list_type, find_by_type, index_by_identity } from "../../binary
 import { ChunkField } from "../descriptors.ts";
 import { auto_name } from "../naming.ts";
 import { default_sequence_fps } from "../preferences.ts";
-import type { FileSource } from "../sources/file.ts";
-import type { PlaceholderSource } from "../sources/placeholder.ts";
-import type { SolidSource } from "../sources/solid.ts";
 import { validate_bool } from "../validators.ts";
 import { Item } from "./item.ts";
 import {
   AttributeError,
   ValueError,
-  deferred,
   descriptor,
   int,
   py_assert,
@@ -26,10 +22,9 @@ import type { Project } from "../project.ts";
 import type { Viewer } from "../viewer/viewer.ts";
 import type { CompItem } from "./composition.ts";
 import type { FolderItem } from "./folder.ts";
-
-const _file = deferred<typeof import("../sources/file.ts")>("py_aep/models/sources/file");
-const _placeholder = deferred<typeof import("../sources/placeholder.ts")>("py_aep/models/sources/placeholder");
-const _solid = deferred<typeof import("../sources/solid.ts")>("py_aep/models/sources/solid");
+import { FileSource } from "../sources/file.ts";
+import { PlaceholderSource } from "../sources/placeholder.ts";
+import { SolidSource } from "../sources/solid.ts";
 
 // NOTE(port): CPython `set` iteration order. `Item.__hash__` is `hash(self.id)`, so
 // `set[CompItem]` iterates in open-addressing table order (deterministic, not insertion
@@ -420,7 +415,7 @@ export class AVItem extends Item {
       name = "Placeholder";
     }
 
-    const source = _placeholder().PlaceholderSource._new(name, width, height, frame_rate, duration);
+    const source = PlaceholderSource._new(name, width, height, frame_rate, duration);
     this._set_proxy(source);
   }
 
@@ -443,13 +438,13 @@ export class AVItem extends Item {
   ): void {
     if (name == null) {
       const existing = new Set([...this._project.items.values()].map((item) => item.name));
-      const solid_name = _solid().SolidSource._color_name(color[0], color[1], color[2]);
+      const solid_name = SolidSource._color_name(color[0], color[1], color[2]);
       name = auto_name(solid_name, existing);
     } else if (name === "") {
       name = "????";
     }
 
-    const source = _solid().SolidSource._new(name, color, width, height, pixel_aspect);
+    const source = SolidSource._new(name, color, width, height, pixel_aspect);
     this._set_proxy(source);
   }
 
@@ -474,7 +469,7 @@ export class AVItem extends Item {
    *   not implemented for this format.
    */
   set_proxy(file: PathLike): void {
-    this._set_proxy(_file().FileSource._from_file(file, { windows: this._project._windows }));
+    this._set_proxy(FileSource._from_file(file, { windows: this._project._windows }));
   }
 
   /**
@@ -503,7 +498,7 @@ export class AVItem extends Item {
     force_alphabetical: boolean = false,
   ): void {
     this._set_proxy(
-      _file().FileSource._from_file(file, {
+      FileSource._from_file(file, {
         sequence: true,
         force_alphabetical,
         windows: this._project._windows,
@@ -522,11 +517,11 @@ export class AVItem extends Item {
   static _pin_for_source(
     source: FileSource | SolidSource | PlaceholderSource,
   ): ListChunk {
-    if (source instanceof _file().FileSource) {
+    if (source instanceof FileSource) {
       return source._pin;
     }
     const pin = build_pin_list(source._sspc, source._opti, {
-      is_solid: source instanceof _solid().SolidSource,
+      is_solid: source instanceof SolidSource,
     });
     // Link the source to its color record, as parsing does, so the
     // version fit and the color-management setters reach it.
