@@ -126,7 +126,7 @@ export class Struct<F extends string = string> {
       throw new StructError(`unpack_from requires a buffer of at least ${this.size + offset} bytes`);
     }
     if (this.unpacker === undefined) this.unpacker = compile_unpack(this.codes, this.le);
-    if (this.unpacker !== null) return this.unpacker(data, offset, scratch, half_to_float);
+    if (this.unpacker !== null) return this.unpacker(data, offset);
     // Integers are assembled from bytes and floats go through a scratch view:
     // `data.buffer` would make JSC materialize a backing store per call.
     const d = data;
@@ -181,7 +181,7 @@ export class Struct<F extends string = string> {
       throw new StructError(`pack expected ${this.n_values} items for packing (got ${values.length})`);
     }
     if (this.packer === undefined) this.packer = compile_pack(this.codes, this.le);
-    if (this.packer !== null) return this.packer(out, offset, values, to_int, pack_one, pack_s, range_error);
+    if (this.packer !== null) return this.packer(out, offset, values);
     const le = this.le;
     let p = offset;
     let vi = 0;
@@ -205,7 +205,7 @@ export class Struct<F extends string = string> {
 }
 
 /** Pack an `s`/`p` field: `v` truncated or zero-padded to `count` bytes. */
-function pack_s(out: Uint8Array, p: number, v: any, count: number): void {
+function pack_s(out: Uint8Array, p: number, v: PackValue, count: number): void {
   if (!(v instanceof Uint8Array)) throw new StructError("argument for 's' must be a bytes object");
   const n = Math.min(v.length, count);
   for (let i = 0; i < n; i++) out[p + i] = v[i];
@@ -218,7 +218,7 @@ function range_error(ch: string): StructError {
 }
 
 /** Pack one value of a single-item code (anything but `x`, `s`, `p`) at `p`. */
-function pack_one(out: Uint8Array, p: number, ch: string, v: any, le: boolean): void {
+function pack_one(out: Uint8Array, p: number, ch: string, v: PackValue, le: boolean): void {
   switch (ch) {
     case "c":
       if (!(v instanceof Uint8Array) || v.length !== 1) {
@@ -275,15 +275,7 @@ function pack_one(out: Uint8Array, p: number, ch: string, v: any, le: boolean): 
   }
 }
 
-type Packer = (
-  out: Uint8Array,
-  p: number,
-  v: any[],
-  to_int: (v: any) => number,
-  pack_one: (out: Uint8Array, p: number, ch: string, v: any, le: boolean) => void,
-  pack_s: (out: Uint8Array, p: number, v: any, count: number) => void,
-  range_error: (ch: string) => StructError,
-) => void;
+type Packer = (out: Uint8Array, p: number, v: PackValue[]) => void;
 
 /** Straight-line `pack_to` for `codes`: integers inline, other codes through `pack_one` in order. */
 function compile_pack(codes: Code[], le: boolean): Packer | null {
@@ -316,18 +308,18 @@ function compile_pack(codes: Code[], le: boolean): Packer | null {
     }
   }
   try {
-    return new Function("out", "p", "v", "to_int", "pack_one", "pack_s", "range_error", body.join("")) as Packer;
+    return new Function("to_int", "pack_one", "pack_s", "range_error", `return (out, p, v) => {${body.join("")}};`)(
+      to_int,
+      pack_one,
+      pack_s,
+      range_error,
+    );
   } catch {
     return null;
   }
 }
 
-type Unpacker = (
-  d: Uint8Array,
-  p: number,
-  scratch: (d: Uint8Array, p: number, n: number) => DataView,
-  half_to_float: (h: number) => number,
-) => any[];
+type Unpacker = (d: Uint8Array, p: number) => any[];
 
 /** Straight-line `unpack_from` for `codes`: one expression per value at a fixed offset. */
 function compile_unpack(codes: Code[], le: boolean): Unpacker | null {
@@ -369,7 +361,7 @@ function compile_unpack(codes: Code[], le: boolean): Unpacker | null {
     }
   }
   try {
-    return new Function("d", "p", "scratch", "half_to_float", `return [${exprs.join(",")}];`) as Unpacker;
+    return new Function("scratch", "half_to_float", `return (d, p) => [${exprs.join(",")}];`)(scratch, half_to_float);
   } catch {
     return null;
   }

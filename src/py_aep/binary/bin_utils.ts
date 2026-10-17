@@ -7,7 +7,6 @@
  */
 
 import {
-  BytesIO,
   Fraction,
   OSError,
   ValueError,
@@ -100,14 +99,16 @@ export function _get_struct(full_fmt: string): struct.Struct {
   return s;
 }
 
-const _BE_STRUCTS = new Map<string, struct.Struct>();
+const _STRUCTS_BY_ENDIAN = new Map<string, Map<string, struct.Struct>>();
 
-/** `_get_struct(">" + fmt)` without building the key string on a hit. */
-export function _get_struct_be(fmt: string): struct.Struct {
-  let s = _BE_STRUCTS.get(fmt);
+/** `_get_struct(endian + fmt)` without building the key string on a hit. */
+export function _struct_for(fmt: string, endian = ">"): struct.Struct {
+  let by_fmt = _STRUCTS_BY_ENDIAN.get(endian);
+  if (by_fmt === undefined) _STRUCTS_BY_ENDIAN.set(endian, (by_fmt = new Map()));
+  let s = by_fmt.get(fmt);
   if (s === undefined) {
-    s = _get_struct(">" + fmt);
-    _BE_STRUCTS.set(fmt, s);
+    s = _get_struct(endian + fmt);
+    by_fmt.set(fmt, s);
   }
   return s;
 }
@@ -122,16 +123,14 @@ export function _get_struct_be(fmt: string): struct.Struct {
  */
 export function read_fmt<F extends string>(fmt: F, fp: IO, endian?: string): struct.Unpacked<F>;
 export function read_fmt(fmt: string, fp: IO, endian = ">"): struct.Unpacked<string> {
-  const s = endian === ">" ? _get_struct_be(fmt) : _get_struct(endian + fmt);
-  if (fp instanceof BytesIO) {
-    const values = fp.unpack(s);
-    if (values !== null) return values;
+  const s = _struct_for(fmt, endian);
+  const values = fp.unpack(s);
+  if (values === null) {
+    // Consume the short tail, as `fp.read(s.size)` does in Python.
+    const got = fp.read(s.size).length;
+    throw new OSError(`Short read: expected ${s.size} bytes, got ${got}`);
   }
-  const data = fp.read(s.size);
-  if (data.length < s.size) {
-    throw new OSError(`Short read: expected ${s.size} bytes, got ${data.length}`);
-  }
-  return s.unpack(data);
+  return values;
 }
 
 /**
@@ -145,17 +144,7 @@ export type WriteFmtOptions = { endian?: string };
 export function write_fmt(fp: IO, fmt: string, ...args: (struct.PackValue | WriteFmtOptions)[]): number {
   const last = args[args.length - 1];
   const opts: WriteFmtOptions = last !== null && typeof last === "object" && Object.getPrototypeOf(last) === Object.prototype ? (args.pop() as WriteFmtOptions) : {};
-  const endian = opts.endian ?? ">";
-  return write_values(fp, endian === ">" ? _get_struct_be(fmt) : _get_struct(endian + fmt), args as struct.PackValue[]);
-}
-
-/** `write_fmt` with a resolved struct and the values as an array. */
-export function write_values(fp: IO, s: struct.Struct, values: struct.PackValue[]): number {
-  const sink: { write(data: Uint8Array): unknown } = fp;
-  if (fp instanceof BytesIO) return fp.pack(s, values);
-  const data = s.pack(...values);
-  sink.write(data);
-  return data.length;
+  return fp.pack(_struct_for(fmt, opts.endian), args as struct.PackValue[]);
 }
 
 /** The largest finite IEEE-754 single (float32). */

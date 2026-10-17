@@ -50,12 +50,7 @@ export class BytesIO {
 
   write(data: Uint8Array): number {
     const end = this.pos + data.length;
-    if (end > this.buf.length) {
-      const grown = new Uint8Array(Math.max(end, this.buf.length * 2));
-      grown.set(this.buf.subarray(0, this.len));
-      this.buf = grown;
-    }
-    this.zero_gap();
+    this.reserve(end);
     this.buf.set(data, this.pos);
     this.pos = end;
     if (end > this.len) this.len = end;
@@ -73,20 +68,21 @@ export class BytesIO {
       this.pos = end;
       return s.size;
     }
-    if (end > this.buf.length) {
-      const grown = new Uint8Array(Math.max(end, this.buf.length * 2));
-      grown.set(this.buf.subarray(0, this.len));
-      this.buf = grown;
-    }
     // Bytes past `len` are never observable, so a failed pack leaves no trace.
-    this.zero_gap();
+    this.reserve(end);
     s.pack_to(this.buf, this.pos, values);
     this.pos = this.len = end;
     return s.size;
   }
 
-  /** Zero the bytes between `len` and a position seeked past the end. */
-  private zero_gap(): void {
+  /** Make room for a write ending at `end`, zeroing any gap a seek past the end left. */
+  private reserve(end: number): void {
+    if (end > this.buf.length) {
+      const grown = new Uint8Array(Math.max(end, this.buf.length * 2));
+      grown.set(this.buf.subarray(0, this.len));
+      this.buf = grown;
+    }
+    // A native `fill` costs more than a loop for the 4-byte length placeholder.
     if (this.pos - this.len > 16) this.buf.fill(0, this.len, this.pos);
     else for (let i = this.len; i < this.pos; i++) this.buf[i] = 0;
   }
