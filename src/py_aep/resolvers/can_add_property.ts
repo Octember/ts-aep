@@ -133,10 +133,9 @@ export const _NAMED_ADDABLE_GROUPS: ReadonlySet<string> = new Set(["ADBE Text An
  * the expression controls py_aep can create are accepted (AE itself
  * validates against the installed effects).
  *
- * Args:
- *     match_name: The match name of the parent group.
- *     property_type: The property type of the parent group.
- *     name: A match name or display name to resolve.
+ * @param match_name - The match name of the parent group.
+ * @param property_type - The property type of the parent group.
+ * @param name - A match name or display name to resolve.
  */
 export function resolve_addable(
   match_name: string,
@@ -182,10 +181,9 @@ export function resolve_addable(
  * Parade, only the expression controls py_aep can create are
  * accepted.
  *
- * Args:
- *     match_name: The match name of the parent group.
- *     property_type: The property type of the parent group.
- *     name: A match name or display name to check.
+ * @param match_name - The match name of the parent group.
+ * @param property_type - The property type of the parent group.
+ * @param name - A match name or display name to check.
  */
 export function can_add_property(
   match_name: string,

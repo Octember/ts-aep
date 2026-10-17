@@ -22,12 +22,11 @@ import { PsdGroup, read_psd_layers, type PsdLayer, type PsdNode } from "./psd_la
 /**
  * Return a PSD's leaf layers in document order (bottom layer first).
  *
- * Flattens the [read_psd_layers][] group tree to the layers AE's
+ * Flattens the {@link read_psd_layers} group tree to the layers AE's
  * chooser offers (groups excluded).
  *
- * Raises:
- *     UnsupportedPsdLayersError: If the file is not a valid PSD/PSB.
- *     FlattenedPsdError: If the document has no layer records.
+ * @throws {@link UnsupportedPsdLayersError} If the file is not a valid PSD/PSB.
+ * @throws {@link FlattenedPsdError} If the document has no layer records.
  */
 export function psd_leaf_layers(
   file: PathLike,
@@ -62,13 +61,10 @@ export function psd_leaf_layers(
  * dropdown: leaf layers only, top-most first. Duplicate names are
  * possible (Photoshop does not enforce unique layer names).
  *
- * Args:
- *     file: Path to a `.psd`, `.psb`, `.ai`, or `.pdf` file.
- *
- * Raises:
- *     ValueError: If the extension is not a layered format, or the file's
- *         layers cannot be enumerated (`UnsupportedPsdLayersError` /
- *         `UnsupportedAiLayersError`, both `ValueError` subclasses).
+ * @param file - Path to a `.psd`, `.psb`, `.ai`, or `.pdf` file.
+ * @throws {@link ValueError} If the extension is not a layered format, or the file's layers cannot
+ *   be enumerated (`UnsupportedPsdLayersError` / `UnsupportedAiLayersError`, both `ValueError`
+ *   subclasses).
  */
 export function list_layers(file: PathLike): string[] {
   const suffix = new Path(file).suffix.toLowerCase();
@@ -93,9 +89,8 @@ export function list_layers(file: PathLike): string[] {
  * `FootageItem.replace(..., CURRENT_VALUE)` to rebind a new file at the
  * same stored index.
  *
- * Raises:
- *     ValueError: If the extension is not a layered format, or no
- *         selectable layer of `file` has that stored index.
+ * @throws {@link ValueError} If the extension is not a layered format, or no selectable layer of
+ *   `file` has that stored index.
  */
 export function layer_index_for_stored(
   file: PathLike,
@@ -146,9 +141,8 @@ export function _out_of_range(
  * Return the PSD leaf layer at `layer_index` in `list_layers` order
  * (top layer first).
  *
- * Raises:
- *     ValueError: If `layer_index` is out of range.
- *     UnsupportedPsdLayersError: If the file's layers cannot be read.
+ * @throws {@link ValueError} If `layer_index` is out of range.
+ * @throws {@link UnsupportedPsdLayersError} If the file's layers cannot be read.
  */
 export function resolve_psd_layer(
   file: PathLike,
@@ -168,20 +162,14 @@ export function resolve_psd_layer(
 /**
  * Resolve an AI/PDF layer chosen by `list_layers` position.
  *
- * Args:
- *     file: Path to a `.ai` or `.pdf` file.
- *     layer_index: The layer's index in `list_layers` order (top first).
- *     data: The file's bytes, if the caller already read them.
- *
- * Returns:
- *     A `(layers, document_index)` tuple: the file's layers in document
- *     order (bottom layer first) and the chosen layer's position in them,
- *     which is the index the binary stores. The whole list comes back
- *     because the binding also records how many layers the document has.
- *
- * Raises:
- *     ValueError: If `layer_index` is out of range.
- *     UnsupportedAiLayersError: If the file's layers cannot be read.
+ * @param file - Path to a `.ai` or `.pdf` file.
+ * @param layer_index - The layer's index in `list_layers` order (top first).
+ * @param data - The file's bytes, if the caller already read them.
+ * @returns A `(layers, document_index)` tuple: the file's layers in document order (bottom layer
+ *   first) and the chosen layer's position in them, which is the index the binary stores. The whole
+ *   list comes back because the binding also records how many layers the document has.
+ * @throws {@link ValueError} If `layer_index` is out of range.
+ * @throws {@link UnsupportedAiLayersError} If the file's layers cannot be read.
  */
 export function resolve_ai_layer(
   file: PathLike,

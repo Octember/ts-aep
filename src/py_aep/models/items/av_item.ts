@@ -177,16 +177,16 @@ export function _sync_proxy_active(obj: AVItem): void {
  * audio/visual files imported into After Effects.
  *
  * Info:
- * `AVItem` is a subclass of [Item][]. All methods and attributes of [Item][]
+ * `AVItem` is a subclass of {@link Item}. All methods and attributes of {@link Item}
  * are available when working with `AVItem`.
  *
  * Info:
- * `AVItem` is the base class for both [CompItem][] and [FootageItem][], so
+ * `AVItem` is the base class for both {@link CompItem} and {@link FootageItem}, so
  * `AVItem` attributes and methods are also available when working with
- * [CompItem][] and [FootageItem][] objects. See [CompItem][] object and
- * [FootageItem][] object.
+ * {@link CompItem} and {@link FootageItem} objects. See {@link CompItem} object and
+ * {@link FootageItem} object.
  *
- * See: https://ae-scripting.docsforadobe.dev/item/avitem/
+ * @see https://ae-scripting.docsforadobe.dev/item/avitem/
  */
 // Annotation-only attributes of AVItem.duration/frame_duration/frame_rate (interface merge so subclasses may override them with accessors).
 export interface AVItem {
@@ -279,7 +279,7 @@ export class AVItem extends Item {
   }
 
   /**
-   * The [FootageSource][] being used as a proxy. Read-only.
+   * The {@link FootageSource} being used as a proxy. Read-only.
    *
    * To change it, call any of the `AVItem` methods that change the proxy
    * source: `set_proxy()`, `set_proxy_with_sequence()`,
@@ -292,8 +292,8 @@ export class AVItem extends Item {
   /**
    * When `True`, the AVItem has an audio component.
    *
-   * In a [CompItem][], the value is linked to the composition.
-   * In a [FootageItem][py_aep.models.items.footage.FootageItem],
+   * In a {@link CompItem}, the value is linked to the composition.
+   * In a {@link py_aep.models.items.footage.FootageItem | FootageItem},
    * the value is linked to the `main_source` or `proxy_source` object.
    */
   get has_audio(): boolean {
@@ -304,8 +304,8 @@ export class AVItem extends Item {
    * `True` if the item has a video component.
    *
    * An AVItem has video when it has non-zero dimensions (`width > 0`
-   * and `height > 0`). In a [CompItem][], the value is always `True`.
-   * In a [FootageItem][py_aep.models.items.footage.FootageItem],
+   * and `height > 0`). In a {@link CompItem}, the value is always `True`.
+   * In a {@link py_aep.models.items.footage.FootageItem | FootageItem},
    * the value depends on the footage source (e.g. audio-only files
    * return `False`).
    */
@@ -318,8 +318,8 @@ export class AVItem extends Item {
    * with a source file that could not be found when the project was last
    * saved. Read-only.
    *
-   * Always `False` for a [CompItem][]; a
-   * [FootageItem][py_aep.models.items.footage.FootageItem] reports the
+   * Always `False` for a {@link CompItem}; a
+   * {@link py_aep.models.items.footage.FootageItem | FootageItem} reports the
    * state of its `main_source` (see the `FootageItem` override).
    */
   get footage_missing(): boolean {
@@ -328,10 +328,10 @@ export class AVItem extends Item {
 
   /**
    * `True` if the item can be used as an alternate source when setting
-   * [Property.alternate_source][py_aep.models.properties.property.Property.alternate_source].
+   * {@link py_aep.models.properties.property.Property.alternate_source | Property.alternate_source}.
    * Read-only.
    *
-   * A [CompItem][] or a [FootageItem][py_aep.models.items.footage.FootageItem]
+   * A {@link CompItem} or a {@link py_aep.models.items.footage.FootageItem | FootageItem}
    * with a video component can be used as an alternate source; see the
    * `FootageItem` override for footage restrictions.
    */
@@ -342,7 +342,7 @@ export class AVItem extends Item {
   /**
    * The current time of the item when it is being previewed directly
    * from the Project panel. This value is a number of seconds. It is an
-   * error to set this value for a [FootageItem][] whose `main_source` or
+   * error to set this value for a {@link FootageItem} whose `main_source` or
    * `proxy_source` is still.
    */
   get time(): number {
@@ -368,7 +368,7 @@ export class AVItem extends Item {
    *
    * Footage items carry a main-source pin at index 0 and the proxy at
    * index 1; composition items have no main-source pin, so the proxy
-   * lives at index 0. Overridden by [CompItem][].
+   * lives at index 0. Overridden by {@link CompItem}.
    */
   get _proxy_pin_index(): number {
     return 1;
@@ -377,7 +377,7 @@ export class AVItem extends Item {
   /**
    * Keep the `idta` time stamp in step with the source in use.
    *
-   * Overridden by [FootageItem][]. A comp's stamp is the time of its
+   * Overridden by {@link FootageItem}. A comp's stamp is the time of its
    * last edit (measured on AE 2026, also with a proxy in use), which
    * py_aep does not track.
    */
@@ -400,13 +400,12 @@ export class AVItem extends Item {
   /**
    * Set a placeholder as the proxy source.
    *
-   * Args:
-   *     name: The placeholder name. `None` becomes `Missing Name`.
-   *         An empty string becomes `Placeholder`.
-   *     width: Width in pixels (4-30000).
-   *     height: Height in pixels (4-30000).
-   *     frame_rate: Frame rate in fps (1.0-99.0).
-   *     duration: Duration in seconds (> 0, <= 10800).
+   * @param name - The placeholder name. `None` becomes `Missing Name`. An empty string becomes
+   *   `Placeholder`.
+   * @param width - Width in pixels (4-30000).
+   * @param height - Height in pixels (4-30000).
+   * @param frame_rate - Frame rate in fps (1.0-99.0).
+   * @param duration - Duration in seconds (\> 0, \<= 10800).
    */
   set_proxy_with_placeholder(
     name: string | null,
@@ -428,14 +427,12 @@ export class AVItem extends Item {
   /**
    * Set a solid as the proxy source.
    *
-   * Args:
-   *     color: Solid color as [R, G, B] in 0.0-1.0 range.
-   *     name: The solid name. Pass `None` to auto-generate
-   *         a name from the color (e.g. `Red Solid 1`).
-   *         An empty string becomes `????`.
-   *     width: Width in pixels (1-30000).
-   *     height: Height in pixels (1-30000).
-   *     pixel_aspect: Pixel aspect ratio (0.01-100.0).
+   * @param color - Solid color as [R, G, B] in 0.0-1.0 range.
+   * @param name - The solid name. Pass `None` to auto-generate a name from the color (e.g.
+   *   `Red Solid 1`). An empty string becomes `????`.
+   * @param width - Width in pixels (1-30000).
+   * @param height - Height in pixels (1-30000).
+   * @param pixel_aspect - Pixel aspect ratio (0.01-100.0).
    */
   set_proxy_with_solid(
     color: number[],
@@ -468,17 +465,13 @@ export class AVItem extends Item {
    * This differs from setting a `FootageItem`'s `main_source`, but both actions are
    * performed as in the user interface.
    *
-   * Note:
-   *     Unlike ExtendScript, if the specified file has an unlabeled alpha channel,
-   *     this method does not estimate the alpha interpretation.
+   * **Note:** Unlike ExtendScript, if the specified file has an unlabeled alpha channel,
+   * this method does not estimate the alpha interpretation.
    *
-   * Args:
-   *     file: Path to the proxy source file.
-   *
-   * Raises:
-   *     ValueError: If the extension is not a supported footage format.
-   *     NotImplementedError: If After Effects requires a format-specific
-   *         `opti` header not implemented for this format.
+   * @param file - Path to the proxy source file.
+   * @throws {@link ValueError} If the extension is not a supported footage format.
+   * @throws {@link NotImplementedError} If After Effects requires a format-specific `opti` header
+   *   not implemented for this format.
    */
   set_proxy(file: PathLike): void {
     this._set_proxy(_file().FileSource._from_file(file, { windows: this._project._windows }));
@@ -493,23 +486,17 @@ export class AVItem extends Item {
    * It does not preserve the interpretation parameters, instead using the user
    * preferences.
    *
-   * Note:
-   *     Unlike ExtendScript, if the specified file has an unlabeled alpha channel,
-   *     this method does not estimate the alpha interpretation.
+   * **Note:** Unlike ExtendScript, if the specified file has an unlabeled alpha channel,
+   * this method does not estimate the alpha interpretation.
    *
-   * Args:
-   *     file: Path to a representative frame; sibling frames in the same
-   *         folder are gathered into the sequence.
-   *     force_alphabetical: Take every file of the same type in the
-   *         folder, in alphabetical order, rather than the numbered
-   *         frames (see `ImportOptions.force_alphabetical`).
-   *
-   * Raises:
-   *     ValueError: If the extension is not a supported footage format,
-   *         or one After Effects does not import as a sequence (movies,
-   *         audio, HEIC, FBX, data files).
-   *     NotImplementedError: If After Effects requires a format-specific
-   *         `opti` header not implemented for this format.
+   * @param file - Path to a representative frame; sibling frames in the same folder are gathered
+   *   into the sequence.
+   * @param force_alphabetical - Take every file of the same type in the folder, in alphabetical
+   *   order, rather than the numbered frames (see `ImportOptions.force_alphabetical`).
+   * @throws {@link ValueError} If the extension is not a supported footage format, or one After
+   *   Effects does not import as a sequence (movies, audio, HEIC, FBX, data files).
+   * @throws {@link NotImplementedError} If After Effects requires a format-specific `opti` header
+   *   not implemented for this format.
    */
   set_proxy_with_sequence(
     file: PathLike,

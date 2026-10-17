@@ -17,7 +17,7 @@ import { CosString } from "./cos.ts";
 
 export const _UNDEFINED = 0xfffd;
 
-/** byte -> unicode code point, for every byte Latin-1 does not already cover. */
+/** byte -\> unicode code point, for every byte Latin-1 does not already cover. */
 export const _OVERRIDES: Map<number, number> = new Map<number, number>([
   [0x18, 0x02d8], // breve
   [0x19, 0x02c7], // caron
@@ -64,7 +64,8 @@ export const _OVERRIDES: Map<number, number> = new Map<number, number>([
   [0xad, _UNDEFINED],
 ]);
 
-/** Decode a PDF text string.
+/**
+ * Decode a PDF text string.
  *
  * A BOM-prefixed literal (UTF-16 either way, or UTF-8) is decoded by the
  * COS lexer already and passes through. Everything else is
@@ -77,8 +78,7 @@ export const _OVERRIDES: Map<number, number> = new Map<number, number>([
  * this way: `(caf\\xc3\\xa9)` with no BOM becomes `caf` + U+00C3 U+00A9,
  * NOT the UTF-8 reading `café`.
  *
- * Args:
- *     raw: The string object read from the PDF.
+ * @param raw - The string object read from the PDF.
  */
 export function decode_pdf_text_string(raw: Uint8Array | string): string {
   if (raw instanceof Uint8Array) {

@@ -37,17 +37,14 @@ export function parse_orientation(
   /**
    * Parse an orientation property.
    *
-   * Args:
-   *     otst_chunk: The OTST chunk to parse.
-   *     match_name: A special name for the property used to build unique
-   *         naming paths. The match name is not displayed, but you can refer
-   *         to it in scripts. Every property has a unique match-name
-   *         identifier. Match names are stable from version to version
-   *         regardless of the display name (the name attribute value) or any
-   *         changes to the application. Unlike the display name, it is not
-   *         localized.
-   *     property_depth: The nesting depth of this property (0 = layer level).
-   *     composition: The parent composition.
+   * @param otst_chunk - The OTST chunk to parse.
+   * @param match_name - A special name for the property used to build unique naming paths. The
+   *   match name is not displayed, but you can refer to it in scripts. Every property has a unique
+   *   match-name identifier. Match names are stable from version to version regardless of the
+   *   display name (the name attribute value) or any changes to the application. Unlike the display
+   *   name, it is not localized.
+   * @param property_depth - The nesting depth of this property (0 = layer level).
+   * @param composition - The parent composition.
    */
   const tdbs_chunk = find_by_list_type(otst_chunk.chunks, "tdbs");
   const prop = parse_property(tdbs_chunk, match_name, composition, property_depth, tdmn);
@@ -105,20 +102,14 @@ export function _parse_shape_shap(shap_chunk: ListChunk, layer: Layer | null, ma
    * size to get pixel values.  Shape-layer paths already have a pixel
    * bounding box.
    *
-   * Args:
-   *     shap_chunk: A `shap` LIST chunk.
-   *     layer: The owning layer, which a mask shape denormalizes against.
-   *         Only optional because a shape-layer path does not need one.
-   *     mask_path: The Mask Path property this shape is a value of (its
-   *         mask's RotoBezier switch decides the reported tangents), or
-   *         `None` for a shape-layer path.
-   *
-   * Returns:
-   *     A [Shape][] with absolute coordinates and tangent offsets.
-   *
-   * Raises:
-   *     ValueError: If a mask shape is parsed without its layer, which
-   *         would silently yield raw normalized coordinates.
+   * @param shap_chunk - A `shap` LIST chunk.
+   * @param layer - The owning layer, which a mask shape denormalizes against. Only optional because
+   *   a shape-layer path does not need one.
+   * @param mask_path - The Mask Path property this shape is a value of (its mask's RotoBezier
+   *   switch decides the reported tangents), or `None` for a shape-layer path.
+   * @returns A {@link Shape} with absolute coordinates and tangent offsets.
+   * @throws {@link ValueError} If a mask shape is parsed without its layer, which would silently
+   *   yield raw normalized coordinates.
    */
   const is_mask_shape = mask_path != null;
   if (is_mask_shape && layer == null) {
@@ -183,18 +174,14 @@ export function parse_shape(
    * - `omks` LIST: shape keyframe values (one `shap` per keyframe,
    *   or one `shap` for static shapes)
    *
-   * Args:
-   *     oms_chunk: The `om-s` LIST chunk to parse.
-   *     match_name: The property match name.
-   *     property_depth: Nesting depth of this property.
-   *     composition: The parent composition.
-   *     layer: The owning layer, required for a mask path (which
-   *         denormalizes against the layer, not the composition).
-   *
-   * Returns:
-   *     A [Property][] with `property_value_type` set to
-   *     [SHAPE][py_aep.enums.PropertyValueType.SHAPE] and `value`
-   *     set to a [Shape][].
+   * @param oms_chunk - The `om-s` LIST chunk to parse.
+   * @param match_name - The property match name.
+   * @param property_depth - Nesting depth of this property.
+   * @param composition - The parent composition.
+   * @param layer - The owning layer, required for a mask path (which denormalizes against the
+   *   layer, not the composition).
+   * @returns A {@link Property} with `property_value_type` set to
+   *   {@link py_aep.enums.PropertyValueType.SHAPE | SHAPE} and `value` set to a {@link Shape}.
    */
   const tdbs_chunk = find_by_list_type(oms_chunk.chunks, "tdbs");
   const prop = parse_property(tdbs_chunk, match_name, composition, property_depth, tdmn);
@@ -247,17 +234,14 @@ export function parse_text_document(
   /**
    * Parse a text document property.
    *
-   * Args:
-   *     btds_chunk: The BTDS chunk to parse.
-   *     match_name: A special name for the property used to build unique
-   *         naming paths. The match name is not displayed, but you can refer
-   *         to it in scripts. Every property has a unique match-name
-   *         identifier. Match names are stable from version to version
-   *         regardless of the display name (the name attribute value) or any
-   *         changes to the application. Unlike the display name, it is not
-   *         localized.
-   *     property_depth: The nesting depth of this property (0 = layer level).
-   *     composition: The parent composition.
+   * @param btds_chunk - The BTDS chunk to parse.
+   * @param match_name - A special name for the property used to build unique naming paths. The
+   *   match name is not displayed, but you can refer to it in scripts. Every property has a unique
+   *   match-name identifier. Match names are stable from version to version regardless of the
+   *   display name (the name attribute value) or any changes to the application. Unlike the display
+   *   name, it is not localized.
+   * @param property_depth - The nesting depth of this property (0 = layer level).
+   * @param composition - The parent composition.
    */
   const tdbs_chunk = find_by_list_type(btds_chunk.chunks, "tdbs");
   const prop = parse_property(tdbs_chunk, match_name, composition, property_depth, tdmn);
@@ -329,12 +313,11 @@ export function parse_gradient(
    * - LIST:tdbs with base property metadata
    * - LIST:GCky with Utf8 chunks containing gradient XML per keyframe
    *
-   * Args:
-   *     gcst_chunk: The GCst LIST chunk to parse.
-   *     match_name: The match name identifier for this property.
-   *     property_depth: The nesting depth of this property.
-   *     composition: The parent composition.
-   *     tdmn: The tdmn chunk for this property.
+   * @param gcst_chunk - The GCst LIST chunk to parse.
+   * @param match_name - The match name identifier for this property.
+   * @param property_depth - The nesting depth of this property.
+   * @param composition - The parent composition.
+   * @param tdmn - The tdmn chunk for this property.
    */
   const tdbs_chunk = find_by_list_type(gcst_chunk.chunks, "tdbs");
   const prop = parse_property(tdbs_chunk, match_name, composition, property_depth, tdmn);

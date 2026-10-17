@@ -183,16 +183,14 @@ export function resolve_properties(
   attrs: Map<string, string>,
   css_rules: CssRule[],
 ): Map<string, string> {
-  /** Compute the effective presentation properties for an element.
+  /**
+   * Compute the effective presentation properties for an element.
    *
-   * Args:
-   *     parent: The parent element's resolved properties.
-   *     tag: Local element name.
-   *     attrs: Element attributes.
-   *     css_rules: Parsed document CSS rules.
-   *
-   * Returns:
-   *     The resolved property dict for this element.
+   * @param parent - The parent element's resolved properties.
+   * @param tag - Local element name.
+   * @param attrs - Element attributes.
+   * @param css_rules - Parsed document CSS rules.
+   * @returns The resolved property dict for this element.
    */
   // Start from inherited properties only.
   const style = new Map<string, string>(

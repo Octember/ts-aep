@@ -142,7 +142,7 @@ export function _load_config(config_path: Path): Map<string, any> | null {
  * listed in `inactive_colorspaces`. Returns `[]` if the file cannot be read or
  * parsed.
  *
- * @param config_path Path to a `.ocio` configuration file.
+ * @param config_path - Path to a `.ocio` configuration file.
  */
 export function list_config_color_spaces(config_path: Path): string[] {
   const doc = _load_config(config_path);
@@ -176,7 +176,7 @@ export function list_config_color_spaces(config_path: Path): string[] {
  * `"ACES 1.2"`), which After Effects ships under
  * `<install>/Support Files/OpenColorIO-Configs/<name>/`.
  *
- * @param config The `ocio_configuration_file` value.
+ * @param config - The `ocio_configuration_file` value.
  * @returns The resolved `.ocio` path, or `None` if it cannot be located.
  */
 export function resolve_ocio_config(config: string): Path | null {
@@ -200,9 +200,9 @@ export function resolve_ocio_config(config: string): Path | null {
  * depend on whether the name is a direct colorspace, a role/alias, or a
  * `display/view` pair, and only the config can tell those apart.
  *
- * @param config The project's `ocio_configuration_file` value (`None` when
+ * @param config - The project's `ocio_configuration_file` value (`None` when
  *   there is no project to read it from).
- * @param purpose Completes the error message, e.g.
+ * @param purpose - Completes the error message, e.g.
  *   `"build the color-profile envelope for 'ACEScg'"`.
  *
  * @throws ValueError If the configuration cannot be located.
@@ -260,8 +260,8 @@ export const _OCIO_PROFILE_TYPE = 3;
  * name + the `colorProfileData` JSON; the outer `ColorSpace` Guid wraps that
  * with the `baseProfileType` and a flag byte.
  *
- * @param profile_name The `colorProfileName` (e.g. `"ACES/ACEScg yo"`).
- * @param profile_data The `colorProfileData` JSON (e.g. `{"colorSpace1":"ACEScg yo"}`).
+ * @param profile_name - The `colorProfileName` (e.g. `"ACES/ACEScg yo"`).
+ * @param profile_data - The `colorProfileData` JSON (e.g. `{"colorSpace1":"ACEScg yo"}`).
  */
 export function _color_space_guid(profile_name: string, profile_data: string): Uint8Array {
   const inner = ae_guid(
@@ -359,8 +359,7 @@ export const _config_index_cached = lru_cache(
  *   `colorProfileData` = `{"colorSpace1": name}`.
  * - a role: the role's target name, `{"colorSpace1": target, "ocioColorSpaceType": 2}`.
  * - an alias: the alias name, `{"colorSpace1": alias, "ocioColorSpaceType": 2}`.
- * - a `display/view` pair: `{"colorSpace1": display, "colorSpace2": view,
- *   "ocioColorSpaceType": 1}`.
+ * - a `display/view` pair: `{"colorSpace1": display, "colorSpace2": view, "ocioColorSpaceType": 1}`.
  *
  * @throws ValueError If `color_space` is not found in the config.
  */
@@ -409,7 +408,7 @@ export function* _iter_output_color_spaces(index: _ConfigIndex): Generator<strin
 }
 
 /**
- * `Guid` -> name for every assignable output color space in the config.
+ * `Guid` -\> name for every assignable output color space in the config.
  *
  * Keys are `tkey(guid)` strings: a `Uint8Array` key would compare by identity
  * in a `Map`, the same way a Python `bytes` key compares by value.
@@ -436,8 +435,8 @@ export const _guid_table_cached = lru_cache(
  * computations for AE's bundled ACES 1.2) is memoized per config like
  * `_load_config`, so repeated reads are dict lookups.
  *
- * @param config_path The resolved `.ocio` config path.
- * @param profile_id The 16-byte output profile id from the output module.
+ * @param config_path - The resolved `.ocio` config path.
+ * @param profile_id - The 16-byte output profile id from the output module.
  */
 export function ocio_color_space_for_profile_id(
   config_path: Path,
@@ -457,8 +456,7 @@ export function ocio_color_space_for_profile_id(
  * space (see `_output_envelope`). Verified against AE-authored samples: a
  * direct colorspace pick (`ACEScg yo`, family `ACES`) stores
  * `colorProfileName="ACES/ACEScg yo"` with `{"colorSpace1":"ACEScg yo"}`,
- * while a role pick (`mari_int16`) stores `colorProfileName="sRGB
- * (mari_int16)"` with `{...,"ocioColorSpaceType":2}` - and AE 25.6 and
+ * while a role pick (`mari_int16`) stores `colorProfileName="sRGB (mari_int16)"` with `{...,"ocioColorSpaceType":2}` - and AE 25.6 and
  * 26.3 write byte-identical envelopes for the same pick.
  *
  * Accepts the qualified `"<family>/<name>"` form as well as the bare
@@ -466,8 +464,8 @@ export function ocio_color_space_for_profile_id(
  * `colorProfileName` and therefore what `Project.working_space` reads back -
  * without this, assigning a project its own working space would raise.
  *
- * @param config_path The resolved `.ocio` config path.
- * @param color_space The color-space, role, alias, `display/view`, or
+ * @param config_path - The resolved `.ocio` config path.
+ * @param color_space - The color-space, role, alias, `display/view`, or
  *   `family/color-space` name.
  *
  * @throws ValueError If `color_space` is not found in the config.
@@ -498,8 +496,8 @@ export function ocio_color_profile_envelope(config_path: Path, color_space: stri
  * envelope AE would hash (see `_output_envelope` for the four selection
  * kinds), then computes its `Guid`.
  *
- * @param config_path The resolved `.ocio` config path.
- * @param color_space The output color-space name to assign.
+ * @param config_path - The resolved `.ocio` config path.
+ * @param color_space - The output color-space name to assign.
  *
  * @throws ValueError If `color_space` is not found in the config.
  */
@@ -608,13 +606,12 @@ export function fnmatchcase(name: string, pat: string): boolean {
  * Measured on AE 2026 (ACES 1.2, ACES 1.3 CG and a studio config with an
  * extension rule): the first matching file rule decides, its color space
  * recorded as a direct pick named after the family of the color space it
- * resolves to (`"Utility/scene_linear"` with `{"colorSpace1":
- * "scene_linear"}` for a role); a config without file rules gets its
+ * resolves to (`"Utility/scene_linear"` with `{"colorSpace1": "scene_linear"}` for a role); a config without file rules gets its
  * `default` role, recorded as a role pick. A `ColorSpaceNamePathSearch`
  * rule is not modelled (it is skipped).
  *
- * @param config_path The resolved `.ocio` config path.
- * @param file_path The imported file's path.
+ * @param config_path - The resolved `.ocio` config path.
+ * @param file_path - The imported file's path.
  *
  * @returns The envelope, or `None` when no rule matches and the config has no
  *   `default` role.

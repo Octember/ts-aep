@@ -11,7 +11,7 @@ import { getitem, int_enum, type EnumValue } from "../../pyrt/index.ts";
 /**
  * Classic 3D shadow map resolution.
  *
- * Used in Composition Settings > 3D Renderer > Classic 3D > Options.
+ * Used in Composition Settings \> 3D Renderer \> Classic 3D \> Options.
  *
  * Not documented in the AE scripting reference.
  */
@@ -53,7 +53,7 @@ export const _SHADOW_MAP_RESOLUTION_LABELS: Map<number, string> = new Map<number
 /**
  * Advanced 3D environment light shadow resolution.
  *
- * Used in Composition Settings > 3D Renderer > Advanced 3D > Options.
+ * Used in Composition Settings \> 3D Renderer \> Advanced 3D \> Options.
  *
  * Not documented in the AE scripting reference.
  */

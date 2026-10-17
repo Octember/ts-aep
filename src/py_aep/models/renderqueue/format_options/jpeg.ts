@@ -13,15 +13,15 @@ import type { RoptChunk } from "../../../binary/render_chunks.ts";
  * These settings correspond to the JPEG Options dialog in After Effects,
  * accessible when the output format is set to JPEG Sequence.
  *
- * Example:
- *     ```python
- *     from py_aep import JpegFormatOptions, parse
+ * @example
+ * ```python
+ * from py_aep import JpegFormatOptions, parse
  *
- *     app = parse("project.aep")
- *     om = app.project.render_queue.items[0].output_modules[0]
- *     if isinstance(om.format_options, JpegFormatOptions):
- *         print(om.format_options.quality)
- *     ```
+ * app = parse("project.aep")
+ * om = app.project.render_queue.items[0].output_modules[0]
+ * if isinstance(om.format_options, JpegFormatOptions):
+ *     print(om.format_options.quality)
+ * ```
  */
 export class JpegFormatOptions extends FormatOptionsBase {
   declare _body: RoptChunk;

@@ -185,8 +185,8 @@ export function gcd(a: number, b: number): number {
 /**
  * Calculate simplified aspect ratio string (e.g., '16x9').
  *
- * @param width Frame width in pixels.
- * @param height Frame height in pixels.
+ * @param width - Frame width in pixels.
+ * @param height - Frame height in pixels.
  * @returns Aspect ratio string like '16x9', '4x3', etc.
  */
 export function calculate_aspect_ratio(width: number, height: number): string {
@@ -200,8 +200,8 @@ export function calculate_aspect_ratio(width: number, height: number): string {
  * AE uses a feet+frames format where each foot is 16 frames (like 35mm
  * film). Format is FFFF+RR where FFFF is feet and RR is remaining frames.
  *
- * @param frame Frame number (0-based).
- * @param fps Frames per second (not used in this format).
+ * @param frame - Frame number (0-based).
+ * @param fps - Frames per second (not used in this format).
  * @returns Formatted frame string like '0045+00' (45 feet, 0 frames).
  */
 export function format_frame_number(frame: number, fps: number): string {
@@ -214,9 +214,9 @@ export function format_frame_number(frame: number, fps: number): string {
 /**
  * Format time as timecode string with dashes.
  *
- * @param seconds Time in seconds.
- * @param fps Frames per second.
- * @param is_duration If true, uses ceiling for frame calculation (for
+ * @param seconds - Time in seconds.
+ * @param fps - Frames per second.
+ * @param is_duration - If true, uses ceiling for frame calculation (for
  *   durations). If false, uses floor (for absolute times).
  * @returns Timecode string like '0-00-00-00' (hours-minutes-seconds-frames).
  */
@@ -247,39 +247,39 @@ export function format_timecode(seconds: number, fps: number, is_duration = fals
  * `[compName]` and `[fileExtension]`. This function resolves those
  * variables to produce the actual filename that would be rendered.
  *
- * @param file_template The file path containing template variables.
+ * @param file_template - The file path containing template variables.
  *   e.g., `C:/Output/[compName].[fileExtension]`
- * @param project_name The project name (without .aep extension) for
+ * @param project_name - The project name (without .aep extension) for
  *   `[projectName]`.
- * @param comp_name The composition name for `[compName]`.
- * @param render_settings_name The render settings template name for
+ * @param comp_name - The composition name for `[compName]`.
+ * @param render_settings_name - The render settings template name for
  *   `[renderSettingsName]`.
- * @param output_module_name The output module name for
+ * @param output_module_name - The output module name for
  *   `[outputModuleName]`.
- * @param width The composition width for `[width]`.
- * @param height The composition height for `[height]`.
- * @param frame_rate The frame rate for `[frameRate]` and timecodes.
- * @param start_frame The start frame for `[startFrame]`
+ * @param width - The composition width for `[width]`.
+ * @param height - The composition height for `[height]`.
+ * @param frame_rate - The frame rate for `[frameRate]` and timecodes.
+ * @param start_frame - The start frame for `[startFrame]`
  *   (feet+frames format).
- * @param end_frame The end frame for `[endFrame]`
+ * @param end_frame - The end frame for `[endFrame]`
  *   (feet+frames format).
- * @param duration_frames The duration in frames for `[durationFrames]`
+ * @param duration_frames - The duration in frames for `[durationFrames]`
  *   (feet+frames format).
- * @param start_time The start time in seconds for `[startTimecode]`
+ * @param start_time - The start time in seconds for `[startTimecode]`
  *   (uses floor).
- * @param end_time The end time in seconds for `[endTimecode]`
+ * @param end_time - The end time in seconds for `[endTimecode]`
  *   (uses floor).
- * @param duration_time The duration in seconds for `[durationTimecode]`
+ * @param duration_time - The duration in seconds for `[durationTimecode]`
  *   (uses ceiling).
- * @param channels The output channels setting for `[channels]`.
- * @param project_color_depth The project bits per channel (8/16/32) for
+ * @param channels - The output channels setting for `[channels]`.
+ * @param project_color_depth - The project bits per channel (8/16/32) for
  *   `[projectColorDepth]`.
- * @param output_color_depth The output color depth for
+ * @param output_color_depth - The output color depth for
  *   `[outputColorDepth]`.
- * @param compressor The video codec/compressor name for `[compressor]`.
- * @param field_render The field render setting for `[fieldOrder]`.
- * @param pulldown_phase The 3:2 pulldown phase for `[pulldownPhase]`.
- * @param file_extension The file extension for `[fileExtension]`.
+ * @param compressor - The video codec/compressor name for `[compressor]`.
+ * @param field_render - The field render setting for `[fieldOrder]`.
+ * @param pulldown_phase - The 3:2 pulldown phase for `[pulldownPhase]`.
+ * @param file_extension - The file extension for `[fileExtension]`.
  * @returns The resolved file path, or an empty string if file_template is None.
  */
 export function resolve_output_filename(
@@ -390,9 +390,9 @@ export function resolve_output_filename(
  * Determines start/end frames, timecodes, and duration based on the
  * Time Span mode (Work Area, Length of Comp, or Custom).
  *
- * @param comp The composition being rendered.
- * @param rq_settings The render settings dict.
- * @param effective_frame_rate The effective frame rate for rendering.
+ * @param comp - The composition being rendered.
+ * @param rq_settings - The render settings dict.
+ * @param effective_frame_rate - The effective frame rate for rendering.
  * @returns Dict with keys: start_frame, end_frame, duration_frames,
  *   start_time, end_time, duration_time.
  */

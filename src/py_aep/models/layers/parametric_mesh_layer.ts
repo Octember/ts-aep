@@ -32,24 +32,23 @@ export function _type_of(x: any): any {
 /**
  * The ParametricMeshLayer object represents a parametric mesh layer within a composition.
  *
- * Example:
- *     ```python
- *     from py_aep import parse
- *
- *     app = parse("project.aep")
- *     comp = app.project.compositions[0]
- *     mesh = comp.parametric_mesh_layers[0]
- *     print(mesh.name)
- *     ```
  *
  * Info:
- *     `ParametricMeshLayer` is a subclass of [AVLayer][] object. All methods and
- *     attributes of [AVLayer][] are available when working with `ParametricMeshLayer`.
+ *     `ParametricMeshLayer` is a subclass of {@link AVLayer} object. All methods and
+ *     attributes of {@link AVLayer} are available when working with `ParametricMeshLayer`.
  *
- * Note:
- *     This functionality was added in After Effects 26.0
+ * **Note:** This functionality was added in After Effects 26.0
  *
- * See: https://ae-scripting.docsforadobe.dev/layer/parametricmeshlayer/
+ * @example
+ * ```python
+ * from py_aep import parse
+ *
+ * app = parse("project.aep")
+ * comp = app.project.compositions[0]
+ * mesh = comp.parametric_mesh_layers[0]
+ * print(mesh.name)
+ * ```
+ * @see https://ae-scripting.docsforadobe.dev/layer/parametricmeshlayer/
  */
 export class ParametricMeshLayer extends AVLayer {
   // NOTE(port): Layer.__init__ -> PropertyBase.__init__ assigns instance `_auto_name = None`, shadowing this class attribute in Python too; AVLayer.name's `self._auto_name` therefore sees None in both.
@@ -194,8 +193,7 @@ export function register_bevel(mesh_type: ParametricMeshType) {
 /**
  * Descriptor for a parametric mesh layer property.
  *
- * Args:
- *     property_name: Name of the property in the parametric mesh options group.
+ * @param property_name - Name of the property in the parametric mesh options group.
  */
 export class ParaMeshField<T extends number | boolean = number> {
   declare _property_name: string;

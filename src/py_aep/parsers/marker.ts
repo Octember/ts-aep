@@ -20,13 +20,12 @@ import { at } from "../../pyrt/index.ts";
 /**
  * Parse markers from an MRST chunk.
  *
- * Returns the underlying [Property][] (the `tdbs` inside the
+ * Returns the underlying {@link Property} (the `tdbs` inside the
  * `mrst` chunk, with keyframes holding marker values).
  *
- * Args:
- *     mrst_chunk: The MRST chunk to parse.
- *     composition: The parent composition.
- *     property_depth: The nesting depth of this property (default 1).
+ * @param mrst_chunk - The MRST chunk to parse.
+ * @param composition - The parent composition.
+ * @param property_depth - The nesting depth of this property (default 1).
  */
 export function parse_markers(
   mrst_chunk: ListChunk,
@@ -64,10 +63,9 @@ export function parse_markers(
 /**
  * Parse a marker.
  *
- * Args:
- *     nmrd_chunk: The NMRD chunk to parse.
- *     keyframe: The keyframe that holds this marker value.
- *     frame_time: Fallback time in frames (used when no keyframe ref).
+ * @param nmrd_chunk - The NMRD chunk to parse.
+ * @param keyframe - The keyframe that holds this marker value.
+ * @param frame_time - Fallback time in frames (used when no keyframe ref).
  */
 export function parse_marker(
   nmrd_chunk: ListChunk,

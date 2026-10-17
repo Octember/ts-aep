@@ -21,12 +21,9 @@ export const _XML_FORMAT_CODES: ReadonlySet<string> = new Set([".AVI", "H264", "
 /**
  * Parse format-specific options from the Ropt chunk, if present.
  *
- * Args:
- *     chunks: List of chunks belonging to an output module.
- *
- * Returns:
- *     A format-specific options object, or `None` when the Ropt chunk
- *     is absent or the format is not yet supported.
+ * @param chunks - List of chunks belonging to an output module.
+ * @returns A format-specific options object, or `None` when the Ropt chunk is absent or the format
+ *   is not yet supported.
  */
 export function parse_format_options(chunks: Chunk[]): FormatOptions | null {
   let ropt_chunk: RoptChunk;

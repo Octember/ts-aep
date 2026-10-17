@@ -37,7 +37,6 @@ export function _ensure_materialized(chunk: Chunk): void {
  * particular After Effects project. Attributes provide access to items in
  * the render queue and their render status.
  *
- * Example:
  * ```python
  * from py_aep import parse
  *
@@ -47,7 +46,8 @@ export function _ensure_materialized(chunk: Chunk): void {
  *     ...
  * ```
  *
- * See: https://ae-scripting.docsforadobe.dev/renderqueue/renderqueue/
+ * @example
+ * @see https://ae-scripting.docsforadobe.dev/renderqueue/renderqueue/
  */
 export class RenderQueue {
   declare _lrdr: ListChunk;
@@ -84,9 +84,10 @@ export class RenderQueue {
    * Build an empty render queue with its backing `LIST:LRdr` tree.
    *
    * Mirrors the empty-queue scaffold AE writes and `parse_render_queue`
-   * yields: `Rhed` + empty `Rout` + a settings `LIST:list` (lhd3 plus a
    * synthetic ldat) + empty `LItm` + `LSIf[ARsi]`. The settings ldat is
    * synthetic so it is skipped by `write_aep()` until the first `add()`.
+   *
+   * @returns An iterator yielding `Rhed` + empty `Rout` + a settings `LIST:list` (lhd3 plus a
    */
   static _new(parent: Project): RenderQueue {
     const rhed = new RhedChunk({});
@@ -140,8 +141,7 @@ export class RenderQueue {
   /**
    * The number of items in the render queue. Read-only.
    *
-   * Note:
-   *     Equivalent to `len(render_queue.items)`
+   * **Note:** Equivalent to `len(render_queue.items)`
    */
   get num_items(): number {
     return this.items.length;
@@ -153,11 +153,8 @@ export class RenderQueue {
    * Creates a new {@link RenderQueueItem} with default render settings and
    * a single default output module.
    *
-   * Args:
-   *     comp: The {@link CompItem} to render.
-   *
-   * Returns:
-   *     The newly created {@link RenderQueueItem}.
+   * @param comp - The {@link CompItem} to render.
+   * @returns The newly created {@link RenderQueueItem}.
    */
   add(comp: CompItem): RenderQueueItem {
     if (!(comp instanceof _composition().CompItem)) {

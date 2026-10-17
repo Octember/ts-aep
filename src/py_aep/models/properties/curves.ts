@@ -203,7 +203,7 @@ export class CurvesChannel {
  * The five curves of a Curves effect.
  *
  * Read-only: py-aep does not write curves back to the project, and reads
- * them from one ([Property.value][] or [Keyframe.value][]).
+ * them from one ({@link Property.value} or {@link Keyframe.value}).
  */
 export class Curves {
   declare _version: number;
@@ -290,9 +290,8 @@ export class Curves {
    * when drawn with the pencil. Clamped to 0..1 unless `clamp` is
    * `False`, which leaves the spline's overshoot between the points.
    *
-   * Raises:
-   *     ValueError: If `channel` is not one of `CURVES_CHANNELS`, or `x`
-   *         is not a finite number.
+   * @throws {@link ValueError} If `channel` is not one of `CURVES_CHANNELS`, or `x` is not a finite
+   *   number.
    */
   evaluate(channel: string, x: number, clamp = true): number {
     if (!CURVES_CHANNELS.includes(channel)) {

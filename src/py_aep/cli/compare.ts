@@ -69,8 +69,10 @@ export function bin8(x: number): string {
 
 // ── Dataclasses ─────────────────────────────────────────────────────────────
 
-/** Sentinel used in [ByteDifference][] when one chunk is shorter
- * than the other and a byte position doesn't exist. */
+/**
+ * Sentinel used in {@link ByteDifference} when one chunk is shorter
+ * than the other and a byte position doesn't exist. 
+ */
 export const MISSING_BYTE = -1;
 
 /** Represents a single byte difference between two files. */
@@ -346,17 +348,14 @@ export const parse_aep_chunks = extract_leaf_chunks;
 /**
  * Compare two chunk dictionaries and return differences.
  *
- * Args:
- *     data1: Chunk path to bytes mapping from file 1.
- *     data2: Chunk path to bytes mapping from file 2.
- *     typed1: Optional decoded chunks for file 1 (enables float-tolerant
- *         comparison of coordinate fields).
- *     typed2: Optional decoded chunks for file 2.
- *     exact: When `True`, disable float tolerance (byte-exact).
- *
- * Returns:
- *     Tuple of (differences, paths only in data1, paths only in data2,
- *     paths of the float-precision-only differences suppressed).
+ * @param data1 - Chunk path to bytes mapping from file 1.
+ * @param data2 - Chunk path to bytes mapping from file 2.
+ * @param typed1 - Optional decoded chunks for file 1 (enables float-tolerant comparison of
+ *   coordinate fields).
+ * @param typed2 - Optional decoded chunks for file 2.
+ * @param exact - When `True`, disable float tolerance (byte-exact).
+ * @returns Tuple of (differences, paths only in data1, paths only in data2, paths of the
+ *   float-precision-only differences suppressed).
  */
 export function _compare_chunk_dicts(
   data1: Map<string, Uint8Array>,
@@ -449,12 +448,9 @@ export function _compare_structure_recursive(c1: Chunk, c2: Chunk, path: string,
  * Detects child count mismatches, missing chunks (including empty ones
  * invisible to byte-level diffing), and ordering differences.
  *
- * Args:
- *     file1: First AEP file path.
- *     file2: Second AEP file path.
- *
- * Returns:
- *     List of structural differences.
+ * @param file1 - First AEP file path.
+ * @param file2 - Second AEP file path.
+ * @returns List of structural differences.
  */
 export function compare_structure(file1: Path, file2: Path): StructuralDifference[] {
   // `with open(file, "rb") as f: read_aep(f)` is modelled by reading the
@@ -473,15 +469,11 @@ export function compare_structure(file1: Path, file2: Path): StructuralDifferenc
  *
  * The first file is treated as the reference.
  *
- * Args:
- *     files: List of AEP file paths (first = reference).
- *     exact: When `True`, disable float tolerance (byte-exact); otherwise
- *         chunks differing only in float-precision coordinates across all
- *         present files are suppressed, matching two-file mode.
- *
- * Returns:
- *     Tuple of (chunk differences, missing chunk info, parsed data per file,
- *     paths of the float-precision-only chunk differences suppressed).
+ * @param files - List of AEP file paths (first = reference).
+ * @param exact - When `True`, disable float tolerance (byte-exact); otherwise chunks differing only
+ *   in float-precision coordinates across all present files are suppressed, matching two-file mode.
+ * @returns Tuple of (chunk differences, missing chunk info, parsed data per file, paths of the
+ *   float-precision-only chunk differences suppressed).
  */
 export function compare_multi_aep_files(
   files: Path[],
@@ -548,14 +540,11 @@ export function compare_multi_aep_files(
 /**
  * Format a context line showing bytes around a diff offset.
  *
- * Args:
- *     label: Label for this line (e.g. `File 1`).
- *     data: Full chunk data.
- *     offset: The diff offset to highlight.
- *     context: Number of bytes before/after to show.
- *
- * Returns:
- *     Formatted context string with the diff byte in brackets.
+ * @param label - Label for this line (e.g. `File 1`).
+ * @param data - Full chunk data.
+ * @param offset - The diff offset to highlight.
+ * @param context - Number of bytes before/after to show.
+ * @returns Formatted context string with the diff byte in brackets.
  */
 export function _format_context_line(label: string, data: Uint8Array, offset: number, context: number): string {
   const start = Math.max(0, offset - context);

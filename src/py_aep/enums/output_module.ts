@@ -15,7 +15,7 @@ import type { EnumValue } from "../../pyrt/index.ts";
 /**
  * Output channels setting.
  *
- * Used in OutputModule Settings > Channels
+ * Used in OutputModule Settings \> Channels
  *
  * Not documented in AE scripting reference.
  */
@@ -44,7 +44,7 @@ export const _OUTPUT_CHANNELS_LABELS: Map<number, string> = new Map<number, stri
  * (with/without alpha), 48 or 64 for 16 bpc, 96 or 128 for 32 bpc
  * (floating point). The `+` label suffix indicates alpha is included.
  *
- * Used in OutputModule Settings > Depth
+ * Used in OutputModule Settings \> Depth
  *
  * Not documented in AE scripting reference.
  */
@@ -81,7 +81,7 @@ export const _OUTPUT_COLOR_DEPTH_LABELS: Map<number, string> = new Map<number, s
 /**
  * Output color mode (premultiplied vs straight).
  *
- * Used in OutputModule Settings > Color
+ * Used in OutputModule Settings \> Color
  *
  * Not documented in AE scripting reference.
  */
@@ -104,7 +104,7 @@ export const _OUTPUT_COLOR_MODE_LABELS: Map<number, string> = new Map<number, st
 /**
  * Audio output mode.
  *
- * Used in OutputModule Settings > Output Audio
+ * Used in OutputModule Settings \> Output Audio
  *
  * Not documented in AE scripting reference.
  */
@@ -150,7 +150,7 @@ export type FormatKind = EnumValue<typeof FormatKind>;
 /**
  * Output file format.
  *
- * Used in OutputModule Settings > Format
+ * Used in OutputModule Settings \> Format
  *
  * Not documented in AE scripting reference.
  */
@@ -177,8 +177,10 @@ export const OutputFormat = int_enum("OutputFormat", {
     return getitem(_OUTPUT_FORMAT_LABELS, self);
   },
 
-  /** Whether this format is an audio file, a movie, or a still
-   * sequence. See [FormatKind][]. */
+  /**
+   * Whether this format is an audio file, a movie, or a still
+   * sequence. See {@link FormatKind}. 
+   */
   kind(self: number): FormatKind {
     return getitem(_OUTPUT_FORMAT_KINDS, self);
   },
@@ -186,12 +188,9 @@ export const OutputFormat = int_enum("OutputFormat", {
   /**
    * Convert a Roou 4-char format identifier to OutputFormat.
    *
-   * Args:
-   *     format_id: The 4-char format identifier from the Roou chunk
-   *         (e.g. `"H264"`, `"TIF "`, `"png!"`).
-   *
-   * Raises:
-   *     ValueError: If the format identifier is not recognised.
+   * @param format_id - The 4-char format identifier from the Roou chunk (e.g. `"H264"`, `"TIF "`,
+   *   `"png!"`).
+   * @throws {@link ValueError} If the format identifier is not recognised.
    */
   from_format_id(format_id: string | Uint8Array): number {
     if (format_id instanceof Uint8Array) {
@@ -279,7 +278,7 @@ export const _OUTPUT_FORMAT_TO_FORMAT_ID: Map<number, string> = new Map<number, 
 /**
  * Audio bit depth.
  *
- * Used in OutputModule Settings > Audio > Format
+ * Used in OutputModule Settings \> Audio \> Format
  *
  * Not documented in AE scripting reference.
  */
@@ -318,7 +317,7 @@ export const _AUDIO_BIT_DEPTH_LABELS: Map<number, string> = new Map<number, stri
 /**
  * Audio channels.
  *
- * Used in OutputModule Settings > Audio > Channels
+ * Used in OutputModule Settings \> Audio \> Channels
  *
  * Not documented in AE scripting reference.
  */
@@ -349,7 +348,7 @@ export const _AUDIO_CHANNELS_LABELS: Map<number, string> = new Map<number, strin
 /**
  * Resize quality setting.
  *
- * Used in OutputModule Settings > Stretch > Quality
+ * Used in OutputModule Settings \> Stretch \> Quality
  *
  * Not documented in AE scripting reference.
  */
@@ -375,7 +374,7 @@ export const _RESIZE_QUALITY_LABELS: Map<number, string> = new Map<number, strin
  * Standard sample rates available in After Effects output module
  * audio settings.
  *
- * Used in OutputModule Settings > Audio > Sample Rate
+ * Used in OutputModule Settings \> Audio \> Sample Rate
  *
  * Not documented in AE scripting reference.
  */
@@ -435,7 +434,7 @@ export type AudioSampleRate = EnumValue<typeof AudioSampleRate>;
  * during rendering. When enabled only for 32 bpc, the conversion is
  * skipped for projects rendered at lower bit depths.
  *
- * Used in OutputModule Settings > Color Management > Convert to Linear Light
+ * Used in OutputModule Settings \> Color Management \> Convert to Linear Light
  *
  * Not documented in AE scripting reference.
  */

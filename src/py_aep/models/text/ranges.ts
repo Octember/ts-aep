@@ -2,7 +2,7 @@
  * Text range models mirroring the AE 24.3+ ExtendScript range API.
  *
  * `CharacterRange`, `ParagraphRange` and `ComposedLineRange` are computed,
- * read-only views over a [TextDocument][py_aep.models.text.TextDocument]'s
+ * read-only views over a {@link py_aep.models.text.TextDocument | TextDocument}'s
  * parsed COS data. They are created via the `TextDocument` factory methods
  * (`character_range`, `paragraph_range`, `composed_line_range`), never
  * constructed directly - matching ExtendScript, where `new CharacterRange()`
@@ -431,7 +431,7 @@ export function _register_font_at(
  * All of a layer's keyframe documents share one font table and one COS
  * tree, so the font is registered once per layer. After Effects inserts
  * the replacement directly AFTER the font it replaces and leaves the old
- * entry in place (probed AE 2026: `Verdana`@0 -> `Georgia`@1), which is
+ * entry in place (probed AE 2026: `Verdana`\@0 -\> `Georgia`\@1), which is
  * what `_register_font_at` reproduces.
  *
  * A font table can hold SEVERAL entries with one PostScript name (AE
@@ -871,7 +871,7 @@ export function _apply_para_key(doc: TextDocument, start: number, end: number, k
  * Read-only descriptor resolving one COS style key over a range.
  *
  * Evaluates the key across every style run overlapping the owning
- * [CharacterRange][] with AE's mixed-value semantics: a uniform value
+ * {@link CharacterRange} with AE's mixed-value semantics: a uniform value
  * is returned, disagreement reads as `None` (ExtendScript
  * `undefined`). `gate` names a boolean style key that must be truthy
  * for a run to participate at all (AE gates `strokeColor` on
@@ -884,17 +884,16 @@ export function _apply_para_key(doc: TextDocument, start: number, end: number, k
  * Fields whose writes need coupled side effects (kerning runs,
  * leading/auto-leading) stay `read_only` until their phase lands.
  *
- * Args:
- *   kind: `"char"` or `"para"` - which run array to resolve over.
- *   key: String key into each run's style dict.
- *   transform: Optional callable applied to each stored value.
- *   default: Per-run value when the key is absent from the run.
- *   gate: Optional boolean style key gating run participation.
- *   reverse: 1-arg callable applied when setting (user-facing ->
- *     COS value), mirroring `CosField.reverse`.
- *   validate: Optional callable `(value, instance)` run before any
- *     `reverse`, mirroring the TextDocument CosField validators.
- *   read_only: When `true`, the field cannot be set.
+ * @param kind - `"char"` or `"para"` - which run array to resolve over.
+ * @param key - String key into each run's style dict.
+ * @param transform - Optional callable applied to each stored value.
+ * @param default - Per-run value when the key is absent from the run.
+ * @param gate - Optional boolean style key gating run participation.
+ * @param reverse - 1-arg callable applied when setting (user-facing -\> COS value), mirroring
+ *   `CosField.reverse`.
+ * @param validate - Optional callable `(value, instance)` run before any `reverse`, mirroring the
+ *   TextDocument CosField validators.
+ * @param read_only - When `true`, the field cannot be set.
  */
 export class RangeField {
   declare kind: string;
@@ -1008,7 +1007,7 @@ export class RangeField {
 }
 
 /**
- * A [CosField][py_aep.cos.CosField] whose writes style the whole
+ * A {@link py_aep.cos.CosField | CosField} whose writes style the whole
  * document.
  *
  * AE document-level setters apply to every character or paragraph and
@@ -1131,7 +1130,7 @@ export class _TextRange {
  */
 export class _IndexRange extends _TextRange {
   /**
-   * A [CharacterRange][] fixed to the current character bounds.
+   * A {@link CharacterRange} fixed to the current character bounds.
    *
    * The returned range holds resolved indices and does not follow
    * later changes to this range's paragraphs or lines.
@@ -1147,10 +1146,9 @@ export class _IndexRange extends _TextRange {
 // ---------------------------------------------------------------------------
 
 /**
- * A contiguous character span of a [TextDocument][].
+ * A contiguous character span of a {@link TextDocument}.
  *
- * Created via `TextDocument.character_range(character_start,
- * signed_character_end)`. Most `TextDocument` styling attributes are
+ * Created via `TextDocument.character_range(character_start, signed_character_end)`. Most `TextDocument` styling attributes are
  * readable on the range; when the range spans style runs with
  * differing values the attribute reads `None` (ExtendScript
  * `undefined`). Bounds re-resolve on every access, so a range created
@@ -1159,7 +1157,7 @@ export class _IndexRange extends _TextRange {
  * Zero-span ranges (`character_start == character_end`) are valid and
  * report the style at that caret position with an empty `text`.
  *
- * See: https://ae-scripting.docsforadobe.dev/text/characterrange/
+ * @see https://ae-scripting.docsforadobe.dev/text/characterrange/
  */
 export class CharacterRange extends _TextRange {
   // Descriptor-backed style fields: installed after the class (see the
@@ -1202,8 +1200,7 @@ export class CharacterRange extends _TextRange {
   /**
    * Resolve `(start, end)` against the current document.
    *
-   * Raises:
-   *   ValueError: When the range is outside the document bounds.
+   * @throws {@link ValueError} When the range is outside the document bounds.
    */
   _bounds(): [number, number] {
     const visible = _visible_length(this._doc_ref);
@@ -1247,8 +1244,8 @@ export class CharacterRange extends _TextRange {
   /**
    * Resolve one style key over the overlapping runs.
    *
-   * Uniform value -> that value; disagreement -> `None`; every run
-   * gated out -> `None`.
+   * Uniform value -\> that value; disagreement -\> `None`; every run
+   * gated out -\> `None`.
    */
   _resolve_mixed(
     kind: string,
@@ -1312,9 +1309,8 @@ export class CharacterRange extends _TextRange {
    * prepending missing fonts like AE. This range keeps its creation
    * indices and may become invalid when the pasted text is shorter.
    *
-   * Args:
-   *   source_range: The [CharacterRange][] to copy from (may
-   *     belong to another document or project).
+   * @param source_range - The {@link CharacterRange} to copy from (may belong to another document
+   *   or project).
    */
   paste_from(source_range: CharacterRange): void {
     if (!(source_range instanceof CharacterRange)) {
@@ -1490,7 +1486,7 @@ export class CharacterRange extends _TextRange {
     this._propagate();
   }
 
-  /** The range's [FontObject][]; `None` when mixed. Read-only. */
+  /** The range's {@link FontObject}; `None` when mixed. Read-only. */
   get font_object(): FontObject | null {
     const idx = this._resolve_mixed("char", "0", null, null, null);
     const fonts = this._doc_ref._fonts;
@@ -1616,22 +1612,20 @@ export class CharacterRange extends _TextRange {
 // ---------------------------------------------------------------------------
 
 /**
- * A paragraph span of a [TextDocument][].
+ * A paragraph span of a {@link TextDocument}.
  *
- * Created via `TextDocument.paragraph_range(paragraph_index_start,
- * signed_paragraph_index_end)`. Paragraph character boundaries include
+ * Created via `TextDocument.paragraph_range(paragraph_index_start, signed_paragraph_index_end)`. Paragraph character boundaries include
  * each paragraph's trailing `\r`; the final boundary is clamped to
  * the visible text length, so a trailing empty paragraph reports a
  * zero-span range.
  *
- * See: https://ae-scripting.docsforadobe.dev/text/paragraphrange/
+ * @see https://ae-scripting.docsforadobe.dev/text/paragraphrange/
  */
 export class ParagraphRange extends _IndexRange {
   /**
    * Resolve the paragraph indices to character bounds.
    *
-   * Raises:
-   *   ValueError: When the paragraph indices are out of bounds.
+   * @throws {@link ValueError} When the paragraph indices are out of bounds.
    */
   _bounds(): [number, number] {
     const spans = _para_run_spans(this._doc_ref);
@@ -1646,10 +1640,9 @@ export class ParagraphRange extends _IndexRange {
 }
 
 /**
- * A composed-line span of a [TextDocument][].
+ * A composed-line span of a {@link TextDocument}.
  *
- * Created via `TextDocument.composed_line_range(
- * composed_line_index_start, signed_composed_line_index_end)`.
+ * Created via `TextDocument.composed_line_range( composed_line_index_start, signed_composed_line_index_end)`.
  * Point text derives its lines from the paragraphs (always fresh).
  * Box text reads the layout cache AE persisted at save time; after a
  * layout-affecting py-side write the calibrated composed-line
@@ -1659,15 +1652,14 @@ export class ParagraphRange extends _IndexRange {
  * clamp to the current text and lines falling wholly outside it
  * raise `ValueError`.
  *
- * See: https://ae-scripting.docsforadobe.dev/text/composedlinerange/
+ * @see https://ae-scripting.docsforadobe.dev/text/composedlinerange/
  */
 export class ComposedLineRange extends _IndexRange {
   /**
    * Resolve the line indices to character bounds.
    *
-   * Raises:
-   *   ValueError: When the line indices are out of bounds, or the
-   *     cached line lies wholly outside the current text.
+   * @throws {@link ValueError} When the line indices are out of bounds, or the cached line lies
+   *   wholly outside the current text.
    */
   _bounds(): [number, number] {
     const spans = _composed_line_spans(this._doc_ref);

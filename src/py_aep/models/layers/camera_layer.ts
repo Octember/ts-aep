@@ -11,21 +11,21 @@ import type { PropertyGroup } from "../properties/property_group.ts";
 /**
  * The CameraLayer object represents a camera layer within a composition.
  *
- * Example:
- *     ```python
- *     from py_aep import parse
- *
- *     app = parse("project.aep")
- *     comp = app.project.compositions[0]
- *     camera = comp.camera_layers[0]
- *     print(camera.name)
- *     ```
  *
  * Info:
- *     `CameraLayer` is a subclass of [Layer][] object. All methods and
- *     attributes of [Layer][] are available when working with `CameraLayer`.
+ *     `CameraLayer` is a subclass of {@link Layer} object. All methods and
+ *     attributes of {@link Layer} are available when working with `CameraLayer`.
  *
- * See: https://ae-scripting.docsforadobe.dev/layer/cameralayer/
+ * @example
+ * ```python
+ * from py_aep import parse
+ *
+ * app = parse("project.aep")
+ * comp = app.project.compositions[0]
+ * camera = comp.camera_layers[0]
+ * print(camera.name)
+ * ```
+ * @see https://ae-scripting.docsforadobe.dev/layer/cameralayer/
  */
 export class CameraLayer extends Layer {
   static _auto_name: string = "Camera";

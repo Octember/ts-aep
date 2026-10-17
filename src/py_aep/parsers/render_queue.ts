@@ -17,10 +17,9 @@ import { parse_output_module } from "./output_module.ts";
 /**
  * Parse the render queue from the top-level chunks.
  *
- * Args:
- *     root_chunks: The top-level chunks from the AEP file.
- *     project: The Project object being constructed, used to link comp
- *         references in render queue items.
+ * @param root_chunks - The top-level chunks from the AEP file.
+ * @param project - The Project object being constructed, used to link comp references in render
+ *   queue items.
  */
 export function parse_render_queue(root_chunks: Chunk[], project: Project): RenderQueue {
   let lrdr_chunk: ListChunk;
@@ -170,12 +169,11 @@ export function parse_render_queue(root_chunks: Chunk[], project: Project): Rend
  * - A LIST 'list' chunk with OM metadata (lhd3 + ldat)
  * - A LIST 'LOm ' chunk with output module chunks
  *
- * Args:
- *     litm_chunk: The LIST 'LItm' chunk containing per-item groups.
- *     render_settings: The parsed RenderSettingsItem list from LRdr's ldat.
- *     rout_items: The parsed RoutItem list from the Rout chunk.
- *     project: The Project object, used to resolve comp references.
- *     render_queue: The parent RenderQueue being constructed.
+ * @param litm_chunk - The LIST 'LItm' chunk containing per-item groups.
+ * @param render_settings - The parsed RenderSettingsItem list from LRdr's ldat.
+ * @param rout_items - The parsed RoutItem list from the Rout chunk.
+ * @param project - The Project object, used to resolve comp references.
+ * @param render_queue - The parent RenderQueue being constructed.
  */
 export function parse_render_queue_items(
   litm_chunk: ListChunk,
@@ -225,16 +223,15 @@ export function parse_render_queue_items(
 /**
  * Parse a single render queue item from its component chunks.
  *
- * Args:
- *     list_chunk: The LIST 'list' chunk containing OM metadata.
- *     lom_chunk: The LIST 'LOm ' chunk containing output modules.
- *     ldat_body: The RenderSettingsItem for this item.
- *     rcom_container: The RCom ContainerChunk, or None if absent.
- *     rcom_utf8: The Utf8 chunk inside RCom, or None if absent.
- *     rout_items: This item's block of RoutItems (AE writes 5 per item).
- *     litm_chunk: The LIST 'LItm' chunk.
- *     project: The Project object, used to resolve comp references.
- *     render_queue: The parent RenderQueue being constructed.
+ * @param list_chunk - The LIST 'list' chunk containing OM metadata.
+ * @param lom_chunk - The LIST 'LOm ' chunk containing output modules.
+ * @param ldat_body - The RenderSettingsItem for this item.
+ * @param rcom_container - The RCom ContainerChunk, or None if absent.
+ * @param rcom_utf8 - The Utf8 chunk inside RCom, or None if absent.
+ * @param rout_items - This item's block of RoutItems (AE writes 5 per item).
+ * @param litm_chunk - The LIST 'LItm' chunk.
+ * @param project - The Project object, used to resolve comp references.
+ * @param render_queue - The parent RenderQueue being constructed.
  */
 export function parse_render_queue_item(
   list_chunk: ListChunk,

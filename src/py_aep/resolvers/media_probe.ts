@@ -281,8 +281,8 @@ export function read_bounded(fp: IO, size: number): Uint8Array {
 /**
  * Read footage metadata from a media file's header.
  *
- * @param file Path to the source media file (drives the format dispatch).
- * @param data The file's bytes, if the caller already read them; probed
+ * @param file - Path to the source media file (drives the format dispatch).
+ * @param data - The file's bytes, if the caller already read them; probed
  *   in memory instead of re-reading `file`.
  *
  * @throws NotImplementedError If header probing is not implemented for the
@@ -1061,15 +1061,14 @@ export const _LAYER_RECORD_KEYS: readonly Uint8Array[] = [b("Lr16"), b("Lr32"), 
  * that block empty and store the records inside a global `Lr16`/`Lr32`
  * additional-info block instead; the walk continues there.
  *
- * Returns:
- *   `(record_count, remaining)` - the layer record count (`0` for a
- *   flattened document: an empty or truncated Layer-and-Mask or Layer
- *   Info section, and no `Lr16`/`Lr32`/`Layr` block) and the record
- *   bytes left after the count. On a non-zero count, `fp` is positioned
- *   at the first layer record.
  *
  * Shared by `_probe_psd` and `resolvers.psd_layers.read_psd_layers` so the
  * two agree on which files count as flattened.
+ *
+ * @returns `(record_count, remaining)` - the layer record count (`0` for a flattened document: an
+ *   empty or truncated Layer-and-Mask or Layer Info section, and no `Lr16`/`Lr32`/`Layr` block) and
+ *   the record bytes left after the count. On a non-zero count, `fp` is positioned at the first
+ *   layer record.
  */
 export function psd_layer_record_count(fp: IO, is_psb: boolean): [number, number] {
   // Color Mode Data and Image Resources sections (4-byte lengths in both).
@@ -1448,8 +1447,8 @@ export function _fragment_totals(fp: IO, track_id: number): [number, number] {
 /**
  * Probe a QuickTime-family container (`.mov`, `.m4v`, `.m4a`, `.mp4`).
  *
- * @param fp The open media file.
- * @param undecodable Video sample-entry codes whose track AE's importer
+ * @param fp - The open media file.
+ * @param undecodable - Video sample-entry codes whose track AE's importer
  *   cannot decode, so it must be reported as absent (see
  *   `_MP4_UNDECODABLE_CODECS`). Keys are `bytes_.hex` of the code.
  */
@@ -1778,7 +1777,7 @@ export function _naive_datetime_us(y: number, mo: number, d: number, h: number, 
  * its microseconds since the epoch, which keeps differences exact.
  *
  * TODO(port): the `datetime.fromisoformat` fallback accepts only YYYY-MM-DD with an optional
- * `T`/space HH[:MM[:SS[.f{1,6}]]]; CPython 3.12 also accepts basic format (YYYYMMDD,
+ * `T`/space HH[:MM[:SS[.f\{1,6\}]]]; CPython 3.12 also accepts basic format (YYYYMMDD,
  * HHMMSS), ISO week dates (YYYY-Www-D) and 3/6-digit-only fractions with comma separators,
  * so such mgjson sample times yield None here but a value in Python.
  */
@@ -1990,7 +1989,7 @@ export function _probe_mp3(fp: IO): MediaInfo {
 // AAC - ADTS frame stream (audio only)
 // ---------------------------------------------------------------------------
 
-/** ADTS sampling-frequency index -> Hz (indices 13-15 are reserved/explicit). */
+/** ADTS sampling-frequency index -\> Hz (indices 13-15 are reserved/explicit). */
 export const _AAC_SR: readonly number[] = [96000, 88200, 64000, 48000, 44100, 32000, 24000, 22050, 16000, 12000, 11025, 8000, 7350];
 
 /**
@@ -2005,7 +2004,7 @@ export function _adts_frame_len(raw: Uint8Array, pos: number): number {
  * Whether `pos` begins a plausible ADTS frame header.
  *
  * Beyond the 12-bit sync word this checks the layer bits (always 0 for ADTS)
- * and the sampling-frequency index (< 13), and that the frame length is at
+ * and the sampling-frequency index (\< 13), and that the frame length is at
  * least a full header - enough to reject a coincidental `0xFF 0xFx` byte pair
  * in non-ADTS data.
  */
@@ -2583,7 +2582,7 @@ export function _deep_color_depth(has_alpha: boolean, bit_depth: number): number
  * little-endian (`XPDS`), Cineon big-endian (`0x802A5FD7`) and
  * little-endian (`0xD75F2A80`).
  *
- * @param fp Readable binary stream positioned at the start of the file.
+ * @param fp - Readable binary stream positioned at the start of the file.
  * @returns A `MediaInfo` with width, height, bit_depth, and has_alpha filled in.
  *   Duration is 0 (still frame); pixel_aspect defaults to 1.0.
  * @throws ValueError If the file is too short or has an unrecognised magic number.
@@ -2656,7 +2655,7 @@ export const _HEIF_BRANDS: ReadonlySet<string> = new Set([b("heic"), b("heix"), 
 /**
  * Probe a HEIF/HEIC (ISO/IEC 23008-12) still image.
  *
- * Walks the ISOBMFF box tree (`meta` -> `iprp` -> `ipco`) for `ispe`
+ * Walks the ISOBMFF box tree (`meta` -\> `iprp` -\> `ipco`) for `ispe`
  * (dimensions), `pixi` (bit depth) and an `auxC` alpha item. Accepts any
  * `ftyp` whose major or compatible brands include `heic`, `heix`, `mif1`
  * or `heif`.

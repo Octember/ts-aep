@@ -14,15 +14,14 @@ import { parse_source } from "./source.ts";
 /**
  * Parse a footage item.
  *
- * Args:
- *     child_chunks: The footage item child chunks.
- *     _idta: The idta chunk.
- *     _name_utf8: The Utf8 chunk containing the item name.
- *     _cmta: The cmta chunk (None if no comment).
- *     _item_list: The LIST chunk for creating new chunks.
- *     _gide: The LIST chunk for guides (None if no guides).
- *     project: The project.
- *     parent_folder: The item's parent folder.
+ * @param child_chunks - The footage item child chunks.
+ * @param _idta - The idta chunk.
+ * @param _name_utf8 - The Utf8 chunk containing the item name.
+ * @param _cmta - The cmta chunk (None if no comment).
+ * @param _item_list - The LIST chunk for creating new chunks.
+ * @param _gide - The LIST chunk for guides (None if no guides).
+ * @param project - The project.
+ * @param parent_folder - The item's parent folder.
  */
 export function parse_footage(
   child_chunks: Chunk[],

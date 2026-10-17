@@ -459,24 +459,24 @@ export function _rewrite_eg_identity(
  * The `CompItem` object represents a composition, and allows you to
  * manipulate and get information about it.
  *
- * Example:
- *     ```python
- *     from py_aep import parse
- *
- *     app = parse("project.aep")
- *     comp = app.project.compositions[0]
- *     print(comp.frame_rate)
- *     for layer in comp:
- *         ...
- *     ```
  *
  * Info:
- *     [Item][] is the base class for [AVItem][] object and for [FolderItem][]
+ *     {@link Item} is the base class for {@link AVItem} object and for {@link FolderItem}
  *     object, which are in turn the base classes for various other item
- *     types, so [Item][] attributes and methods are available when working with
+ *     types, so {@link Item} attributes and methods are available when working with
  *     all of these item types.
  *
- * See: https://ae-scripting.docsforadobe.dev/item/compitem/
+ * @example
+ * ```python
+ * from py_aep import parse
+ *
+ * app = parse("project.aep")
+ * comp = app.project.compositions[0]
+ * print(comp.frame_rate)
+ * for layer in comp:
+ *     ...
+ * ```
+ * @see https://ae-scripting.docsforadobe.dev/item/compitem/
  */
 export class CompItem extends AVItem {
   static _auto_name: string = "Comp";
@@ -485,11 +485,12 @@ export class CompItem extends AVItem {
    * the red, green, and blue components of the color. Read / Write. */
   declare bg_color: number[];
 
-  /** When `True`, Draft 3D mode is enabled for the composition.
+  /**
+   * When `True`, Draft 3D mode is enabled for the composition.
    * Read / Write.
    *
-   * Warning:
-   *     Deprecated in After Effects 2024 in favor of the new Draft 3D mode. */
+   * **Warning:** Deprecated in After Effects 2024 in favor of the new Draft 3D mode.
+   */
   declare draft3d: boolean;
 
   /** When `True`, frame blending is enabled for this Composition. Corresponds
@@ -549,10 +550,12 @@ export class CompItem extends AVItem {
    * Read / Write. */
   declare resolution_factor: number[];
 
-  /** The maximum number of motion blur samples of 2D layer motion. This
+  /**
+   * The maximum number of motion blur samples of 2D layer motion. This
    * corresponds to the Adaptive Sample Limit setting in the Advanced tab of
-   * the Composition Settings dialog box. Must be >= `samples_per_frame`.
-   * Read / Write. */
+   * the Composition Settings dialog box. Must be \>= `samples_per_frame`.
+   * Read / Write. 
+   */
   declare motion_blur_adaptive_sample_limit: number;
 
   /** The minimum number of motion blur samples per frame for Classic 3D
@@ -615,7 +618,7 @@ export class CompItem extends AVItem {
      * `seconds = time_units / internal_timebase`, so holding a keyframe at
      * the same time in seconds means scaling its stored unit count by
      * `new / old`. That ratio is 1 whenever only `time_scale` moved - the
-     * whole NTSC family, and 30 <-> 60 - but the frame rate cached on each
+     * whole NTSC family, and 30 \<-\> 60 - but the frame rate cached on each
      * `Keyframe` still has to be refreshed, because `frame_time` is derived
      * from it.
      *
@@ -906,7 +909,7 @@ export class CompItem extends AVItem {
   /**
    * The current time of the item when it is being previewed directly
    * from the Project panel. This value is a number of seconds. It is an
-   * error to set this value for a [FootageItem][] whose `main_source` is
+   * error to set this value for a {@link FootageItem} whose `main_source` is
    * still. Read / Write.
    *
    * Writing snaps the value to the nearest frame, half a frame rounding
@@ -963,18 +966,16 @@ export class CompItem extends AVItem {
     /**
      * Create a new empty composition.
      *
-     * Args:
-     *     name: The name of the new composition.
-     *     width: The width in pixels.
-     *     height: The height in pixels.
-     *     pixel_aspect: The pixel aspect ratio (1.0 for square pixels).
-     *     duration: The duration in seconds.
-     *     frame_rate: The frame rate in frames per second.
-     *     project: The project that owns this composition.
-     *     parent_folder: The folder that will contain this composition.
-     *     min_dimension: The smallest width / height accepted: 4, as
-     *         `addComp`, except for an import that AE builds smaller (an
-     *         SVG canvas can be 1 px a side).
+     * @param name - The name of the new composition.
+     * @param width - The width in pixels.
+     * @param height - The height in pixels.
+     * @param pixel_aspect - The pixel aspect ratio (1.0 for square pixels).
+     * @param duration - The duration in seconds.
+     * @param frame_rate - The frame rate in frames per second.
+     * @param project - The project that owns this composition.
+     * @param parent_folder - The folder that will contain this composition.
+     * @param min_dimension - The smallest width / height accepted: 4, as `addComp`, except for an
+     *   import that AE builds smaller (an SVG canvas can be 1 px a side).
      */
     const { project, parent_folder, min_dimension = 4 } = kw;
     validate_string(name);
@@ -1144,7 +1145,7 @@ export class CompItem extends AVItem {
      * contains the same layers as the original.
      *
      * The duplicate is placed directly after the original in its folder and named with
-     * the next numeric suffix (`Comp` > `Comp 2`). Every layer id - including the
+     * the next numeric suffix (`Comp` \> `Comp 2`). Every layer id - including the
      * viewer pseudo-layers - is freshly allocated, with parent, track
      * matte and effect layer-references remapped to the new siblings.
      * Essential Graphics controllers get fresh uuids with their comp and
@@ -1152,8 +1153,7 @@ export class CompItem extends AVItem {
      * (footage, precomps) and layer-side Essential Property override
      * uuids stay shared with the original.
      *
-     * Returns:
-     *     The newly created [CompItem][].
+     * @returns The newly created {@link CompItem}.
      */
     const project = this._project;
     const parent = this._parent_folder;
@@ -1419,8 +1419,10 @@ export class CompItem extends AVItem {
     return 0;
   }
 
-  /** All the [Layer][] objects for layers in this composition.
-   * Read-only. */
+  /**
+   * All the {@link Layer} objects for layers in this composition.
+   * Read-only. 
+   */
   get layers(): Layer[] {
     this._ensure_layers_loaded();
     return this._layers;
@@ -1494,7 +1496,7 @@ export class CompItem extends AVItem {
    * The number of controllers in the Essential Graphics panel for the
    * composition. Read-only.
    *
-   * Note: for each type-10 Group controller, After Effects synthesizes a
+   * **Note:** for each type-10 Group controller, After Effects synthesizes a
    * runtime-only "drop zone" controller it does not store in the file, so
    * this count is one lower per group than ExtendScript's
    * `motionGraphicsTemplateControllerCount`.
@@ -1751,22 +1753,23 @@ export class CompItem extends AVItem {
    * Keys are the labels the Render Options dialog uses, and the same
    * object also exposes each option as a typed attribute.
    *
-   * Example:
-   *     ```python
-   *     comp.renderer_options["Quality"] = 61
-   *     comp.renderer_options.quality = 61
-   *     ```
    *
    * The concrete type follows the composition's 3D renderer. Note
-   * that [renderer][] holds the ExtendScript module name, and the
+   * that {@link renderer} holds the ExtendScript module name, and the
    * one for Classic 3D is (confusingly) `ADBE Advanced 3d`:
    *
-   * - `ADBE Advanced 3d` (Classic 3D) - [ClassicRendererOptions][]
-   * - `ADBE Calder` (Advanced 3D) - [AdvancedRendererOptions][]
-   * - `ADBE Ernst` (Cinema 4D) - [Cinema4DRendererOptions][]
-   * - `ADBE Picasso` (Ray-traced 3D) - [RayTracedRendererOptions][]
+   * - `ADBE Advanced 3d` (Classic 3D) - {@link ClassicRendererOptions}
+   * - `ADBE Calder` (Advanced 3D) - {@link AdvancedRendererOptions}
+   * - `ADBE Ernst` (Cinema 4D) - {@link Cinema4DRendererOptions}
+   * - `ADBE Picasso` (Ray-traced 3D) - {@link RayTracedRendererOptions}
    *
    * Read / Write.
+   *
+   * @example
+   * ```python
+   * comp.renderer_options["Quality"] = 61
+   * comp.renderer_options.quality = 61
+   * ```
    */
   get renderer_options(): RendererOptions {
     return _renderer_options().renderer_options_for(this._prda, this);
@@ -1794,16 +1797,16 @@ export class CompItem extends AVItem {
   }
 
   /**
-   * A flat list of [MarkerValue][] objects for this composition.
+   * A flat list of {@link MarkerValue} objects for this composition.
    *
    * Shortcut for accessing marker data without navigating the property
    * tree.  Returns an empty list when the composition has no markers.
    *
-   * Example:
-   *     ```python
-   *     for marker in comp.markers:
-   *         print(marker.comment)
-   *     ```
+   * @example
+   * ```python
+   * for marker in comp.markers:
+   *     print(marker.comment)
+   * ```
    */
   get markers(): MarkerValue[] {
     if (this.marker_property == null) {
@@ -1831,7 +1834,7 @@ export class CompItem extends AVItem {
   /**
    * The front-most enabled camera layer, or `None`.
    *
-   * Returns the first [CameraLayer][] that is active at the current
+   * Returns the first {@link CameraLayer} that is active at the current
    * composition time. The value is `None` when the composition
    * contains no active camera layers.
    */
@@ -1853,13 +1856,11 @@ export class CompItem extends AVItem {
     /**
      * Get a Layer object by name, index, or relative to another layer.
      *
-     * Args:
-     *     name: The name of the layer to return.
-     *     index: The index position of the layer to return.
-     *     other_layer: A Layer object to use as a reference for the relative
-     *         index position of the layer to return.
-     *     rel_index: The index position of the layer relative to the
-     *         other_layer to return.
+     * @param name - The name of the layer to return.
+     * @param index - The index position of the layer to return.
+     * @param other_layer - A Layer object to use as a reference for the relative index position of
+     *   the layer to return.
+     * @param rel_index - The index position of the layer relative to the other_layer to return.
      */
     if (name) {
       for (const layer of this.layers) {
@@ -1885,7 +1886,7 @@ export class CompItem extends AVItem {
     return this.__type_cache != null ? this.__type_cache : this._build_type_cache();
   }
 
-  /** A list of all [AVLayer][] objects in this composition. */
+  /** A list of all {@link AVLayer} objects in this composition. */
   get av_layers(): AVLayer[] {
     return this._type_cache.av;
   }
@@ -2054,16 +2055,11 @@ export class CompItem extends AVItem {
      * for other layers. Its source is a small transparent solid created
      * automatically.
      *
-     * Args:
-     *     duration: Layer duration in seconds. Defaults to the
-     *         synthetic-layer default span (the
-     *         "Pref_DEFAULT_SYNTHETIC_OUT_POINT" preference; composition
-     *         duration by default). AE's `addNull` ignores this argument
-     *         (probed in AE 2026); py_aep honors it, since it sets the
-     *         layer out-point directly and the result is a valid AE file.
-     *
-     * Returns:
-     *     The newly created [AVLayer][].
+     * @param duration - Layer duration in seconds. Defaults to the synthetic-layer default span
+     *   (the "Pref_DEFAULT_SYNTHETIC_OUT_POINT" preference; composition duration by default). AE's
+     *   `addNull` ignores this argument (probed in AE 2026); py_aep honors it, since it sets the
+     *   layer out-point directly and the result is a valid AE file.
+     * @returns The newly created {@link AVLayer}.
      */
     if (duration != null) {
       validate_duration(duration);
@@ -2107,8 +2103,7 @@ export class CompItem extends AVItem {
     /**
      * Create a new empty shape layer at the top of the layer stack.
      *
-     * Returns:
-     *     The newly created [ShapeLayer][].
+     * @returns The newly created {@link ShapeLayer}.
      */
     const existing = new Set(this.layers.map((lyr) => lyr.name));
     const name = auto_name(ShapeLayer._auto_name, existing);
@@ -2128,13 +2123,9 @@ export class CompItem extends AVItem {
     /**
      * Create a new camera layer at the top of the layer stack.
      *
-     * Args:
-     *     name: Layer name. Auto-generated if `None`.
-     *     center_point: The `[x, y]` center point. Defaults to
-     *         `[width/2, height/2]`.
-     *
-     * Returns:
-     *     The newly created [CameraLayer][].
+     * @param name - Layer name. Auto-generated if `None`.
+     * @param center_point - The `[x, y]` center point. Defaults to `[width/2, height/2]`.
+     * @returns The newly created {@link CameraLayer}.
      */
     if (name == null) {
       const existing = new Set(this.layers.map((lyr) => lyr.name));
@@ -2181,13 +2172,9 @@ export class CompItem extends AVItem {
     /**
      * Create a new light layer at the top of the layer stack.
      *
-     * Args:
-     *     name: Layer name. Auto-generated if `None`.
-     *     center_point: The `[x, y]` center point. Defaults to
-     *         `[width/2, height/2]`.
-     *
-     * Returns:
-     *     The newly created [LightLayer][].
+     * @param name - Layer name. Auto-generated if `None`.
+     * @param center_point - The `[x, y]` center point. Defaults to `[width/2, height/2]`.
+     * @returns The newly created {@link LightLayer}.
      */
     if (name == null) {
       const existing = new Set(this.layers.map((lyr) => lyr.name));
@@ -2231,12 +2218,9 @@ export class CompItem extends AVItem {
     /**
      * Create a new parametric mesh layer at the top of the layer stack.
      *
-     * Args:
-     *     name: Layer name. Auto-generated if `None`.
-     *     mesh_type: The type of parametric mesh (required, keyword-only).
-     *
-     * Returns:
-     *     The newly created [ParametricMeshLayer][].
+     * @param name - Layer name. Auto-generated if `None`.
+     * @param mesh_type - The type of parametric mesh (required, keyword-only).
+     * @returns The newly created {@link ParametricMeshLayer}.
      */
     const { mesh_type } = kw;
     const explicit_name = name != null;
@@ -2269,16 +2253,12 @@ export class CompItem extends AVItem {
     /**
      * Add an existing footage or composition item as a new layer.
      *
-     * Args:
-     *     item: The [AVItem][] (footage or composition) to add.
-     *     duration: Layer duration in seconds, for still footage.
-     *         By default (probed in AE 2026) timed footage and nested
-     *         comps span their source duration, and stills span the
-     *         still-layer default (the "Pref_DEFAULT_STILL_OUT_POINT"
-     *         preference; composition duration by default).
-     *
-     * Returns:
-     *     The newly created [AVLayer][].
+     * @param item - The {@link AVItem} (footage or composition) to add.
+     * @param duration - Layer duration in seconds, for still footage. By default (probed in AE
+     *   2026) timed footage and nested comps span their source duration, and stills span the
+     *   still-layer default (the "Pref_DEFAULT_STILL_OUT_POINT" preference; composition duration by
+     *   default).
+     * @returns The newly created {@link AVLayer}.
      */
     if (!(item instanceof AVItem)) {
       throw new ValueError("item must be an AVItem (FootageItem or CompItem).");
@@ -2318,7 +2298,7 @@ export class CompItem extends AVItem {
 
   precompose(layer_indices: number[], name: string, move_all_attributes = true): CompItem {
     /**
-     * Create a new [CompItem][] and move the specified layers into it.
+     * Create a new {@link CompItem} and move the specified layers into it.
      *
      * The moved layers are replaced in this composition by a single new
      * layer whose source is the new composition, placed at the topmost
@@ -2339,28 +2319,20 @@ export class CompItem extends AVItem {
      * the new composition, which is sized from the layer's source and
      * contains one fresh layer referencing that source.
      *
-     * Warning:
-     *     References to moved `Layer` objects become stale (the layers
-     *     are re-created inside the new composition), mirroring
-     *     ExtendScript's reference invalidation.
+     * **Warning:** References to moved `Layer` objects become stale (the layers
+     * are re-created inside the new composition), mirroring
+     * ExtendScript's reference invalidation.
      *
-     * Args:
-     *     layer_indices: 0-based indices of the layers to precompose
-     *         (ExtendScript uses 1-based indices).
-     *     name: The name of the new composition.
-     *     move_all_attributes: `True` (default) to move all attributes
-     *         into the new composition; `False` to leave them on the
-     *         retained layer ("Leave all attributes" in the
-     *         Pre-compose dialog).
-     *
-     * Returns:
-     *     The newly created [CompItem][].
-     *
-     * Raises:
-     *     ValueError: If `layer_indices` is empty or contains an
-     *         out-of-range index, or if `move_all_attributes` is
-     *         `False` with more than one index or with a layer that
-     *         has no source.
+     * @param layer_indices - 0-based indices of the layers to precompose (ExtendScript uses 1-based
+     *   indices).
+     * @param name - The name of the new composition.
+     * @param move_all_attributes - `True` (default) to move all attributes into the new
+     *   composition; `False` to leave them on the retained layer ("Leave all attributes" in the
+     *   Pre-compose dialog).
+     * @returns The newly created {@link CompItem}.
+     * @throws {@link ValueError} If `layer_indices` is empty or contains an out-of-range index, or
+     *   if `move_all_attributes` is `False` with more than one index or with a layer that has no
+     *   source.
      */
     validate_string(name);
     if (!Array.isArray(layer_indices) || !layer_indices?.length) {
@@ -2610,22 +2582,17 @@ export class CompItem extends AVItem {
     /**
      * Create a new solid layer at the top of the layer stack.
      *
-     * Args:
-     *     color: Solid color as `[R, G, B]` in 0.0--1.0 range.
-     *     name: The solid and layer name. Pass `None` to auto-generate
-     *         a name from the color (e.g. `Red Solid 1`).
-     *     width: Solid width in pixels. Defaults to comp width.
-     *     height: Solid height in pixels. Defaults to comp height.
-     *     pixel_aspect: Pixel aspect ratio (default 1.0).
-     *     duration: Layer duration in seconds. Defaults to the
-     *         synthetic-layer default span (the
-     *         "Pref_DEFAULT_SYNTHETIC_OUT_POINT" preference; composition
-     *         duration by default). AE's `addSolid` ignores this argument
-     *         (probed in AE 2026); py_aep honors it, since it sets the
-     *         layer out-point directly and the result is a valid AE file.
-     *
-     * Returns:
-     *     The newly created [AVLayer][].
+     * @param color - Solid color as `[R, G, B]` in 0.0--1.0 range.
+     * @param name - The solid and layer name. Pass `None` to auto-generate a name from the color
+     *   (e.g. `Red Solid 1`).
+     * @param width - Solid width in pixels. Defaults to comp width.
+     * @param height - Solid height in pixels. Defaults to comp height.
+     * @param pixel_aspect - Pixel aspect ratio (default 1.0).
+     * @param duration - Layer duration in seconds. Defaults to the synthetic-layer default span
+     *   (the "Pref_DEFAULT_SYNTHETIC_OUT_POINT" preference; composition duration by default). AE's
+     *   `addSolid` ignores this argument (probed in AE 2026); py_aep honors it, since it sets the
+     *   layer out-point directly and the result is a valid AE file.
+     * @returns The newly created {@link AVLayer}.
      */
     // Validate before the auto-name subscripts the color, so malformed
     // input raises ValueError instead of TypeError/IndexError.
@@ -2684,14 +2651,11 @@ export class CompItem extends AVItem {
     /**
      * Build the binary btds/btdk structure for a text layer.
      *
-     * Args:
-     *     text: The text content.
-     *     box_size: `[width, height]` for box text; `None` for point text.
-     *     line_orientation: Text [LineOrientation][]; `None` for the
-     *         default horizontal orientation.
-     *
-     * Returns:
-     *     A `(LIST:btds, btgu, tdmn)` tuple to inject into the root tdgp.
+     * @param text - The text content.
+     * @param box_size - `[width, height]` for box text; `None` for point text.
+     * @param line_orientation - Text {@link LineOrientation}; `None` for the default horizontal
+     *   orientation.
+     * @returns A `(LIST:btds, btgu, tdmn)` tuple to inject into the root tdgp.
      */
     const td = new TextDocument(text, box_size, line_orientation);
     // AE applies the character-level "Text Style Sheet" preferences to
@@ -2761,11 +2725,8 @@ export class CompItem extends AVItem {
   /**
    * Create a new point text layer at the top of the layer stack.
    *
-   * Args:
-   *     text: Initial text content.
-   *
-   * Returns:
-   *     The newly created [TextLayer][].
+   * @param text - Initial text content.
+   * @returns The newly created {@link TextLayer}.
    */
   add_text(text = ""): TextLayer {
     return this._add_text_layer(text, false);
@@ -2774,13 +2735,10 @@ export class CompItem extends AVItem {
   /**
    * Create a new box (paragraph) text layer at the top of the layer stack.
    *
-   * Args:
-   *     box_size: `[width, height]` of the text box. If `None`, uses
-   *         the composition dimensions.
-   *     text: Initial text content.
-   *
-   * Returns:
-   *     The newly created [TextLayer][].
+   * @param box_size - `[width, height]` of the text box. If `None`, uses the composition
+   *   dimensions.
+   * @param text - Initial text content.
+   * @returns The newly created {@link TextLayer}.
    */
   add_box_text(box_size: number[] | null = null, text = ""): TextLayer {
     return this._add_text_layer(text, true, box_size);
@@ -2792,11 +2750,8 @@ export class CompItem extends AVItem {
    * Vertical text flows top-to-bottom with lines stacking right-to-left,
    * matching the Vertical Type Tool default.
    *
-   * Args:
-   *     text: Initial text content.
-   *
-   * Returns:
-   *     The newly created [TextLayer][].
+   * @param text - Initial text content.
+   * @returns The newly created {@link TextLayer}.
    */
   // @requires_version(24): wrapped after the class body.
   add_vertical_text(text = ""): TextLayer {
@@ -2809,13 +2764,10 @@ export class CompItem extends AVItem {
    * Vertical text flows top-to-bottom with lines stacking right-to-left,
    * matching the Vertical Type Tool default.
    *
-   * Args:
-   *     box_size: `[width, height]` of the text box. If `None`, uses
-   *         the composition dimensions.
-   *     text: Initial text content.
-   *
-   * Returns:
-   *     The newly created [TextLayer][].
+   * @param box_size - `[width, height]` of the text box. If `None`, uses the composition
+   *   dimensions.
+   * @param text - Initial text content.
+   * @returns The newly created {@link TextLayer}.
    */
   // @requires_version(24): wrapped after the class body.
   add_vertical_box_text(box_size: number[] | null = null, text = ""): TextLayer {
@@ -2915,8 +2867,10 @@ descriptor(
   }),
 );
 
-/** The maximum number of motion blur samples of 2D layer motion. Must be
- * >= `samples_per_frame`. Read / Write. */
+/**
+ * The maximum number of motion blur samples of 2D layer motion. Must be
+ * \>= `samples_per_frame`. Read / Write. 
+ */
 descriptor(
   CompItem,
   "motion_blur_adaptive_sample_limit",

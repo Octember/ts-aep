@@ -48,9 +48,8 @@ export const MAC_EPOCH_OFFSET = 2082844800;
  * for very large values rather than overflowing `struct.pack` and silently
  * truncating the saved file.
  *
- * Raises:
- *     ValueError: If the value's whole part alone cannot fit int32 (about 68
- *         years for a time field) - which also rejects `nan` / `inf`.
+ * @throws {@link ValueError} If the value's whole part alone cannot fit int32 (about 68 years for a
+ *   time field) - which also rejects `nan` / `inf`.
  */
 export function to_dividend_divisor(value: number): [number, number] {
   if (!(_INT32_MIN <= value && value <= _INT32_MAX)) {
@@ -70,8 +69,8 @@ export function to_dividend_divisor(value: number): [number, number] {
  * display start time or a layer's stretch: the value rounded to float32,
  * as an exact ratio, with the divisor held to the signed 32-bit range.
  *
- * Measured on AE 2026: 0.51 -> 2139095/4194304, 0.5 -> 1/2, and
- * 8.33e-7 (whose exact float32 ratio needs a 2^44 divisor) ->
+ * Measured on AE 2026: 0.51 -\> 2139095/4194304, 0.5 -\> 1/2, and
+ * 8.33e-7 (whose exact float32 ratio needs a 2^44 divisor) -\>
  * 330/396000001.
  */
 export function to_float32_ratio(value: number): [number, number] {
@@ -106,8 +105,7 @@ export function _get_struct(full_fmt: string): struct.Struct {
  * Prepends `endian` to `fmt`, reads the required number of bytes, and
  * unpacks them.
  *
- * Raises:
- *     IOError: If fewer bytes are available than the format requires.
+ * @throws {@link IOError} If fewer bytes are available than the format requires.
  */
 export function read_fmt(fmt: string, fp: IO, endian = ">"): any[] {
   const s = _get_struct(endian + fmt);
@@ -144,8 +142,7 @@ export function to_f4(value: number): number {
 /**
  * Read exactly `size` bytes from `fp`.
  *
- * Raises:
- *     IOError: If fewer bytes are available than requested.
+ * @throws {@link IOError} If fewer bytes are available than requested.
  */
 export function read_bytes(fp: IO, size: number): Uint8Array {
   const data = fp.read(size);

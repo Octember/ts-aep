@@ -6,7 +6,7 @@
  * returned callable as the `validate` parameter of a descriptor.
  *
  * The `instance` argument is the model object being modified, allowing
- * cross-field validation (e.g. checking that one field is >= another).
+ * cross-field validation (e.g. checking that one field is \>= another).
  */
 
 import { FLOAT32_MAX } from "../binary/bin_utils.ts";
@@ -30,17 +30,17 @@ import {
 export type Validator = (value: any, instance?: any) => void;
 export type NumBound = number | ((instance: any) => number | null) | null;
 
-/** Return a validator that checks a numeric value.
+/**
+ * Return a validator that checks a numeric value.
  *
- * Args:
- *     min: Minimum allowed value. May be a static number or a callable
- *         `(instance) -> float` for dynamic bounds. Inclusive unless
- *         `exclusive_min` is set.
- *     max: Maximum allowed value (inclusive). May be a static number
- *         or a callable `(instance) -> float` for dynamic bounds.
- *     integer: When `True`, reject non-`int` values.
- *     exclusive_min: When `True`, the value must be strictly greater than
- *         `min` (e.g. a positive-but-non-zero size).
+ * @param kw - Keyword arguments:
+ * - `min`: Minimum allowed value. May be a static number or a callable `(instance) -> float` for
+ *     dynamic bounds. Inclusive unless `exclusive_min` is set.
+ * - `max`: Maximum allowed value (inclusive). May be a static number or a callable
+ *     `(instance) -> float` for dynamic bounds.
+ * - `integer`: When `True`, reject non-`int` values.
+ * - `exclusive_min`: When `True`, the value must be strictly greater than `min` (e.g. a
+ *     positive-but-non-zero size).
  */
 // NOTE(port): int/float — integral values are plain numbers by design (RULEBOOK §4); error messages print whole-number bounds without Python's trailing ".0".
 export function _validate_number(
@@ -89,21 +89,19 @@ export function _validate_number(
   };
 }
 
-/** Return a validator that checks a fixed-length numeric sequence.
+/**
+ * Return a validator that checks a fixed-length numeric sequence.
  *
- * Args:
- *     length: Required number of elements. When `None`, any length
- *         is accepted. May be a callable `(instance) -> int` for
- *         dynamic bounds.
- *     min: Minimum allowed value per element. May be a static number
- *         or a callable `(instance) -> float` for dynamic bounds.
- *         Inclusive unless `exclusive_min` is set.
- *     max: Maximum allowed value per element (inclusive). May be a
- *         static number or a callable `(instance) -> float` for
- *         dynamic bounds.
- *     integer: When `True`, reject non-`int` elements.
- *     exclusive_min: When `True`, each element must be strictly greater
- *         than `min` (e.g. a non-zero-area box size).
+ * @param kw - Keyword arguments:
+ * - `length`: Required number of elements. When `None`, any length is accepted. May be a callable
+ *     `(instance) -> int` for dynamic bounds.
+ * - `min`: Minimum allowed value per element. May be a static number or a callable
+ *     `(instance) -> float` for dynamic bounds. Inclusive unless `exclusive_min` is set.
+ * - `max`: Maximum allowed value per element (inclusive). May be a static number or a callable
+ *     `(instance) -> float` for dynamic bounds.
+ * - `integer`: When `True`, reject non-`int` elements.
+ * - `exclusive_min`: When `True`, each element must be strictly greater than `min` (e.g. a
+ *     non-zero-area box size).
  */
 export function validate_sequence(
   kw: {
@@ -155,14 +153,14 @@ export function validate_sequence(
  */
 export const _ENUM_VALIDATORS = new Map<any, Validator>();
 
-/** Return a validator that checks value is a member of `enum_cls`.
+/**
+ * Return a validator that checks value is a member of `enum_cls`.
  *
  * Accepts both enum instances and their int equivalents. An int that is
  * not a valid member value raises `ValueError`; any other wrong type
  * raises `TypeError`. The returned validator is memoized per `enum_cls`.
  *
- * Args:
- *     enum_cls: The enum class the value must be a member of.
+ * @param enum_cls - The enum class the value must be a member of.
  */
 export function validate_enum(enum_cls: any): Validator {
   const cached = _ENUM_VALIDATORS.get(enum_cls) ?? null;
@@ -192,10 +190,10 @@ export function validate_enum(enum_cls: any): Validator {
   return _validator;
 }
 
-/** Return a validator that checks value is in the allowed set.
+/**
+ * Return a validator that checks value is in the allowed set.
  *
- * Args:
- *     allowed: Iterable of valid values.
+ * @param allowed - Iterable of valid values.
  */
 export function validate_one_of(allowed: Iterable<unknown>): Validator {
   const allowed_list = [...allowed];
@@ -212,16 +210,16 @@ export function validate_one_of(allowed: Iterable<unknown>): Validator {
 /** The After Effects platforms py_aep writes footage for (see `py_aep.parse`). */
 export const validate_platform = validate_one_of(["windows", "macos"]);
 
-/** Return a validator that checks a string value.
+/**
+ * Return a validator that checks a string value.
  *
- * Args:
- *     allow_empty: When `False`, reject empty strings.
- *     max_length: Maximum allowed character count.
- *     max_bytes: Maximum allowed UTF-8 byte count, for a value stored in a
- *         fixed-width chunk field (where `struct.pack` would otherwise
- *         truncate silently, mid-character for multi-byte text).
- *     allow_null: When `False`, reject strings containing a NUL (`\x00`)
- *         character, which corrupt the COS/text blobs AE reads.
+ * @param kw - Keyword arguments:
+ * - `allow_empty`: When `False`, reject empty strings.
+ * - `max_length`: Maximum allowed character count.
+ * - `max_bytes`: Maximum allowed UTF-8 byte count, for a value stored in a fixed-width chunk field
+ *     (where `struct.pack` would otherwise truncate silently, mid-character for multi-byte text).
+ * - `allow_null`: When `False`, reject strings containing a NUL (`\x00`) character, which corrupt
+ *     the COS/text blobs AE reads.
  */
 export function _validate_str(
   kw: { allow_empty?: boolean; max_length?: number | null; max_bytes?: number | null; allow_null?: boolean } = {},
@@ -250,16 +248,15 @@ export function _validate_str(
   };
 }
 
-/** Return a validator that checks a filesystem path.
+/**
+ * Return a validator that checks a filesystem path.
  *
- * Args:
- *     must_exist: When `True`, reject paths that don't exist
- *         (`ValueError`). When `False`, reject paths that do exist
- *         (`FileExistsError`). When `None`, allow both.
- *     must_be_file: When `True`, also reject an existing path that is not
- *         a regular file. Without this a directory passes `must_exist` and
- *         only fails later, deep in a reader, as an OS-specific error
- *         (`PermissionError` on Windows, `IsADirectoryError` elsewhere).
+ * @param kw - Keyword arguments:
+ * - `must_exist`: When `True`, reject paths that don't exist (`ValueError`). When `False`, reject
+ *     paths that do exist (`FileExistsError`). When `None`, allow both.
+ * - `must_be_file`: When `True`, also reject an existing path that is not a regular file. Without
+ *     this a directory passes `must_exist` and only fails later, deep in a reader, as an
+ *     OS-specific error (`PermissionError` on Windows, `IsADirectoryError` elsewhere).
  */
 export function _validate_path(
   kw: { must_exist?: boolean | null; must_be_file?: boolean } = {},

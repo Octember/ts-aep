@@ -305,9 +305,10 @@ register("tdb4")(Tdb4Chunk);
  * - spatial (`color=False, spatial=True`)
  * - plain numeric / vector (`color=False, spatial=False`)
  *
- * @param t The `Tdb4Chunk` to mutate.
- * @param kw.color `true` for color properties.
- * @param kw.spatial `true` for spatial (position / point) properties.
+ * @param t - The `Tdb4Chunk` to mutate.
+ * @param kw - Keyword arguments:
+ * - `color`: `true` for color properties.
+ * - `spatial`: `true` for spatial (position / point) properties.
  */
 export function tdb4_apply_animated_template(t: Tdb4Chunk, kw: { color: boolean; spatial: boolean }): void {
   const { color, spatial } = kw;
@@ -347,7 +348,7 @@ export function tdb4_clear_keyframe_record(t: Tdb4Chunk): void {
 }
 
 /**
- * Apply AE's animated -> static transition in-place (the last keyframe
+ * Apply AE's animated -\> static transition in-place (the last keyframe
  * was removed).
  *
  * AE sets the static bit, clears the animated flag, sets the record's
@@ -361,11 +362,11 @@ export function tdb4_clear_keyframe_record(t: Tdb4Chunk): void {
  * or shape Position reads back at its default and a shape Fill Color
  * fails to evaluate.
  *
- * @param t The `Tdb4Chunk` to mutate.
- * @param kw.in_interpolation The removed keyframe's in interpolation code.
- * @param kw.out_interpolation The removed keyframe's out interpolation code.
- * @param kw.spatial_flags The removed keyframe's spatial flags (0 for a
- *   non-spatial keyframe).
+ * @param t - The `Tdb4Chunk` to mutate.
+ * @param kw - Keyword arguments:
+ * - `in_interpolation`: The removed keyframe's in interpolation code.
+ * - `out_interpolation`: The removed keyframe's out interpolation code.
+ * - `spatial_flags`: The removed keyframe's spatial flags (0 for a non-spatial keyframe).
  */
 export function tdb4_apply_static_template(
   t: Tdb4Chunk,
@@ -386,7 +387,7 @@ export function tdb4_apply_static_template(
  * AE 2026 canon for an active `ADBE Text VF Axis` slot (byte-diffed
  * against the variable_font_axis_static fixture).
  *
- * @param t The `Tdb4Chunk` to mutate.
+ * @param t - The `Tdb4Chunk` to mutate.
  */
 export function tdb4_apply_vf_axis_template(t: Tdb4Chunk): void {
   t.dimensions = 2;
@@ -635,9 +636,8 @@ export class TdsnChunk extends ContainerChunk {
   /**
    * The `Utf8` child holding the display name.
    *
-   * Raises:
-   *     ChunkNotFoundError: If the tdsn has no Utf8 child, so callers
-   *         can degrade to the auto-name like any missing chunk.
+   * @throws {@link ChunkNotFoundError} If the tdsn has no Utf8 child, so callers can degrade to the
+   *   auto-name like any missing chunk.
    */
   get utf8(): Utf8Chunk {
     const chunk = find_by_type(this.chunks, "Utf8");
@@ -727,8 +727,7 @@ export class CurvesArbpChunk extends Chunk {
   /**
    * Read a raw aRbp chunk's data as the Curves layout.
    *
-   * Raises:
-   *     ValueError: If the data is not 1644 bytes long.
+   * @throws {@link ValueError} If the data is not 1644 bytes long.
    */
   static from_arbp(arbp: Chunk): CurvesArbpChunk {
     if (arbp.data.length !== CURVES_ARBP_SIZE) {

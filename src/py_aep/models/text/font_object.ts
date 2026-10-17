@@ -24,7 +24,6 @@ export function _design_vector_from_cos(raw: number[]): number[] {
  * the font technology used, helping disambiguate when multiple fonts
  * sharing the same PostScript name are installed on the system.
  *
- * Example:
  * ```python
  * from py_aep import parse
  *
@@ -34,10 +33,11 @@ export function _design_vector_from_cos(raw: number[]): number[] {
  * print(font.post_script_name)
  * ```
  *
- * Note:
+ * **Note:** 
  * This functionality was added in After Effects 24.0.
  *
- * See: https://ae-scripting.docsforadobe.dev/text/fontobject/
+ * @example
+ * @see https://ae-scripting.docsforadobe.dev/text/fontobject/
  */
 export class FontObject {
   /** The PostScript name of the font. Read-only. */

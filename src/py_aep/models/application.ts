@@ -52,30 +52,28 @@ export function _validate_version(value: any, obj: Application): void {
  * provide access to the project and application-level settings parsed from
  * the binary file.
  *
- * Example:
- *     ```python
- *     from py_aep import parse
+ * @example
+ * ```python
+ * from py_aep import parse
  *
- *     app = parse("project.aep")
- *     print(app.version)
- *     ```
- *
- * See: https://ae-scripting.docsforadobe.dev/general/application/
+ * app = parse("project.aep")
+ * print(app.version)
+ * ```
+ * @see https://ae-scripting.docsforadobe.dev/general/application/
  */
 export class Application {
   /**
    * The build number of After Effects that last saved the project.
    * Read / Write.
    *
-   * Warning:
-   *     This attribute is read-only in ExtendScript. Modifying it could
-   *     cause issues when opening the file in After Effects.
+   * **Warning:** This attribute is read-only in ExtendScript. Modifying it could
+   * cause issues when opening the file in After Effects.
    */
   declare build_number: number;
 
   /**
    * The version of After Effects that last saved the project, formatted as
-   * "{major}.{minor}x{build}" (e.g., "25.6x101"). Read / Write.
+   * "\{major\}.\{minor\}x\{build\}" (e.g., "25.6x101"). Read / Write.
    *
    * Setting it also updates the file-format compatibility marker (which
    * determines the oldest AE that can open the file, and the rules AE reads
@@ -86,28 +84,26 @@ export class Application {
    * before. The major and the build must be at most 255, the minor at most
    * 15.
    *
-   * Warning:
-   *     Setting the version does **not** migrate the project structure: the
-   *     version-gated chunks and features are left unchanged, so relabeling
-   *     to an older version may produce a file that the older AE opens but
-   *     whose newer content it cannot represent. A relabel across a change
-   *     After Effects reads by the format version alone (the AE 23 layer
-   *     record, the AE 17 Media Replacement folder id) raises `ValueError`,
-   *     since no After Effects would open the result. To create a project
-   *     faithfully targeting a specific AE version use [py_aep.new][]; to
-   *     convert an existing project, open and re-save it in the target AE.
+   * **Warning:** Setting the version does **not** migrate the project structure: the
+   * version-gated chunks and features are left unchanged, so relabeling
+   * to an older version may produce a file that the older AE opens but
+   * whose newer content it cannot represent. A relabel across a change
+   * After Effects reads by the format version alone (the AE 23 layer
+   * record, the AE 17 Media Replacement folder id) raises `ValueError`,
+   * since no After Effects would open the result. To create a project
+   * faithfully targeting a specific AE version use {@link py_aep.new}; to
+   * convert an existing project, open and re-save it in the target AE.
    *
-   *     This attribute is read-only in ExtendScript. Modifying it could
-   *     cause issues when opening the file in After Effects.
+   * This attribute is read-only in ExtendScript. Modifying it could
+   * cause issues when opening the file in After Effects.
    */
   declare version: string;
 
   /**
    * Indicates whether the After Effects version is a beta version. Read / Write.
    *
-   * Warning:
-   *     This attribute is read-only in ExtendScript. Modifying it could
-   *     cause issues when opening the file in After Effects.
+   * **Warning:** This attribute is read-only in ExtendScript. Modifying it could
+   * cause issues when opening the file in After Effects.
    */
   declare is_beta: boolean;
 
@@ -130,7 +126,8 @@ export class Application {
     this._active_viewer = active_viewer;
   }
 
-  /** Build a new, empty [Application][] (mirrors File > New Project).
+  /**
+   * Build a new, empty {@link Application} (mirrors File \> New Project).
    *
    * See `py_aep.new`.
    */
@@ -158,7 +155,7 @@ export class Application {
   }
 
   /**
-   * The [Preferences][] object, providing access to the After Effects
+   * The {@link Preferences} object, providing access to the After Effects
    * preference files (requires `ae_preferences_dir` to read values from
    * disk; overrides work without it). Read-only.
    */
@@ -168,13 +165,12 @@ export class Application {
 
   /**
    * A string indicating the version and build of After Effects, formatted
-   * as "{major}.{minor}x{build}" (e.g., "25.6x101"). Read / Write.
+   * as "\{major\}.\{minor\}x\{build\}" (e.g., "25.6x101"). Read / Write.
    *
-   * Alias for [version][py_aep.models.application.Application.version].
+   * Alias for {@link py_aep.models.application.Application.version | version}.
    *
-   * Warning:
-   *     This attribute is read-only in ExtendScript. Modifying it could
-   *     cause issues when opening the file in After Effects.
+   * **Warning:** This attribute is read-only in ExtendScript. Modifying it could
+   * cause issues when opening the file in After Effects.
    */
   get build_name(): string {
     return this.version;

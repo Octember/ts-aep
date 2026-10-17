@@ -162,7 +162,7 @@ export function _get_field_names(obj: any): readonly string[] | null {
 export const _property_names_cache = new Map<Function, readonly string[]>();
 
 /**
- * Get public @property names for a class, cached per type.
+ * Get public \@property names for a class, cached per type.
  *
  * Sorted for the same reason as `_get_field_names`.
  */
@@ -289,9 +289,9 @@ export function _normalize_keys(d: Dict): Dict {
 /**
  * Compare two values with tolerance for floats.
  *
- * @param expected Expected value from ExtendScript JSON.
- * @param parsed Parsed value from py_aep.
- * @param tolerance Float comparison tolerance.
+ * @param expected - Expected value from ExtendScript JSON.
+ * @param parsed - Parsed value from py_aep.
+ * @param tolerance - Float comparison tolerance.
  * @returns True if values match.
  */
 export function compare_values(expected: any, parsed: any, tolerance = 0.001): boolean {
@@ -665,10 +665,10 @@ export function compare_property(
   /**
    * Compare a single property (leaf node).
    *
-   * @param expected_prop Expected property from ExtendScript JSON.
-   * @param parsed_prop Parsed property from py_aep.
-   * @param path Dotted path for error messages.
-   * @param result ValidationResult to accumulate differences.
+   * @param expected_prop - Expected property from ExtendScript JSON.
+   * @param parsed_prop - Parsed property from py_aep.
+   * @param path - Dotted path for error messages.
+   * @param result - ValidationResult to accumulate differences.
    */
   const property_mappings = {
     name: "name",
@@ -892,10 +892,10 @@ export function compare_shape_value(
   /**
    * Compare a Shape value (mask path or shape layer path).
    *
-   * @param expected_shape Expected shape from ExtendScript JSON.
-   * @param parsed_shape Parsed shape dict from py_aep.
-   * @param path Dotted path for error messages.
-   * @param result ValidationResult to accumulate differences.
+   * @param expected_shape - Expected shape from ExtendScript JSON.
+   * @param parsed_shape - Parsed shape dict from py_aep.
+   * @param path - Dotted path for error messages.
+   * @param result - ValidationResult to accumulate differences.
    */
   const shape_mappings: Record<string, string> = {
     closed: "closed",
@@ -940,10 +940,10 @@ export function compare_keyframe(
   /**
    * Compare a single keyframe's attributes.
    *
-   * @param expected_kf Expected keyframe from ExtendScript JSON.
-   * @param parsed_kf Parsed keyframe from py_aep.
-   * @param path Dotted path for error messages.
-   * @param result ValidationResult to accumulate differences.
+   * @param expected_kf - Expected keyframe from ExtendScript JSON.
+   * @param parsed_kf - Parsed keyframe from py_aep.
+   * @param path - Dotted path for error messages.
+   * @param result - ValidationResult to accumulate differences.
    */
   // Track manually-compared fields
   result.track_field("Keyframe", "value", expected_kf.has("value"));
@@ -1029,10 +1029,10 @@ export function compare_text_document(
   /**
    * Compare TextDocument properties.
    *
-   * @param expected_doc Expected TextDocument from ExtendScript JSON.
-   * @param parsed_doc Parsed TextDocument from py_aep.
-   * @param path Dotted path for error messages.
-   * @param result ValidationResult to accumulate differences.
+   * @param expected_doc - Expected TextDocument from ExtendScript JSON.
+   * @param parsed_doc - Parsed TextDocument from py_aep.
+   * @param path - Dotted path for error messages.
+   * @param result - ValidationResult to accumulate differences.
    */
   // fontFamily/fontStyle/fontLocation are intentionally omitted: AE does not
   // store them in the .aep. It resolves them at runtime by feeding the stored
@@ -1122,10 +1122,10 @@ export function compare_property_group(
    *
    * Recursively compares nested properties and property groups.
    *
-   * @param expected_group Expected property group from ExtendScript JSON.
-   * @param parsed_group Parsed property group from py_aep.
-   * @param path Dotted path for error messages.
-   * @param result ValidationResult to accumulate differences.
+   * @param expected_group - Expected property group from ExtendScript JSON.
+   * @param parsed_group - Parsed property group from py_aep.
+   * @param path - Dotted path for error messages.
+   * @param result - ValidationResult to accumulate differences.
    */
   const group_mappings = {
     name: "name",
@@ -1288,10 +1288,10 @@ export function compare_footage_item(
   /**
    * Compare footage item properties and its main source.
    *
-   * @param expected_item Expected FootageItem from ExtendScript JSON.
-   * @param parsed_item Parsed FootageItem from py_aep.
-   * @param path Dotted path for error messages.
-   * @param result ValidationResult to accumulate differences.
+   * @param expected_item - Expected FootageItem from ExtendScript JSON.
+   * @param parsed_item - Parsed FootageItem from py_aep.
+   * @param path - Dotted path for error messages.
+   * @param result - ValidationResult to accumulate differences.
    */
   const footage_mappings = {
     name: "name",
@@ -1585,9 +1585,9 @@ export function compare_viewer(
   /**
    * Compare active viewer properties.
    *
-   * @param expected_viewer Expected activeViewer from ExtendScript JSON.
-   * @param parsed_viewer Parsed active_viewer dict from py_aep.
-   * @param result ValidationResult to accumulate differences.
+   * @param expected_viewer - Expected activeViewer from ExtendScript JSON.
+   * @param parsed_viewer - Parsed active_viewer dict from py_aep.
+   * @param result - ValidationResult to accumulate differences.
    */
   const viewer_mappings: Record<string, string> = {
     type: "type",
@@ -1630,10 +1630,10 @@ export function validate_aep(
   /**
    * Validate parsed AEP against expected JSON.
    *
-   * @param aep_path Path to .aep file.
-   * @param json_path Path to expected JSON (from ExtendScript export).
-   * @param verbose Whether to print detailed progress.
-   * @param category_filter Only show differences from this category.
+   * @param aep_path - Path to .aep file.
+   * @param json_path - Path to expected JSON (from ExtendScript export).
+   * @param verbose - Whether to print detailed progress.
+   * @param category_filter - Only show differences from this category.
    * @returns ValidationResult containing all differences.
    */
   const result = new ValidationResult();

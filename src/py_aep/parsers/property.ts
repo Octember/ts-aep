@@ -118,17 +118,13 @@ export function _property_parser(
  * Iterates each match-name run, finds the first LIST chunk, and
  * dispatches to the appropriate parser based on its list type.
  *
- * Args:
- *     match_name_runs: Sub-property chunks grouped into ordered
- *         match-name runs (from `get_match_name_runs`).
- *     child_depth: The property depth for parsed child properties.
- *     effect_param_defs: Project-level effect parameter definitions.
- *     composition: The parent composition.
- *     layer: The owning layer, for mask paths and effect point
- *         denormalization.
- *
- * Returns:
- *     Ordered list of parsed properties and property groups.
+ * @param match_name_runs - Sub-property chunks grouped into ordered match-name runs (from
+ *   `get_match_name_runs`).
+ * @param child_depth - The property depth for parsed child properties.
+ * @param effect_param_defs - Project-level effect parameter definitions.
+ * @param composition - The parent composition.
+ * @param layer - The owning layer, for mask paths and effect point denormalization.
+ * @returns Ordered list of parsed properties and property groups.
  */
 export function parse_properties(
   match_name_runs: [string, Chunk[]][],
@@ -391,22 +387,18 @@ export function _reclass_override_leaves(group: PropertyGroup): void {
 /**
  * Parse a property group.
  *
- * Args:
- *     tdgp_chunk: The TDGP chunk to parse.
- *     group_match_name: A special name for the property used to build unique
- *         naming paths. The match name is not displayed, but you can refer
- *         to it in scripts. Every property has a unique match-name
- *         identifier. Match names are stable from version to version
- *         regardless of the display name (the name attribute value) or any
- *         changes to the application. Unlike the display name, it is not
- *         localized. An indexed group
- *         (`PropertyBase.property_type == PropertyType.indexed_group`)
- *         may not have a name value, but always has a match_name value.
- *     property_depth: The nesting depth of this group (0 = layer level).
- *     effect_param_defs: Project-level effect parameter definitions, used as
- *         fallback when layer-level parT chunks are missing.
- *     composition: The parent composition.
- *     tdmn: The TDMN chunk for this property group.
+ * @param tdgp_chunk - The TDGP chunk to parse.
+ * @param group_match_name - A special name for the property used to build unique naming paths. The
+ *   match name is not displayed, but you can refer to it in scripts. Every property has a unique
+ *   match-name identifier. Match names are stable from version to version regardless of the display
+ *   name (the name attribute value) or any changes to the application. Unlike the display name, it
+ *   is not localized. An indexed group (`PropertyBase.property_type == PropertyType.indexed_group`)
+ *   may not have a name value, but always has a match_name value.
+ * @param property_depth - The nesting depth of this group (0 = layer level).
+ * @param effect_param_defs - Project-level effect parameter definitions, used as fallback when
+ *   layer-level parT chunks are missing.
+ * @param composition - The parent composition.
+ * @param tdmn - The TDMN chunk for this property group.
  */
 export const parse_property_group = _suppress_materialization().decorate(function parse_property_group(
   tdgp_chunk: ListChunk,
@@ -466,13 +458,12 @@ export const parse_property_group = _suppress_materialization().decorate(functio
  * mask_motion_blur) parsed from the mkif chunk, and the rotoBezier flag
  * from the ADBE Mask Shape tdsb chunk.
  *
- * Args:
- *     tdgp_chunk: The tdgp chunk for this mask atom.
- *     mkif_chunk: The mkif (mask info) chunk containing mask attributes.
- *     property_depth: The nesting depth of this group.
- *     effect_param_defs: Project-level effect parameter definitions.
- *     composition: The parent composition.
- *     tdmn: The TDMN chunk for this mask atom.
+ * @param tdgp_chunk - The tdgp chunk for this mask atom.
+ * @param mkif_chunk - The mkif (mask info) chunk containing mask attributes.
+ * @param property_depth - The nesting depth of this group.
+ * @param effect_param_defs - Project-level effect parameter definitions.
+ * @param composition - The parent composition.
+ * @param tdmn - The TDMN chunk for this mask atom.
  */
 export const _parse_mask_atom = _suppress_materialization().decorate(function _parse_mask_atom(
   tdgp_chunk: ListChunk,

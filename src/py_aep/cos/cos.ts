@@ -105,9 +105,10 @@ export function enum_repr(E: any, v: any): string {
  * Each key is tried as a dict string key first and then as a list
  * index. Returns `None` when any step along the path is missing.
  *
- * Example::
+ * @example
+ * :
  *
- *     cos_get(data, "1", "1", 0, "0", "0")  // -> text string
+ * cos_get(data, "1", "1", 0, "0", "0")  // -\> text string
  */
 export function cos_get(data: any, ...keys: (string | number)[]): any {
   let cur: any = data;
@@ -132,8 +133,7 @@ export function cos_get(data: any, ...keys: (string | number)[]): any {
 /**
  * Decode a text document's COS run array into `(start, end, payload)`.
  *
- * Run arrays (`doc["0"]["5"/"6"/"8"]["0"]`) store `{"0": payload,
- * "1": count}` entries whose counts are UTF-16 units over the raw
+ * Run arrays (`doc["0"]["5"/"6"/"8"]["0"]`) store `{"0": payload, "1": count}` entries whose counts are UTF-16 units over the raw
  * text. `style_key` picks the style sub-dict for paragraph ("5") and
  * character ("6") runs; kerning runs ("8") use their payload directly.
  * Runs with a missing or negative count are skipped. Shared by the

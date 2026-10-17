@@ -40,7 +40,7 @@ import { profile_id_for_name } from "../enums/mappings.ts";
  * (64-67) and profile-ID (84-99) fields zeroed. This is the value After
  * Effects stores in footage `apid` and output `output_profile_id`.
  *
- * @param data Raw ICC profile bytes.
+ * @param data - Raw ICC profile bytes.
  * @returns The 16-byte digest.
  */
 export function icc_profile_id(data: Uint8Array): Uint8Array {
@@ -66,7 +66,7 @@ export function icc_profile_id(data: Uint8Array): Uint8Array {
  * Supports both the ICCv2 `textDescriptionType` and ICCv4
  * `multiLocalizedUnicodeType` tag formats.
  *
- * @param data Raw ICC profile bytes.
+ * @param data - Raw ICC profile bytes.
  * @returns The profile description string, or `null` if not found.
  */
 export function icc_profile_description(data: Uint8Array): string | null {
@@ -182,7 +182,7 @@ export class IccProfileLibrary {
   declare _by_name: Map<string, Path> | null;
 
   /**
-   * @param dirs Directories to scan for `.icc`/`.icm` files. When `null`, the
+   * @param dirs - Directories to scan for `.icc`/`.icm` files. When `null`, the
    *   platform's standard Adobe Color directories are used.
    */
   constructor(dirs: Path[] | null = null) {

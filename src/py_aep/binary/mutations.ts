@@ -250,16 +250,15 @@ export function clone_chunk_tree(chunk: Chunk): Chunk {
   return read_chunks(buf, size)[0];
 }
 
-/** Build an empty keyframe container `LIST:list` (lhd3 + ldat).
+/**
+ * Build an empty keyframe container `LIST:list` (lhd3 + ldat).
  *
  * The opaque lhd3 counters are seeded to the constant values After
  * Effects writes for every animated property (`_count_b=1`,
  * `_counter_a=1`, `_counter_b=4`), regardless of keyframe count.
  *
- * Returns:
- *     `(inner, lhd3, ldat)` - the `LIST:list`, its header, and the
- *     (empty) data chunk. Callers append `LdatItem`s to `ldat.items`
- *     and keep `lhd3.count` in sync.
+ * @returns `(inner, lhd3, ldat)` - the `LIST:list`, its header, and the (empty) data chunk. Callers
+ *   append `LdatItem`s to `ldat.items` and keep `lhd3.count` in sync.
  */
 export function build_keyframe_list(
   item_type: LdatItemType,
@@ -279,16 +278,15 @@ export function build_keyframe_list(
 // render-settings list, item list, settings info.
 export const LRDR_CHILD_ORDER = ["Rhed", "Rout", "list", "LItm", "LSIf"] as const;
 
-/** Build the render-queue settings `LIST:list` skeleton (lhd3 + ldat).
+/**
+ * Build the render-queue settings `LIST:list` skeleton (lhd3 + ldat).
  *
  * The lhd3 is sized for the 2246-byte render-settings items AE writes; the
  * ldat starts synthetic so `write_aep()` skips it until the queue's first
  * `add()`. Shared by `RenderQueue._new` and `parse_render_queue`'s
  * degenerate-file rebuild so the two skeletons cannot drift.
  *
- * Returns:
- *     `(inner, lhd3, ldat)` - the `LIST:list`, its header, and the data
- *     chunk.
+ * @returns `(inner, lhd3, ldat)` - the `LIST:list`, its header, and the data chunk.
  */
 export function build_rq_settings_list(
   kw: { synthetic?: boolean } = {},
@@ -445,12 +443,11 @@ export function build_shap(
   return new ListChunk({ list_type: "shap", chunks: chunks });
 }
 
-/** Build an empty `LIST:Gide` guide container.
+/**
+ * Build an empty `LIST:Gide` guide container.
  *
- * Returns:
- *     (gide, lhd3, inner) - the outer Gide list, header chunk,
- *     and inner `LIST:list`.  Callers can append an `LdatChunk`
- *     to *inner* when guide data is needed.
+ * @returns (gide, lhd3, inner) - the outer Gide list, header chunk, and inner `LIST:list`. Callers
+ *   can append an `LdatChunk` to *inner* when guide data is needed.
  */
 export function build_gide_list(): [ListChunk, Lhd3Chunk, ListChunk] {
   const lhd3 = new Lhd3Chunk({ item_size: 16, item_type_raw: 2 });
@@ -830,7 +827,8 @@ export function build_om_container(): ListChunk {
   return new ListChunk({ list_type: "list", chunks: [lhd3, ldat] });
 }
 
-/** Build the `(tdmn, LIST:om-s)` pair for a new Path element's
+/**
+ * Build the `(tdmn, LIST:om-s)` pair for a new Path element's
  * `ADBE Vector Shape` property.
  *
  * AE writes an empty bezier path (no vertices) with a unit bounding
@@ -838,8 +836,7 @@ export function build_om_container(): ListChunk {
  * layout mirrors a static mask path (`tdbs` with empty `cdat` plus
  * the `omks > shap` value container).
  *
- * Args:
- *     time_base: The comp's internal timebase (`cdta.internal_timebase`).
+ * @param time_base - The comp's internal timebase (`cdta.internal_timebase`).
  */
 export function build_default_path_shape(time_base: number): [TdmnChunk, ListChunk] {
   const tdb4 = new Tdb4Chunk({
@@ -901,7 +898,8 @@ export const _DEFAULT_ROTO_MASK_SHAPE_OMS =
   "0000003f800000000000003f8000000000000000000000000000006f6d746e000000103f80" +
   "00003f8000003f8000003f800000";
 
-/** Build the `(tdmn, LIST:om-s)` pair AE writes for `ADBE Mask Shape`
+/**
+ * Build the `(tdmn, LIST:om-s)` pair AE writes for `ADBE Mask Shape`
  * when a path-less mask first materializes one.
  *
  * A freshly added mask has no Mask Shape subtree (AE treats it as the
@@ -910,14 +908,13 @@ export const _DEFAULT_ROTO_MASK_SHAPE_OMS =
  * normalized, so only the comp's internal timebase and the layer's
  * aspect vary.
  *
- * Args:
- *     time_base: The comp's internal timebase (`cdta.internal_timebase`).
- *     aspect: The tdb4 X multiplier AE stamps on a mask path: the
- *         layer's mask space in display pixels, width / height.
- *     roto_bezier: Whether the mask-shape `tdsb` roto flag is set. The
- *         baked template originates from an enable-rotoBezier capture
- *         (flag on); a plain bezier path write clears it, matching AE
- *         (psd_vector_mask fixtures).
+ * @param time_base - The comp's internal timebase (`cdta.internal_timebase`).
+ * @param kw - Keyword arguments:
+ * - `aspect`: The tdb4 X multiplier AE stamps on a mask path: the layer's mask space in display
+ *     pixels, width / height.
+ * - `roto_bezier`: Whether the mask-shape `tdsb` roto flag is set. The baked template originates
+ *     from an enable-rotoBezier capture (flag on); a plain bezier path write clears it, matching AE
+ *     (psd_vector_mask fixtures).
  */
 export function build_default_mask_shape(
   time_base: number,
@@ -938,7 +935,8 @@ export function build_default_mask_shape(
   return [new TdmnChunk({ value: "ADBE Mask Shape" }), oms];
 }
 
-/** Build the `(tdmn, LIST:tdgp)` pair AE writes for a freshly added
+/**
+ * Build the `(tdmn, LIST:tdgp)` pair AE writes for a freshly added
  * shape element.
  *
  * A new element is a named, otherwise empty group: child properties
@@ -946,14 +944,13 @@ export function build_default_mask_shape(
  * written to binary. `subgroups` lists the mandatory empty subgroups
  * some elements carry as `(match_name, tdsb lock flags)` pairs.
  *
- * Args:
- *     match_name: The element match name (e.g. `ADBE Vector Shape - Rect`).
- *     name: The instance name AE bakes into the tdsn (`"Base N"`).
- *     subgroups: Mandatory empty subgroups to write inside the element,
- *         as `(match_name, tdsb lock flags, tdsb enable flags)` triples.
- *     path_time_base: For the Path element (`ADBE Vector Shape -
- *         Group`), the comp's internal timebase; adds the default
- *         empty `ADBE Vector Shape` bezier property.
+ * @param match_name - The element match name (e.g. `ADBE Vector Shape - Rect`).
+ * @param name - The instance name AE bakes into the tdsn (`"Base N"`).
+ * @param kw - Keyword arguments:
+ * - `subgroups`: Mandatory empty subgroups to write inside the element, as
+ *     `(match_name, tdsb lock flags, tdsb enable flags)` triples.
+ * - `path_time_base`: For the Path element (`ADBE Vector Shape - Group`), the comp's internal
+ *     timebase; adds the default empty `ADBE Vector Shape` bezier property.
  */
 export function build_vector_element(
   match_name: string,
@@ -985,20 +982,18 @@ export function build_vector_element(
   return [new TdmnChunk({ value: match_name }), new ListChunk({ list_type: "tdgp", chunks: chunks })];
 }
 
-/** Build the `(tdmn, LIST:tdgp)` pair AE writes for a freshly added
+/**
+ * Build the `(tdmn, LIST:tdgp)` pair AE writes for a freshly added
  * text selector.
  *
- * A new selector is a named group `[tdsb, tdsn("X Selector N"),
- * group end]` whose value children are synthesized on parse. The
- * Range Selector additionally carries an empty `ADBE Text Range
- * Advanced` subgroup in binary (its children are synthesized too);
+ * A new selector is a named group `[tdsb, tdsn("X Selector N"), group end]` whose value children are synthesized on parse. The
+ * Range Selector additionally carries an empty `ADBE Text Range Advanced` subgroup in binary (its children are synthesized too);
  * Wiggly and Expression selectors do not.
  *
- * Args:
- *     match_name: The selector match name (e.g. `ADBE Text Selector`).
- *     name: The instance name AE bakes into the tdsn (`"Base N"`).
- *     has_advanced: Whether to write the empty Advanced subgroup
- *         (Range Selector only).
+ * @param match_name - The selector match name (e.g. `ADBE Text Selector`).
+ * @param name - The instance name AE bakes into the tdsn (`"Base N"`).
+ * @param kw - Keyword arguments:
+ * - `has_advanced`: Whether to write the empty Advanced subgroup (Range Selector only).
  */
 export function build_text_selector(
   match_name: string,
@@ -1024,16 +1019,15 @@ export function build_text_selector(
   return [new TdmnChunk({ value: match_name }), new ListChunk({ list_type: "tdgp", chunks: chunks })];
 }
 
-/** Build the `(tdmn, LIST:tdgp)` pair AE writes for a freshly added
+/**
+ * Build the `(tdmn, LIST:tdgp)` pair AE writes for a freshly added
  * text animator.
  *
- * A new animator is `[tdsb, tdsn("Animator N"), Animator Properties
- * (empty), group end]`. The empty `ADBE Text Animator Properties`
+ * A new animator is `[tdsb, tdsn("Animator N"), Animator Properties (empty), group end]`. The empty `ADBE Text Animator Properties`
  * subgroup is in binary; its 103-property pool and the (also empty)
  * `ADBE Text Selectors` group are synthesized on parse.
  *
- * Args:
- *     name: The instance name AE bakes into the tdsn (`"Animator N"`).
+ * @param name - The instance name AE bakes into the tdsn (`"Animator N"`).
  */
 export function build_text_animator(name: string): [TdmnChunk, ListChunk] {
   const properties_tdgp = new ListChunk({
@@ -1057,7 +1051,8 @@ export function build_text_animator(name: string): [TdmnChunk, ListChunk] {
   return [new TdmnChunk({ value: "ADBE Text Animator" }), tdgp];
 }
 
-/** Build the `(tdmn, LIST:sspc)` pair AE writes for a freshly added
+/**
+ * Build the `(tdmn, LIST:sspc)` pair AE writes for a freshly added
  * expression-control effect.
  *
  * The parameter definitions (`LIST:parT`) are baked plugin data from
@@ -1067,16 +1062,16 @@ export function build_text_animator(name: string): [TdmnChunk, ListChunk] {
  * parameters stay at their defaults and are omitted from binary,
  * except the Layer Control's, which AE always writes.
  *
- * Args:
- *     match_name: The effect match name (e.g. `ADBE Slider Control`).
- *     display_name: The default effect name, written to `fnam`.
- *     part_bytes: This control's serialized `LIST:parT` chunk.
- *     tdsn_name: The instance name for the effect tdsn - the unnamed
- *         sentinel for a first instance, `"Name N"` for later ones.
- *     time_base: The comp's internal timebase (`cdta.internal_timebase`).
- *     layer_id: Id of the layer the effect is applied to.
- *     layer_param_name: When set, also write the `-0001` value
- *         parameter to the tdgp, with this tdsn display name.
+ * @param match_name - The effect match name (e.g. `ADBE Slider Control`).
+ * @param display_name - The default effect name, written to `fnam`.
+ * @param part_bytes - This control's serialized `LIST:parT` chunk.
+ * @param kw - Keyword arguments:
+ * - `tdsn_name`: The instance name for the effect tdsn - the unnamed sentinel for a first instance,
+ *     `"Name N"` for later ones.
+ * - `time_base`: The comp's internal timebase (`cdta.internal_timebase`).
+ * - `layer_id`: Id of the layer the effect is applied to.
+ * - `layer_param_name`: When set, also write the `-0001` value parameter to the tdgp, with this
+ *     tdsn display name.
  */
 export function build_expression_control(
   match_name: string,
@@ -1156,7 +1151,8 @@ export function build_expression_control(
   return [new TdmnChunk({ value: match_name }), sspc];
 }
 
-/** Build a Dropdown Menu Control - a pseudo-effect whose match name
+/**
+ * Build a Dropdown Menu Control - a pseudo-effect whose match name
  * is generated fresh per instance.
  *
  * The match name is `"Pseudo/@@" + base64(uuid4 bytes)` (standard
@@ -1166,10 +1162,10 @@ export function build_expression_control(
  * sizes. The tdgp is the same as a value-less control (only the
  * `-0000` internal param); the Menu enum + items live in the `parT`.
  *
- * Args:
- *     tdsn_name: The instance name for the effect tdsn.
- *     time_base: The comp's internal timebase.
- *     layer_id: Id of the layer the effect is applied to.
+ * @param kw - Keyword arguments:
+ * - `tdsn_name`: The instance name for the effect tdsn.
+ * - `time_base`: The comp's internal timebase.
+ * - `layer_id`: Id of the layer the effect is applied to.
  */
 export function build_dropdown_control(kw: {
   tdsn_name: string;

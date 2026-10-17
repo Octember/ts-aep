@@ -35,7 +35,6 @@ import type { FolderItem } from "./folder.ts";
  * The `FootageItem` object represents a footage item imported into a project,
  * which appears in the Project panel.
  *
- * Example:
  * ```python
  * from py_aep import parse
  *
@@ -45,11 +44,12 @@ import type { FolderItem } from "./folder.ts";
  * ```
  *
  * Info:
- * `FootageItem` is a subclass of [AVItem][] object, which is a subclass of
- * [Item][] object. All methods and attributes of [AVItem][] and [Item][] are
+ * `FootageItem` is a subclass of {@link AVItem} object, which is a subclass of
+ * {@link Item} object. All methods and attributes of {@link AVItem} and {@link Item} are
  * available when working with `FootageItem`.
  *
- * See: https://ae-scripting.docsforadobe.dev/item/footageitem/
+ * @example
+ * @see https://ae-scripting.docsforadobe.dev/item/footageitem/
  */
 export class FootageItem extends AVItem {
   declare _main_source: FileSource | SolidSource | PlaceholderSource;
@@ -91,7 +91,7 @@ export class FootageItem extends AVItem {
   /**
    * The pixel aspect ratio of the item (1.0 is square). Read / Write.
    *
-   * Note:
+   * **Note:** 
    * Unlike After Effects, which snaps a written value to the nearest
    * preset ratio (1.09 becomes the 1.0940 of D1/DV PAL), the value
    * is stored as given.
@@ -111,8 +111,8 @@ export class FootageItem extends AVItem {
    *
    * In this case, the path of the missing source file is in the
    * `missing_footage_path` attribute of the footage item's source-file object.
-   * See [FootageItem.main_source][] and
-   * [FileSource.missing_footage_path][py_aep.models.sources.file.FileSource.missing_footage_path].
+   * See {@link FootageItem.main_source} and
+   * {@link py_aep.models.sources.file.FileSource.missing_footage_path | FileSource.missing_footage_path}.
    * Read-only.
    */
   get footage_missing(): boolean {
@@ -122,7 +122,7 @@ export class FootageItem extends AVItem {
   /**
    * When `True`, the footage has an audio component.
    *
-   * When [use_proxy][py_aep.models.items.av_item.AVItem.use_proxy] is
+   * When {@link py_aep.models.items.av_item.AVItem.use_proxy | use_proxy} is
    * `True`, reflects the proxy source rather than the main source.
    * Read-only.
    */
@@ -135,7 +135,7 @@ export class FootageItem extends AVItem {
 
   /**
    * `True` if the footage can be used as an alternate source when setting
-   * [Property.alternate_source][py_aep.models.properties.property.Property.alternate_source].
+   * {@link py_aep.models.properties.property.Property.alternate_source | Property.alternate_source}.
    * Read-only.
    *
    * `False` for solids, for footage without a video component (audio-only
@@ -253,7 +253,7 @@ export class FootageItem extends AVItem {
     }
   }
 
-  /** The footage file path if its source is a [FileSource][], else `None`. */
+  /** The footage file path if its source is a {@link FileSource}, else `None`. */
   get file(): string | null {
     if (hasattr(this._main_source, "file")) {
       return (this._main_source as any).file;
@@ -262,7 +262,7 @@ export class FootageItem extends AVItem {
   }
 
   /**
-   * Identity used by [Project.consolidate_footage][].
+   * Identity used by {@link Project.consolidate_footage}.
    *
    * Returns a hashable key for footage that can be merged with other
    * footage sharing the same source file and interpretation, or `None`
@@ -302,7 +302,6 @@ export class FootageItem extends AVItem {
    * The item name resolves from the source; like AE, the item-level
    * Utf8 chunk stays empty until the user renames the item.
    *
-   * Args:
    * source: The footage source (file, placeholder, or solid).
    * project: The project that owns this item.
    * parent_folder: The folder that will contain this item.
@@ -404,13 +403,12 @@ export class FootageItem extends AVItem {
   /**
    * Replace the footage source with a placeholder.
    *
-   * Args:
    * name: The placeholder name. Pass `None` to use
    * `Missing Name`. An empty string becomes `Placeholder`.
    * width: Width in pixels (4-30000).
    * height: Height in pixels (4-30000).
    * frame_rate: Frame rate in fps (1.0-99.0).
-   * duration: Duration in seconds (> 0, <= 10800).
+   * duration: Duration in seconds (\> 0, \<= 10800).
    */
   replace_with_placeholder(
     name: string | null,
@@ -432,7 +430,6 @@ export class FootageItem extends AVItem {
   /**
    * Replace the footage source with a solid.
    *
-   * Args:
    * color: Solid color as [R, G, B] in 0.0-1.0 range.
    * name: The solid name. Pass `None` to auto-generate
    * a name from the color (e.g. `Red Solid 1`).
@@ -488,7 +485,7 @@ export class FootageItem extends AVItem {
    * (the default) preserves the current single-layer binding's choice.
    * For an AI/PDF target the content box is the artwork box measured from
    * the page content stream (see
-   * [read_ai_layer_bounds][py_aep.resolvers.ai_bounds.read_ai_layer_bounds]).
+   * {@link py_aep.resolvers.ai_bounds.read_ai_layer_bounds | read_ai_layer_bounds}).
    * `layer_dimensions` is ignored when `layer_index` is `None` (a merged
    * document is always document-sized).
    *
@@ -502,11 +499,10 @@ export class FootageItem extends AVItem {
    * current source has no PSD layer binding. Like `layer_dimensions`, it
    * is ignored when `layer_index` is `None`.
    *
-   * Note:
+   * **Note:** 
    * Unlike ExtendScript, if the specified file has an unlabeled alpha channel,
    * this method does not estimate the alpha interpretation.
    *
-   * Args:
    * file: Path to the new source file.
    * layer_index: Layer of the new file to reference, as its 0-based
    * `list_layers` position, or `CURRENT_VALUE` (layered files
@@ -516,7 +512,6 @@ export class FootageItem extends AVItem {
    * layer_styles: `"merge"`, `"ignore"`, or `CURRENT_VALUE` to keep
    * the current binding's choice (the default). PSD targets only.
    *
-   * Raises:
    * ValueError: If the extension is not a supported footage format,
    * if the file has no track After Effects can decode (e.g. an
    * AV1-only `.mp4`), if `layer_index` is passed for a
@@ -622,18 +617,16 @@ export class FootageItem extends AVItem {
    * The method preserves interpretation parameters from the previous `main_source`
    * object.
    *
-   * Note:
+   * **Note:** 
    * Unlike ExtendScript, if the specified file has an unlabeled alpha channel,
    * this method does not estimate the alpha interpretation.
    *
-   * Args:
    * file: Path to a representative frame; sibling frames in the same
    * folder are gathered into the sequence.
    * force_alphabetical: Take every file of the same type in the
    * folder, in alphabetical order, rather than the numbered
    * frames (see `ImportOptions.force_alphabetical`).
    *
-   * Raises:
    * ValueError: If the extension is not a supported footage format,
    * or one After Effects does not import as a sequence (movies,
    * audio, HEIC, FBX, data files).

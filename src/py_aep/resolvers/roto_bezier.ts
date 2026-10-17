@@ -32,13 +32,12 @@ export const DEFAULT_TENSION = 1.0 / 3.0;
 /**
  * `(in_tangents, out_tangents)` of a RotoBezier path.
  *
- * Args:
- *     vertices: The path's vertices, in layer pixels.
- *     closed: Whether the path is closed.
- *     tensions: One tension per vertex.
- *     scale_x: Multiplier from layer pixels to the measuring space along x
- *         (the stored aspect over the layer width).
- *     scale_y: The same along y (one over the layer height).
+ * @param vertices - The path's vertices, in layer pixels.
+ * @param closed - Whether the path is closed.
+ * @param tensions - One tension per vertex.
+ * @param scale_x - Multiplier from layer pixels to the measuring space along x (the stored aspect
+ *   over the layer width).
+ * @param scale_y - The same along y (one over the layer height).
  */
 export function roto_bezier_tangents(
   vertices: number[][],

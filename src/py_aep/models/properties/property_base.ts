@@ -94,9 +94,9 @@ export function _renumber_mask_auto_names(parent: PropertyGroup): void {
  *
  * AE assigns the copy the next free mask id (highest existing + 1) and
  * names it `'{base} {new_id}'`, where `base` is the source name with any
- * trailing number stripped (verified in AE 2026: `'Mask 1'` -> id 2
- * `'Mask 2'`; `'Eyes'` -> id 2 `'Eyes 2'`; with ids `[1, 3]`, `'Mask 1'`
- * -> id 4 `'Mask 4'`). A plain clone keeps the source's id and name,
+ * trailing number stripped (verified in AE 2026: `'Mask 1'` -\> id 2
+ * `'Mask 2'`; `'Eyes'` -\> id 2 `'Eyes 2'`; with ids `[1, 3]`, `'Mask 1'`
+ * -\> id 4 `'Mask 4'`). A plain clone keeps the source's id and name,
  * colliding with it.
  */
 export function _assign_duplicate_mask_identity(
@@ -115,14 +115,14 @@ export function _assign_duplicate_mask_identity(
 }
 
 /**
- * Abstract base class for both [Property][] and [PropertyGroup][].
+ * Abstract base class for both {@link Property} and {@link PropertyGroup}.
  *
  * Info:
- *     `PropertyBase` is the base class for both [Property][] and
- *     [PropertyGroup][], so `PropertyBase` attributes and methods are available
+ *     `PropertyBase` is the base class for both {@link Property} and
+ *     {@link PropertyGroup}, so `PropertyBase` attributes and methods are available
  *     when working with properties and property groups.
  *
- * See: https://ae-scripting.docsforadobe.dev/property/propertybase/
+ * @see https://ae-scripting.docsforadobe.dev/property/propertybase/
  */
 export class PropertyBase {
   /** Corresponds to the setting of the eyeball icon. Read / Write. */
@@ -182,7 +182,7 @@ export class PropertyBase {
   /**
    * The body chunk that follows this property's `tdmn` in the parent.
    *
-   * `tdbs` for a [Property][], `tdgp` for a [PropertyGroup][].
+   * `tdbs` for a {@link Property}, `tdgp` for a {@link PropertyGroup}.
    * Overridden by subclasses; `null` on the base.
    */
   _chunk_body(): Chunk | null {
@@ -258,9 +258,8 @@ export class PropertyBase {
   /**
    * When `True`, the property is selected. Read / Write.
    *
-   * Note:
-   *     Property selection is stored in the `.aep` binary format but very complex.
-   *     Parsed projects report `False` for now.
+   * **Note:** Property selection is stored in the `.aep` binary format but very complex.
+   * Parsed projects report `False` for now.
    */
   get selected(): boolean {
     return false;
@@ -295,7 +294,7 @@ export class PropertyBase {
   }
 
   /**
-   * When `True`, this property is an effect [PropertyGroup][].
+   * When `True`, this property is an effect {@link PropertyGroup}.
    * Read-only.
    */
   get is_effect(): boolean {
@@ -303,7 +302,7 @@ export class PropertyBase {
   }
 
   /**
-   * When `True`, this property is a mask [PropertyGroup][].
+   * When `True`, this property is a mask {@link PropertyGroup}.
    * Read-only.
    */
   get is_mask(): boolean {
@@ -320,7 +319,7 @@ export class PropertyBase {
   }
 
   /**
-   * The parent [PropertyGroup][] of this property, or `None` for
+   * The parent {@link PropertyGroup} of this property, or `None` for
    * top-level layer property groups. Read-only.
    */
   get parent_property(): PropertyGroup | null {
@@ -338,10 +337,9 @@ export class PropertyBase {
    * indexed group (a mask, effect, text animator or shape group);
    * read-only otherwise.
    *
-   * Raises:
-   *     ValueError: On write, if the parent is not an indexed group.
-   *         After Effects refuses the same write ("Can not set name
-   *         this property, because parent is not an INDEXED_GROUP").
+   * @throws {@link ValueError} On write, if the parent is not an indexed group. After Effects
+   *   refuses the same write ("Can not set name this property, because parent is not an
+   *   INDEXED_GROUP").
    */
   get name(): string {
     if (this._name != null) return this._name;
@@ -397,10 +395,9 @@ export class PropertyBase {
    *
    * Returns `None` for layers (property depth 0).
    *
-   * Warning:
-   *     Unlike ExtendScript (1-based), this uses Python's 0-based
-   *     convention so that `group.properties[prop.property_index]`
-   *     works directly.
+   * **Warning:** Unlike ExtendScript (1-based), this uses Python's 0-based
+   * convention so that `group.properties[prop.property_index]`
+   * works directly.
    * Read-only.
    */
   get property_index(): number | null {
@@ -546,8 +543,7 @@ export class PropertyBase {
    * Only valid for children of indexed groups (effects, masks, shape
    * contents, text animators).
    *
-   * Raises:
-   *     ValueError: If this property is not in an indexed group.
+   * @throws {@link ValueError} If this property is not in an indexed group.
    */
   remove(): void {
     const [parent, parent_tdgp] = this._can_mutate();
@@ -562,12 +558,9 @@ export class PropertyBase {
    *
    * Only valid for children of indexed groups.
    *
-   * Args:
-   *     new_index: The target 0-based position.
-   *
-   * Raises:
-   *     ValueError: If this property is not in an indexed group.
-   *     IndexError: If `new_index` is out of range.
+   * @param new_index - The target 0-based position.
+   * @throws {@link ValueError} If this property is not in an indexed group.
+   * @throws {@link IndexError} If `new_index` is out of range.
    */
   move_to(new_index: number): void {
     const [parent, parent_tdgp] = this._can_mutate();
@@ -608,13 +601,10 @@ export class PropertyBase {
    * Duplicate this property within its parent group.
    *
    * The duplicate is inserted immediately after the original.
-   * Only valid for children of indexed groups (see [PropertyType][]).
+   * Only valid for children of indexed groups (see {@link PropertyType}).
    *
-   * Returns:
-   *     The newly created [PropertyBase][].
-   *
-   * Raises:
-   *     ValueError: If this property is not in an indexed group.
+   * @returns The newly created {@link PropertyBase}.
+   * @throws {@link ValueError} If this property is not in an indexed group.
    */
   duplicate(): PropertyBase {
     const [parent, parent_tdgp] = this._can_mutate();
@@ -649,11 +639,9 @@ export class PropertyBase {
    * Uses the parser infrastructure to rebuild the correct model
    * hierarchy from cloned binary chunks.
    *
-   * Args:
-   *     cloned: The cloned chunk span - the `tdmn` first, the
-   *         backing LIST chunk last, auxiliary chunks (e.g. `mkif`)
-   *         in between.
-   *     parent: The parent group of the clone.
+   * @param cloned - The cloned chunk span - the `tdmn` first, the backing LIST chunk last,
+   *   auxiliary chunks (e.g. `mkif`) in between.
+   * @param parent - The parent group of the clone.
    */
   _parse_clone(cloned: Chunk[], parent: PropertyGroup): PropertyBase {
     // Determine the composition context

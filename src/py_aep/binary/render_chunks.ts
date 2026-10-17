@@ -885,7 +885,7 @@ export class ArsiChunk extends Chunk {
 
   declare _reserved_04: Uint8Array;
   /**
-   * Offset 379: a slot state byte AE rewrites on the empty -> first-item
+   * Offset 379: a slot state byte AE rewrites on the empty -\> first-item
    * transition (set to 0x73). Exact semantics are not fully understood.
    */
   declare active_slot_state: number;

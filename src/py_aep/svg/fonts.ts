@@ -23,7 +23,7 @@ import {
 export const _FONT_SUFFIXES: readonly string[] = [".ttf", ".otf", ".ttc"];
 
 /**
- * family (lowercased) -> {subfamily (lowercased): (font file path, face index)}
+ * family (lowercased) -\> \{subfamily (lowercased): (font file path, face index)\}
  * The face index addresses a face within a TrueType Collection (.ttc); it is
  * 0 for a single-face .ttf/.otf.
  */
@@ -119,7 +119,7 @@ export function _font_dirs(): Path[] {
   return dirs.filter((d) => d.is_dir());
 }
 
-/** fontTools name IDs -> fontkit `getName` keys. */
+/** fontTools name IDs -\> fontkit `getName` keys. */
 export const NAME_KEYS = new Map<number, string>([
   [1, "fontFamily"],
   [2, "fontSubfamily"],
@@ -188,7 +188,7 @@ export function _adobe_font_dirs(): Path[] {
 }
 
 /**
- * PostScript name (name ID 6, lowercased) ->
+ * PostScript name (name ID 6, lowercased) -\>
  * (font file path, face index, version string from name ID 5 or None).
  */
 export let _ps_index: Map<string, [Path, number, string | null]> | null = null;

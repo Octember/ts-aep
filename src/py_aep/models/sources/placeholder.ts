@@ -11,7 +11,6 @@ import type { U1Chunk } from "../../binary/scalar_chunks.ts";
  * The `PlaceholderSource` object describes the footage source of a
  * placeholder.
  *
- * Example:
  * ```python
  * from py_aep import PlaceholderSource, parse
  *
@@ -22,12 +21,13 @@ import type { U1Chunk } from "../../binary/scalar_chunks.ts";
  * ```
  *
  * Info:
- * `PlaceholderSource` is a subclass of [FootageSource][] object. All
- * methods and attributes of [FootageSource][] are available when working
+ * `PlaceholderSource` is a subclass of {@link FootageSource} object. All
+ * methods and attributes of {@link FootageSource} are available when working
  * with `PlaceholderSource`. `PlaceholderSource` does not define any
  * additional methods or attributes.
  *
- * See: https://ae-scripting.docsforadobe.dev/sources/placeholdersource/
+ * @example
+ * @see https://ae-scripting.docsforadobe.dev/sources/placeholdersource/
  */
 export class PlaceholderSource extends FootageSource {
   static _owns_name = true;
@@ -52,12 +52,11 @@ export class PlaceholderSource extends FootageSource {
   /**
    * Create a new placeholder source with backing chunks.
    *
-   * Args:
-   *     name: The placeholder name.
-   *     width: Width in pixels (4-30000).
-   *     height: Height in pixels (4-30000).
-   *     frame_rate: Frame rate in fps (1.0-99.0).
-   *     duration: Duration in seconds (> 0, <= 10800).
+   * @param name - The placeholder name.
+   * @param width - Width in pixels (4-30000).
+   * @param height - Height in pixels (4-30000).
+   * @param frame_rate - Frame rate in fps (1.0-99.0).
+   * @param duration - Duration in seconds (\> 0, \<= 10800).
    */
   static _new(
     name: string,

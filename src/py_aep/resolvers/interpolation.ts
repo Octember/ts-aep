@@ -4,12 +4,11 @@
  * Implements HOLD, LINEAR, and BEZIER interpolation for
  * `Property.value_at_time()`.  Pure Python with no external dependencies.
  *
- * The temporal structure follows `lottie-web <https://github.com/airbnb/
- * lottie-web>`_, the industry-standard renderer for Lottie/bodymovin
+ * The temporal structure follows `lottie-web <https://github.com/airbnb/ lottie-web>`_, the industry-standard renderer for Lottie/bodymovin
  * animations exported from After Effects, with the numerics adjusted to
  * match AE's own output:
  *
- * - **Temporal ease** uses a normalised [0, 1] -> [0, 1] cubic-bezier
+ * - **Temporal ease** uses a normalised [0, 1] -\> [0, 1] cubic-bezier
  *   easing function (`BezierEasing`), whose curve parameter is solved in
  *   closed form (Cardano).
  * - **Spatial paths** follow AE's own arc-length model instead: an ease curve
@@ -237,8 +236,7 @@ export function _ease_to_bezier_1d(
 /**
  * The two value-space control points of a temporal bezier segment.
  *
- * After Effects places the ease handles absolutely - `v0 + speed_out * io
- * * dt` and `v1 - speed_in * ii * dt`, with `io`/`ii` the influence
+ * After Effects places the ease handles absolutely - `v0 + speed_out * io * dt` and `v1 - speed_in * ii * dt`, with `io`/`ii` the influence
  * fractions - not as a fraction of `v1 - v0`. The two formulations agree
  * whenever the keys differ in value, and only the absolute one keeps the
  * curve bowing when they do not (issue #225: a 1-D BEZIER segment whose
@@ -299,7 +297,7 @@ export function segment_value_slope(
  * De Casteljau subdivision of the segment's time handles, which is what
  * keeps the curve identical. Returns
  * `(left_out, new_in, new_out, right_in)`; measured on AE 2026, splitting
- * a 5 s 0->100 segment eased 0/75 on both sides at 2.5 s gives
+ * a 5 s 0-\>100 segment eased 0/75 on both sides at 2.5 s gives
  * `(75, 12.5, 12.5, 75)`.
  */
 export function split_segment_influences(
@@ -974,8 +972,7 @@ export const _AUTO_BEZIER_CHORD_SCALE = 1.0 / 6.0;
  * working in raw chunk units and callers working in resolved units both
  * get a self-consistent answer.
  *
- * Returns:
- *     An `(out_tangent, in_tangent)` pair.
+ * @returns An `(out_tangent, in_tangent)` pair.
  */
 export function auto_spatial_tangents(values: number[][], index: number): [number[], number[]] {
   const ndim = values[index].length;
@@ -996,10 +993,9 @@ export function auto_spatial_tangents(values: number[][], index: number): [numbe
  * `_DEFAULT_INFLUENCE`.
  *
  * Multi-dimensional properties get a per-dimension slope (measured on AE
- * 2026: 2-D Scale 100->200->400 / 100->120->150 yields speeds 150 and 25).
+ * 2026: 2-D Scale 100-\>200-\>400 / 100-\>120-\>150 yields speeds 150 and 25).
  *
- * Returns:
- *     An `(in_speeds, out_speeds)` pair, one entry per dimension.
+ * @returns An `(in_speeds, out_speeds)` pair, one entry per dimension.
  */
 export function auto_temporal_speeds(values: number[][], times: number[], index: number): [number[], number[]] {
   const ndim = values[index].length;
@@ -1093,10 +1089,8 @@ export function _progress_easing(
  * A 4-point run over 8 s with 0/80 ease on both anchors puts the two
  * roving keys at 3.54484 and 4.308594.
  *
- * Returns:
- *     A `{keyframe index: time units}` mapping covering only the roving
- *     keyframes that sit between two anchors. Units count LAYER time, so
- *     a stretched layer needs no further conversion.
+ * @returns A `{keyframe index: time units}` mapping covering only the roving keyframes that sit
+ *   between two anchors. Units count LAYER time, so a stretched layer needs no further conversion.
  */
 export function roving_keyframe_times(keyframes: Keyframe[], metric: ArcMetric): Map<number, number> {
   const result = new Map<number, number>();
@@ -1342,9 +1336,8 @@ export function _path_speed(keyframes: Keyframe[], low: number, high: number, me
  * the per-segment speeds AE leaves on the roving keys) is 99 px out on
  * the measured 4-point fixture.
  *
- * Returns:
- *     `(index, u)`: the segment starting at `keyframes[index]`, and the
- *     curve parameter along it.
+ * @returns `(index, u)`: the segment starting at `keyframes[index]`, and the curve parameter along
+ *   it.
  */
 export function spatial_location(time: number, keyframes: Keyframe[], left: number, metric: ArcMetric): [number, number] {
   const [start, end] = _run_bounds(keyframes, left);
@@ -1427,12 +1420,11 @@ export function motion_path_direction(time: number, keyframes: Keyframe[], metri
  * the rotation arc instead is 33 degrees out on a 40 deg/s Orientation
  * ease.
  *
- * Args:
- *     kf_left: The keyframe starting the segment.
- *     kf_right: The keyframe ending it.
- *     time: Evaluation time, in the owning layer's seconds.
- *     t0: `kf_left`'s layer time.
- *     t1: `kf_right`'s layer time.
+ * @param kf_left - The keyframe starting the segment.
+ * @param kf_right - The keyframe ending it.
+ * @param time - Evaluation time, in the owning layer's seconds.
+ * @param t0 - `kf_left`'s layer time.
+ * @param t1 - `kf_right`'s layer time.
  */
 export function _single_progress(
   kf_left: Keyframe,
@@ -1845,28 +1837,21 @@ export function _interpolate_color(
 /**
  * Compute the interpolated value at `time` from a keyframe list.
  *
- * Args:
- *     time: Time in the owning LAYER's seconds, not composition seconds.
- *         AE evaluates the temporal bezier in layer time - its ease
- *         speeds are per layer second, and a negatively stretched layer's
- *         keyframes only ascend on this axis.
- *         [Property.value_at_time][py_aep.Property.value_at_time]
- *         converts before calling.
- *     keyframes: Keyframes in stored (layer time ascending) order.
- *     is_spatial: Whether the property is spatial.
- *     inert_dimensions: Indices the layer ignores, held at the left
- *         keyframe's value instead of interpolated - the Z of a 2-D
- *         layer's Scale, which AE never moves.
- *     value_kind: `SHAPE_KIND` or `ORIENTATION_KIND` for the two kinds
- *         AE blends as one eased quantity rather than per component;
- *         `None` for an ordinary numeric property.
- *     metric: How the property's motion path is measured, from its
- *         `tdb4`; only a spatial property reads it.
- *     is_color: Whether the value is a colour, which AE blends along one
- *         eased progress (see `_interpolate_color`).
- *
- * Returns:
- *     Interpolated value, or `None` if no keyframes.
+ * @param time - Time in the owning LAYER's seconds, not composition seconds. AE evaluates the
+ *   temporal bezier in layer time - its ease speeds are per layer second, and a negatively
+ *   stretched layer's keyframes only ascend on this axis.
+ *   {@link py_aep.Property.value_at_time | Property.value_at_time} converts before calling.
+ * @param keyframes - Keyframes in stored (layer time ascending) order.
+ * @param is_spatial - Whether the property is spatial.
+ * @param inert_dimensions - Indices the layer ignores, held at the left keyframe's value instead of
+ *   interpolated - the Z of a 2-D layer's Scale, which AE never moves.
+ * @param value_kind - `SHAPE_KIND` or `ORIENTATION_KIND` for the two kinds AE blends as one eased
+ *   quantity rather than per component; `None` for an ordinary numeric property.
+ * @param metric - How the property's motion path is measured, from its `tdb4`; only a spatial
+ *   property reads it.
+ * @param is_color - Whether the value is a colour, which AE blends along one eased progress (see
+ *   `_interpolate_color`).
+ * @returns Interpolated value, or `None` if no keyframes.
  */
 export function interpolate_keyframes(
   time: number,

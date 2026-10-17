@@ -155,7 +155,27 @@ is not provable from the code, keep `int`.
 Drop pyrt names that are no longer used in the file. Keep import order
 otherwise.
 
-## Later passes (not in pass 1)
+## Pass 2: docstrings to TSDoc
+
+`tools/codemods/pass2_tsdoc.ts` rewrites comments only (`tools/tsdoc_lint.ts`
+must report 0 messages; code printed without comments is identical before and
+after):
+
+- Google-style sections: `Args:` → `@param name - …` (names read from the TS
+  signature, so renames like `default_` match); keyword-only args → one
+  `@param kw - Keyword arguments:` with a bullet per option (TSDoc names cannot
+  be dotted); `Returns:` / `Yields:` → `@returns`; `Raises:` →
+  `@throws {@link Error} …`; `Example(s):` → `@example`; `See:` → `@see`;
+  `Note:` / `Warning:` → bold-led paragraphs in the description.
+- mkdocs cross-references: `[Name][]` → `{@link Name}`, `[text][Name]` →
+  `{@link Name | text}`; RST ``` ``x`` ``` → `` `x` ``.
+- Hygiene on every doc comment: `@param x - …` hyphen, `<`, `>`, `{`, `}` and
+  non-tag `@` escaped outside code, code spans never wrapped across lines.
+
+The prose still speaks Python (`None`, `True`, Python examples, `py_aep.x`
+paths); pass 3 rewrites it in TypeScript terms.
+
+## Later passes
 
 Each of these changes structure and needs its own guide section first:
 

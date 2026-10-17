@@ -534,8 +534,7 @@ export class ContainerChunk extends Chunk {
    * A fixed `fnam` keeps its size (48 bytes when new); a string that
    * does not fit raises rather than being cut.
    *
-   * Raises:
-   *     ValueError: If the new string does not fit a fixed buffer.
+   * @throws {@link ValueError} If the new string does not fit a fixed buffer.
    */
   _legacy_body(): Uint8Array {
     const cls = this.constructor as typeof ContainerChunk;

@@ -22,7 +22,7 @@
  * - Constraint keys are the ExtendScript setting names from `OM_SETTINGS`
  *   (e.g. `"Depth"`, `"Audio Sample Rate"`) plus format-option context keys
  *   (e.g. `"Audio Codec"`, `"BitRate"`).
- * - Conditional entries are ordered general -> specific; a later matching
+ * - Conditional entries are ordered general -\> specific; a later matching
  *   entry REPLACES earlier constraints per key. Entries constraining the
  *   same key within one format must have mutually exclusive conditions.
  * - A condition key absent from the context never matches (permissive
@@ -655,16 +655,12 @@ export function constrained_keys(fmt: OutputFormat): ReadonlySet<string> {
 /**
  * Allowed values for an output-module setting under `fmt`.
  *
- * Args:
- *   fmt: The output format of the module.
- *   key: The setting name (`OM_SETTINGS` key or format-option
- *     context key, e.g. `"Depth"`, `"Audio Codec"`).
- *   context: Current values of the other settings, used to match
- *     conditional rules. Missing keys disable the rules that
- *     need them.
- *
- * Returns:
- *   The allowed value set, or `null` when unconstrained.
+ * @param fmt - The output format of the module.
+ * @param key - The setting name (`OM_SETTINGS` key or format-option context key, e.g. `"Depth"`,
+ *   `"Audio Codec"`).
+ * @param context - Current values of the other settings, used to match conditional rules. Missing
+ *   keys disable the rules that need them.
+ * @returns The allowed value set, or `null` when unconstrained.
  */
 export function allowed_values(
   fmt: OutputFormat,

@@ -13,21 +13,21 @@ import type { PropertyGroup } from "../properties/property_group.ts";
 /**
  * The `TextLayer` object represents a text layer within a composition.
  *
- * Example:
- *     ```python
- *     from py_aep import parse
- *
- *     app = parse("project.aep")
- *     comp = app.project.compositions[0]
- *     text_layer = comp.text_layers[0]
- *     print(text_layer.text)
- *     ```
  *
  * Info:
- *     `TextLayer` is a subclass of [AVLayer][] object. All methods and
- *     attributes of [AVLayer][] are available when working with `TextLayer`.
+ *     `TextLayer` is a subclass of {@link AVLayer} object. All methods and
+ *     attributes of {@link AVLayer} are available when working with `TextLayer`.
  *
- * See: https://ae-scripting.docsforadobe.dev/layer/textlayer/
+ * @example
+ * ```python
+ * from py_aep import parse
+ *
+ * app = parse("project.aep")
+ * comp = app.project.compositions[0]
+ * text_layer = comp.text_layers[0]
+ * print(text_layer.text)
+ * ```
+ * @see https://ae-scripting.docsforadobe.dev/layer/textlayer/
  */
 export class TextLayer extends AVLayer {
   static _auto_name: string = "Text";

@@ -122,7 +122,7 @@ export const _URL_RE = new RegExp(`^url\\([${_PY_WS}]*#([^)${_PY_WS}]+)[${_PY_WS
 /**
  * Parse an SVG file into a flattened {@link SvgDocument}.
  *
- * @param source Path to an `.svg` file, or its raw bytes/markup.
+ * @param source - Path to an `.svg` file, or its raw bytes/markup.
  * @returns The flattened document (canvas size + drawables).
  * @throws UnsupportedSVGError For SVG features py_aep cannot import, and for
  *   a file that is not well-formed XML.
@@ -319,8 +319,7 @@ export class _Reader {
     depth: number,
   ): void {
     /**
-     * A nested `<svg>` is a new viewport (SVG 1.1 7.9): `x / y /
-     * width / height` place it (100 % of the parent viewport by default)
+     * A nested `<svg>` is a new viewport (SVG 1.1 7.9): `x / y / width / height` place it (100 % of the parent viewport by default)
      * and its viewBox maps onto that box under `preserveAspectRatio`, as
      * AE 2026 imports it. Its content is not clipped (AE clips it).
      */

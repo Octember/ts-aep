@@ -7,17 +7,18 @@ import type { CompItem } from "../composition.ts";
 /**
  * A renderer's options, as both a mapping and a typed object.
  *
- * Subclasses [SettingsView][] with itself as the owner, so one object
+ * Subclasses {@link SettingsView} with itself as the owner, so one object
  * satisfies both idioms.
  *
- * Example:
  * ```python
  * comp.renderer_options["Quality"] = 61     # mapping
  * comp.renderer_options.quality = 61        # typed, validated
  * ```
  *
- * The [CompItem][] is held because Advanced 3D stores its Casting Box
+ * The {@link CompItem} is held because Advanced 3D stores its Casting Box
  * values as fractions of the composition's own pixel dimensions.
+ *
+ * @example
  */
 export class RendererOptionsBase extends SettingsView {
   // ExtendScript-style key -> (attribute name, optional enum class)

@@ -27,11 +27,11 @@ export function _knot(record: Uint8Array, canvas_w: number, canvas_h: number): n
 }
 
 /**
- * Decode a `vmsk`/`vsms` block into one [Shape][] per subpath.
+ * Decode a `vmsk`/`vsms` block into one {@link Shape} per subpath.
  *
- * @param block The raw tagged-block body (version + flags + path records).
- * @param canvas_w Document canvas width in pixels.
- * @param canvas_h Document canvas height in pixels.
+ * @param block - The raw tagged-block body (version + flags + path records).
+ * @param canvas_w - Document canvas width in pixels.
+ * @param canvas_h - Document canvas height in pixels.
  * @returns The subpaths in file order (usually one). A malformed block yields
  *   the subpaths decoded so far.
  */

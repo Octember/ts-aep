@@ -30,7 +30,7 @@ export const _DEG2RAD = Math.PI / 180.0;
 export const _RAD2DEG = 180.0 / Math.PI;
 export const _EPSILON = 1e-10;
 
-/** 4x4 matrix stored row-major: `m[row][col]`. */
+/** 4x4 matrix stored row-major: `m{@link col | row}`. */
 export class Mat4 {
   declare _rows: number[][];
 
@@ -240,26 +240,21 @@ export function _rotate_z(deg: number): Mat4 {
  * After Effects scales and rotates in square pixels: a layer's own
  * pixels are widened by its source's pixel aspect first, and the result
  * narrowed by the pixel aspect of the space its Position lives in (its
- * parent's source, or the composition) - `T(pos) . Sp^-1 . R . S . Sl .
- * T(-anchor)` (measured on AE 2026 in a 2:1 pixel-aspect comp).
+ * parent's source, or the composition) - `T(pos) . Sp^-1 . R . S . Sl . T(-anchor)` (measured on AE 2026 in a 2:1 pixel-aspect comp).
  *
- * Args:
- *     position: `[x, y, z]` position in pixels.
- *     anchor: `[x, y, z]` anchor point in pixels.
- *     scale_pct: `[sx, sy, sz]` scale as percentages (100 = 1x).
- *     rotation_z: Z-axis rotation in degrees.
- *     orientation: `[ox, oy, oz]` orientation angles in degrees
- *         (3D layers only).
- *     rotate_x: X-axis rotation in degrees (3D layers only).
- *     rotate_y: Y-axis rotation in degrees (3D layers only).
- *     auto_rotation: A 3D layer's auto-orientation, applied after its own
- *         rotations (before the translation).
- *     source_aspect: The pixel aspect of the layer's own pixels (`Sl`).
- *     space_aspect: The pixel aspect of the space the layer's Position
- *         lives in (`Sp`).
- *
- * Returns:
- *     A 4x4 matrix representing the layer's local transform.
+ * @param position - `[x, y, z]` position in pixels.
+ * @param anchor - `[x, y, z]` anchor point in pixels.
+ * @param scale_pct - `[sx, sy, sz]` scale as percentages (100 = 1x).
+ * @param rotation_z - Z-axis rotation in degrees.
+ * @param kw - Keyword arguments:
+ * - `orientation`: `[ox, oy, oz]` orientation angles in degrees (3D layers only).
+ * - `rotate_x`: X-axis rotation in degrees (3D layers only).
+ * - `rotate_y`: Y-axis rotation in degrees (3D layers only).
+ * - `auto_rotation`: A 3D layer's auto-orientation, applied after its own rotations (before the
+ *     translation).
+ * - `source_aspect`: The pixel aspect of the layer's own pixels (`Sl`).
+ * - `space_aspect`: The pixel aspect of the space the layer's Position lives in (`Sp`).
+ * @returns A 4x4 matrix representing the layer's local transform.
  */
 export function build_local_matrix(
   position: number[],
@@ -332,25 +327,22 @@ export function build_local_matrix(
  *
  * Traverses `layer.parent` upward, composing local matrices so that::
  *
- *     world = root_local @ ... @ parent_local @ layer_local
+ *     world = root_local \@ ... \@ parent_local \@ layer_local
  *
  * A camera or light ancestor contributes its rig: its position and
  * rotations (a two-node rig's look-at toward its point of interest
  * first), with no anchor point or scale - what After Effects parents to
  * (measured on AE 2026).
  *
- * Args:
- *     layer: The layer whose world matrix to build.
- *     time: Composition time in seconds to evaluate animated transform
- *         properties at; `None` uses each property's static `value`.
- *     flatten_2d: Drop the out-of-plane terms (see `_layer_local_matrix`).
- *     as_parent: Treat `layer` itself as a parent too - a camera or light
- *         then contributes its rig.
- *     auto_orient: Apply the layers' auto-orientation (needs `time`).
- *
- * Raises:
- *     NotImplementedError: With `auto_orient`, for an orientation the
- *         math does not model (see `_auto_rotation`).
+ * @param layer - The layer whose world matrix to build.
+ * @param time - Composition time in seconds to evaluate animated transform properties at; `None`
+ *   uses each property's static `value`.
+ * @param flatten_2d - Drop the out-of-plane terms (see `_layer_local_matrix`).
+ * @param kw - Keyword arguments:
+ * - `as_parent`: Treat `layer` itself as a parent too - a camera or light then contributes its rig.
+ * - `auto_orient`: Apply the layers' auto-orientation (needs `time`).
+ * @throws {@link NotImplementedError} With `auto_orient`, for an orientation the math does not
+ *   model (see `_auto_rotation`).
  */
 export function build_world_matrix(
   layer: Layer,
@@ -561,8 +553,7 @@ export function _rig_matrix(layer: Layer, time: number | null, space_aspect: num
 }
 
 /**
- * A layer's auto-orientation at comp `time`: `(3D rotation, 2D Rotate Z
- * increment)`, measured on AE 2026.
+ * A layer's auto-orientation at comp `time`: `(3D rotation, 2D Rotate Z increment)`, measured on AE 2026.
  *
  * - Along its path, a 2D layer turns its X axis to the motion direction;
  *   a 3D layer aims its Z axis along it (a two-node camera's look-at).
@@ -570,10 +561,8 @@ export function _rig_matrix(layer: Layer, time: number | null, space_aspect: num
  * - Towards the camera, a 3D layer aims its Z axis away from the active
  *   camera (the comp's default camera without one).
  *
- * Raises:
- *     NotImplementedError: For separated Position dimensions along a
- *         path, a parented layer turned towards the camera, and characters
- *         turned towards the camera.
+ * @throws {@link NotImplementedError} For separated Position dimensions along a path, a parented
+ *   layer turned towards the camera, and characters turned towards the camera.
  */
 export function _auto_rotation(layer: Layer, time: number, position: number[]): [Mat4 | null, number] {
   const mode = layer.auto_orient;
@@ -748,13 +737,10 @@ export function strip_orientation(matrix: Mat4, orientation: number[]): Mat4 {
  * Orientation is assumed to be `[0, 0, 0]` - i.e. any orientation
  * contribution must already be factored out before calling this.
  *
- * Args:
- *     matrix: The 4x4 transform matrix to decompose.
- *     anchor: `[ax, ay, az]` anchor point (held constant).
- *
- * Returns:
- *     A tuple of `(position, scale_pct, rotation_z, rotate_x,
- *     rotate_y)` where `scale_pct` is in percentage units (100 = 1x).
+ * @param matrix - The 4x4 transform matrix to decompose.
+ * @param anchor - `[ax, ay, az]` anchor point (held constant).
+ * @returns A tuple of `(position, scale_pct, rotation_z, rotate_x, rotate_y)` where `scale_pct` is
+ *   in percentage units (100 = 1x).
  */
 export function decompose_transform(
   matrix: Mat4,
@@ -883,20 +869,15 @@ export function _vec3_normalize(v: number[]): number[] {
  * `scale[2] = 100 * sin(angle(x, y))`; reflections come out as 180-degree
  * rotation combinations, never negative scale.
  *
- * Args:
- *     top_left: `[x, y, z]` comp-space position of the source's top-left.
- *     top_right: `[x, y, z]` position of the source's top-right.
- *     bottom_left: `[x, y, z]` position of the source's bottom-left.
- *     width: Layer source width in pixels.
- *     height: Layer source height in pixels.
- *
- * Returns:
- *     A dict with `anchor_point`, `position`, `x_rotation`, `y_rotation`,
- *     `z_rotation` and `scale` keys, matching the transform property
- *     values AE's `calculateTransformFromPoints()` returns.
- *
- * Raises:
- *     ValueError: If the points are coincident or collinear.
+ * @param top_left - `[x, y, z]` comp-space position of the source's top-left.
+ * @param top_right - `[x, y, z]` position of the source's top-right.
+ * @param bottom_left - `[x, y, z]` position of the source's bottom-left.
+ * @param width - Layer source width in pixels.
+ * @param height - Layer source height in pixels.
+ * @returns A dict with `anchor_point`, `position`, `x_rotation`, `y_rotation`, `z_rotation` and
+ *   `scale` keys, matching the transform property values AE's `calculateTransformFromPoints()`
+ *   returns.
+ * @throws {@link ValueError} If the points are coincident or collinear.
  */
 export function transform_from_points(
   top_left: number[],
@@ -1039,8 +1020,7 @@ export function _look_at_rotation(eye: number[], target: number[]): Mat4 {
  * anchor-point slot), then applies Orientation and the per-axis
  * rotations on top.
  *
- * Returns:
- *     `(origin, direction)` in world space.
+ * @returns `(origin, direction)` in world space.
  */
 export function camera_ray(
   camera: Layer | null,
@@ -1098,11 +1078,9 @@ export function camera_ray(
  * `[0, 0]`), the AE Scripting Guide does not document it, and a caller
  * that cannot tell a miss from a hit will use the miss as a coordinate.
  *
- * Raises:
- *     ValueError: If the forward ray does not meet the layer plane - it
- *         is parallel to the plane, or the plane is at or behind the ray
- *         origin - or if the layer plane is degenerate (an X or Y scale
- *         of 0).
+ * @throws {@link ValueError} If the forward ray does not meet the layer plane - it is parallel to
+ *   the plane, or the plane is at or behind the ray origin - or if the layer plane is degenerate
+ *   (an X or Y scale of 0).
  */
 export function intersect_layer_plane(world: Mat4, origin: number[], direction: number[]): number[] {
   const axis_u = [0, 1, 2].map((r) => world.__getitem__(r)[0]);

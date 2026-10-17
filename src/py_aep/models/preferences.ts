@@ -39,12 +39,10 @@ export const _LABEL_INDICES_SECTION = "Label Preference Indices Section 5";
 /**
  * Resolve a default label color index from the label preferences.
  *
- * Args:
- *     preferences: The project's [Preferences][].
- *     key: Key in the `Label Preference Indices Section 5` section
- *         (e.g. `Comp Label Index 2`).
- *     default: AE's factory value, used when no preferences directory
- *         was provided or the key is absent.
+ * @param preferences - The project's {@link Preferences}.
+ * @param key - Key in the `Label Preference Indices Section 5` section (e.g. `Comp Label Index 2`).
+ * @param default_ - AE's factory value, used when no preferences directory was provided or the key
+ *   is absent.
  */
 export function label_index(preferences: Preferences, key: string, default_: number): number {
   const value = preferences.get_pref_as_number(
@@ -436,24 +434,23 @@ export function default_synthetic_out_point(preferences: Preferences): number | 
  *   files, and there is no `save_to_disk()`. Overrides last for the
  *   lifetime of this object and never modify the files.
  * - `getPrefAsLong` / `getPrefAsFloat` are merged into a single
- *   [get_pref_as_number][] (Python does not need the distinction).
+ *   {@link get_pref_as_number} (Python does not need the distinction).
  * - Getters accept an optional `default` returned when the key is
  *   absent instead of raising `KeyError`.
  *
- * See: https://ae-scripting.docsforadobe.dev/other/preferences/
+ * @see https://ae-scripting.docsforadobe.dev/other/preferences/
+ * @example
+ * ```python
+ * import py_aep
+ * from py_aep.enums import PREFType
  *
- * Example:
- *     ```python
- *     import py_aep
- *     from py_aep.enums import PREFType
- *
- *     app = py_aep.parse("project.aep", ae_preferences_dir="...")
- *     fps = app.preferences.get_pref_as_number(
- *         "Import Options Preference Section",
- *         "Import Options Default Sequence FPS",
- *         PREFType.PREF_Type_MACHINE_INDEPENDENT,
- *     )
- *     ```
+ * app = py_aep.parse("project.aep", ae_preferences_dir="...")
+ * fps = app.preferences.get_pref_as_number(
+ *     "Import Options Preference Section",
+ *     "Import Options Default Sequence FPS",
+ *     PREFType.PREF_Type_MACHINE_INDEPENDENT,
+ * )
+ * ```
  */
 export class Preferences {
   declare _prefs_dir: Path | null;
@@ -514,12 +511,11 @@ export class Preferences {
    * Merges ExtendScript's `getPrefAsLong` and `getPrefAsFloat`:
    * integral values return `int`, others `float`.
    *
-   * Args:
-   *     section_name: The name of a preferences section.
-   *     key_name: The key name of the preference.
-   *     pref_type: The preference file the preference is read from.
-   *     default: Returned when the key is absent (otherwise a missing
-   *         key raises `KeyError`).
+   * @param section_name - The name of a preferences section.
+   * @param key_name - The key name of the preference.
+   * @param pref_type - The preference file the preference is read from.
+   * @param kw - Keyword arguments:
+   * - `default`: Returned when the key is absent (otherwise a missing key raises `KeyError`).
    */
   get_pref_as_number(
     section_name: string,
@@ -542,12 +538,11 @@ export class Preferences {
   /**
    * The value of the given preference as a boolean.
    *
-   * Args:
-   *     section_name: The name of a preferences section.
-   *     key_name: The key name of the preference.
-   *     pref_type: The preference file the preference is read from.
-   *     default: Returned when the key is absent (otherwise a missing
-   *         key raises `KeyError`).
+   * @param section_name - The name of a preferences section.
+   * @param key_name - The key name of the preference.
+   * @param pref_type - The preference file the preference is read from.
+   * @param kw - Keyword arguments:
+   * - `default`: Returned when the key is absent (otherwise a missing key raises `KeyError`).
    */
   get_pref_as_bool(
     section_name: string,
@@ -570,12 +565,11 @@ export class Preferences {
   /**
    * The value of the given preference as a string.
    *
-   * Args:
-   *     section_name: The name of a preferences section.
-   *     key_name: The key name of the preference.
-   *     pref_type: The preference file the preference is read from.
-   *     default: Returned when the key is absent (otherwise a missing
-   *         key raises `KeyError`).
+   * @param section_name - The name of a preferences section.
+   * @param key_name - The key name of the preference.
+   * @param pref_type - The preference file the preference is read from.
+   * @param kw - Keyword arguments:
+   * - `default`: Returned when the key is absent (otherwise a missing key raises `KeyError`).
    */
   get_pref_as_string(
     section_name: string,
@@ -603,11 +597,10 @@ export class Preferences {
    * never modified. Merges ExtendScript's `savePrefAsLong` and
    * `savePrefAsFloat`.
    *
-   * Args:
-   *     section_name: The name of a preferences section.
-   *     key_name: The key name of the preference.
-   *     value: The new numeric value.
-   *     pref_type: The preference file the preference belongs to.
+   * @param section_name - The name of a preferences section.
+   * @param key_name - The key name of the preference.
+   * @param value - The new numeric value.
+   * @param pref_type - The preference file the preference belongs to.
    */
   set_pref_as_number(
     section_name: string,
@@ -632,11 +625,10 @@ export class Preferences {
    * The override is in-memory only; the preference file on disk is
    * never modified.
    *
-   * Args:
-   *     section_name: The name of a preferences section.
-   *     key_name: The key name of the preference.
-   *     value: The new boolean value.
-   *     pref_type: The preference file the preference belongs to.
+   * @param section_name - The name of a preferences section.
+   * @param key_name - The key name of the preference.
+   * @param value - The new boolean value.
+   * @param pref_type - The preference file the preference belongs to.
    */
   set_pref_as_bool(
     section_name: string,
@@ -657,11 +649,10 @@ export class Preferences {
    * The override is in-memory only; the preference file on disk is
    * never modified.
    *
-   * Args:
-   *     section_name: The name of a preferences section.
-   *     key_name: The key name of the preference.
-   *     value: The new string value.
-   *     pref_type: The preference file the preference belongs to.
+   * @param section_name - The name of a preferences section.
+   * @param key_name - The key name of the preference.
+   * @param value - The new string value.
+   * @param pref_type - The preference file the preference belongs to.
    */
   set_pref_as_string(
     section_name: string,
@@ -681,10 +672,9 @@ export class Preferences {
   /**
    * Whether the given preference exists (override or file value).
    *
-   * Args:
-   *     section_name: The name of a preferences section.
-   *     key_name: The key name of the preference.
-   *     pref_type: The preference file the preference is read from.
+   * @param section_name - The name of a preferences section.
+   * @param key_name - The key name of the preference.
+   * @param pref_type - The preference file the preference is read from.
    */
   have_pref(
     section_name: string,
@@ -699,13 +689,12 @@ export class Preferences {
    * Delete the given preference from this object's view.
    *
    * The file value (if any) is masked, not removed from disk:
-   * [have_pref][] returns `False` and getters fall back to their
+   * {@link have_pref} returns `False` and getters fall back to their
    * `default` afterwards.
    *
-   * Args:
-   *     section_name: The name of a preferences section.
-   *     key_name: The key name of the preference.
-   *     pref_type: The preference file the preference belongs to.
+   * @param section_name - The name of a preferences section.
+   * @param key_name - The key name of the preference.
+   * @param pref_type - The preference file the preference belongs to.
    */
   delete_pref(
     section_name: string,
@@ -756,7 +745,7 @@ export class Preferences {
    * `{name: template}` mapping (py_aep extension, not in ExtendScript).
    *
    * Parsed from the "Output File Name Template Presets Section v6"
-   * of the machine-specific preference file (e.g. `Comp Name` ->
+   * of the machine-specific preference file (e.g. `Comp Name` -\>
    * `[compName].[fileExtension]`); `set_pref_as_*` overrides are not
    * consulted. Empty when no preferences directory was provided.
    */

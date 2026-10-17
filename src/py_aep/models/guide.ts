@@ -12,18 +12,17 @@ import { validate_f8 } from "./validators.ts";
  * Guides are horizontal or vertical lines placed at specific pixel positions
  * within a composition. They are visual aids and do not affect rendering.
  *
- * Note:
- *     Guide class has no ExtendScript equivalent.
+ * **Note:** Guide class has no ExtendScript equivalent.
  *
- * Example:
- *     ```python
- *     from py_aep import parse
+ * @example
+ * ```python
+ * from py_aep import parse
  *
- *     app = parse("project.aep")
- *     comp = app.project.compositions[0]
- *     for guide in comp.guides:
- *         print(guide.orientation_type, guide.position)
- *     ```
+ * app = parse("project.aep")
+ * comp = app.project.compositions[0]
+ * for guide in comp.guides:
+ *     print(guide.orientation_type, guide.position)
+ * ```
  */
 export class Guide {
   /** The orientation of the guide. Read / Write. */
@@ -53,12 +52,9 @@ export class Guide {
    * Any `orientation_type` value other than 0 or 1 defaults to
    * horizontal (matching ExtendScript behavior).
    *
-   * Args:
-   *     orientation_type: 0 for horizontal, 1 for vertical.
-   *     position: The pixel position of the guide.
-   *
-   * Returns:
-   *     A new `Guide` instance backed by a freshly created `GuideItem`.
+   * @param orientation_type - 0 for horizontal, 1 for vertical.
+   * @param position - The pixel position of the guide.
+   * @returns A new `Guide` instance backed by a freshly created `GuideItem`.
    */
   static _new(orientation_type: number, position: number): Guide {
     const orientation = GuideOrientationType.from_binary(orientation_type);

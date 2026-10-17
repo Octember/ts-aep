@@ -6,9 +6,8 @@ import type { FipsChunk } from "../../binary/misc_chunks.ts";
 import type { AVItem } from "../items/av_item.ts";
 
 /**
- * The `ViewOptions` object represents the options for a given [View][] object.
+ * The `ViewOptions` object represents the options for a given {@link View} object.
  *
- * Example:
  * ```python
  * from py_aep import parse
  *
@@ -17,7 +16,8 @@ import type { AVItem } from "../items/av_item.ts";
  * print(options.zoom)
  * ```
  *
- * See: https://ae-scripting.docsforadobe.dev/other/viewoptions/
+ * @example
+ * @see https://ae-scripting.docsforadobe.dev/other/viewoptions/
  */
 export class ViewOptions {
   /**

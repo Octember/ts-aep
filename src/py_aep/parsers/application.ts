@@ -22,11 +22,10 @@ export function* _collect_viewers(folder: FolderItem): Generator<Viewer> {
 }
 
 /**
- * Build an [Application][] from the parsed RIFX data and project.
+ * Build an {@link Application} from the parsed RIFX data and project.
  *
- * Args:
- *     rifx: The parsed binary RIFX root chunk.
- *     project: The already-parsed [Project][].
+ * @param rifx - The parsed binary RIFX root chunk.
+ * @param project - The already-parsed {@link Project}.
  */
 export const parse_app = _suppress_materialization()(function parse_app(
   rifx: ListChunk,

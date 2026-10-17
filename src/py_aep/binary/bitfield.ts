@@ -3,7 +3,7 @@
  *
  * Usage::
  *
- *     @define
+ *     \@define
  *     class MyChunk(Chunk):
  *         _flags: int = u1_field(repr=False)
  *

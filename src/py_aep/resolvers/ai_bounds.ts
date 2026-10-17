@@ -1244,8 +1244,8 @@ export class _Measurer {
  * `(x0, y0, x1, y1)`. They are a conservative estimate of the artwork
  * extent, not its true visual bounds - see the module docstring.
  *
- * @param file Path to a `.ai` or `.pdf` file.
- * @param data The file's bytes, if the caller already read them.
+ * @param file - Path to a `.ai` or `.pdf` file.
+ * @param data - The file's bytes, if the caller already read them.
  *
  * @returns One entry per layer in `resolvers.ai_layers.read_ai_layers` order
  * (bottom layer first), `null` for a layer with no artwork on the page.
@@ -1300,8 +1300,8 @@ export const _COLOR_SPACE_OP_RE = /\/([^ \t\n\r\f\v\/\[\]()<>{}%]+)[ \t\n\r\f\v]
  * (compressed object streams, encryption, an unsupported filter), the first
  * embedded profile is returned.
  *
- * @param file Path to a `.ai` or `.pdf` file.
- * @param data The file's bytes, if the caller already read them.
+ * @param file - Path to a `.ai` or `.pdf` file.
+ * @param data - The file's bytes, if the caller already read them.
  */
 export function read_ai_icc_profile(file: PathLike, data: Uint8Array | null = null): Uint8Array | null {
   if (data == null) data = new Path(file).read_bytes();
@@ -1335,7 +1335,7 @@ export function read_ai_icc_profile(file: PathLike, data: Uint8Array | null = nu
  * is ceilinged - an extent that lands a float hair above an integer must not
  * gain a pixel. A layer with no artwork floors at 1x1.
  *
- * @param box An entry of `read_ai_layer_bounds`, or `null` for an empty layer.
+ * @param box - An entry of `read_ai_layer_bounds`, or `null` for an empty layer.
  */
 export function footage_size(box: Box | null): [number, number] {
   const [x0, y0, x1, y1] = (box == null ? EMPTY_BOX : box).map((v) => round(v * 65536));

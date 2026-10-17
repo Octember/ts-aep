@@ -24,9 +24,8 @@ import { parse_render_queue } from "./render_queue.ts";
  * is unset. Mirrors `Project._rewrite_color_profile`, which writes by this
  * same rule.
  *
- * Returns:
- *     The `Utf8Chunk` holding the profile envelope, or `null` when the marker
- *     is absent or its slot is unset.
+ * @returns The `Utf8Chunk` holding the profile envelope, or `null` when the marker is absent or its
+ *   slot is unset.
  */
 export function _color_profile_utf8(root_chunks: Chunk[], marker: string): Utf8Chunk | null {
   for (const [i, chunk] of root_chunks.entries()) {
@@ -63,12 +62,10 @@ export function _nnhd_from_nhed(nhed: NhedChunk): NnhdChunk {
 /**
  * Parse an After Effects (.aep) project file into a Project.
  *
- * Args:
- *     rifx: The parsed binary RIFX root chunk.
- *     xmp: The XMP metadata string from the file trailer.
- *     file_path: Path to the `.aep` file (stored on the Project).
- *     ae_preferences_dir: Optional path to the AE preferences directory
- *         for template lookup.
+ * @param rifx - The parsed binary RIFX root chunk.
+ * @param xmp - The XMP metadata string from the file trailer.
+ * @param file_path - Path to the `.aep` file (stored on the Project).
+ * @param ae_preferences_dir - Optional path to the AE preferences directory for template lookup.
  */
 export const parse_project = _suppress_materialization()(function parse_project(
   rifx: ListChunk,

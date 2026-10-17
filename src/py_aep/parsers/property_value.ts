@@ -20,17 +20,14 @@ export const logger = {
 /**
  * Parse a property.
  *
- * Args:
- *     tdbs_chunk: The TDBS chunk to parse.
- *     match_name: A special name for the property used to build unique
- *         naming paths. The match name is not displayed, but you can refer
- *         to it in scripts. Every property has a unique match-name
- *         identifier. Match names are stable from version to version
- *         regardless of the display name (the name attribute value) or any
- *         changes to the application. Unlike the display name, it is not
- *         localized.
- *     composition: The parent composition.
- *     property_depth: The nesting depth of this property (0 = layer level).
+ * @param tdbs_chunk - The TDBS chunk to parse.
+ * @param match_name - A special name for the property used to build unique naming paths. The match
+ *   name is not displayed, but you can refer to it in scripts. Every property has a unique
+ *   match-name identifier. Match names are stable from version to version regardless of the display
+ *   name (the name attribute value) or any changes to the application. Unlike the display name, it
+ *   is not localized.
+ * @param composition - The parent composition.
+ * @param property_depth - The nesting depth of this property (0 = layer level).
  */
 export const parse_property = _suppress_materialization().decorate(function parse_property(
   tdbs_chunk: ListChunk,
@@ -125,9 +122,8 @@ export const parse_property = _suppress_materialization().decorate(function pars
 /**
  * Parse keyframes from a property's child chunks.
  *
- * Args:
- *     tdbs_child_chunks: The child chunks of the TDBS chunk.
- *     frame_rate: The frame rate of the parent composition.
+ * @param tdbs_child_chunks - The child chunks of the TDBS chunk.
+ * @param frame_rate - The frame rate of the parent composition.
  */
 export function _parse_keyframes(tdbs_child_chunks: Chunk[], frame_rate: number): Keyframe[] {
   let list_chunk: ListChunk;

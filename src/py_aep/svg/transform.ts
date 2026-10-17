@@ -88,7 +88,7 @@ export function _numbers(text: string): number[] {
  * Multiple functions compose left-to-right (the leftmost is applied
  * last), per the SVG spec.
  *
- * @param value The `transform` attribute string.
+ * @param value - The `transform` attribute string.
  * @returns The composed transform (identity for an empty string, and for a
  *   malformed list: a known function with the wrong number of
  *   arguments or a non-finite one).

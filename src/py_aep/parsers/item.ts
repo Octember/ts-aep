@@ -18,10 +18,9 @@ import type { Project } from "../models/project.ts";
 /**
  * Parse an item (composition, footage or folder).
  *
- * Args:
- *     item_chunk: The LIST chunk to parse.
- *     project: The project.
- *     parent_folder: The parent folder.
+ * @param item_chunk - The LIST chunk to parse.
+ * @param project - The project.
+ * @param parent_folder - The parent folder.
  */
 export function parse_item(
   item_chunk: ListChunk,
@@ -99,16 +98,15 @@ export function parse_item(
 /**
  * Parse a folder item.
  *
- * Args:
- *     is_root: Whether the folder is the root folder (ID 0).
- *     child_chunks: child chunks of the folder LIST chunk.
- *     project: The project.
- *     _idta: The idta chunk (None for the root folder).
- *     _name_utf8: The Utf8 chunk containing the folder name.
- *     _cmta: The cmta chunk (None if no comment).
- *     _item_list: The LIST chunk for creating new chunks.
- *     _gide: The LIST chunk for guides (None if no guides).
- *     parent_folder: The folder's parent folder.
+ * @param is_root - Whether the folder is the root folder (ID 0).
+ * @param child_chunks - child chunks of the folder LIST chunk.
+ * @param project - The project.
+ * @param _idta - The idta chunk (None for the root folder).
+ * @param _name_utf8 - The Utf8 chunk containing the folder name.
+ * @param _cmta - The cmta chunk (None if no comment).
+ * @param _item_list - The LIST chunk for creating new chunks.
+ * @param _gide - The LIST chunk for guides (None if no guides).
+ * @param parent_folder - The folder's parent folder.
  */
 export function parse_folder(
   is_root: boolean,
@@ -167,11 +165,8 @@ export function parse_folder(
 /**
  * Parse composition guides from the LIST:Gide chunk.
  *
- * Args:
- *     child_chunks: child chunks of the item LIST chunk.
- *
- * Returns:
- *     List of Guide objects, empty if no guides are defined.
+ * @param child_chunks - child chunks of the item LIST chunk.
+ * @returns List of Guide objects, empty if no guides are defined.
  */
 export function _parse_guides(child_chunks: Chunk[]): Guide[] {
   let gide_list: ListChunk;

@@ -2,7 +2,7 @@
  * Item and project-level chunk types: idta, head, nhed, nnhd.
  *
  * All three use `fmt_field()` for fixed-layout I/O.
- * HeadChunk packs version info into a 32-bit bitfield word with @property
+ * HeadChunk packs version info into a 32-bit bitfield word with \@property
  * accessors. NnhdChunk uses `BitField` for scattered flag bits.
  */
 
@@ -175,7 +175,7 @@ export class HeadChunk extends Chunk {
   // preserves these.
   declare _version_word: number;
   declare _reserved_08: Uint8Array;
-  /** Next item ID to allocate, always > max existing item ID. */
+  /** Next item ID to allocate, always \> max existing item ID. */
   declare next_item_id: number;
   /** File revision counter (32-bit), incremented on each user action. */
   declare file_revision: number;

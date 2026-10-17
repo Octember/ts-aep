@@ -48,14 +48,15 @@ export type _StructInfo = [
 
 export const _UNSET = Symbol("_UNSET");
 
-/** The text of a fixed-size string field, read up to its first NUL,
+/**
+ * The text of a fixed-size string field, read up to its first NUL,
  * that also keeps the field's raw bytes when non-zero bytes follow the
  * terminator.
  *
  * After Effects leaves such bytes behind: a renamed solid keeps the tail
  * of its previous name in its `opti`, and CSV / TXT data footage is coded
  * `"\0vsc"` / `"\0vst"` in `sspc` (AE 2026 imports). Writing the raw
- * bytes back keeps parse -> save byte-identical; an assigned plain `str`
+ * bytes back keeps parse -\> save byte-identical; an assigned plain `str`
  * is encoded and NUL-padded as usual.
  */
 export class _NulTailStr extends String {
@@ -100,29 +101,25 @@ export type FmtFieldOptions = {
   coerce?: ((value: any) => any) | null;
 };
 
-/** Declare an attrs field with its struct format in metadata.
+/**
+ * Declare an attrs field with its struct format in metadata.
  *
- * Args:
- *     fmt: struct format character(s) (e.g. `"B"`, `"48s"`).
- *     default: Default value for the field.  When omitted, bytes
- *         formats (`"Ns"`) default to `b"\\x00" * N` and all
- *         other formats default to `0`.
- *     repr: Whether to include this field in `repr()`.
- *     encoding: When set, the raw `bytes` from `struct.unpack`
- *         are decoded to `str` up to the first NUL, and on write the
- *         `str` is encoded back and NUL-padded to fill the fixed size
- *         (non-zero bytes read after the NUL are written back
- *         unchanged, see `_NulTailStr`).
- *     optional: When `True`, the field may be absent in older
- *         binary versions. Use `default=None` so that `None`
- *         means "not present" (preserves round-trip fidelity).
- *         Optional fields must come after all required fields.
- *     endian: Per-field byte-order override (e.g. `"<"` for
- *         little-endian). When `None` (default), the chunk-level
- *         big-endian default is used. Triggers per-field I/O in
- *         `Chunk.read()` / `Chunk.write()`.
- *     coerce: Type callable applied after unpacking (e.g. `bool`).
- *         On write, the inverse is applied (e.g. `int` for `bool`).
+ * @param fmt - struct format character(s) (e.g. `"B"`, `"48s"`).
+ * @param kw - Keyword arguments:
+ * - `default`: Default value for the field. When omitted, bytes formats (`"Ns"`) default to
+ *     `b"\\x00" * N` and all other formats default to `0`.
+ * - `repr`: Whether to include this field in `repr()`.
+ * - `encoding`: When set, the raw `bytes` from `struct.unpack` are decoded to `str` up to the first
+ *     NUL, and on write the `str` is encoded back and NUL-padded to fill the fixed size (non-zero
+ *     bytes read after the NUL are written back unchanged, see `_NulTailStr`).
+ * - `optional`: When `True`, the field may be absent in older binary versions. Use `default=None`
+ *     so that `None` means "not present" (preserves round-trip fidelity). Optional fields must come
+ *     after all required fields.
+ * - `endian`: Per-field byte-order override (e.g. `"<"` for little-endian). When `None` (default),
+ *     the chunk-level big-endian default is used. Triggers per-field I/O in `Chunk.read()` /
+ *     `Chunk.write()`.
+ * - `coerce`: Type callable applied after unpacking (e.g. `bool`). On write, the inverse is applied
+ *     (e.g. `int` for `bool`).
  */
 export function fmt_field(fmt: string, kw: FmtFieldOptions = {}): FieldSpec {
   const {
@@ -158,16 +155,16 @@ export function fmt_field(fmt: string, kw: FmtFieldOptions = {}): FieldSpec {
   return field({ default: default_, repr, metadata: md, converter });
 }
 
-/** Declare a list-of-items field that fills the remaining body bytes.
+/**
+ * Declare a list-of-items field that fills the remaining body bytes.
  *
  * The item count is inferred at read time: `count = remaining // item_size`.
  * Item classes must use `fmt_field()` for their fields (with `endian`
  * and `encoding` as needed) so that `_struct_info()` can auto-serialize
  * them.
  *
- * Args:
- *     item_cls: Class used to deserialize each item.
- *     item_size: Fixed byte size of each serialized item.
+ * @param item_cls - Class used to deserialize each item.
+ * @param item_size - Fixed byte size of each serialized item.
  */
 export function items_field(item_cls: Function, item_size: number): FieldSpec {
   const md: Record<string, any> = {
@@ -244,19 +241,18 @@ export function bool_field(kw: FmtFieldOptions = {}): FieldSpec {
 }
 
 export function _struct_info_uncached(cls: Function): _StructInfo | null {
-  /** Derive struct layout metadata for a chunk class.
+  /**
+   * Derive struct layout metadata for a chunk class.
    *
-   * Returns a 10-tuple `(fmt, data_fields, encodings,
-   * optional_start, endians, items_info, coerces, init_names, simple,
-   * expected_size)` or `None` for raw-bytes chunks that have neither
+   * Returns a 10-tuple `(fmt, data_fields, encodings, optional_start, endians, items_info, coerces, init_names, simple, expected_size)` or `None` for raw-bytes chunks that have neither
    * `fmt_field` nor `items_field` fields.
    *
-   * - `encodings`: field-index -> encoding name.
+   * - `encodings`: field-index -\> encoding name.
    * - `optional_start`: index of first optional field.
-   * - `endians`: field-index -> endian override (`"<"` or `">"`);
+   * - `endians`: field-index -\> endian override (`"<"` or `">"`);
    *   non-empty triggers per-field I/O in `Chunk.read()` / `Chunk.write()`.
    * - `items_info`: `(init_param_name, item_cls, item_size)` or `None`.
-   * - `coerces`: field-index -> type callable (e.g. `bool`).
+   * - `coerces`: field-index -\> type callable (e.g. `bool`).
    * - `simple`: `True` when the chunk has no string encodings, endian
    *   overrides, optional fields, or items, so `_decode_fields` can be
    *   replaced with `dict(zip(init_names, values))` plus inline coerce
@@ -348,18 +344,20 @@ export function _struct_info_uncached(cls: Function): _StructInfo | null {
 // hashable at runtime. The cast restores the precise signature for callers.
 export const _struct_info: (cls: Function) => _StructInfo | null = lru_cache(_struct_info_uncached);
 
-/** Convert attrs field name to init parameter name.
+/**
+ * Convert attrs field name to init parameter name.
  *
  * attrs strips the leading underscore from private field names for
- * the `__init__` signature: `_trailing` -> `trailing=`.
+ * the `__init__` signature: `_trailing` -\> `trailing=`.
  */
 export function _init_name(name: string): string {
   return name.startsWith("_") ? lstrip(name, "_") : name;
 }
 
-/** Decode raw struct values into init keyword arguments.
+/**
+ * Decode raw struct values into init keyword arguments.
  *
- * Applies encoding (bytes > str) and coerce (e.g. int > bool) transforms
+ * Applies encoding (bytes \> str) and coerce (e.g. int \> bool) transforms
  * declared via `fmt_field()`. Shared by `Chunk.read()` and
  * `FmtItem.frombytes()`.
  */
@@ -384,10 +382,11 @@ export function _decode_fields(
   return kw;
 }
 
-/** Encode a single field value for struct packing.
+/**
+ * Encode a single field value for struct packing.
  *
- * Applies encoding (str > null-padded bytes) and coerce reversal
- * (bool > int) transforms. Shared by `Chunk.write()` and
+ * Applies encoding (str \> null-padded bytes) and coerce reversal
+ * (bool \> int) transforms. Shared by `Chunk.write()` and
  * `FmtItem.tobytes()`.
  */
 export function _encode_value(

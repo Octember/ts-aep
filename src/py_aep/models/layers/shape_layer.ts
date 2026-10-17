@@ -11,21 +11,21 @@ import type { PropertyGroup } from "../properties/property_group.ts";
 /**
  * The `ShapeLayer` object represents a shape layer within a composition.
  *
- * Example:
- *     ```python
- *     from py_aep import parse
- *
- *     app = parse("project.aep")
- *     comp = app.project.compositions[0]
- *     shape_layer = comp.shape_layers[0]
- *     print(shape_layer.content)
- *     ```
  *
  * Info:
- *     `ShapeLayer` is a subclass of [AVLayer][] object. All methods and
- *     attributes of [AVLayer][] are available when working with `ShapeLayer`.
+ *     `ShapeLayer` is a subclass of {@link AVLayer} object. All methods and
+ *     attributes of {@link AVLayer} are available when working with `ShapeLayer`.
  *
- * See: https://ae-scripting.docsforadobe.dev/layer/shapelayer/
+ * @example
+ * ```python
+ * from py_aep import parse
+ *
+ * app = parse("project.aep")
+ * comp = app.project.compositions[0]
+ * shape_layer = comp.shape_layers[0]
+ * print(shape_layer.content)
+ * ```
+ * @see https://ae-scripting.docsforadobe.dev/layer/shapelayer/
  */
 export class ShapeLayer extends AVLayer {
   static _auto_name: string = "Shape Layer";

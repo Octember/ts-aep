@@ -13,15 +13,15 @@ import type { OpenExrRoptChunk } from "../../../binary/render_chunks.ts";
  * These settings correspond to the OpenEXR Options dialog in After Effects,
  * accessible when the output format is set to OpenEXR or OpenEXR Sequence.
  *
- * Example:
- *     ```python
- *     from py_aep import OpenExrFormatOptions, parse
+ * @example
+ * ```python
+ * from py_aep import OpenExrFormatOptions, parse
  *
- *     app = parse("project.aep")
- *     om = app.project.render_queue.items[0].output_modules[0]
- *     if isinstance(om.format_options, OpenExrFormatOptions):
- *         print(om.format_options.compression)
- *     ```
+ * app = parse("project.aep")
+ * om = app.project.render_queue.items[0].output_modules[0]
+ * if isinstance(om.format_options, OpenExrFormatOptions):
+ *     print(om.format_options.compression)
+ * ```
  */
 export class OpenExrFormatOptions extends FormatOptionsBase {
   declare _body: OpenExrRoptChunk;

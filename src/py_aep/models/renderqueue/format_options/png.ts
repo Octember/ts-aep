@@ -30,15 +30,15 @@ import type { Utf8Chunk } from "../../../binary/scalar_chunks.ts";
  * bytes) with width, height, and bit depth at known offsets. HDR10 metadata
  * is stored separately in a JSON `Utf8` chunk alongside the Ropt chunk.
  *
- * Example:
- *     ```python
- *     from py_aep import PngFormatOptions, parse
+ * @example
+ * ```python
+ * from py_aep import PngFormatOptions, parse
  *
- *     app = parse("project.aep")
- *     om = app.project.render_queue.items[0].output_modules[0]
- *     if isinstance(om.format_options, PngFormatOptions):
- *         print(om.format_options.compression)
- *     ```
+ * app = parse("project.aep")
+ * om = app.project.render_queue.items[0].output_modules[0]
+ * if isinstance(om.format_options, PngFormatOptions):
+ *     print(om.format_options.compression)
+ * ```
  */
 export class PngFormatOptions extends FormatOptionsBase {
   declare _body: PngRoptChunk;

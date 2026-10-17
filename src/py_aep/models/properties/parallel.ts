@@ -5,9 +5,9 @@
  * per-keyframe values outside the keyframe `ldat` items, in a sibling
  * container inside a wrapper LIST (`otst`/`otky`, `mrst`/`mrky`,
  * `om-s`/`omks`, `GCst`/`GCky`, `btds`/btdk COS). The kinds differ in a
- * small set of facts and conversions; each [ParallelKind][] subclass
+ * small set of facts and conversions; each {@link ParallelKind} subclass
  * centralizes one kind so the generic keyframe mutation algorithms in
- * [Property][py_aep.models.properties.property.Property] are written once.
+ * {@link py_aep.models.properties.property.Property | Property} are written once.
  *
  * All binary forms were reverse-engineered from AE 2026 static-vs-keyed
  * output pairs (`aep-compare` ground-truth workflow).
@@ -275,7 +275,7 @@ export class _ShapeKind extends ParallelKind {
   /**
    * A path interpolates: a key added between two keys takes the
    * in-between shape, not a copy of the nearest key (AE 2026: added at
-   * 0.7 s on a 0 -> 2 s LINEAR segment, [[7, 3.5], [117.5, 0],
+   * 0.7 s on a 0 -\> 2 s LINEAR segment, [[7, 3.5], [117.5, 0],
    * [107, 114]]).
    */
   held_value(prop: Property, time: number): any {
@@ -343,7 +343,7 @@ export class _GradientKind extends ParallelKind {
 /**
  * Source Text. Values live in the shared btdk COS blob (one document
  * per keyframe), so the add / remove / animate algorithms are the
- * dedicated text paths on [Property][], not the generic container ones.
+ * dedicated text paths on {@link Property}, not the generic container ones.
  */
 export class _TextKind extends ParallelKind {
   name = "text";

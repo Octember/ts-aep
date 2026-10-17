@@ -14,7 +14,7 @@
  * release still loads in another.
  */
 
-/** Effect match name -> (display name, serialized `LIST:sspc` as hex). */
+/** Effect match name -\> (display name, serialized `LIST:sspc` as hex). */
 export const BUILTIN_EFFECTS: Map<string, [string, string]> = new Map<string, [string, string]>([
   [
     "ADBE Geometry2",

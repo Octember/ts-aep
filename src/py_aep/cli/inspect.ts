@@ -67,9 +67,9 @@ export function _chunk_detail(chunk: Chunk): string {
 /**
  * Print a chunk tree with types and sizes.
  *
- * @param chunk Root chunk to print.
- * @param depth Current depth (for indentation).
- * @param max_depth Maximum depth to recurse (-1 for unlimited).
+ * @param chunk - Root chunk to print.
+ * @param depth - Current depth (for indentation).
+ * @param max_depth - Maximum depth to recurse (-1 for unlimited).
  */
 export function print_tree(chunk: Chunk, depth: number = 0, max_depth: number = -1): void {
   if (max_depth >= 0 && depth > max_depth) return;
@@ -89,8 +89,8 @@ export function print_tree(chunk: Chunk, depth: number = 0, max_depth: number = 
 /**
  * Show detailed children of a specific Item by 0-based index.
  *
- * @param path Path to the `.aep` file.
- * @param index 0-based item index within `LIST:Fold`.
+ * @param path - Path to the `.aep` file.
+ * @param index - 0-based item index within `LIST:Fold`.
  * @returns Exit code (0 on success, 1 on error).
  */
 export function _inspect_item(path: Path, index: number): number {
@@ -144,7 +144,7 @@ export function _inspect_item(path: Path, index: number): number {
 /**
  * Show item summary with children types for each item in Fold.
  *
- * @param path Path to the `.aep` file.
+ * @param path - Path to the `.aep` file.
  * @returns Exit code.
  */
 export function _item_summary(path: Path): number {
@@ -177,7 +177,7 @@ export function _item_summary(path: Path): number {
 /**
  * Print a tree of all chunk paths and sizes in an AEP file.
  *
- * @param path Path to the `.aep` file.
+ * @param path - Path to the `.aep` file.
  * @returns Exit code.
  */
 export function _list_chunks(path: Path): number {
@@ -204,8 +204,8 @@ export function _list_chunks(path: Path): number {
  * If the path does not match exactly, a partial (substring) match is
  * attempted. Prints available paths on failure.
  *
- * @param path Path to the `.aep` file.
- * @param chunk_path Full or partial chunk path (e.g. `LIST:Fold/ftts`).
+ * @param path - Path to the `.aep` file.
+ * @param chunk_path - Full or partial chunk path (e.g. `LIST:Fold/ftts`).
  * @returns Exit code.
  */
 export function _dump_chunk(path: Path, chunk_path: string): number {

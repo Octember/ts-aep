@@ -8,7 +8,7 @@ import { warn } from "../pyrt/index.ts";
  * Emits a `DeprecationWarning` with `message` each time the decorated
  * function is called.
  *
- * @param message Explanation shown in the warning (e.g. migration path).
+ * @param message - Explanation shown in the warning (e.g. migration path).
  */
 export function deprecated(message: string) {
   return function decorator<R>(func: (...args: any[]) => R): (...args: any[]) => R {

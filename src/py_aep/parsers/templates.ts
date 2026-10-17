@@ -45,15 +45,15 @@ export const _OM_PREFS_ITEM_SIZE = 128;
 /**
  * An output module template parsed from AE preferences.
  *
- * Attributes:
- *     settings: The binary settings for this template.
- *     name: The template name from the prefs spec strings section.
- *     format_info: Raw bytes of the `Rouu` chunk (output format header),
- *         or None if no format info was found.
- *     format_options: Raw bytes of the format-specific `Ropt` chunk (codec
- *         / image-sequence options), from the "Output File Options
- *         Preference Section". None if absent.
- *     format_options_xml: The XML format options string, or None.
+ * **Attributes:**
+ * settings: The binary settings for this template.
+ * name: The template name from the prefs spec strings section.
+ * format_info: Raw bytes of the `Rouu` chunk (output format header),
+ * or None if no format info was found.
+ * format_options: Raw bytes of the format-specific `Ropt` chunk (codec
+ * / image-sequence options), from the "Output File Options
+ * Preference Section". None if absent.
+ * format_options_xml: The XML format options string, or None.
  */
 export class OutputModuleTemplate {
   settings: OutputModuleSettingsItem;
@@ -98,16 +98,11 @@ export function _extract_section_value(lines: string[], key: string): Uint8Array
 /**
  * Parse render settings templates from AE preferences.
  *
- * Args:
- *     prefs_dir: Path to the AE version preferences directory
- *         (e.g. `~/AppData/Roaming/Adobe/After Effects/25.6`).
- *
- * Returns:
- *     A tuple of (templates, default_index). Templates is a list of
- *     parsed [RenderSettingsItem][] objects. Default_index is the
- *     index of the default render settings template in the returned
- *     list, or None if not found (or the default entry was filtered
- *     out).
+ * @param prefs_dir - Path to the AE version preferences directory (e.g.
+ *   `~/AppData/Roaming/Adobe/After Effects/25.6`).
+ * @returns A tuple of (templates, default_index). Templates is a list of parsed
+ *   {@link RenderSettingsItem} objects. Default_index is the index of the default render settings
+ *   template in the returned list, or None if not found (or the default entry was filtered out).
  */
 export function parse_render_templates(prefs_dir: Path): [RenderSettingsItem[], number | null] {
   const render_files = prefs_dir.glob("*-indep-render.txt");
@@ -168,16 +163,12 @@ export function _extract_int_value(lines: string[], key: string): number | null 
 /**
  * Parse output module templates from AE preferences.
  *
- * Args:
- *     prefs_dir: Path to the AE version preferences directory
- *         (e.g. `~/AppData/Roaming/Adobe/After Effects/25.6`).
- *
- * Returns:
- *     A tuple of (templates, default_index). Templates is a list of
- *     [OutputModuleTemplate][] objects. Default_index is the index
- *     of the default output module template in the returned list, or
- *     None if not found (or the default entry was filtered out).
- *     Templates whose name starts with `_HIDDEN` are excluded.
+ * @param prefs_dir - Path to the AE version preferences directory (e.g.
+ *   `~/AppData/Roaming/Adobe/After Effects/25.6`).
+ * @returns A tuple of (templates, default_index). Templates is a list of
+ *   {@link OutputModuleTemplate} objects. Default_index is the index of the default output module
+ *   template in the returned list, or None if not found (or the default entry was filtered out).
+ *   Templates whose name starts with `_HIDDEN` are excluded.
  */
 export function parse_output_templates(prefs_dir: Path): [OutputModuleTemplate[], number | null] {
   const output_files = prefs_dir.glob("*-indep-output.txt");
@@ -251,14 +242,11 @@ export function parse_output_templates(prefs_dir: Path): [OutputModuleTemplate[]
  * encoding decoded by `parse_hex_value`. Parsing is bounded to the named
  * section so continuation lines never leak across section boundaries.
  *
- * Args:
- *     text: Full preferences file text.
- *     section: Substring identifying the section header line (e.g.
- *         "Output File Info Preference Section").
- *     id_prefix: The per-entry key prefix (e.g. "Output File Info").
- *
- * Returns:
- *     A dict mapping template index to decoded raw bytes.
+ * @param text - Full preferences file text.
+ * @param section - Substring identifying the section header line (e.g. "Output File Info Preference
+ *   Section").
+ * @param id_prefix - The per-entry key prefix (e.g. "Output File Info").
+ * @returns A dict mapping template index to decoded raw bytes.
  */
 export function _parse_id_hex_section(text: string, section: string, id_prefix: string): Map<number, Uint8Array> {
   const entries = new Map<number, Uint8Array>();

@@ -38,12 +38,12 @@ export function list_remove<T>(xs: T[], x: T): void {
  * The `Item` object represents an item that can appear in the Project panel.
  *
  * Info:
- *     `Item` is the base class for [AVItem][] object and for [FolderItem][]
+ *     `Item` is the base class for {@link AVItem} object and for {@link FolderItem}
  *     object, which are in turn the base classes for various other item
  *     types, so `Item` attributes and methods are available when working with
  *     all of these item types.
  *
- * See: https://ae-scripting.docsforadobe.dev/item/item/
+ * @see https://ae-scripting.docsforadobe.dev/item/item/
  */
 // Annotation-only `name` (interface merge so FootageItem may override it with an accessor).
 export interface Item {
@@ -161,10 +161,9 @@ export class Item {
    * of the new folder's container, and both folders' `items` lists are
    * updated.
    *
-   * Raises:
-   *     ValueError: If this is the root folder, or if moving a folder
-   *         into itself or one of its own descendants.
-   *     TypeError: If the value is not a [FolderItem][].
+   * @throws {@link ValueError} If this is the root folder, or if moving a folder into itself or one
+   *   of its own descendants.
+   * @throws {@link TypeError} If the value is not a {@link FolderItem}.
    */
   get parent_folder(): FolderItem | null {
     return this._parent_folder;
@@ -200,9 +199,8 @@ export class Item {
   /**
    * When `True`, this item is selected. Read-only.
    *
-   * Note:
-   *     Item selection is not stored in the `.aep` binary format; it is a
-   *     runtime-only state. Parsed projects always report `False`.
+   * **Note:** Item selection is not stored in the `.aep` binary format; it is a
+   * runtime-only state. Parsed projects always report `False`.
    */
   get selected(): boolean {
     return false;
@@ -232,14 +230,10 @@ export class Item {
    * Any `orientation_type` value other than 0 (horizontal) or 1 (vertical)
    * defaults to horizontal.
    *
-   * Args:
-   *     orientation_type: 0 for horizontal, 1 for vertical.
-   *     position: The pixel position of the guide. May be negative or
-   *         fractional - guides sit anywhere on the ruler, inside the
-   *         composition bounds or outside them.
-   *
-   * Returns:
-   *     The index of the new guide.
+   * @param orientation_type - 0 for horizontal, 1 for vertical.
+   * @param position - The pixel position of the guide. May be negative or fractional - guides sit
+   *   anywhere on the ruler, inside the composition bounds or outside them.
+   * @returns The index of the new guide.
    */
   add_guide(orientation_type: number, position: number): number {
     this._ensure_guides_container();
@@ -255,11 +249,8 @@ export class Item {
   /**
    * Removes an existing guide by index.
    *
-   * Args:
-   *     guide_index: The 0-based index of the guide to remove.
-   *
-   * Raises:
-   *     IndexError: If `guide_index` is out of range.
+   * @param guide_index - The 0-based index of the guide to remove.
+   * @throws {@link IndexError} If `guide_index` is out of range.
    */
   remove_guide(guide_index: number): void {
     if (this._guides.length === 0) throw new IndexError("No guides to remove");
@@ -327,13 +318,12 @@ export class Item {
    *
    * Subclasses add their own cleanup before calling `super().remove()`:
    *
-   * - [FolderItem][] removes children recursively.
-   * - [AVItem][] removes layers that reference this item as their source
+   * - {@link FolderItem} removes children recursively.
+   * - {@link AVItem} removes layers that reference this item as their source
    *   and cleans up viewer references.
-   * - [CompItem][] removes render-queue items targeting this composition.
+   * - {@link CompItem} removes render-queue items targeting this composition.
    *
-   * Raises:
-   *     ValueError: If this is the root folder.
+   * @throws {@link ValueError} If this is the root folder.
    */
   remove(): void {
     // Remove from parent folder's binary chunks

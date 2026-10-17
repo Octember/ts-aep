@@ -46,7 +46,7 @@ export function _start_time_from_binary(value: number): Date | null {
 
 /**
  * The id AE gives a new render-queue item: the queue's highest + 1, and
- * 2 in an empty queue (AE 2026: ids 9 and 3 -> an added item gets 10, a
+ * 2 in an empty queue (AE 2026: ids 9 and 3 -\> an added item gets 10, a
  * duplicate after it 11).
  */
 export function _next_item_id(rq: RenderQueue): number {
@@ -100,7 +100,6 @@ export const RENDER_SETTINGS = new Map<string, [string, any]>([
  * queue. It provides access to the specific settings for an item to be
  * rendered.
  *
- * Example:
  * ```python
  * from py_aep import parse
  *
@@ -111,7 +110,8 @@ export const RENDER_SETTINGS = new Map<string, [string, any]>([
  *     ...
  * ```
  *
- * See: https://ae-scripting.docsforadobe.dev/renderqueue/renderqueueitem/
+ * @example
+ * @see https://ae-scripting.docsforadobe.dev/renderqueue/renderqueueitem/
  */
 export class RenderQueueItem {
   /**
@@ -218,12 +218,10 @@ export class RenderQueueItem {
    * settings and a single output module. If default templates are
    * available from AE preferences, their settings are applied.
    *
-   * Args:
-   *     comp: The composition to render.
-   *     parent: The parent RenderQueue.
-   *
-   * Returns:
-   *     The new RenderQueueItem model.
+   * @param comp - The composition to render.
+   * @param kw - Keyword arguments:
+   * - `parent`: The parent RenderQueue.
+   * @returns The new RenderQueueItem model.
    */
   static _new(comp: CompItem, kw: { parent: RenderQueue }): RenderQueueItem {
     const { parent } = kw;
@@ -277,11 +275,10 @@ export class RenderQueueItem {
   /**
    * Add an output module to this render queue item.
    *
-   * Creates a new [OutputModule][] with default settings (or the
+   * Creates a new {@link OutputModule} with default settings (or the
    * default template if `ae_preferences_dir` was passed to `parse()`).
    *
-   * Returns:
-   *     The newly created [OutputModule][].
+   * @returns The newly created {@link OutputModule}.
    */
   add(): OutputModule {
     const [om, lom_chunks] = _output_module().OutputModule._new({
@@ -334,7 +331,7 @@ export class RenderQueueItem {
     return this._output_modules;
   }
 
-  /** The [RenderQueue][] containing this item. Read-only. */
+  /** The {@link RenderQueue} containing this item. Read-only. */
   get parent(): RenderQueue {
     return this._parent_rq;
   }
@@ -421,14 +418,13 @@ export class RenderQueueItem {
    *
    * Read / Write.
    *
-   * Note:
-   *     After Effects does not save the value: it reads 0 for every
-   *     item of a project it opens and renders all frames, whatever
-   *     output frame rate the output modules store (AE 2026, rendered).
-   *     py_aep keeps it in memory the same way - a parsed project starts
-   *     at 0. Writing it still stores each output module's frame rate
-   *     (the render frame rate divided by skip + 1), as AE does once an
-   *     item is prepared for output.
+   * **Note:** After Effects does not save the value: it reads 0 for every
+   * item of a project it opens and renders all frames, whatever
+   * output frame rate the output modules store (AE 2026, rendered).
+   * py_aep keeps it in memory the same way - a parsed project starts
+   * at 0. Writing it still stores each output module's frame rate
+   * (the render frame rate divided by skip + 1), as AE does once an
+   * item is prepared for output.
    */
   get skip_frames(): number {
     return this._skip_frames;
@@ -450,8 +446,7 @@ export class RenderQueueItem {
   /**
    * Return the number of output modules for this render queue item. Read-only.
    *
-   * Note:
-   *     Equivalent to `len(item.output_modules)`
+   * **Note:** Equivalent to `len(item.output_modules)`
    */
   get num_output_modules(): number {
     return this.output_modules.length;
@@ -509,10 +504,11 @@ export class RenderQueueItem {
    *
    * Supports item assignment:
    *
-   * Example:
    * ```python
    * rqi.settings["Quality"] = RenderQuality.BEST
    * ```
+   *
+   * @example
    */
   get settings(): SettingsView {
     return new _RenderSettingsView(this, RENDER_SETTINGS);
@@ -565,24 +561,21 @@ export class RenderQueueItem {
    *
    * Setting the duration keeps the start. Setting the start keeps the
    * end when the span still follows the work area or the comp, and keeps
-   * the duration once it is CUSTOM (measured on AE 2026: 0..10 s ->
-   * start 1.03 gives 1.03 / 8.97; a custom 0 / 2.51 span -> start 1.03
+   * the duration once it is CUSTOM (measured on AE 2026: 0..10 s -\>
+   * start 1.03 gives 1.03 / 8.97; a custom 0 / 2.51 span -\> start 1.03
    * gives 1.03 / 2.51). Unlike AE scripting which accepts degenerate
    * spans and silently renders garbage (a start before 0 renders void
    * lead-in frames, an end before the start renders a single frame) -
    * py_aep validates the values like AE's own dialog.
    *
-   * Args:
-   *     value: Time in seconds, or frame count if `is_frames` is True.
-   *     field: Either "start" or "duration".
-   *     is_frames: When True, `value` is a frame count and is converted
-   *         to seconds via the composition frame rate before writing.
-   *
-   * Raises:
-   *     ValueError: If a start is negative, if either field would leave
-   *         a duration shorter than one frame (AE's own scripting
-   *         bound), or if a value does not fit the stored ratio.
-   *     TypeError: If the value is not a number.
+   * @param value - Time in seconds, or frame count if `is_frames` is True.
+   * @param field - Either "start" or "duration".
+   * @param is_frames - When True, `value` is a frame count and is converted to seconds via the
+   *   composition frame rate before writing.
+   * @throws {@link ValueError} If a start is negative, if either field would leave a duration
+   *   shorter than one frame (AE's own scripting bound), or if a value does not fit the stored
+   *   ratio.
+   * @throws {@link TypeError} If the value is not a number.
    */
   _set_time_span(value: number, field: string, is_frames = false): void {
     const frame_duration = 1.0 / this.comp.frame_rate;
@@ -730,10 +723,8 @@ export class RenderQueueItem {
   /**
    * Return render settings in the specified format.
    *
-   * Args:
-   *     format: The output format.
-   *         `GetSettingsFormat.NUMBER` returns numeric values (enums unwrapped to ints).
-   *         `GetSettingsFormat.STRING` returns all values as strings
+   * @param format_ - The output format. `GetSettingsFormat.NUMBER` returns numeric values (enums
+   *   unwrapped to ints). `GetSettingsFormat.STRING` returns all values as strings
    */
   get_settings(format_: GetSettingsFormat = GetSettingsFormat.STRING): Map<string, any> {
     if (format_ === GetSettingsFormat.STRING) {
@@ -752,9 +743,8 @@ export class RenderQueueItem {
   /**
    * Return a single render setting in the specified format.
    *
-   * Args:
-   *     key: The setting key (e.g. `"Quality"`, `"Frame Rate"`).
-   *     format: The output format.
+   * @param key - The setting key (e.g. `"Quality"`, `"Frame Rate"`).
+   * @param format_ - The output format.
    */
   get_setting(key: string, format_: GetSettingsFormat = GetSettingsFormat.STRING): any {
     return getitem(this.get_settings(format_), key);
@@ -782,11 +772,8 @@ export class RenderQueueItem {
    * `ae_preferences_dir` in `parse()`) and copies its settings to
    * this render queue item.
    *
-   * Args:
-   *     name: Template name (e.g. `"Best Settings"`, `"Draft Settings"`).
-   *
-   * Raises:
-   *     ValueError: If the template name is not found.
+   * @param name - Template name (e.g. `"Best Settings"`, `"Draft Settings"`).
+   * @throws {@link ValueError} If the template name is not found.
    */
   apply_template(name: string): void {
     const rs_items = this._project._get_render_templates();
@@ -845,7 +832,7 @@ export class RenderQueueItem {
   /**
    * Create a duplicate of this item in the render queue.
    *
-   * Returns the new [RenderQueueItem][]. If the original item's status is
+   * Returns the new {@link RenderQueueItem}. If the original item's status is
    * `DONE` or `ERR_STOPPED`, the duplicate's status is set to `QUEUED`.
    */
   duplicate(): RenderQueueItem {

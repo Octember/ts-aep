@@ -109,7 +109,6 @@ export class TextDocument {
   /**
    * Stores a value for a TextLayer's Source Text property.
    *
-   * Example:
    * ```python
    * from py_aep import parse
    *
@@ -119,7 +118,8 @@ export class TextDocument {
    * print(text_doc.text)
    * ```
    *
-   * See: https://ae-scripting.docsforadobe.dev/text/textdocument/
+   * @example
+   * @see https://ae-scripting.docsforadobe.dev/text/textdocument/
    */
 
   // `text` is an accessor below; Python's `text: str` annotation exists so
@@ -387,21 +387,18 @@ export class TextDocument {
   // -- Constructor -------------------------------------------------------
 
   /**
-   * Build a [TextDocument][] from the point-text COS template.
+   * Build a {@link TextDocument} from the point-text COS template.
    *
    * Creates a document whose `_cos_data` and `_btdk_body` are wired
    * together so that descriptor / setter writes propagate to the
    * backing `btdk` chunk.
    *
-   * Args:
-   *     text: Initial text content. When empty, the template's
-   *         placeholder text is left unchanged.
-   *     box_size: `[width, height]` for box (paragraph) text. When
-   *         given, converts the document to box text; `None` leaves
-   *         it as point text.
-   *     line_orientation: Text [LineOrientation][]. When given, sets
-   *         the layer's orientation (e.g. vertical); `None` leaves
-   *         the template's horizontal default.
+   * @param text - Initial text content. When empty, the template's placeholder text is left
+   *   unchanged.
+   * @param box_size - `[width, height]` for box (paragraph) text. When given, converts the document
+   *   to box text; `None` leaves it as point text.
+   * @param line_orientation - Text {@link LineOrientation}. When given, sets the layer's
+   *   orientation (e.g. vertical); `None` leaves the template's horizontal default.
    */
   constructor(
     text: string = "",
@@ -561,8 +558,7 @@ export class TextDocument {
      * the paragraph runs become one clone of the first paragraph's
      * run per new paragraph, and manual-kerning runs are dropped.
      *
-     * Args:
-     *     raw: The new stored text, including the terminator `\r`.
+     * @param raw - The new stored text, including the terminator `\r`.
      */
     const inner = dict_get(this._doc, "0", new Map());
     const char_runs = cos_get(inner, "6", "0");
@@ -705,7 +701,7 @@ export class TextDocument {
     return used;
   }
 
-  /** The Text layer's [FontObject][]. Read-only. */
+  /** The Text layer's {@link FontObject}. Read-only. */
   get font_object(): FontObject | null {
     const override: FontObject | null = this._override("font_object");
     if (override != null) return override;
@@ -1090,22 +1086,20 @@ export class TextDocument {
    * The baseline (x,y) locations for a Text layer. Line wraps in a
    * paragraph text box are treated as multiple lines. Read-only.
    *
-   * Four floats per composed line - `line.start_x, line.start_y,
-   * line.end_x, line.end_y` - in layer coordinates. Empty for
+   * Four floats per composed line - `line.start_x, line.start_y, line.end_x, line.end_y` - in layer coordinates. Empty for
    * documents never parsed from a layer or without a layout cache.
    *
    * Tip:
    *     If a line has no characters, the x and y values for start and
    *     end are the maximum float value (`3.402823466e+38`).
    *
-   * Note:
-   *     Unlike [composed_line_count][TextDocument.composed_line_count],
-   *     this always reports the layout After Effects persisted: the
-   *     per-line pen origins and glyph advances only exist in that
-   *     cache, and the composed-line resolver does not reproduce them.
-   *     After a layout-affecting py-side write the values therefore
-   *     stay at the persisted layout even when the resolver could
-   *     recompose the line spans (see `composition_stale`).
+   * **Note:** Unlike {@link TextDocument.composed_line_count | composed_line_count},
+   * this always reports the layout After Effects persisted: the
+   * per-line pen origins and glyph advances only exist in that
+   * cache, and the composed-line resolver does not reproduce them.
+   * After a layout-affecting py-side write the values therefore
+   * stay at the persisted layout even when the resolver could
+   * recompose the line spans (see `composition_stale`).
    */
   get baseline_locs(): number[] {
     if (!this._associated) return [];
@@ -1163,7 +1157,7 @@ export class TextDocument {
    * Character bounds of every paragraph as `{"start", "end"}`
    * records. Read-only.
    *
-   * Matches [paragraph_range][TextDocument.paragraph_range] bounds
+   * Matches {@link TextDocument.paragraph_range | paragraph_range} bounds
    * (paragraph spans clamped to the visible text) from one pass
    * over the paragraph runs; empty for documents never parsed from
    * a layer. Ground-truth validation compares this against
@@ -1182,7 +1176,7 @@ export class TextDocument {
    * Character bounds of every composed line as `{"start", "end"}`
    * records. Read-only.
    *
-   * Matches [composed_line_range][TextDocument.composed_line_range]
+   * Matches {@link TextDocument.composed_line_range | composed_line_range}
    * bounds (ends clamped to the visible text, stale cached lines
    * beyond it dropped) from one span derivation; empty for
    * documents never parsed from a layer or without a layout cache.
@@ -1216,12 +1210,10 @@ export class TextDocument {
    * project was parsed with, and falls back to AE's factory values when
    * no preference file is available.
    *
-   * Note:
-   *     Attributes the Character panel does not carry are left alone,
-   *     matching After Effects.
+   * **Note:** Attributes the Character panel does not carry are left alone,
+   * matching After Effects.
    *
-   * Raises:
-   *     ValueError: If the document was never associated with a layer.
+   * @throws {@link ValueError} If the document was never associated with a layer.
    */
   reset_char_style(): void {
     this._require_association();
@@ -1261,13 +1253,11 @@ export class TextDocument {
    * preferences directory the project was parsed with, and falls back to
    * AE's factory values when no preference file is available.
    *
-   * Note:
-   *     Hyphenation has no entry in that sheet, so - like After Effects -
-   *     this leaves [auto_hyphenate][TextDocument.auto_hyphenate]
-   *     untouched.
+   * **Note:** Hyphenation has no entry in that sheet, so - like After Effects -
+   * this leaves {@link TextDocument.auto_hyphenate | auto_hyphenate}
+   * untouched.
    *
-   * Raises:
-   *     ValueError: If the document was never associated with a layer.
+   * @throws {@link ValueError} If the document was never associated with a layer.
    */
   reset_paragraph_style(): void {
     this._require_association();
@@ -1311,18 +1301,14 @@ export class TextDocument {
     signed_character_end: number | null = null,
   ): CharacterRange {
     /**
-     * A [CharacterRange][] over part of this document.
+     * A {@link CharacterRange} over part of this document.
      *
-     * Args:
-     *     character_start: First character index (UTF-16 units,
-     *         `0 <= character_start <= text length`).
-     *     signed_character_end: Index past the last character. `-1`
-     *         resolves dynamically to the text length; when omitted,
-     *         defaults to `character_start + 1`.
-     *
-     * Raises:
-     *     ValueError: When the indices are outside the document
-     *         bounds (AE raises at creation time).
+     * @param character_start - First character index (UTF-16 units,
+     *   `0 <= character_start <= text length`).
+     * @param signed_character_end - Index past the last character. `-1` resolves dynamically to the
+     *   text length; when omitted, defaults to `character_start + 1`.
+     * @throws {@link ValueError} When the indices are outside the document bounds (AE raises at
+     *   creation time).
      */
     this._require_association();
     validate_positive_int(character_start, this);
@@ -1339,18 +1325,14 @@ export class TextDocument {
     signed_paragraph_index_end: number | null = null,
   ): ParagraphRange {
     /**
-     * A [ParagraphRange][] over part of this document.
+     * A {@link ParagraphRange} over part of this document.
      *
-     * Args:
-     *     paragraph_index_start: First paragraph index
-     *         (`0 <= paragraph_index_start < paragraph count`).
-     *     signed_paragraph_index_end: Index past the last paragraph.
-     *         `-1` resolves dynamically to the paragraph count; when
-     *         omitted, defaults to `paragraph_index_start + 1`.
-     *
-     * Raises:
-     *     ValueError: When the indices are outside the document
-     *         bounds (AE raises at creation time).
+     * @param paragraph_index_start - First paragraph index
+     *   (`0 <= paragraph_index_start < paragraph count`).
+     * @param signed_paragraph_index_end - Index past the last paragraph. `-1` resolves dynamically
+     *   to the paragraph count; when omitted, defaults to `paragraph_index_start + 1`.
+     * @throws {@link ValueError} When the indices are outside the document bounds (AE raises at
+     *   creation time).
      */
     this._require_association();
     validate_positive_int(paragraph_index_start, this);
@@ -1367,22 +1349,18 @@ export class TextDocument {
     signed_composed_line_index_end: number | null = null,
   ): ComposedLineRange {
     /**
-     * A [ComposedLineRange][] over part of this document.
+     * A {@link ComposedLineRange} over part of this document.
      *
      * Composed lines come from the layout cache AE persisted at save
      * time, or from the calibrated composed-line resolver after
-     * py-side edits; see [ComposedLineRange][] for the semantics.
+     * py-side edits; see {@link ComposedLineRange} for the semantics.
      *
-     * Args:
-     *     composed_line_index_start: First composed-line index
-     *         (`0 <= composed_line_index_start < composed line count`).
-     *     signed_composed_line_index_end: Index past the last line.
-     *         `-1` resolves dynamically to the line count; when
-     *         omitted, defaults to `composed_line_index_start + 1`.
-     *
-     * Raises:
-     *     ValueError: When the indices are outside the cached
-     *         composed lines (AE raises at creation time).
+     * @param composed_line_index_start - First composed-line index
+     *   (`0 <= composed_line_index_start < composed line count`).
+     * @param signed_composed_line_index_end - Index past the last line. `-1` resolves dynamically
+     *   to the line count; when omitted, defaults to `composed_line_index_start + 1`.
+     * @throws {@link ValueError} When the indices are outside the cached composed lines (AE raises
+     *   at creation time).
      */
     this._require_association();
     validate_positive_int(composed_line_index_start, this);
@@ -1398,15 +1376,9 @@ export class TextDocument {
     /**
      * The character bounds of the paragraph containing an index.
      *
-     * Args:
-     *     character_index: A character index (UTF-16 units) within
-     *         the text.
-     *
-     * Returns:
-     *     `{"start": int, "end": int}` for the containing paragraph.
-     *
-     * Raises:
-     *     ValueError: When `character_index` is outside the text.
+     * @param character_index - A character index (UTF-16 units) within the text.
+     * @returns `{"start": int, "end": int}` for the containing paragraph.
+     * @throws {@link ValueError} When `character_index` is outside the text.
      */
     this._require_association();
     validate_positive_int(character_index, this);
@@ -1423,16 +1395,10 @@ export class TextDocument {
     /**
      * The character bounds of the composed line containing an index.
      *
-     * Args:
-     *     character_index: A character index (UTF-16 units) within
-     *         the text.
-     *
-     * Returns:
-     *     `{"start": int, "end": int}` for the containing composed line.
-     *
-     * Raises:
-     *     ValueError: When `character_index` is outside the text or
-     *         the document has no composed-line cache.
+     * @param character_index - A character index (UTF-16 units) within the text.
+     * @returns `{"start": int, "end": int}` for the containing composed line.
+     * @throws {@link ValueError} When `character_index` is outside the text or the document has no
+     *   composed-line cache.
      */
     this._require_association();
     validate_positive_int(character_index, this);

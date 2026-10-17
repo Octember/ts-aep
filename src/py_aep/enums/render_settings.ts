@@ -12,7 +12,7 @@ import { and, getitem, int, int_enum, type EnumValue } from "../../pyrt/index.ts
  * Determines whether the render uses the composition's own frame rate
  * or a custom frame rate specified in the render settings.
  *
- * Used in RenderQueueItem Settings > Frame Rate
+ * Used in RenderQueueItem Settings \> Frame Rate
  *
  * Not documented in AE scripting reference.
  */
@@ -40,7 +40,7 @@ export const _FRAME_RATE_SETTING_LABELS: Map<number, string> = new Map<number, s
 /**
  * Quality setting for rendering.
  *
- * Used in RenderQueueItem Settings > Quality
+ * Used in RenderQueueItem Settings \> Quality
  *
  * Not documented in AE scripting reference.
  */
@@ -64,7 +64,7 @@ export const RenderQuality = int_enum(
       return value === 0xffff ? this.CURRENT_SETTINGS : this.of(value);
     },
 
-    /** Convert to binary value (CURRENT_SETTINGS -> 0xFFFF). */
+    /** Convert to binary value (CURRENT_SETTINGS -\> 0xFFFF). */
     to_binary(self: number): number {
       return and(int(self), 0xffff);
     },
@@ -82,7 +82,7 @@ export const _RENDER_QUALITY_LABELS: Map<number, string> = new Map<number, strin
 /**
  * Field rendering option.
  *
- * Used in RenderQueueItem Settings > Field Render
+ * Used in RenderQueueItem Settings \> Field Render
  *
  * Not documented in AE scripting reference.
  */
@@ -112,7 +112,7 @@ export const _FIELD_RENDER_LABELS: Map<number, string> = new Map<number, string>
 /**
  * 3:2 Pulldown phase for field rendering.
  *
- * Used in RenderQueueItem Settings > 3:2 Pulldown
+ * Used in RenderQueueItem Settings \> 3:2 Pulldown
  *
  * Not documented in AE scripting reference.
  */
@@ -148,7 +148,7 @@ export const _PULLDOWN_SETTING_LABELS: Map<number, string> = new Map<number, str
 /**
  * Motion blur render setting.
  *
- * Used in RenderQueueItem Settings > Motion Blur
+ * Used in RenderQueueItem Settings \> Motion Blur
  *
  * Not documented in AE scripting reference.
  */
@@ -183,7 +183,7 @@ export const _MOTION_BLUR_SETTING_LABELS: Map<number, string> = new Map<number, 
 /**
  * Frame blending render setting.
  *
- * Used in RenderQueueItem Settings > Frame Blending
+ * Used in RenderQueueItem Settings \> Frame Blending
  *
  * Not documented in AE scripting reference.
  */
@@ -218,7 +218,7 @@ export const _FRAME_BLENDING_SETTING_LABELS: Map<number, string> = new Map<numbe
 /**
  * Effects render setting.
  *
- * Used in RenderQueueItem Settings > Effects
+ * Used in RenderQueueItem Settings \> Effects
  *
  * Not documented in AE scripting reference.
  */
@@ -253,7 +253,7 @@ export const _EFFECTS_SETTING_LABELS: Map<number, string> = new Map<number, stri
 /**
  * Proxy usage render setting.
  *
- * Used in RenderQueueItem Settings > Proxy Use
+ * Used in RenderQueueItem Settings \> Proxy Use
  *
  * Not documented in AE scripting reference.
  */
@@ -290,7 +290,7 @@ export const _PROXY_USE_SETTING_LABELS: Map<number, string> = new Map<number, st
 /**
  * Solo switches render setting.
  *
- * Used in RenderQueueItem Settings > Solo Switches
+ * Used in RenderQueueItem Settings \> Solo Switches
  *
  * Not documented in AE scripting reference.
  */
@@ -323,7 +323,7 @@ export const _SOLO_SWITCHES_SETTING_LABELS: Map<number, string> = new Map<number
 /**
  * Guide layers render setting.
  *
- * Used in RenderQueueItem Settings > Guide Layers
+ * Used in RenderQueueItem Settings \> Guide Layers
  *
  * Not documented in AE scripting reference.
  */
@@ -356,7 +356,7 @@ export const _GUIDE_LAYERS_LABELS: Map<number, string> = new Map<number, string>
 /**
  * Disk cache render setting.
  *
- * Used in RenderQueueItem Settings > Disk Cache
+ * Used in RenderQueueItem Settings \> Disk Cache
  *
  * Not documented in AE scripting reference.
  */
@@ -389,7 +389,7 @@ export const _DISK_CACHE_SETTING_LABELS: Map<number, string> = new Map<number, s
 /**
  * Color depth render setting.
  *
- * Used in RenderQueueItem Settings > Color Depth
+ * Used in RenderQueueItem Settings \> Color Depth
  *
  * Not documented in AE scripting reference.
  */
@@ -413,7 +413,7 @@ export const ColorDepthSetting = int_enum(
       return value === 0xffff ? this.CURRENT_SETTINGS : this.of(value);
     },
 
-    /** Convert to binary value (CURRENT_SETTINGS -> 0xFFFF). */
+    /** Convert to binary value (CURRENT_SETTINGS -\> 0xFFFF). */
     to_binary(self: number): number {
       return and(int(self), 0xffff);
     },
@@ -431,7 +431,7 @@ export const _COLOR_DEPTH_SETTING_LABELS: Map<number, string> = new Map<number, 
 /**
  * Time span source setting.
  *
- * Used in RenderQueueItem Settings > Time Span
+ * Used in RenderQueueItem Settings \> Time Span
  *
  * Not documented in AE scripting reference.
  */
@@ -466,7 +466,7 @@ export const _TIME_SPAN_SOURCE_LABELS: Map<number, string> = new Map<number, str
 /**
  * Post-render action for the output module settings dict.
  *
- * Used in OutputModule Settings > Post-Render Action
+ * Used in OutputModule Settings \> Post-Render Action
  *
  * Not documented in AE scripting reference.
  */

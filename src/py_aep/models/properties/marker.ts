@@ -26,17 +26,16 @@ export function _validate_params(value: Map<string, string>): void {
  * associates a comment, and optionally a chapter reference point, Web-page
  * link, or Flash Video cue point with a particular point in a layer.
  *
- * Example:
- *     ```python
- *     from py_aep import parse
+ * @example
+ * ```python
+ * from py_aep import parse
  *
- *     app = parse("project.aep")
- *     comp = app.project.compositions[0]
- *     marker = comp.markers[0]
- *     print(marker.comment)
- *     ```
- *
- * See: https://ae-scripting.docsforadobe.dev/other/markervalue/
+ * app = parse("project.aep")
+ * comp = app.project.compositions[0]
+ * marker = comp.markers[0]
+ * print(marker.comment)
+ * ```
+ * @see https://ae-scripting.docsforadobe.dev/other/markervalue/
  */
 export class MarkerValue {
   declare _nmhd: NmhdChunk;
@@ -205,9 +204,8 @@ export class MarkerValue {
   /**
    * The marker's duration, in frames of its composition. Read / Write.
    *
-   * Raises:
-   *     ValueError: If the marker is not set on a marker property yet,
-   *         so it has no composition frame rate.
+   * @throws {@link ValueError} If the marker is not set on a marker property yet, so it has no
+   *   composition frame rate.
    */
   get frame_duration(): number {
     return round(this.duration * this._frame_rate());

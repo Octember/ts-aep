@@ -171,7 +171,7 @@ export function _next_mask_name(names: Iterable<string>): string {
   /**
    * The name AE 2026 gives a new mask beside masks named `names`: one past
    * the highest number, keeping the zero padding of the first name holding
-   * it ("Mask 007" -> "Mask 008"; "Mask 0" counts as unnumbered).
+   * it ("Mask 007" -\> "Mask 008"; "Mask 0" counts as unnumbered).
    */
   let highest = 0;
   let width = 1;
@@ -246,20 +246,16 @@ export function _reorder_and_fill(
    * canonical order. Missing children are created via `Property.synthesized`
    * (for `PropSpec`) or as empty `PropertyGroup` instances (for `GroupSpec`).
    *
-   * Args:
-   *     container: Object whose `.properties` list is reordered/filled.
-   *         Also set as `parent_property` on synthesized children.
-   *     specs: Full canonical spec list (NOT pre-filtered by `skip`).
-   *     child_depth: `property_depth` for synthesized children.
-   *     skip: Match names to skip synthesis for.  Checked only when the
-   *         match name is **not** already in the container - existing
-   *         children are always preserved in canonical position.
-   *     value_overrides: `{match_name: (value, default_value)}` for
-   *         overriding synthesized property values.  When `None`, uses
-   *         `spec.value` / `spec.default_value`.
-   *     tail_mode: What non-spec children to append after the canonical
-   *         entries: `"groups"` (only `PropertyGroup`), `"all"`
-   *         (everything), or `"none"` (nothing).
+   * @param container - Object whose `.properties` list is reordered/filled. Also set as
+   *   `parent_property` on synthesized children.
+   * @param specs - Full canonical spec list (NOT pre-filtered by `skip`).
+   * @param child_depth - `property_depth` for synthesized children.
+   * @param skip - Match names to skip synthesis for. Checked only when the match name is **not**
+   *   already in the container - existing children are always preserved in canonical position.
+   * @param value_overrides - `{match_name: (value, default_value)}` for overriding synthesized
+   *   property values. When `None`, uses `spec.value` / `spec.default_value`.
+   * @param tail_mode - What non-spec children to append after the canonical entries: `"groups"`
+   *   (only `PropertyGroup`), `"all"` (everything), or `"none"` (nothing).
    */
   const { skip = new Set<string>(), value_overrides = null, tail_mode = "groups", ae_major } = kw;
 
@@ -385,36 +381,36 @@ export function _derive_layer_styles_enabled(
 
 /**
  * The `PropertyGroup` object represents a group of properties. It can contain
- * [Property][] objects and other `PropertyGroup` objects. Property groups can
- * be nested to provide a parent-child hierarchy, with a [Layer][] object at the
- * top (root) down to a single [Property][] object, such as the mask feather of
- * the third mask. To traverse the group hierarchy, use [PropertyBase][] methods
+ * {@link Property} objects and other `PropertyGroup` objects. Property groups can
+ * be nested to provide a parent-child hierarchy, with a {@link Layer} object at the
+ * top (root) down to a single {@link Property} object, such as the mask feather of
+ * the third mask. To traverse the group hierarchy, use {@link PropertyBase} methods
  * and attributes; see `PropertyBase.propertyGroup()`. For examples of how to
- * access properties and property groups, see [PropertyBase][] object.
+ * access properties and property groups, see {@link PropertyBase} object.
  *
- * Example:
- *     ```python
- *     from py_aep import parse
- *
- *     app = parse("project.aep")
- *     comp = app.project.compositions[0]
- *     effects = comp.layers[0].effects
- *     if effects is not None:
- *         for effect in effects:
- *             ...
- *     ```
  *
  * Info:
- *     `PropertyGroup` is a subclass of [PropertyBase][]. All methods and
- *     attributes of [PropertyBase][] are available when working with
+ *     `PropertyGroup` is a subclass of {@link PropertyBase}. All methods and
+ *     attributes of {@link PropertyBase} are available when working with
  *     `PropertyGroup`.
  *
  * Info:
- *     `PropertyGroup` is a base class for [Layer][] and `MaskPropertyGroup`.
+ *     `PropertyGroup` is a base class for {@link Layer} and `MaskPropertyGroup`.
  *     `PropertyGroup` attributes and methods are available when working with
  *     layer or mask groups.
  *
- * See: https://ae-scripting.docsforadobe.dev/property/propertygroup/
+ * @example
+ * ```python
+ * from py_aep import parse
+ *
+ * app = parse("project.aep")
+ * comp = app.project.compositions[0]
+ * effects = comp.layers[0].effects
+ * if effects is not None:
+ *     for effect in effects:
+ *         ...
+ * ```
+ * @see https://ae-scripting.docsforadobe.dev/property/propertygroup/
  */
 export class PropertyGroup extends PropertyBase {
   /** Child properties by attribute name, resolved through `__getattr__` (Python's dynamic `group.child_name`). */
@@ -439,16 +435,14 @@ export class PropertyGroup extends PropertyBase {
   /**
    * Create a synthetic empty PropertyGroup with backing chunks.
    *
-   * Args:
-   *     match_name: The property's match name.
-   *     auto_name: The display name for the group.
-   *     property_depth: The depth of the group in the tree.
-   *     parent_property: The container that owns the synthesized group.
-   *     synthetic: If True, mark backing chunks as synthetic
-   *         (skipped during serialization).
-   *     enable_flags: `tdsb` enable-flags byte (bit 0 enabled, bit 1
-   *         collapsed). Defaults to `1` (enabled); pass `2` for a
-   *         group AE leaves disabled (e.g. an unused layer style).
+   * @param match_name - The property's match name.
+   * @param auto_name - The display name for the group.
+   * @param property_depth - The depth of the group in the tree.
+   * @param kw - Keyword arguments:
+   * - `parent_property`: The container that owns the synthesized group.
+   * - `synthetic`: If True, mark backing chunks as synthetic (skipped during serialization).
+   * - `enable_flags`: `tdsb` enable-flags byte (bit 0 enabled, bit 1 collapsed). Defaults to `1`
+   *     (enabled); pass `2` for a group AE leaves disabled (e.g. an unused layer style).
    */
   static _new(
     match_name: string,
@@ -726,10 +720,9 @@ export class PropertyGroup extends PropertyBase {
      * layer.transform.anchor_point.value
      * ```
      *
-     * Note:
-     *     Only invoked when normal attribute lookup has already
-     *     failed, so class attributes and `@property` descriptors
-     *     always take priority.
+     * **Note:** Only invoked when normal attribute lookup has already
+     * failed, so class attributes and `@property` descriptors
+     * always take priority.
      */
     // A child property is never named with a leading underscore, so a
     // private name here is always a miss on an internal attribute
@@ -785,20 +778,16 @@ export class PropertyGroup extends PropertyBase {
      * This is the canonical access method. Both `property()` and
      * `__getattr__` (snake_case attribute access) delegate here.
      *
-     * Example:
-     *     ```python
-     *     layer["ADBE Transform Group"]["ADBE Position"]
-     *     layer["ADBE Masks"][0]
-     *     layer[0]
-     *     ```
-     *
-     * Args:
-     *     key: An `int` index or a `str` display name / match name.
-     *
-     * Raises:
-     *     KeyError: If the string key does not match any child.
-     *     IndexError: If the integer index is out of range.
-     *     TypeError: If `key` is neither `int` nor `str`.
+     * @example
+     * ```python
+     * layer["ADBE Transform Group"]["ADBE Position"]
+     * layer["ADBE Masks"][0]
+     * layer[0]
+     * ```
+     * @param key - An `int` index or a `str` display name / match name.
+     * @throws {@link KeyError} If the string key does not match any child.
+     * @throws {@link IndexError} If the integer index is out of range.
+     * @throws {@link TypeError} If `key` is neither `int` nor `str`.
      */
     if (typeof key === "number" && Number.isInteger(key)) {
       return at(this.properties, key);
@@ -866,7 +855,7 @@ export class PropertyGroup extends PropertyBase {
      * Remove every keyframe from all properties in this group,
      * recursively.
      *
-     * Calling this on a [Layer][] clears the keyframes of every
+     * Calling this on a {@link Layer} clears the keyframes of every
      * property on the layer, including its marker keyframes. Each
      * animated property reverts to a static value; see
      * `Property.remove_all_keys`.
@@ -886,15 +875,14 @@ export class PropertyGroup extends PropertyBase {
      * any effect already defined in the project (`LIST:EfdG`) are
      * accepted.
      *
-     * Args:
-     *     name: A match name or display name to check.
+     * @param name - A match name or display name to check.
      */
     if (_can_add_property(this.match_name, this.property_type, name)) return true;
     return this._installed_effect_def(name) != null;
   }
 
   /**
-   * Create and return a [Property][] for a variable font axis, and
+   * Create and return a {@link Property} for a variable font axis, and
    * add it to this group.
    *
    * Mirrors ExtendScript `PropertyGroup.addVariableFontAxis()`. Can
@@ -909,21 +897,15 @@ export class PropertyGroup extends PropertyBase {
    * path). Pass `font_file` explicitly, or leave it `None` to locate
    * the installed font from the text document's font family.
    *
-   * Note:
-   *     This functionality was added in After Effects 26.0.
+   * **Note:** This functionality was added in After Effects 26.0.
    *
-   * Args:
-   *     axis_tag: The 4-character tag identifying the variable font
-   *         axis (e.g. `wght`, `wdth`, `slnt`, `ital`, `opsz`).
-   *     font_file: Optional path to the variable font file. When
-   *         `None`, the font is located in the OS font directories
-   *         by the text document's font family.
-   *
-   * Raises:
-   *     ValueError: If this group is not a text animator Properties
-   *         group, the font cannot be located or is not a variable
-   *         font, `axis_tag` is not one of the font's axes, or all
-   *         8 axis slots are in use.
+   * @param axis_tag - The 4-character tag identifying the variable font axis (e.g. `wght`, `wdth`,
+   *   `slnt`, `ital`, `opsz`).
+   * @param font_file - Optional path to the variable font file. When `None`, the font is located in
+   *   the OS font directories by the text document's font family.
+   * @throws {@link ValueError} If this group is not a text animator Properties group, the font
+   *   cannot be located or is not a variable font, `axis_tag` is not one of the font's axes, or all
+   *   8 axis slots are in use.
    */
   add_variable_font_axis(axis_tag: string, font_file: string | null = null): Property {
     validate_string(axis_tag);
@@ -1012,25 +994,18 @@ export class PropertyGroup extends PropertyBase {
    * `can_add_property`. Accepted names cover every ExtendScript
    * addable family: mask atoms (`ADBE Mask Atom` / `Mask`), the
    * expression controls including the Dropdown Menu Control (e.g.
-   * `ADBE Slider Control` / `Slider Control`, `ADBE Dropdown
-   * Control`), shape elements on a contents group (e.g.
+   * `ADBE Slider Control` / `Slider Control`, `ADBE Dropdown Control`), shape elements on a contents group (e.g.
    * `ADBE Vector Shape - Rect`, `ADBE Vector Group`), text
    * selectors (e.g. `ADBE Text Selector` / `Range Selector`), text
    * animators (`ADBE Text Animator` / `Animator`), and animator
    * properties from the fixed pool (e.g. `ADBE Text Position 3D` /
    * `Position`).
    *
-   * Note:
-   *     Unlike ExtendScript, adding a property does not invalidate
-   *     existing references to the group's other properties.
+   * **Note:** Unlike ExtendScript, adding a property does not invalidate
+   * existing references to the group's other properties.
    *
-   * Args:
-   *     name: The display name or match name of the property to
-   *         add.
-   *
-   * Raises:
-   *     ValueError: If a property with this name cannot be added
-   *         to this group.
+   * @param name - The display name or match name of the property to add.
+   * @throws {@link ValueError} If a property with this name cannot be added to this group.
    */
   add_property(name: string): Property | PropertyGroup {
     const result = resolve_addable(this.match_name, this.property_type, name);
@@ -1236,7 +1211,7 @@ export class PropertyGroup extends PropertyBase {
     /**
      * Insert a built effect's chunks, parse, wire the model, append.
      *
-     * `parse_effect` is the canonical chunks->model path for effects
+     * `parse_effect` is the canonical chunks-\>model path for effects
      * (param-def merging, child synthesis); `duplicate()` uses it too.
      * `engv` is the engine-version atom AE stores between an effect's
      * `tdmn` and its `sspc` (Puppet only).
@@ -1269,7 +1244,7 @@ export class PropertyGroup extends PropertyBase {
     /**
      * Insert a built group's chunks, parse, wire the model, append.
      *
-     * `parse_property_group` is the canonical chunks->model path for
+     * `parse_property_group` is the canonical chunks-\>model path for
      * added groups (mandatory subgroups, the Path element's om-s,
      * deferred child synthesis); the shape, selector and animator
      * builders share it, as `_attach_effect` does for effects.
@@ -1376,8 +1351,7 @@ export class PropertyGroup extends PropertyBase {
     /**
      * Look up a child property by index or name.
      *
-     * Args:
-     *     key: An `int` index or a `str` display name / match name.
+     * @param key - An `int` index or a `str` display name / match name.
      */
     // NOTE This property needs to be defined last to avoid ghosting the
     // @property decorator

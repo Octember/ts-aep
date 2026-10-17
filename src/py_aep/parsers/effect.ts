@@ -51,12 +51,9 @@ export const _PVT_DIMENSIONS: Map<number, number> = new Map<number, number>([
 /**
  * Convert an effect parameter definition dict into a `PropSpec`.
  *
- * Args:
- *     match_name: The property's match name.
- *     param_def: The parameter definition dict from parT parsing.
- *
- * Returns:
- *     A `PropSpec` suitable for `Property._new()`.
+ * @param match_name - The property's match name.
+ * @param param_def - The parameter definition dict from parT parsing.
+ * @returns A `PropSpec` suitable for `Property._new()`.
  */
 export function _param_def_to_spec(match_name: string, param_def: Map<string, any>): PropSpec {
   const pvt = dict_get(param_def, "property_value_type", PropertyValueType.OneD);
@@ -93,13 +90,10 @@ export function _param_def_to_spec(match_name: string, param_def: Map<string, an
  * Returns pre-rescale values - point defaults stay in percent of the
  * layer size; `_scale_point_to_pixels` converts them to pixels.
  *
- * Args:
- *     match_name: The property's match name.
- *     param_def: The parameter definition dict from parT parsing.
- *     control_type: The effect control type.
- *
- * Returns:
- *     A (value, default_value) tuple.
+ * @param match_name - The property's match name.
+ * @param param_def - The parameter definition dict from parT parsing.
+ * @param control_type - The effect control type.
+ * @returns A (value, default_value) tuple.
  */
 export function _resolve_effect_value(
   match_name: string,
@@ -149,9 +143,8 @@ export function _resolve_effect_value(
  * property_parameters from the parameter definition dict.  Shared by
  * `_synthesize_effect_property` and `_merge_param_def`.
  *
- * Args:
- *     prop: The property to update in place.
- *     param_def: The parameter definition dict.
+ * @param prop - The property to update in place.
+ * @param param_def - The parameter definition dict.
  */
 export function _apply_param_def_metadata(prop: Property, param_def: Map<string, any>): void {
   prop.last_value = param_def.get("last_value") ?? null;
@@ -218,11 +211,8 @@ export function _scale_point_to_pixels(prop: Property, size: [number, number]): 
  * Each effect has a parT LIST containing parameter definitions that
  * describe the control type, default values, and ranges.
  *
- * Args:
- *     sspc_child_chunks: The SSPC chunk's child chunks.
- *
- * Returns:
- *     Dict mapping parameter match names to definition dicts.
+ * @param sspc_child_chunks - The SSPC chunk's child chunks.
+ * @returns Dict mapping parameter match names to definition dicts.
  */
 export function parse_effect_param_defs(
   sspc_child_chunks: Chunk[],
@@ -246,11 +236,9 @@ export function parse_effect_param_defs(
  * Overrides auto-detected property attributes with the more precise
  * values from the effect's parameter definition.
  *
- * Args:
- *     prop: The property to update in place.
- *     param_def: The parameter definition dict.
- *     point_size: The layer size a point parameter's default is
- *         relative to.
+ * @param prop - The property to update in place.
+ * @param param_def - The parameter definition dict.
+ * @param point_size - The layer size a point parameter's default is relative to.
  */
 export function _merge_param_def(
   prop: Property,
@@ -294,14 +282,12 @@ export function _merge_param_def(
  * separators, a PropertyGroup) from the parT definition so the parsed
  * output matches what ExtendScript reports.
  *
- * Args:
- *     match_name: The property's match name.
- *     param_def: The parameter definition dict from parT parsing.
- *     property_depth: The nesting depth for this property.
- *     parent_property: The effect group that owns the synthesized child.
- *
- * Returns:
- *     A Property or PropertyGroup with default values.
+ * @param match_name - The property's match name.
+ * @param param_def - The parameter definition dict from parT parsing.
+ * @param property_depth - The nesting depth for this property.
+ * @param kw - Keyword arguments:
+ * - `parent_property`: The effect group that owns the synthesized child.
+ * @returns A Property or PropertyGroup with default values.
  */
 export function _synthesize_effect_property(
   match_name: string,
@@ -343,15 +329,12 @@ export function _synthesize_effect_property(
  * children not in `param_defs` (e.g. Compositing Options) are appended
  * in their original parsed order.
  *
- * Args:
- *     tdgp_chunk: The tdgp chunk containing property data.
- *     param_defs: Parameter definitions to merge into properties.
- *     child_depth: The property depth for parsed child properties.
- *     composition: The parent composition.
- *     parent_property: The effect group that owns the parsed children.
- *
- * Returns:
- *     List of parsed and merged properties.
+ * @param tdgp_chunk - The tdgp chunk containing property data.
+ * @param param_defs - Parameter definitions to merge into properties.
+ * @param child_depth - The property depth for parsed child properties.
+ * @param composition - The parent composition.
+ * @param parent_property - The effect group that owns the parsed children.
+ * @returns List of parsed and merged properties.
  */
 export function _parse_effect_properties(
   tdgp_chunk: ListChunk,
@@ -441,25 +424,20 @@ export function _parse_effect_properties(
 /**
  * Parse an effect.
  *
- * Args:
- *     sspc_chunk: The SSPC chunk to parse.
- *     group_match_name: A special name for the property used to build unique
- *         naming paths. The match name is not displayed, but you can refer
- *         to it in scripts. Every property has a unique match-name
- *         identifier. Match names are stable from version to version
- *         regardless of the display name (the name attribute value) or any
- *         changes to the application. Unlike the display name, it is not
- *         localized. An indexed group (`PropertyBase.property_type ==
- *         PropertyType.indexed_group`) may not have a name value, but
- *         always has a match_name value.
- *     property_depth: The nesting depth of this group (0 = layer level).
- *     effect_param_defs: Project-level effect parameter definitions, used as
- *         fallback when layer-level parT chunks are missing.
- *     composition: The parent composition.
- *     layer: The layer the effect belongs to, whose pixel size is used to
- *         denormalize point parameters. Optional: during the initial
- *         parse the layer does not exist yet and the composition stands
- *         in.
+ * @param sspc_chunk - The SSPC chunk to parse.
+ * @param group_match_name - A special name for the property used to build unique naming paths. The
+ *   match name is not displayed, but you can refer to it in scripts. Every property has a unique
+ *   match-name identifier. Match names are stable from version to version regardless of the display
+ *   name (the name attribute value) or any changes to the application. Unlike the display name, it
+ *   is not localized. An indexed group (`PropertyBase.property_type == PropertyType.indexed_group`)
+ *   may not have a name value, but always has a match_name value.
+ * @param property_depth - The nesting depth of this group (0 = layer level).
+ * @param effect_param_defs - Project-level effect parameter definitions, used as fallback when
+ *   layer-level parT chunks are missing.
+ * @param composition - The parent composition.
+ * @param layer - The layer the effect belongs to, whose pixel size is used to denormalize point
+ *   parameters. Optional: during the initial parse the layer does not exist yet and the composition
+ *   stands in.
  */
 export const parse_effect = _suppress_materialization().decorate(function parse_effect(
   sspc_chunk: ListChunk,
@@ -733,12 +711,9 @@ export function _parse_effect_parameter_def(parameter_chunks: Chunk[]): Map<stri
  * project. Unlike layer-level sspc chunks, the EfdG definitions always
  * include a parT chunk.
  *
- * Args:
- *     root_chunks: The root chunks of the AEP file.
- *
- * Returns:
- *     Dict mapping effect match names to their parameter definitions
- *     (effect_match_name -> param_match_name -> param_def dict).
+ * @param root_chunks - The root chunks of the AEP file.
+ * @returns Dict mapping effect match names to their parameter definitions (effect_match_name -\>
+ *   param_match_name -\> param_def dict).
  */
 export function parse_effect_definitions(
   root_chunks: Chunk[],
@@ -806,9 +781,7 @@ export function effect_definition_entries(
  * `name` is matched against the effect match name across all entries
  * first, then against the `fnam` display name.
  *
- * Returns:
- *     `(match_name, display_name, def_sspc)` for the matching
- *     definition, or `None`.
+ * @returns `(match_name, display_name, def_sspc)` for the matching definition, or `None`.
  */
 export function match_effect_definition(
   entries: [string, string, ListChunk][],

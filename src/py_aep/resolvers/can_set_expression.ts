@@ -59,7 +59,7 @@ export const _MITER_JOIN = 1;
 /**
  * Compute `can_set_expression` for a property.
  *
- * @param prop The property to evaluate.
+ * @param prop - The property to evaluate.
  * @returns Whether an expression can be set on this property.
  */
 export function resolve_can_set_expression(prop: Property): boolean {
@@ -248,8 +248,7 @@ export function _can_set_expression_light(layer: any, mn: string): boolean {
  * the generic (layer-type-agnostic) resolution. Rules verified against
  * AE 2026 ExtendScript (parametric_meshes.json):
  *
- * - A fixed set of streams is never expressionable (`Displacement
- *   Intensity`, the material texture-projection params).
+ * - A fixed set of streams is never expressionable (`Displacement Intensity`, the material texture-projection params).
  * - Mesh-option / bevel streams are expressionable only when they belong
  *   to the layer's ACTIVE mesh type; checkbox toggles (caps / invert
  *   slice) are expressionable regardless of active type.

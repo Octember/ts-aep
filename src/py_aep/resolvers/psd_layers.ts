@@ -44,7 +44,7 @@ export class UnsupportedPsdLayersError extends ValueError {}
 /**
  * Raised when a `.psd`/`.psb` is flattened (has no layer records).
  *
- * A subclass of [UnsupportedPsdLayersError][] so callers can tell a flattened
+ * A subclass of {@link UnsupportedPsdLayersError} so callers can tell a flattened
  * document (which can still be imported as a single-layer composition) apart
  * from an invalid file.
  */
@@ -468,21 +468,16 @@ export class _UserMask {
 /**
  * Return the layer tree of a Photoshop file (bottom layer first).
  *
- * Args:
- *     file: Path to a `.psd` or `.psb` file.
- *     mask_boxes: Decode each raster layer mask's channel data for
- *         `PsdLayer.mask_box` (a full decode of the masked layers'
- *         pixels). `False` leaves it `None`, for callers that only
- *         need names and indices.
- *
- * Returns:
- *     Top-level nodes bottom-first: [PsdLayer][] leaves and [PsdGroup][]
- *     groups (groups nest recursively).
- *
- * Raises:
- *     UnsupportedPsdLayersError: If the file is not a valid PSD/PSB.
- *     FlattenedPsdError: If the file has no layer records (a flattened
- *         document) - a subclass of `UnsupportedPsdLayersError`.
+ * @param file - Path to a `.psd` or `.psb` file.
+ * @param kw - Keyword arguments:
+ * - `mask_boxes`: Decode each raster layer mask's channel data for `PsdLayer.mask_box` (a full
+ *     decode of the masked layers' pixels). `False` leaves it `None`, for callers that only need
+ *     names and indices.
+ * @returns Top-level nodes bottom-first: {@link PsdLayer} leaves and {@link PsdGroup} groups
+ *   (groups nest recursively).
+ * @throws {@link UnsupportedPsdLayersError} If the file is not a valid PSD/PSB.
+ * @throws {@link FlattenedPsdError} If the file has no layer records (a flattened document) - a
+ *   subclass of `UnsupportedPsdLayersError`.
  */
 export function read_psd_layers(file: PathLike, kw: { mask_boxes?: boolean } = {}): PsdNode[] {
   const { mask_boxes = true } = kw;
@@ -880,8 +875,7 @@ export function _build_layer_tree(records: _Record[]): PsdNode[] {
 }
 
 /**
- * Extract `(name, layer_id, section_divider, is_adjustment, style_blocks,
- * vector_mask, is_fill, mask_data)`; `layer_id` is `None` without an `lyid`
+ * Extract `(name, layer_id, section_divider, is_adjustment, style_blocks, vector_mask, is_fill, mask_data)`; `layer_id` is `None` without an `lyid`
  * block.
  *
  * `section_divider` is the `lsct` value: 0 (or absent) for a normal layer,

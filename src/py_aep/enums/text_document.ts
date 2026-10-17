@@ -9,7 +9,7 @@ import { ValueError, getitem, int, int_enum, type EnumValue } from "../../pyrt/i
 /**
  * Auto kerning type option for text characters.
  *
- * See: https://ae-scripting.docsforadobe.dev/text/textdocument/#textdocumentautokerntype
+ * @see https://ae-scripting.docsforadobe.dev/text/textdocument/#textdocumentautokerntype
  */
 export const AutoKernType = int_enum(
   "AutoKernType",
@@ -37,7 +37,7 @@ export type AutoKernType = EnumValue<typeof AutoKernType>;
  * This is significant for Japanese language in vertical texts.
  * `BASELINE_VERTICAL_CROSS_STREAM` is also known as Tate-Chu-Yoko.
  *
- * See: https://ae-scripting.docsforadobe.dev/text/textdocument/#textdocumentbaselinedirection
+ * @see https://ae-scripting.docsforadobe.dev/text/textdocument/#textdocumentbaselinedirection
  */
 export const BaselineDirection = int_enum(
   "BaselineDirection",
@@ -66,7 +66,7 @@ export type BaselineDirection = EnumValue<typeof BaselineDirection>;
 /**
  * Box auto fit policy for paragraph text boxes.
  *
- * See: https://ae-scripting.docsforadobe.dev/text/textdocument/#textdocumentboxautofitpolicy
+ * @see https://ae-scripting.docsforadobe.dev/text/textdocument/#textdocumentboxautofitpolicy
  */
 export const BoxAutoFitPolicy = int_enum(
   "BoxAutoFitPolicy",
@@ -97,7 +97,7 @@ export type BoxAutoFitPolicy = EnumValue<typeof BoxAutoFitPolicy>;
 /**
  * First baseline alignment for paragraph text boxes.
  *
- * See: https://ae-scripting.docsforadobe.dev/text/textdocument/#textdocumentboxfirstbaselinealignment
+ * @see https://ae-scripting.docsforadobe.dev/text/textdocument/#textdocumentboxfirstbaselinealignment
  */
 export const BoxFirstBaselineAlignment = int_enum(
   "BoxFirstBaselineAlignment",
@@ -133,7 +133,7 @@ export type BoxFirstBaselineAlignment = EnumValue<typeof BoxFirstBaselineAlignme
 /**
  * Vertical alignment for paragraph text boxes.
  *
- * See: https://ae-scripting.docsforadobe.dev/text/textdocument/#textdocumentboxverticalalignment
+ * @see https://ae-scripting.docsforadobe.dev/text/textdocument/#textdocumentboxverticalalignment
  */
 export const BoxVerticalAlignment = int_enum(
   "BoxVerticalAlignment",
@@ -164,7 +164,7 @@ export type BoxVerticalAlignment = EnumValue<typeof BoxVerticalAlignment>;
 /**
  * Text composer engine type.
  *
- * See: https://ae-scripting.docsforadobe.dev/text/textdocument/#textdocumentcomposerengine
+ * @see https://ae-scripting.docsforadobe.dev/text/textdocument/#textdocumentcomposerengine
  */
 export const ComposerEngine = int_enum("ComposerEngine", {
   LATIN_CJK_ENGINE: 10413,
@@ -175,7 +175,7 @@ export type ComposerEngine = EnumValue<typeof ComposerEngine>;
 /**
  * Digit set option for text characters.
  *
- * See: https://ae-scripting.docsforadobe.dev/text/textdocument/#textdocumentdigitset
+ * @see https://ae-scripting.docsforadobe.dev/text/textdocument/#textdocumentdigitset
  */
 export const DigitSet = int_enum(
   "DigitSet",
@@ -202,7 +202,7 @@ export type DigitSet = EnumValue<typeof DigitSet>;
 /**
  * Font baseline option for superscript and subscript.
  *
- * See: https://ae-scripting.docsforadobe.dev/text/textdocument/#textdocumentfontbaselineoption
+ * @see https://ae-scripting.docsforadobe.dev/text/textdocument/#textdocumentfontbaselineoption
  */
 export const FontBaselineOption = int_enum(
   "FontBaselineOption",
@@ -227,7 +227,7 @@ export type FontBaselineOption = EnumValue<typeof FontBaselineOption>;
 /**
  * Font caps option for text characters.
  *
- * See: https://ae-scripting.docsforadobe.dev/text/textdocument/#textdocumentfontcapsoption
+ * @see https://ae-scripting.docsforadobe.dev/text/textdocument/#textdocumentfontcapsoption
  */
 export const FontCapsOption = int_enum(
   "FontCapsOption",
@@ -253,7 +253,7 @@ export type FontCapsOption = EnumValue<typeof FontCapsOption>;
 /**
  * Paragraph leading type.
  *
- * See: https://ae-scripting.docsforadobe.dev/text/textdocument/#textdocumentleadingtype
+ * @see https://ae-scripting.docsforadobe.dev/text/textdocument/#textdocumentleadingtype
  */
 export const LeadingType = int_enum(
   "LeadingType",
@@ -277,7 +277,7 @@ export type LeadingType = EnumValue<typeof LeadingType>;
 /**
  * Line join type for text stroke.
  *
- * See: https://ae-scripting.docsforadobe.dev/text/textdocument/#textdocumentlinejointype
+ * @see https://ae-scripting.docsforadobe.dev/text/textdocument/#textdocumentlinejointype
  */
 export const LineJoinType = int_enum(
   "LineJoinType",
@@ -302,7 +302,7 @@ export type LineJoinType = EnumValue<typeof LineJoinType>;
 /**
  * Line orientation for text layers.
  *
- * See: https://ae-scripting.docsforadobe.dev/text/textdocument/#textdocumentlineorientation
+ * @see https://ae-scripting.docsforadobe.dev/text/textdocument/#textdocumentlineorientation
  */
 export const LineOrientation = int_enum(
   "LineOrientation",
@@ -341,7 +341,7 @@ export const _LINE_ORIENTATION_TO_BINARY: Map<LineOrientation, number> = new Map
 /**
  * Paragraph direction for text layers.
  *
- * See: https://ae-scripting.docsforadobe.dev/text/textdocument/#textdocumentdirection
+ * @see https://ae-scripting.docsforadobe.dev/text/textdocument/#textdocumentdirection
  */
 export const ParagraphDirection = int_enum(
   "ParagraphDirection",
@@ -365,7 +365,7 @@ export type ParagraphDirection = EnumValue<typeof ParagraphDirection>;
 /**
  * Paragraph justification for text layers.
  *
- * See: https://ae-scripting.docsforadobe.dev/text/textdocument/#textdocumentjustification
+ * @see https://ae-scripting.docsforadobe.dev/text/textdocument/#textdocumentjustification
  */
 export const ParagraphJustification = int_enum(
   "ParagraphJustification",
@@ -405,9 +405,8 @@ export type ParagraphJustification = EnumValue<typeof ParagraphJustification>;
  * character-spacing compensation when animating variable-font axes
  * changes character widths.
  *
- * Note:
- *     This functionality was added in After Effects 26.0. The enum
- *     values match the property's stored value directly.
+ * **Note:** This functionality was added in After Effects 26.0. The enum
+ * values match the property's stored value directly.
  */
 export const VariableFontSpacing = int_enum("VariableFontSpacing", {
   ADAPTIVE: 1,

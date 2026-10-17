@@ -83,30 +83,23 @@ export function _int_float_guard(fn: (x: any) => number): (x: any) => number {
 /**
  * Descriptor that proxies a single key on a COS dict.
  *
- * The dict is retrieved from the model instance via `getattr(obj,
- * dict_attr)`.  When the dict is `None` the descriptor returns
+ * The dict is retrieved from the model instance via `getattr(obj, dict_attr)`.  When the dict is `None` the descriptor returns
  * `default` (which defaults to `None`).
  *
  * Unlike `ChunkField`, this descriptor is scalar-only: `reverse`
  * always returns a single value written to one dict key.
  *
- * Args:
- *   dict_attr: Name of the model attribute holding the COS sub-dict
- *     (e.g. `"_char_style"`).
- *   key: String key into that dict (e.g. `"1"` for font_size).
- *   transform: Optional callable applied when *getting* (COS value
- *     -> user-facing value).
- *   reverse: 1-arg callable applied when *setting* (user-facing ->
- *     COS value). Always returns a scalar.
- *   read_only: When `True`, the field cannot be set.
- *   validate: Optional callable called with the user-facing value
- *     before any `reverse` transform.
- *   default: Value returned when the dict is `None` or the key is
- *     absent. Defaults to `None`.
- *   min_version: Minimum AE major version required to *set* this
- *     field. Writes to an older file raise `AttributeError`;
- *     reads are always allowed. Mirrors
- *     `models.descriptors.ChunkField`.
+ * @param dict_attr - Name of the model attribute holding the COS sub-dict (e.g. `"_char_style"`).
+ * @param key - String key into that dict (e.g. `"1"` for font_size).
+ * @param transform - Optional callable applied when *getting* (COS value -\> user-facing value).
+ * @param reverse - 1-arg callable applied when *setting* (user-facing -\> COS value). Always returns
+ *   a scalar.
+ * @param read_only - When `True`, the field cannot be set.
+ * @param validate - Optional callable called with the user-facing value before any `reverse`
+ *   transform.
+ * @param default - Value returned when the dict is `None` or the key is absent. Defaults to `None`.
+ * @param min_version - Minimum AE major version required to *set* this field. Writes to an older
+ *   file raise `AttributeError`; reads are always allowed. Mirrors `models.descriptors.ChunkField`.
  */
 export class CosField<T> {
   declare dict_attr: string;

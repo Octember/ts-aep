@@ -1,5 +1,5 @@
 /**
- * Footage file-format table: extension -> AE source-format code and defaults.
+ * Footage file-format table: extension -\> AE source-format code and defaults.
  *
  * Derived empirically by importing `samples/assets/` in AE 2026 and decoding the
  * resulting `sspc` chunks (see the `filesource-aep-format` notes). `source_format`
@@ -92,10 +92,9 @@ export const GENERIC_STILL_FORMATS = { macos: "IMIO", windows: "STIL" } as const
 /**
  * The `sspc` code AE on the target platform writes for `fmt`.
  *
- * Args:
- *     fmt: The file's format (a still or a sequence frame).
- *     windows: `true` to tag the source for AE on Windows (see
- *         `GENERIC_STILL_FORMATS`).
+ * @param fmt - The file's format (a still or a sequence frame).
+ * @param kw - Keyword arguments:
+ * - `windows`: `true` to tag the source for AE on Windows (see `GENERIC_STILL_FORMATS`).
  */
 export function platform_source_format(fmt: FileFormat, kw: { windows: boolean }): string {
   const { windows } = kw;
@@ -268,12 +267,9 @@ export const EPS_COMP_EXTENSIONS: ReadonlySet<string> = new Set<string>([".eps"]
 /**
  * Return the `ImportAsType` values valid for a file extension.
  *
- * Args:
- *     suffix: The file extension including the leading dot (e.g. `.psd`).
- *
- * Returns:
- *     The set of accepted import types, or an empty set for an extension
- *     with no recorded import support.
+ * @param suffix - The file extension including the leading dot (e.g. `.psd`).
+ * @returns The set of accepted import types, or an empty set for an extension with no recorded
+ *   import support.
  */
 export function get_import_as_types(suffix: string): ReadonlySet<ImportAsType> {
   return dict_get(_IMPORT_AS_TYPES, suffix.toLowerCase(), new Set<ImportAsType>());
@@ -282,11 +278,8 @@ export function get_import_as_types(suffix: string): ReadonlySet<ImportAsType> {
 /**
  * Return the `FileFormat` for a file extension (e.g. `.png`).
  *
- * Args:
- *     suffix: The file extension including the leading dot.
- *
- * Raises:
- *     ValueError: If the extension is not a supported footage format.
+ * @param suffix - The file extension including the leading dot.
+ * @throws {@link ValueError} If the extension is not a supported footage format.
  */
 export function get_file_format(suffix: string): FileFormat {
   const fmt = _FILE_FORMATS.get(suffix.toLowerCase()) ?? null;

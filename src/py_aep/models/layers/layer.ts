@@ -109,17 +109,17 @@ export function _list_remove(xs: any[], x: any): void {
  * The `Layer` object provides access to layers within compositions.
  *
  * Info:
- *     `Layer` is a subclass of [PropertyGroup][], which is a subclass of
- *     [PropertyBase][py_aep.models.properties.property_base.PropertyBase]. All
- *     methods and attributes of [PropertyGroup][], in addition to those listed below,
+ *     `Layer` is a subclass of {@link PropertyGroup}, which is a subclass of
+ *     {@link py_aep.models.properties.property_base.PropertyBase | PropertyBase}. All
+ *     methods and attributes of {@link PropertyGroup}, in addition to those listed below,
  *     are available when working with `Layer` objects.
  *
  * Info:
- *     `Layer` is the base class for [CameraLayer][] object, [LightLayer][]
- *     object and [AVLayer][] object, so `Layer` attributes and methods are
+ *     `Layer` is the base class for {@link CameraLayer} object, {@link LightLayer}
+ *     object and {@link AVLayer} object, so `Layer` attributes and methods are
  *     available when working with all layer types.
  *
- * See: https://ae-scripting.docsforadobe.dev/layer/layer/
+ * @see https://ae-scripting.docsforadobe.dev/layer/layer/
  */
 export class Layer extends PropertyGroup {
   static _LAYER_MATCH_NAMES: Map<LayerType, string> = new Map<LayerType, string>([
@@ -196,7 +196,7 @@ export class Layer extends PropertyGroup {
   /**
    * UUIDs of Essential Properties overrides on this layer.
    *
-   * Each UUID corresponds to an [EssentialGraphicsController][] in
+   * Each UUID corresponds to an {@link EssentialGraphicsController} in
    * the source composition's Essential Graphics panel.
    */
   declare essential_property_uuids: string[];
@@ -212,7 +212,7 @@ export class Layer extends PropertyGroup {
    * (seconds). Read / Write.
    *
    * Writing snaps the time to the nearest tick of the layer's own
-   * timebase (see [stretch][]), a tie rounding up, as After Effects does:
+   * timebase (see {@link stretch}), a tie rounding up, as After Effects does:
    * on AE 2026, 1.3 s on a 24 fps layer reads back as 1.3000081 s
    * (31949 / 24576) and on a 150 % one as 1.2999946 s (47923 / 36864).
    * A later stretch change leaves the stored start alone.
@@ -524,7 +524,7 @@ export class Layer extends PropertyGroup {
   /**
    * Whether the layer transforms in three dimensions.
    *
-   * `False` on the base [Layer][]: only an [AVLayer][] carries the
+   * `False` on the base {@link Layer}: only an {@link AVLayer} carries the
    * 3D switch, and cameras and lights are always 3D, so both override
    * this. Read-only.
    */
@@ -535,8 +535,8 @@ export class Layer extends PropertyGroup {
   /**
    * The layer's pixel dimensions, for denormalizing effect points.
    *
-   * `None` on the base [Layer][]: `width` / `height` live on
-   * [AVLayer][], and a camera or light has neither, so nothing
+   * `None` on the base {@link Layer}: `width` / `height` live on
+   * {@link AVLayer}, and a camera or light has neither, so nothing
    * normalized against a layer sits on one.
    */
   get _pixel_size(): [number, number] | null {
@@ -585,7 +585,7 @@ export class Layer extends PropertyGroup {
    * (seconds). Read / Write.
    *
    * On a time-reversed layer the out point is the earlier end (see
-   * [in_point][]).
+   * {@link in_point}).
    */
   get out_point(): number {
     return this._time_origin + this._ldta.out_point * this._stretch_factor;
@@ -638,9 +638,8 @@ export class Layer extends PropertyGroup {
   /**
    * The 0-based index position of the layer in its containing comp.
    *
-   * Warning:
-   *     Unlike ExtendScript (1-based), this uses Python's 0-based
-   *     convention so that `comp.layers[layer.index]` works directly.
+   * **Warning:** Unlike ExtendScript (1-based), this uses Python's 0-based
+   * convention so that `comp.layers[layer.index]` works directly.
    */
   get index(): number {
     return _list_index(this.containing_comp.layers, this);
@@ -649,7 +648,7 @@ export class Layer extends PropertyGroup {
   /**
    * `True` if the layer has a video switch in the Timeline panel.
    *
-   * Always `False` for [CameraLayer][] and [LightLayer][] objects.
+   * Always `False` for {@link CameraLayer} and {@link LightLayer} objects.
    */
   get has_video(): boolean {
     return false;
@@ -658,8 +657,8 @@ export class Layer extends PropertyGroup {
   /**
    * `True` if the layer is an adjustment layer.
    *
-   * Always `False` for [CameraLayer][] and [LightLayer][] objects.
-   * Overridden in [AVLayer][] to read from the binary chunk.
+   * Always `False` for {@link CameraLayer} and {@link LightLayer} objects.
+   * Overridden in {@link AVLayer} to read from the binary chunk.
    */
   get adjustment_layer(): boolean {
     return false;
@@ -668,8 +667,8 @@ export class Layer extends PropertyGroup {
   /**
    * `True` if the layer is an environment layer.
    *
-   * Always `False` for [CameraLayer][] and [LightLayer][] objects.
-   * Overridden in [AVLayer][] to read from the binary chunk.
+   * Always `False` for {@link CameraLayer} and {@link LightLayer} objects.
+   * Overridden in {@link AVLayer} to read from the binary chunk.
    */
   get environment_layer(): boolean {
     return false;
@@ -678,8 +677,8 @@ export class Layer extends PropertyGroup {
   /**
    * When `True`, the layer is active at the current time.
    *
-   * Overrides [PropertyBase.active][] to evaluate
-   * [active_at_time][] at [time][].
+   * Overrides {@link PropertyBase.active} to evaluate
+   * {@link active_at_time} at {@link time}.
    */
   get active(): boolean {
     return this.active_at_time(this.time);
@@ -688,7 +687,7 @@ export class Layer extends PropertyGroup {
   /**
    * The layer's marker property.
    *
-   * A [Property][py_aep.models.properties.property.Property] with
+   * A {@link py_aep.models.properties.property.Property | Property} with
    * `match_name="ADBE Marker"` whose keyframes hold marker values.
    * `None` when the layer has no markers.
    */
@@ -704,16 +703,16 @@ export class Layer extends PropertyGroup {
   }
 
   /**
-   * A flat list of [MarkerValue][] objects for this layer.
+   * A flat list of {@link MarkerValue} objects for this layer.
    *
    * Shortcut for accessing marker data without navigating the property
    * tree. Returns an empty list when the layer has no markers.
    *
-   * Example:
-   *     ```python
-   *     for marker in layer.markers:
-   *         print(marker.comment)
-   *     ```
+   * @example
+   * ```python
+   * for marker in layer.markers:
+   *     print(marker.comment)
+   * ```
    */
   get markers(): MarkerValue[] {
     if (this.marker == null) return [];
@@ -735,7 +734,7 @@ export class Layer extends PropertyGroup {
    * This is the Transform `PropertyGroup` (match name
    * `ADBE Transform Group`). Individual transform properties (Position,
    * Scale, Rotation, etc.) are accessible via
-   * [properties][PropertyGroup.properties].
+   * {@link PropertyGroup.properties | properties}.
    */
   get transform(): PropertyGroup {
     const group = this.__getitem__("ADBE Transform Group");
@@ -747,15 +746,15 @@ export class Layer extends PropertyGroup {
    * Contains a layer's effects.
    *
    * This is the Effects `PropertyGroup` (match name `ADBE Effect Parade`).
-   * Each child in [properties][PropertyGroup.properties] is itself a
-   * [PropertyGroup][] representing one effect.
+   * Each child in {@link PropertyGroup.properties | properties} is itself a
+   * {@link PropertyGroup} representing one effect.
    *
    * Like ExtendScript's `layer.property("Effects")`, the group is
    * returned even when it is empty, so the first effect can be added
    * with `layer.effects.add_property(...)`. An empty group is falsy,
    * so `if layer.effects:` still means "has effects".
    *
-   * `None` on [CameraLayer][] and [LightLayer][], the only layer kinds
+   * `None` on {@link CameraLayer} and {@link LightLayer}, the only layer kinds
    * AE gives no Effects group; every other layer kind always has one.
    */
   get effects(): PropertyGroup | null {
@@ -766,12 +765,12 @@ export class Layer extends PropertyGroup {
    * Contains a layer's masks.
    *
    * This is the Masks `PropertyGroup` (match name `ADBE Mask Parade`).
-   * Each child in [properties][PropertyGroup.properties] is itself a
-   * [PropertyGroup][] representing one mask.
+   * Each child in {@link PropertyGroup.properties | properties} is itself a
+   * {@link PropertyGroup} representing one mask.
    *
-   * Like [effects][], the group is returned even when it is empty (an
-   * empty group is falsy), and is `None` only on [CameraLayer][] and
-   * [LightLayer][], which AE gives no Masks group.
+   * Like {@link effects}, the group is returned even when it is empty (an
+   * empty group is falsy), and is `None` only on {@link CameraLayer} and
+   * {@link LightLayer}, which AE gives no Masks group.
    */
   get masks(): PropertyGroup | null {
     return this._optional_group("ADBE Mask Parade");
@@ -783,8 +782,8 @@ export class Layer extends PropertyGroup {
    * This is the Text `PropertyGroup` (match name `ADBE Text Properties`),
    * holding Source Text, Path Options, More Options and the Animators.
    *
-   * `None` on every layer that is not a [TextLayer][]: unlike
-   * [effects][] and [masks][], this group is never synthesized for
+   * `None` on every layer that is not a {@link TextLayer}: unlike
+   * {@link effects} and {@link masks}, this group is never synthesized for
    * other layer kinds because AE does not expose it on them.
    */
   get text(): PropertyGroup | null {
@@ -870,7 +869,7 @@ export class Layer extends PropertyGroup {
    * assigned a rotation of -30 degrees.
    *
    * Like After Effects, the offsets are computed from the transforms at the
-   * composition's current [time][Layer.time], and a parent scaled to 0 is
+   * composition's current {@link Layer.time | time}, and a parent scaled to 0 is
    * set without any offset.
    *
    * To set the parent without changing the child layer's transform values, use the
@@ -1171,12 +1170,9 @@ export class Layer extends PropertyGroup {
    * In this case, an offset is calculated and set in the child layer's transform
    * fields, to prevent the jump from occurring.
    *
-   * Args:
-   *     new_parent: The new parent layer, or `None` to unparent.
-   *
-   * Raises:
-   *     ValueError: If `new_parent` is this layer itself, one of its
-   *         descendants, or a layer in another composition.
+   * @param new_parent - The new parent layer, or `None` to unparent.
+   * @throws {@link ValueError} If `new_parent` is this layer itself, one of its descendants, or a
+   *   layer in another composition.
    */
   set_parent_with_jump(new_parent: Layer | null): void {
     this._validate_parent(new_parent);
@@ -1189,13 +1185,12 @@ export class Layer extends PropertyGroup {
    * For this method to return `True`, three conditions must be met:
    *
    * 1. The layer must be `enabled`.
-   * 2. No other layer in the [containing_comp][] may be soloed unless
-   *    this layer is also [solo][].
-   * 3. `time` must fall between [in_point][] (inclusive) and
-   *    [out_point][] (exclusive).
+   * 2. No other layer in the {@link containing_comp} may be soloed unless
+   *    this layer is also {@link solo}.
+   * 3. `time` must fall between {@link in_point} (inclusive) and
+   *    {@link out_point} (exclusive).
    *
-   * Args:
-   *     time: The time in seconds.
+   * @param time - The time in seconds.
    */
   active_at_time(time: number): boolean {
     validate_number(time);
@@ -1288,8 +1283,7 @@ export class Layer extends PropertyGroup {
    * The duplicate is placed directly above (before) the original
    * layer.
    *
-   * Returns:
-   *     The newly created [Layer][].
+   * @returns The newly created {@link Layer}.
    */
   duplicate(): Layer {
     return this._clone_into(this.containing_comp, { duplicate: true });
@@ -1303,16 +1297,14 @@ export class Layer extends PropertyGroup {
    * is cleared and its transform rewritten so it keeps its place (the
    * parent's transform at time 0 is baked in, whatever the playhead),
    * and the layers its effects reference are cleared - also when the
-   * target is this layer's own [containing_comp][] (use [duplicate][]
+   * target is this layer's own {@link containing_comp} (use {@link duplicate}
    * to keep them). Into another composition the track matte and an
    * environment light's source are cleared too, and keyframe and
    * marker times are kept in seconds whatever the target's frame rate
    * (measured on AE 2026).
    *
-   * Args:
-   *     into_comp: The target [CompItem][].
-   * Returns:
-   *     The newly created [Layer][] in the target composition.
+   * @param into_comp - The target {@link CompItem}.
+   * @returns The newly created {@link Layer} in the target composition.
    */
   copy_to_comp(into_comp: CompItem): Layer {
     // Circular: models.items.composition -> models.layers -> layer
@@ -1324,8 +1316,8 @@ export class Layer extends PropertyGroup {
 
   /**
    * Clone this layer's chunks into `into_comp` and parse the copy:
-   * a [duplicate][] (directly above, references kept) or a
-   * [copy_to_comp][] (on top, references cleared).
+   * a {@link duplicate} (directly above, references kept) or a
+   * {@link copy_to_comp} (on top, references cleared).
    */
   _clone_into(into_comp: CompItem, kw: { duplicate: boolean }): Layer {
     const { duplicate } = kw;
@@ -1509,8 +1501,7 @@ export class Layer extends PropertyGroup {
    * Moves this layer to a position immediately after (below)
    * the specified layer.
    *
-   * Args:
-   *     layer: The target layer in the same composition.
+   * @param layer - The target layer in the same composition.
    */
   move_after(layer: Layer): void {
     if (!(layer instanceof Layer)) throw new ValueError("Target must be a Layer.");
@@ -1530,8 +1521,7 @@ export class Layer extends PropertyGroup {
    * Moves this layer to a position immediately before (above)
    * the specified layer.
    *
-   * Args:
-   *     layer: The target layer in the same composition.
+   * @param layer - The target layer in the same composition.
    */
   move_before(layer: Layer): void {
     if (!(layer instanceof Layer)) throw new ValueError("Target must be a Layer.");
