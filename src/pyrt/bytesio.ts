@@ -11,10 +11,20 @@ export class BytesIO {
   private buf: Uint8Array;
   private len: number;
   private pos = 0;
+  /** `buf` is still the caller's `initial`; copied before the first mutation, as CPython does. */
+  private shared: boolean;
 
   constructor(initial?: Uint8Array) {
-    this.buf = initial ? initial.slice() : new Uint8Array(256);
+    this.buf = initial ?? new Uint8Array(256);
     this.len = initial ? initial.length : 0;
+    this.shared = initial !== undefined;
+  }
+
+  private own(): void {
+    if (this.shared) {
+      this.buf = this.buf.slice();
+      this.shared = false;
+    }
   }
 
   /** `fp.read(n)`; `n` omitted or negative reads to the end. */
@@ -64,6 +74,7 @@ export class BytesIO {
       if (end > this.len || s.size > PACK_SCRATCH.length) return this.write(s.pack(...values));
       // Overwrite via scratch: a failed pack must leave the visible bytes alone.
       s.pack_to(PACK_SCRATCH, 0, values);
+      this.own();
       for (let i = 0; i < s.size; i++) this.buf[this.pos + i] = PACK_SCRATCH[i];
       this.pos = end;
       return s.size;
@@ -77,6 +88,7 @@ export class BytesIO {
 
   /** Make room for a write ending at `end`, zeroing any gap a seek past the end left. */
   private reserve(end: number): void {
+    this.own();
     if (end > this.buf.length) {
       const grown = new Uint8Array(Math.max(end, this.buf.length * 2));
       grown.set(this.buf.subarray(0, this.len));
@@ -104,6 +116,7 @@ export class BytesIO {
 
   /** `getbuffer()` - a view without copying. */
   getbuffer(): Uint8Array {
+    this.own();
     return this.buf.subarray(0, this.len);
   }
 

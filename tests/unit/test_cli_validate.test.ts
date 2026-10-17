@@ -3,7 +3,8 @@
  */
 
 import { describe, expect, test } from "bun:test";
-import { spawnSync } from "node:child_process";
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
 
 import "../../src/py_aep/binary/_register.ts";
 import { ValidationResult, _get_field_names, _get_property_names, compare_marker, compare_values, get_enum_value, main } from "../../src/py_aep/cli/validate.ts";
@@ -160,7 +161,7 @@ describe("TestTraversalOrder", () => {
   });
 
   /** The reported differences must not vary between runs. */
-  test("test_repeated_validation_is_identical", () => {
+  test("test_repeated_validation_is_identical", async () => {
     const aep = SAMPLES_DIR.div("bugs", "29.97_fps_time_scale_3.125.aep");
     const json_path = aep.with_suffix(".json");
     if (!aep.exists() || !json_path.exists()) return skip("sample not available");
@@ -173,13 +174,10 @@ describe("TestTraversalOrder", () => {
       `const r = validate_aep(new Path(${JSON.stringify(aep.toString())}), new Path(${JSON.stringify(json_path.toString())}));`,
       `console.log(r.differences.length);`,
     ].join("\n");
-    const counts = new Set<string>();
-    for (const _ of range(3)) {
-      // check=True: a non-zero exit raises here, as CalledProcessError does in Python.
-      const r = spawnSync(process.execPath, ["-e", script], { encoding: "utf8" });
-      if (r.status !== 0) throw new Error(`child process exited ${r.status}: ${r.stderr}`);
-      counts.add(strip(r.stdout));
-    }
+    // The three interpreters run concurrently; check=True: a non-zero exit
+    // rejects here, as CalledProcessError raises in Python.
+    const runs = await Promise.all([...range(3)].map(() => promisify(execFile)(process.execPath, ["-e", script])));
+    const counts = new Set(runs.map((r) => strip(r.stdout)));
     py_assert(len(counts) === 1, `validate_aep is not deterministic: ${repr([...counts])}`);
  }, 120_000);
 });

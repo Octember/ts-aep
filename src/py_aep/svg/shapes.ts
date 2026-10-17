@@ -20,7 +20,6 @@ import {
   getattr,
   max,
   min,
-  mod,
   py_eq,
   py_slice,
   strip,
@@ -132,7 +131,7 @@ export function _rect(attrs: Map<string, string>, ctx: LengthContext | null): Ra
     const segs: CubicSeg[] = [];
     for (let i = 0; i < 4; i++) {
       const p0 = pts[i];
-      const p3 = pts[mod(i + 1, 4)];
+      const p3 = pts[(i + 1) % 4];
       segs.push([p0[0], p0[1], p0[0], p0[1], p3[0], p3[1], p3[0], p3[1]]);
     }
     return [new RawSubpath(segs, true)];
@@ -263,7 +262,7 @@ export function cubics_to_subpath(raw: RawSubpath, transform: Affine): Subpath |
       const vy = tsegs[i][1];
       vertices.push([vx, vy]);
       out_t.push([tsegs[i][2] - vx, tsegs[i][3] - vy]);
-      const prev = tsegs[mod(i - 1, n)];
+      const prev = tsegs.at(i - 1)!;
       in_t.push([prev[4] - vx, prev[5] - vy]);
     }
   } else {

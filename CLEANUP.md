@@ -227,6 +227,27 @@ checks single files.
 - Rule: fix a type at its declaration; a cast is the last resort; `unknown`
   only for opaque values; `any` only behind a named alias for genuinely
   dynamic data (parsed COS/JSON trees, ExtendScript-style duck typing).
+- The text-document COS tree (`btdk`) has earned types, with no cast:
+  - The parser builds `CosNode` values (`cos/cos.ts`). `decode_btdk`
+    (`cos/schema.ts`) is the one entry point from untyped data; it runs the
+    recursive zod schema `cos_node` over the blob and yields a `CosDict`.
+    Nothing deeper is checked there: py-aep never validates COS, so a value
+    of the wrong kind must fail where Python fails, or not at all.
+  - Every `isinstance` check py-aep makes is a zod kind run as a type guard
+    (`is(py_int, x)`, `read(char_style, d, "0")`, `cos/kinds.ts`). Every
+    other access goes through an operation that raises what the Python
+    builtin raises on the wrong kind: `cos_float` / `cos_int` (TypeError),
+    `cos_dict(x, "get")` / `cos_setdefault` / `cos_pop` (AttributeError),
+    `cos_item` / `cos_setitem` (TypeError, KeyError), `py_add` (int + float
+    is a boxed float). A stored `null` is not a missing key: use
+    `cos_get_or(d, k, default)`, never `d.get(k) ?? default`.
+  - Writes mutate the same `Map`s the serializer emits, so key order, extra
+    keys, int vs `PyFloat` and `CosString` survive.
+  - `bun tools/type_ratchet.ts` (in the gate) keeps `cos/`, `models/text/`
+    and `resolvers/text_*.ts` at zero `as` casts, `!` assertions and `any`.
+  - `tools/diff/fault_run.sh` (in the gate) corrupts the btdk tree of every
+    sample with text and checks that py-aep and the port read, write and
+    save each corrupted project identically, exception classes included.
 - The gate ratchets the per-layer `any` / `unknown` / cast counts against
   `loose_types` in `tools/gate_baseline.json`: they may only fall, and a pass
   that lowers them lowers the baseline.

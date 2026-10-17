@@ -193,7 +193,7 @@ describe("TestCosParserStream", () => {
     const data = b("<< /Length 5 >>\nstream\nhelloendstream");
     const f = new BytesIO(data);
     const parser = new CosParser(f, data.length);
-    const result = parser.parse();
+    const result: any = parser.parse();
     expect(result).toBeInstanceOf(Stream);
     expect(py_eq(result.dictionary, new Map<string, any>([["Length", 5]]))).toBe(true);
     expect(py_eq(result.data, b("hello"))).toBe(true);

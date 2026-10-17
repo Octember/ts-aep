@@ -36,9 +36,6 @@ import * as host from "../../pyrt/host.ts";
 import {
   NotImplementedError,
   at,
-  dict_get,
-  float,
-  int,
   max,
   py_bool,
   py_or,
@@ -51,6 +48,9 @@ import {
 } from "../../pyrt/index.ts";
 import type { TextDocument } from "../models/text/text_document.ts";
 import { cos_get, run_spans } from "../cos/index.ts";
+import type { CosDict } from "../cos/cos.ts";
+import { enum_from_cos } from "../cos/descriptors.ts";
+import { cos_float, cos_get_or, cos_int } from "../cos/kinds.ts";
 import { ParagraphJustification } from "../enums/index.ts";
 import * as tc from "./text_composition.ts";
 import { BoxAccumulator } from "./shape_bounds.ts";
@@ -65,38 +65,40 @@ export const _CFF_INK_SCALE = 1031.25 / 1024;
 
 export const _glyph_cache = new Map<string, [fontkit.Font, boolean, _GlyphBounds]>();
 
-export function _is_os_error(exc: unknown): boolean {
+export function _is_os_error(exc: Error | null): boolean {
   // Python catches OSError (a missing or unreadable file). Node reports those
   // as errors carrying a string `code`.
-  return exc instanceof Error && typeof (exc as { code?: unknown }).code === "string";
+  return exc instanceof Error && "code" in exc && typeof exc.code === "string";
 }
 
 export function _open_face(path: string, face_index: number): fontkit.Font {
   // NOTE(port): fontTools `TTFont(fontNumber=...)` picks a face of a .ttc;
   // fontkit exposes collection faces through `.fonts`; a plain font is its own face.
-  const opened = fontkit.create(host.fs.readFileSync(path)) as fontkit.Font & { fonts?: fontkit.Font[] };
-  return opened.fonts ? opened.fonts[face_index] : opened;
+  const opened = fontkit.create(host.fs.readFileSync(path));
+  return opened.fonts ? at(opened.fonts, face_index) : opened;
 }
 
 /** `(font, is_cff, outline bounds by glyph id)` for a PostScript name, cached; the bounds fill in as glyphs are measured. */
 export function _font_outlines(ps_name: string): [fontkit.Font, boolean, _GlyphBounds] {
   const [path, face_index] = tc._resolve_face(ps_name);
   const key = tkey(str(path), face_index);
-  if (!_glyph_cache.has(key)) {
+  let cached = _glyph_cache.get(key);
+  if (cached === undefined) {
     let font: fontkit.Font;
     try {
       font = _open_face(str(path), face_index);
     } catch (exc) {
-      if (!_is_os_error(exc)) throw exc;
+      if (!(exc instanceof Error) || !_is_os_error(exc)) throw exc;
       throw Object.assign(
         new NotImplementedError(`font file for ${repr(ps_name)} is unreadable: ${str(path)}`),
         { cause: exc },
       );
     }
     const tables = font.directory.tables;
-    _glyph_cache.set(key, [font, "CFF " in tables || "CFF2" in tables, new Map()]);
+    cached = [font, "CFF " in tables || "CFF2" in tables, new Map()];
+    _glyph_cache.set(key, cached);
   }
-  return _glyph_cache.get(key)!;
+  return cached;
 }
 
 /** fontTools `BoundsPen` for one glyph: `null` when it draws nothing. */
@@ -118,10 +120,10 @@ export function _refuse(reason: string): NotImplementedError {
 
 export function _check_styles(doc: TextDocument): void {
   for (const [_start, _end, style] of run_spans(doc._doc, "6", "6")) {
-    if (py_bool(style.get("2"))) throw _refuse("faux bold");
-    if (py_bool(style.get("3"))) throw _refuse("faux italic");
-    if (int(dict_get(style, "12", 0)) !== 0) throw _refuse("small or all caps");
-    if (float(dict_get(style, "6", 1.0)) !== 1.0 || float(dict_get(style, "7", 1.0)) !== 1.0) {
+    if (py_bool(style.get("2") ?? null)) throw _refuse("faux bold");
+    if (py_bool(style.get("3") ?? null)) throw _refuse("faux italic");
+    if (cos_int(cos_get_or(style, "12", 0)) !== 0) throw _refuse("small or all caps");
+    if (cos_float(cos_get_or(style, "6", 1.0)) !== 1.0 || cos_float(cos_get_or(style, "7", 1.0)) !== 1.0) {
       throw _refuse("horizontal or vertical scale");
     }
   }
@@ -131,9 +133,9 @@ export function _check_styles(doc: TextDocument): void {
  * The stroke a character's run draws, 0 when it has none (the width
  * defaults to 1, as `TextDocument.stroke_width` reads it).
  */
-export function _stroke_width(style: Map<string, any>): number {
-  if (!py_bool(dict_get(style, "57", false))) return 0.0;
-  return float(dict_get(style, "63", 1.0));
+export function _stroke_width(style: CosDict): number {
+  if (!py_bool(cos_get_or(style, "57", false))) return 0.0;
+  return cos_float(cos_get_or(style, "63", 1.0));
 }
 
 /**
@@ -247,17 +249,15 @@ export function text_ink_rect(doc: TextDocument): Record<string, number> {
   return box.rect();
 }
 
-export function _justification(paragraph_style: Map<string, any>): ParagraphJustification {
-  return ParagraphJustification.from_binary(
-    int(dict_get(paragraph_style, "0", 0)),
-  ) as ParagraphJustification;
+export function _justification(paragraph_style: CosDict): ParagraphJustification {
+  return enum_from_cos(ParagraphJustification, cos_int(cos_get_or(paragraph_style, "0", 0)));
 }
 
 export function _point_text_ink(
   raw: string,
   styles: _CharStyle[],
   strokes: number[],
-  paragraph_styles: Map<string, any>[],
+  paragraph_styles: CosDict[],
   box: BoxAccumulator,
 ): void {
   const body = raw.endsWith("\r") ? raw.slice(0, -1) : raw;
@@ -292,11 +292,11 @@ export function _point_text_ink(
       // by the first-line indent whatever the justification, plus the
       // start indent when left-justified or minus the end indent when
       // right-justified (a centered line ignores both).
-      origin += float(dict_get(style, "1", 0.0));
+      origin += cos_float(cos_get_or(style, "1", 0.0));
       if (justification === ParagraphJustification.LEFT_JUSTIFY) {
-        origin += float(dict_get(style, "2", 0.0));
+        origin += cos_float(cos_get_or(style, "2", 0.0));
       } else if (justification === ParagraphJustification.RIGHT_JUSTIFY) {
-        origin -= float(dict_get(style, "3", 0.0));
+        origin -= cos_float(cos_get_or(style, "3", 0.0));
       }
       _line_ink(paragraph, styles, strokes, offset, origin, baseline, box);
     }
@@ -309,7 +309,7 @@ export function _box_text_ink(
   raw: string,
   styles: _CharStyle[],
   strokes: number[],
-  paragraph_styles: Map<string, any>[],
+  paragraph_styles: CosDict[],
   box: BoxAccumulator,
 ): void {
   const composed = tc.compose_lines(doc);
@@ -317,8 +317,8 @@ export function _box_text_ink(
   if (position == null) {
     throw _refuse("a text box without a position");
   }
-  const left = float(position[0]);
-  const top = float(position[1]);
+  const left = cos_float(position[0]);
+  const top = cos_float(position[1]);
   const inset = doc.box_inset_spacing;
   // Map each character to its paragraph for the justification and indents.
   const paragraph_of: number[] = [];
@@ -333,9 +333,9 @@ export function _box_text_ink(
       throw _refuse("non-left-justified box text");
     }
     const first_line = start === 0 || raw[start - 1] === "\r";
-    let origin = left + inset + float(dict_get(style, "2", 0.0));
+    let origin = left + inset + cos_float(cos_get_or(style, "2", 0.0));
     if (first_line) {
-      origin += float(dict_get(style, "1", 0.0));
+      origin += cos_float(cos_get_or(style, "1", 0.0));
     }
     // The inset pads the box on every side, the top included (AE 2026:
     // an inset of 8 or 20 lowers the ink by exactly that much).

@@ -20,7 +20,6 @@ import {
   fields,
   getattr,
   int,
-  lru_cache,
   lstrip,
   py_bool,
   struct,
@@ -29,6 +28,7 @@ import {
   type Attribute,
   type FieldSpec,
 } from "../../pyrt/index.ts";
+import { _struct_for } from "./bin_utils.ts";
 
 const _chunk = deferred<typeof import("./chunk.ts")>("py_aep/binary/chunk");
 
@@ -348,10 +348,17 @@ export function _struct_info_uncached(cls: Function): _StructInfo | null {
   ];
 }
 
-// attrs `@define` sets `__hash__ = None` in class stubs, so type objects
-// fail lru_cache's `Hashable` parameter check even though they are always
-// hashable at runtime. The cast restores the precise signature for callers.
-export const _struct_info: (cls: Function) => _StructInfo | null = lru_cache(_struct_info_uncached);
+const _STRUCT_INFO = new Map<Function, _StructInfo | null>();
+
+/** `_struct_info_uncached`, cached per class (Python: `functools.lru_cache`). */
+export function _struct_info(cls: Function): _StructInfo | null {
+  let info = _STRUCT_INFO.get(cls);
+  if (info === undefined) {
+    info = _struct_info_uncached(cls);
+    _STRUCT_INFO.set(cls, info);
+  }
+  return info;
+}
 
 /**
  * Convert attrs field name to init parameter name.
@@ -361,6 +368,78 @@ export const _struct_info: (cls: Function) => _StructInfo | null = lru_cache(_st
  */
 export function _init_name(name: string): string {
   return name.startsWith("_") ? lstrip(name, "_") : name;
+}
+
+type DecodeKw = (values: readonly FieldValue[]) => InitKwargs;
+/** Keyed by a `_struct_info` entry's `init_names`, which fixes its encodings and coerces. */
+const _DECODERS = new WeakMap<readonly string[], DecodeKw | null>();
+
+/**
+ * `_decode_fields` for one class as straight-line code returning an object
+ * literal, so each class's kwargs keep a single shape. Null where
+ * `new Function` is refused (Workers, strict CSP) or names repeat.
+ */
+function _compile_decoder(
+  init_names: readonly string[],
+  encodings: ReadonlyMap<number, string>,
+  coerces: ReadonlyMap<number, Coerce>,
+): DecodeKw | null {
+  if (new Set(init_names).size !== init_names.length) return null;
+  const encs: string[] = [];
+  const fns: Coerce[] = [];
+  const body = ["let x;"];
+  const props: string[] = [];
+  init_names.forEach((name, i) => {
+    body.push(`x = v[${i}];`);
+    const enc = encodings.get(i);
+    if (enc != null) body.push(`if (x != null) x = D(x, E[${encs.push(enc) - 1}]);`);
+    const crc = coerces.get(i);
+    if (crc != null) body.push(`if (x != null) x = C[${fns.push(crc) - 1}](x);`);
+    body.push(`const t${i} = x;`);
+    props.push(`${JSON.stringify(name)}: t${i}`);
+  });
+  body.push(`return { ${props.join(", ")} };`);
+  try {
+    return new Function("D", "E", "C", `return (v) => {\n${body.join("\n")}\n};`)(_decode_fixed_str, encs, fns);
+  } catch {
+    return null;
+  }
+}
+
+type EncodeFields = (self: object) => FieldValue[];
+const _ENCODERS = new Map<_StructInfo, EncodeFields | null>();
+
+/**
+ * Every data field of `self` through `getattr` and `_encode_value`, as
+ * straight-line code per class (big-endian fields only). Null where
+ * `new Function` is refused (Workers, strict CSP).
+ */
+export function _field_encoder(info: _StructInfo): EncodeFields | null {
+  let encode_fields = _ENCODERS.get(info);
+  if (encode_fields === undefined) {
+    const [, data_fields, encodings, , , , coerces] = info;
+    const fmts: string[] = [];
+    const exprs = data_fields.map((f, i) => {
+      const name = JSON.stringify(f.name);
+      const value = `(${name} in self ? self[${name}] : G(self, ${name}))`;
+      if (!encodings.has(i) && !coerces.has(i)) return value;
+      return `X(${value}, ${i}, E, C, ">", F[${fmts.push(f.metadata["fmt"]) - 1}])`;
+    });
+    let compiled: EncodeFields | null;
+    try {
+      compiled = new Function("G", "X", "E", "C", "F", `return (self) => [${exprs.join(", ")}];`)(
+        getattr,
+        _encode_value,
+        encodings,
+        coerces,
+        fmts,
+      );
+    } catch {
+      compiled = null;
+    }
+    _ENCODERS.set(info, (encode_fields = compiled));
+  }
+  return encode_fields;
 }
 
 /**
@@ -377,6 +456,14 @@ export function _decode_fields(
   coerces: Map<number, Coerce>,
   init_names: readonly string[] | null = null,
 ): InitKwargs {
+  if (init_names != null && values.length === init_names.length && init_names.length === data_fields.length) {
+    let decode_kw = _DECODERS.get(init_names);
+    if (decode_kw === undefined) {
+      decode_kw = _compile_decoder(init_names, encodings, coerces);
+      _DECODERS.set(init_names, decode_kw);
+    }
+    if (decode_kw !== null) return decode_kw(values);
+  }
   // NOTE(port): kwargs dict is a plain object: keys are init-name identifiers
   // passed straight to `cls(**kw)`, never iterated for numeric-looking keys.
   const kw: InitKwargs = {};
@@ -409,7 +496,7 @@ export function _encode_value(
 ): FieldValue {
   const enc = encodings.get(idx) ?? null;
   if (enc != null) {
-    const field_size = struct.calcsize(endian + fmt_str);
+    const field_size = _struct_for(fmt_str, endian).size;
     if (value instanceof _NulTailStr && value.raw.length === field_size) return value.raw;
     // `String(value)` unwraps a `_NulTailStr` (a String object) to its text.
     const encoded = encode(String(value), enc, "surrogateescape").slice(0, field_size);
@@ -495,6 +582,8 @@ export class FmtItem extends AttrsBase {
       }
       return bytes_.join(parts);
     }
+    const encode_fields = _field_encoder(info);
+    if (encode_fields !== null) return struct.pack(">" + fmt, ...encode_fields(this));
     const values: FieldValue[] = [];
     for (const [i, f] of data_fields.entries()) {
       let value = getattr(this, f.name);

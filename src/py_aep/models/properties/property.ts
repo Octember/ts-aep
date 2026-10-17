@@ -1,5 +1,7 @@
 import { KeyframeInterpolationType, LayerType, PropertyControlType, PropertyType, PropertyValueType } from "../../enums/index.ts";
 import { cos_get } from "../../cos/index.ts";
+import type { CosNode } from "../../cos/cos.ts";
+import { cos_at, cos_insert, cos_len, cos_pop_at } from "../../cos/kinds.ts";
 import { resolve_can_set_expression } from "../../resolvers/can_set_expression.ts";
 import { _DEFAULT_INFLUENCE, NORMALIZED_ARC_ACCURACY, ArcMetric, _tangents_are_zero, color_distance, interpolate_keyframes, motion_path_direction, motion_path_length, roving_keyframe_times, segment_value_slope, spatial_location, split_segment_influences, split_spatial_path } from "../../resolvers/interpolation.ts";
 import { Chunk, ContainerChunk, ListChunk } from "../../binary/chunk.ts";
@@ -33,7 +35,7 @@ import { PropertyBase } from "./property_base.ts";
 import { Shape } from "./shape.ts";
 import type { PropertyGroup } from "./property_group.ts";
 import { type MaskPropertyGroup } from "./mask_property_group.ts";
-import { deferred, deepcopy, dict_get, getitem, isclose, py_bool, py_eq, sorted, warn, int, round, floordiv, TypeError_, ValueError, KeyError, IndexError, AttributeError, NotImplementedError, py_assert, repr, hasattr, getattr, min, max, range, zip, len, float, lshift, rshift, and, or, b, descriptor, list_mul, type_name, type ClassAttributes } from "../../../pyrt/index.ts";
+import { deferred, deepcopy, dict_get, getitem, isclose, py_bool, py_eq, sorted, warn, int, round, floordiv, TypeError_, ValueError, KeyError, IndexError, AttributeError, NotImplementedError, py_assert, repr, hasattr, getattr, min, max, range, zip, float, lshift, rshift, and, or, b, descriptor, list_mul, type_name, type ClassAttributes } from "../../../pyrt/index.ts";
 
 const _property_group = deferred<typeof import("./property_group.ts")>("py_aep/models/properties/property_group");
 import { AVItem } from "../items/av_item.ts";
@@ -904,8 +906,8 @@ export class Property<V extends PropertyValue = any> extends PropertyBase {
       const td = kf.value;
       if (td instanceof TextDocument) {
         const doc_array = cos_get(td._cos_data, "1", "1");
-        if (old < len(doc_array)) {
-          doc_array.splice(new_, 0, ...doc_array.splice(old, 1));
+        if (old < cos_len(doc_array)) {
+          cos_insert(doc_array, new_, cos_pop_at(doc_array, old));
         }
         td._propagate_cos();
       }
@@ -3808,7 +3810,7 @@ export class Property<V extends PropertyValue = any> extends PropertyBase {
    * Wrap a COS doc Map as a {@link TextDocument} sharing `template`'s
    * COS data / btdk chunk.
    */
-  _build_text_view(doc: Map<string, unknown>, template: TextDocument): TextDocument {
+  _build_text_view(doc: CosNode, template: TextDocument): TextDocument {
     const char = cos_get(doc, "0", "6", "0", 0, "0", "0", "6");
     const para = cos_get(doc, "0", "5", "0", 0, "0", "0", "5");
     const view = TextDocument._from_binary({
@@ -3887,7 +3889,7 @@ export class Property<V extends PropertyValue = any> extends PropertyBase {
       throw new NotImplementedError("text keyframe value is not a TextDocument");
     }
     const doc_array = cos_get(template._cos_data, "1", "1");
-    const new_doc = deepcopy(doc_array[nearest]);
+    const new_doc = deepcopy(cos_at(doc_array, nearest));
 
     const ldat_item = build_parallel_ldat_item(this._keyframe_item_type());
     const kf = new Keyframe<KeyframeValue<V>>({ _ldat_item: ldat_item, _frame_rate: frame_rate });
@@ -3897,7 +3899,7 @@ export class Property<V extends PropertyValue = any> extends PropertyBase {
     if (exists) return idx;
     this._ensure_materialized();
     ldat.items.splice(idx, 0, ldat_item);
-    doc_array.splice(idx, 0, new_doc);
+    cos_insert(doc_array, idx, new_doc);
     this.keyframes.splice(idx, 0, kf);
     const td = this._build_text_view(new_doc, template);
     kf._value = td;
@@ -3930,7 +3932,7 @@ export class Property<V extends PropertyValue = any> extends PropertyBase {
     const doc_array = cos_get(removed._cos_data, "1", "1");
     this._ensure_materialized();
     ldat.items.splice(key_index, 1);
-    if (key_index < len(doc_array)) doc_array.splice(key_index, 1);
+    if (key_index < cos_len(doc_array)) cos_pop_at(doc_array, key_index);
     this.keyframes.splice(key_index, 1);
     set_lhd3_count(lhd3, this.keyframes.length, LHD3_BLOCK_KEYFRAMES);
     removed._propagate_cos();

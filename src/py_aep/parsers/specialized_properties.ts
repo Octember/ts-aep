@@ -5,8 +5,9 @@ import type { OmtnChunk } from "../binary/misc_chunks.ts";
 import type { TdmnChunk } from "../binary/property_chunks.ts";
 import { ChunkNotFoundError, filter_by_list_type, filter_by_type, find_by_list_type, find_by_type } from "../binary/utils.ts";
 import { CosParser } from "../cos/index.ts";
+import { decode_btdk } from "../cos/schema.ts";
 // Python's builtin `SyntaxError` as raised by `CosParser`.
-import { type CosValue, SyntaxError_ } from "../cos/cos.ts";
+import { type CosNode, SyntaxError_ } from "../cos/cos.ts";
 import { PropertyValueType } from "../enums/index.ts";
 import { ORIENTATION_KIND } from "../models/properties/parallel.ts";
 import { FeatherPoint, Shape } from "../models/properties/shape.ts";
@@ -248,7 +249,7 @@ export function parse_text_document(
   prop._property_value_type = PropertyValueType.TEXT_DOCUMENT;
 
   let btdk_chunk: ListChunk;
-  let cos_data: CosValue;
+  let cos_data: CosNode;
   try {
     btdk_chunk = find_by_list_type(btds_chunk.chunks, "btdk");
     // btdk is a ListChunk with list_type="btdk"; raw data stored in .data
@@ -269,12 +270,14 @@ export function parse_text_document(
     return prop;
   }
 
-  if (!(cos_data instanceof Map)) {
+  // The decode boundary: from here on the tree is a typed COS dictionary.
+  const tree = decode_btdk(cos_data);
+  if (tree == null) {
     logger.debug("Unexpected btdk COS structure for %s", match_name);
     return prop;
   }
 
-  const [text_documents, _fonts] = parse_btdk_cos(cos_data, btdk_chunk);
+  const [text_documents, _fonts] = parse_btdk_cos(tree, btdk_chunk);
   // Wire each document to the project head so version-gated attributes
   // (e.g. the box-text setters) can resolve the AE major version, and to
   // the AE preferences, which hold the Character/Paragraph panel defaults

@@ -32,7 +32,9 @@
  */
 
 import * as zlib from "../../pyrt/zlib.ts";
-import type { CosDict, CosValue } from "../cos/cos.ts";
+/** PDF objects are walked dynamically (outside the typed text-document tree). */
+type CosValue = any;
+type CosDict = Map<string, CosValue>;
 import { IndirectReference } from "../cos/index.ts";
 import { STD14_EXTENT, STD14_FIRST_CODE, STD14_STANDARD_QUOTES, STD14_WIDTHS } from "../data/std14_metrics.ts";
 import { UnsupportedAiLayersError, _find_ai_icc, _object_offsets, _parse_object_at, read_ai_layer_ocgs } from "./ai_layers.ts";
@@ -48,7 +50,6 @@ import {
   float,
   getattr,
   int,
-  mod,
   num_str,
   py_or,
   py_eq,
@@ -984,7 +985,7 @@ export class _Measurer {
           [x, y + height],
         ];
         for (let index = 0; index < 4; index++) {
-          segments.push(["l", corners[index], corners[mod(index + 1, 4)]]);
+          segments.push(["l", corners[index], corners[(index + 1) % 4]]);
         }
         const origin: Pt = [x, y];
         current = start = origin;
