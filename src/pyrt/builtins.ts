@@ -3,12 +3,20 @@
 import { AttributeError, IndexError, KeyError, TypeError_, ValueError } from "./errors.ts";
 import { float_repr, PyFloat } from "./num.ts";
 
+/** The dunder methods the builtins below probe for. */
+type DunderProbe = { __bool__?: unknown; __len__?: unknown; __contains__?: unknown; __eq__?: unknown; __repr__?: unknown; __str__?: unknown };
+
+/** Objects and functions can carry dunder methods; reading one off a primitive yields nothing. */
+function _probeable(x: unknown): x is DunderProbe {
+  return x !== null && (typeof x === "object" || typeof x === "function");
+}
+
 /**
  * Python truthiness: empty containers (array, string, bytes, Map, Set,
  * object with `__len__`) are false. JS treats `[]` and an empty
  * Uint8Array as true - never use bare `if (x)` on a container.
  */
-export function py_bool(x: any): boolean {
+export function py_bool(x: unknown): boolean {
   if (x == null) return false;
   if (x instanceof PyFloat) return x.value !== 0;
   if (typeof x === "boolean") return x;
@@ -17,8 +25,10 @@ export function py_bool(x: any): boolean {
   if (typeof x === "string") return x.length > 0;
   if (Array.isArray(x) || ArrayBuffer.isView(x)) return (x as ArrayLike<unknown>).length > 0;
   if (x instanceof Map || x instanceof Set) return x.size > 0;
-  if (typeof x.__bool__ === "function") return x.__bool__();
-  if (typeof x.__len__ === "function") return x.__len__() > 0;
+  if (_probeable(x)) {
+    if (typeof x.__bool__ === "function") return x.__bool__();
+    if (typeof x.__len__ === "function") return x.__len__() > 0;
+  }
   return true;
 }
 
@@ -37,10 +47,10 @@ export function py_and<A, B>(a: A, b: B): A | B {
 }
 
 /** `len(x)` */
-export function len(x: any): number {
+export function len(x: unknown): number {
   if (typeof x === "string" || Array.isArray(x) || ArrayBuffer.isView(x)) return (x as ArrayLike<unknown>).length;
   if (x instanceof Map || x instanceof Set) return x.size;
-  if (x && typeof x.__len__ === "function") return x.__len__();
+  if (_probeable(x) && typeof x.__len__ === "function") return x.__len__();
   throw new TypeError(`object of type '${x?.constructor?.name}' has no len()`);
 }
 
@@ -72,7 +82,7 @@ export function* enumerate<T>(xs: Iterable<T>, start = 0): Generator<[number, T]
 }
 
 /** Python ordering of numbers, strings, bools, and tuples/lists (lexicographic). */
-export function py_cmp(a: any, b: any): number {
+export function py_cmp(a: unknown, b: unknown): number {
   if (Array.isArray(a) && Array.isArray(b)) {
     const n = Math.min(a.length, b.length);
     for (let i = 0; i < n; i++) {
@@ -226,10 +236,10 @@ export function setattr(obj: object, name: string, value: unknown): void {
 }
 
 /** `hasattr(obj, name)` */
-export function hasattr(obj: any, name: string): boolean {
+export function hasattr(obj: unknown, name: string): boolean {
   if (obj == null || !(name in Object(obj))) return false;
   try {
-    void obj[name];
+    void Reflect.get(Object(obj), name, obj);
     return true;
   } catch (e) {
     if (e instanceof AttributeError) return false;
@@ -238,16 +248,16 @@ export function hasattr(obj: any, name: string): boolean {
 }
 
 /** `x in container` for arrays, strings (substring), Maps (keys), Sets. */
-export function contains(container: any, x: any): boolean {
-  if (typeof container === "string") return container.includes(x);
+export function contains(container: unknown, x: unknown): boolean {
+  if (typeof container === "string") return container.includes(String(x));
   if (container instanceof Map || container instanceof Set) return container.has(x);
   if (Array.isArray(container)) return container.some((y) => py_eq(y, x));
-  if (container && typeof container.__contains__ === "function") return container.__contains__(x);
+  if (_probeable(container) && typeof container.__contains__ === "function") return container.__contains__(x);
   throw new TypeError("argument of type is not iterable");
 }
 
 /** `a == b` for values (numbers, strings, arrays/tuples, bytes, Maps, objects with `__eq__`). */
-export function py_eq(a: any, b: any): boolean {
+export function py_eq(a: unknown, b: unknown): boolean {
   if (a === b) return true;
   if (a instanceof PyFloat) a = a.value;
   if (b instanceof PyFloat) b = b.value;
@@ -270,7 +280,7 @@ export function py_eq(a: any, b: any): boolean {
     return true;
   }
   if (a instanceof Set && b instanceof Set) return a.size === b.size && [...a].every((x) => b.has(x));
-  if (typeof a.__eq__ === "function") return a.__eq__(b);
+  if (_probeable(a) && typeof a.__eq__ === "function") return a.__eq__(b);
   return false;
 }
 
@@ -278,7 +288,7 @@ export function py_eq(a: any, b: any): boolean {
 const NON_PRINTABLE = /^[\p{Cc}\p{Cf}\p{Cs}\p{Co}\p{Cn}\p{Zl}\p{Zp}\p{Zs}]$/u;
 
 /** Python `repr(x)` for messages. */
-export function repr(x: any): string {
+export function repr(x: unknown): string {
   if (x == null) return "None";
   if (typeof x === "boolean") return x ? "True" : "False";
   if (typeof x === "number") return Number.isInteger(x) ? String(x) : float_repr(x);
@@ -319,7 +329,7 @@ export function repr(x: any): string {
   if (Array.isArray(x)) return `[${x.map(repr).join(", ")}]`;
   if (x instanceof Map) return `{${[...x].map(([k, v]) => `${repr(k)}: ${repr(v)}`).join(", ")}}`;
   if (x instanceof Set) return x.size ? `{${[...x].map(repr).join(", ")}}` : "set()";
-  if (typeof x.__repr__ === "function") return x.__repr__();
+  if (_probeable(x) && typeof x.__repr__ === "function") return x.__repr__();
   return String(x);
 }
 
@@ -328,7 +338,7 @@ export function repr(x: any): string {
  * int-valued float from an int unless it is a boxed `PyFloat`; class
  * instances report their constructor name, which equals the Python class name.
  */
-export function type_name(x: any): string {
+export function type_name(x: unknown): string {
   if (x == null) return "NoneType";
   if (typeof x === "boolean") return "bool";
   if (x instanceof PyFloat) return "float";
@@ -388,10 +398,10 @@ export function dict<K = any, V = any>(arg?: any): Map<K, V> {
 }
 
 /** Python `str(x)` for messages. */
-export function str(x: any): string {
+export function str(x: unknown): string {
   if (typeof x === "string") return x;
   if (x instanceof String) return String(x);
-  if (x != null && typeof x.__str__ === "function") return x.__str__();
+  if (_probeable(x) && typeof x.__str__ === "function") return x.__str__();
   return repr(x);
 }
 

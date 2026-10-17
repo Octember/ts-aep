@@ -75,11 +75,8 @@ export function py_enum<const M extends Record<string, unknown>, X extends Recor
   const helpers: EnumHelpers<V> = {
     __name__: name,
     of(value: unknown): V {
-      if (by_value.has(value)) return value as V;
-      if (typeof self._missing_ === "function") {
-        const found = self._missing_(value);
-        if (found != null) return found;
-      }
+      const found = helpers.of_or_null(value);
+      if (found !== null) return found;
       throw new ValueError(`${typeof value === "string" ? `'${value}'` : String(value)} is not a valid ${name}`);
     },
     of_or_null(value: unknown): V | null {
