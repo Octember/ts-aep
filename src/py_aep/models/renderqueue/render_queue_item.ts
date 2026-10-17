@@ -60,9 +60,10 @@ export function _next_item_id(rq: RenderQueue): number {
  * written by a script on every `setSettings` (AE 2026).
  */
 export class _RenderSettingsView extends SettingsView {
+  declare _owner: RenderQueueItem;
   __setitem__(key: string, value: any): void {
     super.__setitem__(key, value);
-    (this._owner as RenderQueueItem)._ldat.settings_written = 1;
+    this._owner._ldat.settings_written = 1;
   }
 }
 

@@ -1209,7 +1209,7 @@ export class CompItem extends AVItem {
       // matte_layer_id is absent (None) in pre-AE23 files.
       const matte = ldta.matte_layer_id;
       if (matte != null && id_map.has(matte)) {
-        ldta.matte_layer_id = id_map.get(matte);
+        ldta.matte_layer_id = id_map.get(matte)!;
       }
     }
     // tdpi layer references: the effect owner (hidden -0000 param) and
@@ -1218,7 +1218,7 @@ export class CompItem extends AVItem {
     for (const tdpi of recursive_find(cloned_item.chunks, "tdpi")) {
       const value = (tdpi as S4Chunk).value;
       if (id_map.has(value)) {
-        (tdpi as S4Chunk).value = id_map.get(value);
+        (tdpi as S4Chunk).value = id_map.get(value)!;
       }
     }
 
@@ -1890,11 +1890,11 @@ export class CompItem extends AVItem {
     } else if (index != null) {
       return at(this.layers, index);
     } else if (py_bool(other_layer) && py_bool(rel_index)) {
-      const other_idx = this.layers.indexOf(other_layer);
+      const other_idx = this.layers.indexOf(other_layer!);
       if (other_idx < 0) {
         throw new ValueError(`${repr(other_layer)} is not in list`);
       }
-      return at(this.layers, other_idx + rel_index);
+      return at(this.layers, other_idx + rel_index!);
     }
     throw new ValueError("Must specify one of name, index, or other_layer and rel_index");
   }
@@ -2435,7 +2435,7 @@ export class CompItem extends AVItem {
     const project = this._project;
     const moved = indices.map((i) => this.layers[i]);
     const top_index = indices[0];
-    const old_ids = new Set(moved.map((ly) => ly.id));
+    const old_ids = new Set<number | null>(moved.map((ly) => ly.id));
     const repl_enabled = moved[0].enabled;
 
     const new_comp = this._create_precomp_item(name, this.width, this.height);

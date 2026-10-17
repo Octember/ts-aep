@@ -352,9 +352,9 @@ export function apply_text_style_prefs(document: TextDocument, preferences: Pref
 
   const fill = [number("Fill Red"), number("Fill Green"), number("Fill Blue")];
   if (!fill.includes(null)) {
-    const current_fill = document.fill_color?.length > 0 ? document.fill_color : [0.0, 0.0, 0.0];
-    if (zip(current_fill, fill).some(([c, n]) => differs(c, float(n)))) {
-      document.fill_color = fill.map((n) => float(n));
+    const current_fill = document.fill_color?.length! > 0 ? document.fill_color! : [0.0, 0.0, 0.0];
+    if (zip(current_fill, fill as number[]).some(([c, n]) => differs(c, float(n!)))) {
+      document.fill_color = fill.map((n) => float(n!));
     }
   }
 
@@ -391,9 +391,9 @@ export function apply_text_style_prefs(document: TextDocument, preferences: Pref
       }
       const stroke = [number("Stroke Red"), number("Stroke Green"), number("Stroke Blue")];
       if (!stroke.includes(null)) {
-        const current = document.stroke_color?.length > 0 ? document.stroke_color : [0.0, 0.0, 0.0];
-        if (zip(current, stroke).some(([c, n]) => differs(c, float(n)))) {
-          document.stroke_color = stroke.map((n) => float(n));
+        const current = document.stroke_color?.length! > 0 ? document.stroke_color! : [0.0, 0.0, 0.0];
+        if (zip(current, stroke as number[]).some(([c, n]) => differs(c, float(n!)))) {
+          document.stroke_color = stroke.map((n) => float(n!));
         }
       }
     }

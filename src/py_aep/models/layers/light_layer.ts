@@ -81,12 +81,6 @@ export class LightLayer extends Layer {
   /** The ID of the layer used as a light source. `0` if none. */
   declare _light_source_id: number;
 
-  static _new(
-    match_name: string,
-    auto_name: string,
-    property_depth: number,
-    kw?: unknown,
-  ): PropertyGroup;
   static _new(kw: {
     name: string;
     layer_id: number;
@@ -95,8 +89,15 @@ export class LightLayer extends Layer {
     light_type?: number;
     effect_param_defs?: Map<string, Map<string, Map<string, unknown>>> | null;
   }): LightLayer;
-  static _new(kw: unknown): LightLayer;
-  static _new(kw: any): any {
+  static _new(...args: any[]): any;
+  static _new(kw: {
+    name: string;
+    layer_id: number;
+    duration: number;
+    containing_comp: CompItem;
+    light_type?: number;
+    effect_param_defs?: Map<string, Map<string, Map<string, unknown>>> | null;
+  }): LightLayer {
     // NOTE(port): Python `# type: ignore[override]` is type-only; overloads above mirror Layer._new's signature set.
     const {
       name,

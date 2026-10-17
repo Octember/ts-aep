@@ -20,6 +20,9 @@ import { FormatOptionsBase } from "./base.ts";
 import type { PngRoptChunk } from "../../../binary/render_chunks.ts";
 import type { Utf8Chunk } from "../../../binary/scalar_chunks.ts";
 
+/** HDR10 metadata JSON as AE stores it (parsed, not validated): the binary is trusted, so values are read as scalars. */
+type Hdr10Meta = Map<string, any>;
+
 /**
  * PNG format-specific render options.
  *
@@ -44,7 +47,7 @@ import type { Utf8Chunk } from "../../../binary/scalar_chunks.ts";
 export class PngFormatOptions extends FormatOptionsBase {
   declare _body: PngRoptChunk;
   declare _hdr10_utf8: Utf8Chunk | null;
-  declare _hdr10_meta: Map<string, unknown>;
+  declare _hdr10_meta: Hdr10Meta;
 
   constructor(kw: { _body: PngRoptChunk; _hdr10_utf8?: Utf8Chunk | null }) {
     super();
@@ -137,7 +140,7 @@ export class PngFormatOptions extends FormatOptionsBase {
    */
   get luminance_min(): number | null {
     const raw = this._hdr10_meta.get("minLuminance") ?? null;
-    return raw != null ? float(raw as number) : null;
+    return raw != null ? float(raw) : null;
   }
 
   set luminance_min(value: number | null) {
@@ -157,7 +160,7 @@ export class PngFormatOptions extends FormatOptionsBase {
    */
   get luminance_max(): number | null {
     const raw = this._hdr10_meta.get("maxLuminance") ?? null;
-    return raw != null ? float(raw as number) : null;
+    return raw != null ? float(raw) : null;
   }
 
   set luminance_max(value: number | null) {
@@ -177,7 +180,7 @@ export class PngFormatOptions extends FormatOptionsBase {
    */
   get content_light_max(): number | null {
     const raw = this._hdr10_meta.get("maxContentLightLevel") ?? null;
-    return raw != null ? float(raw as number) : null;
+    return raw != null ? float(raw) : null;
   }
 
   set content_light_max(value: number | null) {
@@ -197,7 +200,7 @@ export class PngFormatOptions extends FormatOptionsBase {
    */
   get content_light_average(): number | null {
     const raw = this._hdr10_meta.get("maxFrameAverageLightLevel") ?? null;
-    return raw != null ? float(raw as number) : null;
+    return raw != null ? float(raw) : null;
   }
 
   set content_light_average(value: number | null) {

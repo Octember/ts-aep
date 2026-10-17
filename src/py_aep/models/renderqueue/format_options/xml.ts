@@ -72,7 +72,9 @@ type ETElement = ET.Element;
 
 /** `dict(*args).items()` for `ParamsDict.update`. */
 // NOTE(port): covers every `dict(*args)` source `update` receives: mapping, list of pairs, plain record.
-export function _dict_items(args: unknown[]): Iterable<[string, string]> {
+export type DictSource = Map<string, string> | Iterable<[string, string]> | Record<string, string>;
+
+export function _dict_items(args: DictSource[]): Iterable<[string, string]> {
   if (args.length === 0) return [];
   const src = args[0];
   if (src instanceof Map) return src.entries();
@@ -232,7 +234,7 @@ export class ParamsDict extends Map<string, string> {
   }
 
   // NOTE(port): `**kwargs` has no TS equivalent; callers pass a mapping as the positional arg.
-  update(...args: unknown[]): void {
+  update(...args: DictSource[]): void {
     for (const [key, value] of _dict_items(args)) {
       this.set(key, value);
     }
@@ -272,7 +274,7 @@ export class ParamsDict extends Map<string, string> {
   // `|` (__or__) needs no override: it returns a new plain dict rather
   // than mutating, so it cannot desync the XML. Only `|=` does.
   /** Python `__ior__` (`|=`) */
-  __ior__(other: unknown): ParamsDict {
+  __ior__(other: DictSource): ParamsDict {
     this.update(other);
     return this;
   }

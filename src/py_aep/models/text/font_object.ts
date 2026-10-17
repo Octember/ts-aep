@@ -1,6 +1,7 @@
 /** Font object model for After Effects text layers. */
 
 import { TypeError_, descriptor, is_real, split, str, instance_dict } from "../../../pyrt/index.ts";
+import type { CosDict } from "../../cos/cos.ts";
 import { CosField } from "../../cos/descriptors.ts";
 
 /** Decode the COS design vector (16.16 fixed-point ints) to floats. */
@@ -8,12 +9,12 @@ export function _design_vector_from_cos(raw: number[]): number[] {
   if (raw == null || typeof raw[Symbol.iterator] !== "function") {
     throw new TypeError_("object is not iterable");
   }
-  return Array.from(raw, (v: unknown) => {
+  return Array.from(raw, (v: number) => {
     // Python `str / float` raises TypeError (JS would yield NaN)
     if (!is_real(v) && typeof v !== "boolean") {
       throw new TypeError_("unsupported operand type(s) for /");
     }
-    return (v as number) / 65536.0;
+    return v / 65536.0;
   });
 }
 
@@ -56,8 +57,8 @@ export class FontObject {
    */
   declare design_vector: number[] | null;
 
-  declare _font_data: Map<string, any>;
-  declare _font_entry: Map<string, any> | null;
+  declare _font_data: CosDict;
+  declare _font_entry: CosDict | null;
 
   /** Returns `true` if the font is a variable font. Read-only. */
   get has_design_axes(): boolean {
@@ -75,8 +76,8 @@ export class FontObject {
   }
 
   constructor(kw: {
-    _font_data: Map<string, any>;
-    _font_entry?: Map<string, any> | null;
+    _font_data: CosDict;
+    _font_entry?: CosDict | null;
     post_script_name?: string | null;
     version?: string | null;
   }) {

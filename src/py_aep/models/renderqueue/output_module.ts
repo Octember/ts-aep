@@ -96,7 +96,7 @@ export function _label_or_name(key: string | null, v: unknown): string {
   const E = key == null ? null : _KEY_ENUM.get(key);
   if (E != null && E.has(v)) {
     const label = typeof E.label === "function" ? E.label(v) : null;
-    if (py_bool(label)) return label;
+    if (py_bool(label)) return label!;
     return E.name_of(v);
   }
   return str(v);
@@ -655,7 +655,7 @@ export class OutputModule {
     }
     const fo = this._format_options;
     if (fo instanceof XmlFormatOptions) {
-      const pairs: [string, RuleValue][] = [
+      const pairs: [string, RuleValue | null][] = [
         ["Audio Codec", fo.audio_codec],
         ["Video Codec", fo.video_codec],
         ["Audio Format", fo.mpeg_audio_format],
@@ -965,7 +965,7 @@ export class OutputModule {
     const is_rgba = this._om_ldat.channels === int(OutputChannels.RGBA);
     const target = is_rgba ? _DEPTH_PLUS : _DEPTH_MINUS;
     if (target.has(depth_val)) {
-      this._roou.depth = target.get(depth_val);
+      this._roou.depth = target.get(depth_val)!;
     }
   }
 
@@ -1039,7 +1039,7 @@ export class OutputModule {
       }
       roou.audio_encoding = roou.audio_bit_depth === 4 ? 3 : 2;
     } else if (_AUDIO_ENCODINGS.has(roou.audio_bit_depth)) {
-      roou.audio_encoding = _AUDIO_ENCODINGS.get(roou.audio_bit_depth);
+      roou.audio_encoding = _AUDIO_ENCODINGS.get(roou.audio_bit_depth)!;
     }
   }
 

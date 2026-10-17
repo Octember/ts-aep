@@ -755,12 +755,12 @@ export function _splice_text(
       for (const run of runs) {
         const run_end = pos + (dict_get(run, "1", 0) as number);
         if (pos <= start && start < run_end) {
-          donor = deepcopy(run);
+          donor = deepcopy<Dict>(run);
           break;
         }
         pos = run_end;
       }
-      if (donor == null) donor = deepcopy(runs[runs.length - 1]);
+      if (donor == null) donor = deepcopy<Dict>(runs[runs.length - 1]);
       donor.set("1", insert_len);
       insert_entries = insert_len ? [donor] : [];
     } else {

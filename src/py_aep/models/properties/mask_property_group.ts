@@ -180,9 +180,13 @@ export class MaskPropertyGroup extends PropertyGroup {
    * - `mask_id`: 1-based creation id, stored in the `mkif` and used to pick the outline color from
    *     the cycle palette.
    */
-  static _new(parent_property_: any, property_depth: any, kw: any): MaskPropertyGroup {
-    const parent_property = parent_property_ as PropertyGroup;
-    const { name, mask_id } = kw as { name: string; mask_id: number };
+  static _new(
+    parent_property_: any,
+    property_depth: any,
+    kw: any,
+  ): MaskPropertyGroup {
+    const parent_property: PropertyGroup = parent_property_;
+    const { name, mask_id }: { name: string; mask_id: number } = kw;
     const color = _MASK_COLOR_CYCLE[mod(mask_id - 1, _MASK_COLOR_CYCLE.length)];
     const _tdmn = new TdmnChunk({ value: "ADBE Mask Atom" });
     const _mkif = new MkifChunk({

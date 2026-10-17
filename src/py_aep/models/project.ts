@@ -2048,7 +2048,7 @@ export class Project {
     let removed = 0;
     for (const item_id of [...this.items.keys()]) {
       if (keep_ids.has(item_id) || !this.items.has(item_id)) continue;
-      this.items.get(item_id).remove();
+      this.items.get(item_id)!.remove();
       removed += 1;
     }
     return removed;

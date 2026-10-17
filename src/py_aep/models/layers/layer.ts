@@ -334,7 +334,7 @@ export class Layer extends PropertyGroup {
     } = kw;
     // NOTE(port): TS cannot touch `this` before super(); the early self._ldta/_cmta/_layer_list/essential_property_uuids assignments move below it (the base __init__ never reads them) and new.target stands in for self in the match-name lookup.
 
-    let layer_type_raw: number;
+    let layer_type_raw: number | undefined;
     let match_name: string;
     try {
       layer_type_raw = _ldta.layer_type;

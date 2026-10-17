@@ -28,6 +28,17 @@ import type { PropertyGroup } from "../properties/property_group.ts";
  * ```
  * @see https://ae-scripting.docsforadobe.dev/layer/textlayer/
  */
+type TextLayerNewKw = {
+  name: string;
+  layer_id: number;
+  duration: number;
+  containing_comp: CompItem;
+  btds: ListChunk;
+  btgu: ListChunk;
+  tdmn: TdmnChunk;
+  effect_param_defs?: Map<string, Map<string, Map<string, unknown>>> | null;
+};
+
 export class TextLayer extends AVLayer {
   static _auto_name: string = "Text";
 
@@ -38,16 +49,7 @@ export class TextLayer extends AVLayer {
     property_depth: number,
     kw?: unknown,
   ): PropertyGroup;
-  static _new(kw: {
-    name: string;
-    layer_id: number;
-    duration: number;
-    containing_comp: CompItem;
-    btds: ListChunk;
-    btgu: ListChunk;
-    tdmn: TdmnChunk;
-    effect_param_defs?: Map<string, Map<string, Map<string, unknown>>> | null;
-  }): TextLayer;
+  static _new(kw: TextLayerNewKw): TextLayer;
   static _new(kw: unknown): AVLayer;
   static _new(kw: any): unknown {
     const {

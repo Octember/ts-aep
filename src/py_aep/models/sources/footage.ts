@@ -636,14 +636,14 @@ export class FootageSource {
   /** The `Utf8` chunk after the CLRS `ocsp` marker (the assigned space). */
   _ocsp_utf8(): Utf8Chunk | null {
     if (this._clrs == null) return null;
-    let after: Chunk[];
+    let after: Utf8Chunk[];
     try {
       after = find_chunks_after(this._clrs.chunks, "Utf8", "ocsp");
     } catch (e) {
       if (!(e instanceof ChunkNotFoundError)) throw e;
       return null;
     }
-    return after?.length > 0 ? (after[0] as Utf8Chunk) : null;
+    return after?.length > 0 ? after[0] : null;
   }
 
   _ocsp_profile(): ColorProfile | null {
@@ -655,14 +655,14 @@ export class FootageSource {
   /** The embedded source profile envelope (CLRS `Mcsp` Utf8), or `{}`. */
   _embedded_envelope(): string {
     if (this._clrs == null) return "{}";
-    let after: Chunk[];
+    let after: Utf8Chunk[];
     try {
       after = find_chunks_after(this._clrs.chunks, "Utf8", "Mcsp");
     } catch (e) {
       if (!(e instanceof ChunkNotFoundError)) throw e;
       return "{}";
     }
-    return after?.length > 0 ? (after[0] as Utf8Chunk).value : "{}";
+    return after?.length > 0 ? after[0].value : "{}";
   }
 
   _write_ocsp(envelope: string): void {

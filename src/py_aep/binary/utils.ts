@@ -65,7 +65,7 @@ export function filter_by_list_type(chunks: Chunk[], list_type: string): ListChu
  *
  * @throws {@link ValueError} If `target` is not found in `chunks`.
  */
-export function index_by_identity<_T>(chunks: readonly _T[], target: object): number {
+export function index_by_identity<_T>(chunks: readonly _T[], target: object | null): number {
   for (const [i, c] of chunks.entries()) {
     if (c === target) return i;
   }

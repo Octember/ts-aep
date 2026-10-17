@@ -269,7 +269,7 @@ export function _reorder_and_fill(
   for (const spec of specs) {
     const mn = spec.match_name;
     if (existing.has(mn)) {
-      const child = existing.get(mn);
+      const child = existing.get(mn)!;
       child._auto_name = spec.auto_name;
       if (!(spec instanceof GroupSpec) && child instanceof Property) {
         instance_dict(child).set("_color", spec.color);

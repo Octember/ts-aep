@@ -239,7 +239,7 @@ export function _coerce_enum(enum_class: LabeledEnum, value: unknown): number {
   if (typeof value === "string") {
     const by_label = new Map<string, number>();
     for (const m of enum_class.members()) by_label.set(enum_label(enum_class, m), m);
-    if (by_label.has(value)) return by_label.get(value);
+    if (by_label.has(value)) return by_label.get(value)!;
     const labels = enum_class
       .members()
       .map((m) => repr(enum_label(enum_class, m)))

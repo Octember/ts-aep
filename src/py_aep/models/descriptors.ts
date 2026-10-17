@@ -60,7 +60,7 @@ export function _run_suppressed<R>(body: () => R): R {
  */
 export function _suppress_materialization() {
   function decorate<F extends (...args: never[]) => unknown>(fn: F): F {
-    return function (this: unknown, ...args: unknown[]) {
+    return function (this: unknown, ...args: Parameters<F>) {
       return _run_suppressed(() => fn.apply(this, args));
     } as unknown as F;
   }

@@ -215,7 +215,7 @@ export class Curves {
    */
   static _from_binary(chunk: CurvesArbpChunk): Curves {
     // `cls.__new__(cls)`: an instance without running `__init__`.
-    const obj = Object.create(this.prototype) as Curves;
+    const obj: Curves = Object.create(this.prototype);
     obj._version = chunk.version;
     obj._mode = chunk.mode;
     obj._channels = new Map();

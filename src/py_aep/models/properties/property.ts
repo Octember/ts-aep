@@ -1073,7 +1073,7 @@ export class Property<V extends PropertyValue = any> extends PropertyBase {
     const scale = this._effect_scale;
     if (scale == null || !py_bool(scale[1]) || !this._has_motion_path) return;
     const layer = this._containing_layer;
-    const source = getattr(layer, "source", null);
+    const source: AVLayer["source"] | null = getattr(layer, "source", null);
     const pixel_aspect = source != null ? source.pixel_aspect : layer.containing_comp.pixel_aspect;
     this._tdb4.pixel_aspect = (scale[0] * pixel_aspect) / scale[1];
     this._tdb4._arc_accuracy = NORMALIZED_ARC_ACCURACY;
@@ -1177,7 +1177,7 @@ export class Property<V extends PropertyValue = any> extends PropertyBase {
   // data in file"). AE's full per-control-type tdb4 canon is NOT reproduced -
   // AE tolerates the synthesis-default flags on open, and matching the canon's
   // integer bit would wrongly flip can_set_expression for point/scalar params.
-  static _EFFECT_BOUNDED_CONTROL_TYPES: ReadonlySet<PropertyControlType> = new Set<PropertyControlType>([
+  static _EFFECT_BOUNDED_CONTROL_TYPES: ReadonlySet<PropertyControlType | null> = new Set<PropertyControlType>([
     PropertyControlType.SCALAR,
     PropertyControlType.INTEGER,
     PropertyControlType.SLIDER,
@@ -2013,7 +2013,7 @@ export class Property<V extends PropertyValue = any> extends PropertyBase {
       // The project-level EfdG mirror, via the parade's cached
       // definitions lookup. Effect params can parse without a
       // composition ref, leaving the project unreachable.
-      let entry: unknown;
+      let entry: ReturnType<PropertyGroup["_installed_effect_def"]>;
       try {
         entry = parade._installed_effect_def(effect.match_name);
       } catch (e) {
@@ -2093,7 +2093,7 @@ export class Property<V extends PropertyValue = any> extends PropertyBase {
     // The residue table first: a synthesized effect parameter carries its
     // pard's verdict in `_can_vary_over_time`, and the Puppet Engine's
     // pard claims it varies where AE says it does not.
-    if (_CANVARY_OVERRIDES.has(this.match_name)) return _CANVARY_OVERRIDES.get(this.match_name);
+    if (_CANVARY_OVERRIDES.has(this.match_name)) return _CANVARY_OVERRIDES.get(this.match_name)!;
     if (this._can_vary_over_time != null) return this._can_vary_over_time;
     // NO_VALUE properties always report canVaryOverTime=True in AE,
     // even though the binary byte says otherwise.
@@ -2233,8 +2233,8 @@ export class Property<V extends PropertyValue = any> extends PropertyBase {
     const keyframes = [...this.keyframes];
     const times = keyframes.map((keyframe) => keyframe.time);
     const values = keyframes.map((keyframe) => keyframe.value as number[]);
-    const in_tangents = keyframes.map((keyframe) => keyframe.in_spatial_tangent?.length > 0 ? keyframe.in_spatial_tangent : []);
-    const out_tangents = keyframes.map((keyframe) => keyframe.out_spatial_tangent?.length > 0 ? keyframe.out_spatial_tangent : []);
+    const in_tangents = keyframes.map((keyframe) => keyframe.in_spatial_tangent?.length! > 0 ? keyframe.in_spatial_tangent! : []);
+    const out_tangents = keyframes.map((keyframe) => keyframe.out_spatial_tangent?.length! > 0 ? keyframe.out_spatial_tangent! : []);
     const interpolation = keyframes.map(
       (keyframe) => [keyframe.in_interpolation_type, keyframe.out_interpolation_type] as const,
     );
@@ -3544,8 +3544,8 @@ export class Property<V extends PropertyValue = any> extends PropertyBase {
     const v1 = next_kf._stored_value;
     if (!Array.isArray(v0) || !Array.isArray(v1)) return 0.0;
     const ndim = v0.length;
-    const out_tangent = prev_kf.out_spatial_tangent?.length > 0 ? prev_kf.out_spatial_tangent : list_mul([0.0], ndim);
-    const in_tangent = next_kf.in_spatial_tangent?.length > 0 ? next_kf.in_spatial_tangent : list_mul([0.0], ndim);
+    const out_tangent = prev_kf.out_spatial_tangent?.length! > 0 ? prev_kf.out_spatial_tangent! : list_mul([0.0], ndim);
+    const in_tangent = next_kf.in_spatial_tangent?.length! > 0 ? next_kf.in_spatial_tangent! : list_mul([0.0], ndim);
     return motion_path_length(v0, v1, out_tangent, in_tangent, this._arc_metric);
   }
 
@@ -3580,8 +3580,8 @@ export class Property<V extends PropertyValue = any> extends PropertyBase {
     const v1 = next_kf._stored_value;
     if (!Array.isArray(v0) || !Array.isArray(v1)) return;
     const ndim = v0.length;
-    const out_tangent = prev_kf.out_spatial_tangent?.length > 0 ? prev_kf.out_spatial_tangent : list_mul([0.0], ndim);
-    const in_tangent = next_kf.in_spatial_tangent?.length > 0 ? next_kf.in_spatial_tangent : list_mul([0.0], ndim);
+    const out_tangent = prev_kf.out_spatial_tangent?.length! > 0 ? prev_kf.out_spatial_tangent! : list_mul([0.0], ndim);
+    const in_tangent = next_kf.in_spatial_tangent?.length! > 0 ? next_kf.in_spatial_tangent! : list_mul([0.0], ndim);
     if (_tangents_are_zero(out_tangent) && _tangents_are_zero(in_tangent)) return;
     const [left_out, new_in, _split, new_out, right_in] = split_spatial_path(v0, v1, out_tangent, in_tangent, u);
     prev_kf.out_spatial_tangent = left_out;
@@ -3751,7 +3751,7 @@ export class Property<V extends PropertyValue = any> extends PropertyBase {
    * not). A mask path keeps the value's feather points.
    */
   _build_shap_chunk(shape: Shape): Chunk {
-    const points = (shape._points?.length > 0 ? shape._points : []).map((p: ShapePoint) => new ShapePoint({ x: p.x, y: p.y }));
+    const points = (shape._points?.length! > 0 ? shape._points! : []).map((p: ShapePoint) => new ShapePoint({ x: p.x, y: p.y }));
     const src = shape._shph;
     let bbox: number[];
     if (src != null) {

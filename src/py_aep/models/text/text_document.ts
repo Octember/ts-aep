@@ -39,6 +39,9 @@ import { CHARACTER_RANGE_OOB, NOT_ASSOCIATED, CharacterRange, ComposedLineRange,
 /** A COS dict (`Map<string, any>`): a `Map` so numeric-looking keys keep their order. */
 export type Dict = Map<string, any>;
 
+/** `Pick<T, K>` with `null` removed from each value (style defaults are never null). */
+type Defined<T, K extends keyof T> = { [P in K]: NonNullable<T[P]> };
+
 /**
  * `baseline_locs` entry for a line with no visible characters: the
  * maximum 32-bit float, as After Effects reports (`3.402823466e+38`).
@@ -178,7 +181,7 @@ export class TextDocument {
      * Runs before the mutation lands so each sibling still calibrates
      * against its own clean cache + text.
      */
-    for (const doc of (this._siblings?.length > 0 ? this._siblings : [this])) {
+    for (const doc of (this._siblings?.length! > 0 ? this._siblings! : [this])) {
       doc._mark_layout_dirty();
     }
   }
@@ -1218,7 +1221,7 @@ export class TextDocument {
   reset_char_style(): void {
     this._require_association();
     // NOTE(port): default_character_style returns a plain identifier-keyed object (preferences.ts), read by name like Python's dict[str, Any] literal.
-    const style = default_character_style(this._effective_preferences()) as Pick<
+    const style = default_character_style(this._effective_preferences()) as Defined<
       TextDocument,
       | "font" | "font_size" | "faux_bold" | "faux_italic" | "apply_fill" | "fill_color"
       | "stroke_color" | "stroke_width" | "stroke_over_fill" | "apply_stroke" | "tracking"
@@ -1268,7 +1271,7 @@ export class TextDocument {
   reset_paragraph_style(): void {
     this._require_association();
     // NOTE(port): default_paragraph_style returns a plain identifier-keyed object, same as default_character_style.
-    const style = default_paragraph_style(this._effective_preferences()) as Pick<
+    const style = default_paragraph_style(this._effective_preferences()) as Defined<
       TextDocument,
       | "justification" | "first_line_indent" | "start_indent" | "end_indent"
       | "space_before" | "space_after" | "hanging_roman" | "every_line_composer"

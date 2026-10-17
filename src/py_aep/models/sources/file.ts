@@ -455,7 +455,7 @@ export function _media_profile_records(
   }
   let blob = icc_profile;
   if (blob == null && _CAMERA_RAW_PROFILES.has(source_format)) {
-    blob = _catalogued_profile(_CAMERA_RAW_PROFILES.get(source_format));
+    blob = _catalogued_profile(_CAMERA_RAW_PROFILES.get(source_format)!);
   } else if (blob == null && _CATALOGUED_PROFILE_FORMATS.has(source_format) && color_mode !== 0) {
     blob = _catalogued_profile(_DEFAULT_PROFILE);
   } else if (

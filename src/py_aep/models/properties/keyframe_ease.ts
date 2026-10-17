@@ -60,7 +60,7 @@ export class KeyframeEase {
     speed_factor: number = 1.0,
   ): KeyframeEase {
     // `cls.__new__(cls)`: skip `__init__`, the backing data is supplied.
-    const obj = Object.create(this.prototype) as KeyframeEase;
+    const obj: KeyframeEase = Object.create(this.prototype);
     obj._kf_data = kf_data;
     obj._dimension_index = dimension_index;
     obj._direction = direction;

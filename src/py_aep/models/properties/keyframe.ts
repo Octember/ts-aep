@@ -1018,7 +1018,7 @@ export class Keyframe<V extends PropertyValue = PropertyValue> {
       // rotation and duration, and on a mask path: always 1.
       // Reporting only - `_single_progress` forces the LINEAR
       // control points and never reads the speed back.
-      return raw_ease.map(() => new KeyframeEase(kind.linear_ease_speed, _DEFAULT_INFLUENCE));
+      return raw_ease.map(() => new KeyframeEase(kind.linear_ease_speed!, _DEFAULT_INFLUENCE));
     }
     const [left, right] = direction === "out" ? [this, other] : [other, this];
     if (prop != null && prop._color) {

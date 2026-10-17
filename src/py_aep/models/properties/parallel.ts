@@ -239,8 +239,8 @@ export class _MarkerKind extends ParallelKind {
     return new ListChunk({ list_type: "Nmrd", chunks: source.map((c) => clone_chunk_tree(c)) });
   }
 
-  wrap_value_chunk(prop: Property, value_chunk: Chunk): unknown {
-    return _marker().parse_marker(value_chunk as ListChunk);
+  wrap_value_chunk(prop: Property, value_chunk: ListChunk): unknown {
+    return _marker().parse_marker(value_chunk);
   }
 
   bind_keyframe(value: unknown, kf: Keyframe): void {
@@ -292,9 +292,9 @@ export class _ShapeKind extends ParallelKind {
     return prop._build_shap_chunk(value);
   }
 
-  wrap_value_chunk(prop: Property, value_chunk: Chunk): unknown {
+  wrap_value_chunk(prop: Property, value_chunk: ListChunk): unknown {
     return _specialized_properties()._parse_shape_shap(
-      value_chunk as ListChunk,
+      value_chunk,
       prop._containing_layer,
       prop.match_name === "ADBE Mask Shape" ? prop : null,
     );
@@ -321,8 +321,8 @@ export class _GradientKind extends ParallelKind {
     return new Utf8Chunk({ value: value._utf8.value });
   }
 
-  wrap_value_chunk(prop: Property, value_chunk: Chunk): unknown {
-    return parse_gradient_xml(value_chunk as Utf8Chunk);
+  wrap_value_chunk(prop: Property, value_chunk: Utf8Chunk): unknown {
+    return parse_gradient_xml(value_chunk);
   }
 
   on_wrap(prop: Property): void {

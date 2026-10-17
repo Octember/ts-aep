@@ -345,7 +345,7 @@ export class Shape {
      * (`resolvers.roto_bezier`), or `null` for any other shape.
      */
     if (!this._is_roto_bezier()) return null;
-    const prop = this._mask_path as Property;
+    const prop = this._mask_path!;
     const [width, height] = (prop._containing_layer as AVLayer)._mask_scale;
     const vertices = this.vertices;
     let tensions = this._tensions;

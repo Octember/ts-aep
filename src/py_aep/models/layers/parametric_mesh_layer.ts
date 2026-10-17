@@ -107,7 +107,11 @@ export class ParametricMeshLayer extends AVLayer {
     // (tdsb=1) while the other mesh groups stay collapsed (tdsb=3, the
     // synthesized default). Override the active groups before the layer
     // is materialized so the written tdsb matches AE.
-    const active_groups = dict_get(_PARAMETRIC_MESH_ACTIVE_GROUPS, ParametricMeshType.to_binary(mesh_type), []);
+    const active_groups = dict_get<number, readonly string[], readonly string[]>(
+      _PARAMETRIC_MESH_ACTIVE_GROUPS,
+      ParametricMeshType.to_binary(mesh_type),
+      [],
+    );
     for (const child of layer.properties) {
       if (active_groups.includes(child.match_name) && child._tdsb != null) {
         child._tdsb._enable_flags = 1;

@@ -870,7 +870,7 @@ export class AVLayer extends Layer {
 
   /** `true` if time remapping is enabled for this layer. Read / Write. */
   get time_remap_enabled(): boolean {
-    let prop: unknown;
+    let prop: Property | PropertyGroup;
     try {
       prop = this.__getitem__("ADBE Time Remapping");
     } catch (e) {
