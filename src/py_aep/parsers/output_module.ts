@@ -1,5 +1,5 @@
 import type { Utf8Chunk } from "../binary/scalar_chunks.ts";
-import { ChunkNotFoundError, filter_by_type, find_by_list_type, find_by_type } from "../binary/utils.ts";
+import { filter_by_type, find_by_list_type_or_null, find_by_type, find_by_type_or_null } from "../binary/utils.ts";
 import { _suppress_materialization } from "../models/descriptors.ts";
 import { OutputModule } from "../models/renderqueue/output_module.ts";
 import type { RenderQueueItem } from "../models/renderqueue/render_queue_item.ts";
@@ -40,14 +40,8 @@ export const parse_output_module = _suppress_materialization().decorate(
     const roou_chunk = find_by_type(chunks, "Roou");
 
     // The alas (output file path) is present only once a file is set.
-    let alas_utf8: Utf8Chunk | null;
-    try {
-      const als2_chunk = find_by_list_type(chunks, "Als2");
-      alas_utf8 = find_by_type(als2_chunk.chunks, "alas");
-    } catch (e) {
-      if (!(e instanceof ChunkNotFoundError)) throw e;
-      alas_utf8 = null;
-    }
+    const als2_chunk = find_by_list_type_or_null(chunks, "Als2");
+    const alas_utf8 = als2_chunk === null ? null : find_by_type_or_null(als2_chunk.chunks, "alas");
 
     // Format name + file-name template are the last two top-level Utf8 chunks.
     const om_utf8 = filter_by_type(chunks, "Utf8");

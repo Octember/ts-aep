@@ -3,8 +3,7 @@
 import { warn } from "../../pyrt/index.ts";
 import type { Chunk, ListChunk } from "../binary/chunk.ts";
 import type { TdmnChunk } from "../binary/property_chunks.ts";
-import type { S4Chunk } from "../binary/scalar_chunks.ts";
-import { ChunkNotFoundError, find_by_list_type_or_null, find_by_type, find_by_type_or_null } from "../binary/utils.ts";
+import { find_by_list_type_or_null, find_by_type, find_by_type_or_null } from "../binary/utils.ts";
 import { _suppress_materialization } from "../models/descriptors.ts";
 import { Keyframe } from "../models/properties/keyframe.ts";
 import { Property } from "../models/properties/property.ts";
@@ -50,17 +49,9 @@ export const parse_property = _suppress_materialization().decorate(function pars
   // For LAYER control properties, keep the tdpi chunk reference so the
   // layer index can be resolved lazily (it changes on layer reorder).
   // tdli stores the 1-based mask index directly and is stable.
-  let tdpi: S4Chunk | null = null;
-  try {
-    tdpi = find_by_type(tdbs_child_chunks, "tdpi");
-  } catch (e) {
-    if (!(e instanceof ChunkNotFoundError)) throw e;
-  }
-  try {
-    value = find_by_type(tdbs_child_chunks, "tdli").value;
-  } catch (e) {
-    if (!(e instanceof ChunkNotFoundError)) throw e;
-  }
+  const tdpi = find_by_type_or_null(tdbs_child_chunks, "tdpi");
+  const tdli = find_by_type_or_null(tdbs_child_chunks, "tdli");
+  if (tdli !== null) value = tdli.value;
 
   const expression_utf8 = find_by_type_or_null(tdbs_child_chunks, "Utf8");
 
