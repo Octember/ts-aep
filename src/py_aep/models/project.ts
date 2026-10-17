@@ -2571,7 +2571,7 @@ export function _stamp_style_tdb4(leaf: Property, match_name: string, timebase: 
 // write a parameter leaf only when its value differs from these (AE 2026);
 // the synthesis tables are the byte-verified source, and only the Layer
 // Styles + Blend Options tables can carry keys the resolver emits.
-export const _STYLE_SPEC_DEFAULTS = new Map<string, any>();
+export const _STYLE_SPEC_DEFAULTS = new Map<string, number | number[]>();
 for (const spec_list of _LAYER_STYLE_CHILD_SPECS.values()) {
   for (const spec of spec_list) {
     if (spec.value != null) _STYLE_SPEC_DEFAULTS.set(spec.match_name, spec.value);

@@ -34,6 +34,9 @@ export const _validate_pref_type = validate_enum(PREFType);
 // Tombstone marking a key removed by delete_pref (masks the file value).
 export const _DELETED: unique symbol = Symbol("_DELETED");
 
+/** A preference value as a setter stores it. */
+export type PrefValue = number | boolean | string;
+
 export const _LABEL_INDICES_SECTION = "Label Preference Indices Section 5";
 
 /**
@@ -455,7 +458,7 @@ export function default_synthetic_out_point(preferences: Preferences): number | 
 export class Preferences {
   declare _prefs_dir: Path | null;
   declare _files: Map<PREFType, PrefsFile | null>;
-  declare _overrides: Map<string, unknown>;
+  declare _overrides: Map<string, PrefValue | typeof _DELETED>;
 
   constructor(prefs_dir: PathLike | null = null) {
     this._prefs_dir = prefs_dir != null ? new Path(prefs_dir) : null;
@@ -484,7 +487,7 @@ export class Preferences {
    * `value` is a typed value when `is_override` is `true`,
    * otherwise the raw pref-file text (AE's mixed hex/ASCII encoding).
    */
-  _resolve(section_name: string, key_name: string, pref_type: PREFType): [boolean, any, boolean] {
+  _resolve(section_name: string, key_name: string, pref_type: PREFType): [false, null, false] | [true, PrefValue, true] | [true, string, false] {
     validate_name(section_name);
     validate_name(key_name);
     _validate_pref_type(pref_type);
@@ -529,7 +532,7 @@ export class Preferences {
       if (default_ != null) return default_;
       throw this._missing(section_name, key_name, pref_type);
     }
-    if (!is_override) return decode_pref_number(value);
+    if (is_override === false) return decode_pref_number(value);
     if (typeof value === "boolean") return int(value);
     if (typeof value === "number") return value;
     return parse_number_text(value);
@@ -556,7 +559,7 @@ export class Preferences {
       if (default_ != null) return default_;
       throw this._missing(section_name, key_name, pref_type);
     }
-    if (!is_override) return decode_pref_bool(value);
+    if (is_override === false) return decode_pref_bool(value);
     if (typeof value === "boolean") return value;
     if (typeof value === "number") return value !== 0;
     return parse_number_text(value) !== 0;
@@ -583,11 +586,11 @@ export class Preferences {
       if (default_ != null) return default_;
       throw this._missing(section_name, key_name, pref_type);
     }
-    if (!is_override) return decode_pref_string(value);
+    if (is_override === false) return decode_pref_string(value);
     if (typeof value === "boolean") return str(int(value));
     // NOTE(port): int/float — integral values are plain numbers by design (RULEBOOK §4); a float override such as 30.0 returns "30" where Python returns "30.0".
     if (typeof value === "number") return str(value);
-    return value as string;
+    return value;
   }
 
   /**
