@@ -1,0 +1,14 @@
+{
+  // Type declarations for the published package (bun build emits the JS).
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "declaration": true,
+    "emitDeclarationOnly": true,
+    "rewriteRelativeImportExtensions": true,
+    "outDir": "dist/types",
+    "rootDir": "src"
+  },
+  "include": ["src"],
+  "exclude": []
+}

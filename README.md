@@ -12,15 +12,35 @@ file by file. Python semantics the port depends on (rounding, floor division,
 
 ## Status
 
-Against upstream at the pinned commit, on the same machine:
+Against upstream at the pinned commit (CI runs all of this on every push):
 
 - Test suite: all 15,431 upstream tests translated to `bun:test`; 15,369 pass,
   62 skip on missing system fonts / OCIO configs / AE preferences — identical to
   CPython 3.12. (Runtime skips report as passes in bun's tally.)
-- Parse → save is byte-identical on all 644 upstream sample projects
-  (`bun tools/corpus_roundtrip.ts`), same as py-aep.
-- `tsc` is non-strict and still reports ~2,000 typing errors; 219 `TODO(port)`
-  markers flag spots where parity rests on tests rather than a proven-exact port.
+- Differential check against py-aep on all 644 upstream sample projects
+  (`tools/diff/`): every public attribute of the parsed project is identical, and
+  25,427 deterministic edits through public setters give the same outcome and
+  byte-identical saved files.
+- Parse → save is byte-identical on all 644 samples, in Node, Bun, a browser and
+  workerd.
+- `tsc` reports 0 errors. 33 `TODO(port)` markers name the remaining known gaps
+  (fontkit/harfbuzzjs vs fontTools/uharfbuzz text metrics, argparse help text in
+  the CLIs, integers beyond 2^53, no LZMA decoder); 232 `NOTE(port)` comments
+  record why a spot already matches Python.
+
+## Install
+
+```bash
+bun add ts-aep
+```
+
+```ts
+import { parse } from "ts-aep";
+
+const app = parse("project.aep");
+for (const comp of app.project.compositions) console.log(comp.name, comp.duration);
+app.project.save("copy.aep");
+```
 
 ## Use
 
@@ -99,3 +119,18 @@ bun tools/gen_deferred_modules.ts --check   # the deferred-import hub is current
 ## License
 
 MIT. Derived from py-aep, Copyright (c) 2023 Fortiche production; see `LICENSE`.
+
+## Releasing
+
+Releases publish from GitHub Actions with npm trusted publishing (OIDC), so no
+npm token is stored anywhere:
+
+1. One-time, on npmjs.com: package `ts-aep` → Settings → Trusted publishing →
+   GitHub Actions, owner `Octember`, repository `ts-aep`, workflow `release.yml`.
+   If npm requires the package to exist first, do the very first publish by hand
+   (`npm login`, then `bun publish --access public`) and add the trusted
+   publisher afterwards.
+2. Bump `version` in `package.json`, commit, then `git tag v<version> && git push --tags`.
+   `.github/workflows/release.yml` runs the tests and the packed-tarball smoke
+   (`tools/pack_smoke.sh`), then `npm publish` with provenance.
+

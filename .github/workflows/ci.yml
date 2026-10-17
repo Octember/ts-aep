@@ -40,6 +40,9 @@ jobs:
           bun tools/corpus_roundtrip.ts | tee roundtrip.json
           python3 -c "import json,sys; r=json.loads(open('roundtrip.json').readline()); sys.exit(0 if r['identical']==r['total'] else 1)"
 
+      - name: Packed tarball works in Node and Bun
+        run: tools/pack_smoke.sh
+
       - name: Differential check against py-aep
         run: |
           (cd .upstream && uv sync -q)

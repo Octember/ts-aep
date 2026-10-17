@@ -1,0 +1,50 @@
+name: Release
+
+# Publish to npm when a version tag is pushed (git tag v0.1.0 && git push --tags).
+# Uses npm trusted publishing: GitHub's OIDC token is exchanged for a short-lived
+# npm credential, so no NPM_TOKEN secret exists, and npm attaches provenance.
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.2
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+
+      # Trusted publishing needs npm >= 11.5.1.
+      - run: npm install -g npm@11.5.1
+
+      - name: Tag matches package.json version
+        run: |
+          version=$(node -p "require('./package.json').version")
+          test "v$version" = "$GITHUB_REF_NAME" || { echo "tag $GITHUB_REF_NAME != v$version"; exit 1; }
+
+      - run: bun install --frozen-lockfile
+
+      - name: Fetch upstream samples
+        run: tools/fetch-samples.sh
+
+      - run: bun test --timeout 60000
+
+      - name: Packed tarball works in Node and Bun
+        run: tools/pack_smoke.sh
+
+      - name: Publish
+        run: npm publish --access public

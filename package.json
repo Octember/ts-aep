@@ -1,20 +1,55 @@
 {
   "name": "ts-aep",
-  "version": "0.0.0",
-  "private": true,
+  "version": "0.1.0",
+  "description": "1:1 TypeScript port of py-aep: read and write Adobe After Effects .aep projects (Node, Bun, browsers, Workers)",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Octember/ts-aep.git"
+  },
+  "keywords": [
+    "after-effects",
+    "aep",
+    "adobe",
+    "rifx",
+    "py-aep"
+  ],
   "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/types/py_aep/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/types/py_aep/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist/index.js",
+    "dist/index.js.map",
+    "dist/types",
+    "README.md",
+    "LICENSE"
+  ],
+  "sideEffects": true,
+  "engines": {
+    "node": ">=22.3"
+  },
   "scripts": {
     "typecheck": "tsc --noEmit -p .",
-    "test": "bun test"
-  },
-  "devDependencies": {
-    "@types/bun": "1.2.21",
-    "typescript": "5.9.2"
+    "test": "bun test",
+    "build": "bun tools/build.ts",
+    "prepublishOnly": "bun tools/build.ts"
   },
   "dependencies": {
     "fflate": "0.8.2",
     "fontkit": "2.0.4",
     "harfbuzzjs": "0.4.7",
     "yaml": "2.6.0"
+  },
+  "devDependencies": {
+    "@types/bun": "1.2.21",
+    "typescript": "5.9.2"
   }
 }
