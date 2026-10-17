@@ -16,7 +16,7 @@ import { ColorManagementSystem, LinearLightMode } from "../../enums/index.ts";
 import type { Box } from "../../resolvers/ai_bounds.ts";
 import { EMPTY_BOX, footage_size, read_ai_icc_profile, read_ai_layer_bounds } from "../../resolvers/ai_bounds.ts";
 import { UnsupportedAiLayersError, read_ai_layer_ocgs } from "../../resolvers/ai_layers.ts";
-import { pixel_buffer_size, probe_media, psd_layer_channels, psd_layer_depth, type MediaInfo } from "../../resolvers/media_probe.ts";
+import { MediaInfo, pixel_buffer_size, probe_media, psd_layer_channels, psd_layer_depth, type MediaInfoFields } from "../../resolvers/media_probe.ts";
 import { platform_path } from "../../resolvers/platform_paths.ts";
 import { psd_layer_box } from "../../resolvers/psd_bounds.ts";
 import { read_global_light } from "../../resolvers/psd_styles.ts";
@@ -60,9 +60,10 @@ import {
  * `NamedTuple._replace(**kw)` for the translated NamedTuples (`MediaInfo`,
  * `FileFormat`) that may not carry a `_replace` method.
  */
-export function _replace<T extends object>(obj: T, kw: Partial<T>): T {
-  const own = (obj as { _replace?: (kw: Partial<T>) => T })._replace;
-  if (typeof own === "function") return own.call(obj, kw);
+export function _replace(obj: MediaInfo, kw: Partial<MediaInfoFields>): MediaInfo;
+export function _replace(obj: FileFormat, kw: Partial<FileFormat>): FileFormat;
+export function _replace(obj: MediaInfo | FileFormat, kw: Partial<MediaInfoFields> & Partial<FileFormat>): MediaInfo | FileFormat {
+  if (obj instanceof MediaInfo) return obj._replace(kw);
   return Object.assign(Object.create(Object.getPrototypeOf(obj)), obj, kw);
 }
 
@@ -454,8 +455,9 @@ export function _media_profile_records(
     return [null, null]; // a named space, or none at all (DPX/Cineon)
   }
   let blob = icc_profile;
-  if (blob == null && _CAMERA_RAW_PROFILES.has(source_format)) {
-    blob = _catalogued_profile(_CAMERA_RAW_PROFILES.get(source_format)!);
+  const camera_raw_profile = _CAMERA_RAW_PROFILES.get(source_format);
+  if (blob == null && camera_raw_profile !== undefined) {
+    blob = _catalogued_profile(camera_raw_profile);
   } else if (blob == null && _CATALOGUED_PROFILE_FORMATS.has(source_format) && color_mode !== 0) {
     blob = _catalogued_profile(_DEFAULT_PROFILE);
   } else if (
@@ -792,7 +794,7 @@ export class FileSource extends FootageSource {
       _sspc.frame_padding > 0 &&
       _sspc.start_frame !== UNDEFINED_FRAME
     ) {
-      let utf8_before_opti: Chunk[];
+      let utf8_before_opti: Utf8Chunk[];
       try {
         utf8_before_opti = find_chunks_before(pin_chunks, "Utf8", "opti");
       } catch (e) {
@@ -800,8 +802,8 @@ export class FileSource extends FootageSource {
         utf8_before_opti = [];
       }
       if (utf8_before_opti.length >= 2) {
-        const prefix = (utf8_before_opti.at(-2) as Utf8Chunk).value;
-        const extension = (utf8_before_opti.at(-1) as Utf8Chunk).value;
+        const prefix = at(utf8_before_opti, -2).value;
+        const extension = at(utf8_before_opti, -1).value;
         if (prefix || extension) {
           const first_frame =
             `${prefix}${format(_sspc.start_frame, `0${_sspc.frame_padding}d`)}` +
@@ -1501,10 +1503,10 @@ export class FileSource extends FootageSource {
    *   not implemented.
    */
   reload(): void {
-    let owner: unknown = null;
+    let owner: FootageItem | null = null;
     if (this._project != null) {
-      for (const item of this._project.items.values()) {
-        if (getattr(item, "_main_source", null) === this) {
+      for (const item of this._project.footages) {
+        if (item._main_source === this) {
           owner = item;
           break;
         }
@@ -1622,10 +1624,10 @@ export class FileSource extends FootageSource {
     _sync_premultiplied(sspc);
 
     const idta = getattr(owner, "_idta", null);
-    if (idta != null) {
+    if (owner != null && idta != null) {
       idta._flags_17 = this._idta_flags17();
       // AE 2026 restamps the item with the reloaded file's mtime too.
-      (owner as FootageItem)._sync_modified_time();
+      owner._sync_modified_time();
     }
   }
 
@@ -1779,7 +1781,7 @@ export class FileSource extends FootageSource {
     const end_frame = this._end_frame;
     if (start_frame === UNDEFINED_FRAME || end_frame === UNDEFINED_FRAME) return "";
 
-    let utf8_before_opti: Chunk[];
+    let utf8_before_opti: Utf8Chunk[];
     try {
       utf8_before_opti = find_chunks_before(this._pin.chunks, "Utf8", "opti");
     } catch (e) {
@@ -1789,8 +1791,8 @@ export class FileSource extends FootageSource {
 
     if (utf8_before_opti.length < 2) return "";
 
-    const prefix = (utf8_before_opti.at(-2) as Utf8Chunk).value;
-    const extension = (utf8_before_opti.at(-1) as Utf8Chunk).value;
+    const prefix = at(utf8_before_opti, -2).value;
+    const extension = at(utf8_before_opti, -1).value;
 
     if (!prefix && !extension) return "";
 

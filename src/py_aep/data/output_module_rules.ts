@@ -667,7 +667,7 @@ export function allowed_values(
   fmt: OutputFormat,
   key: string,
   context: ReadonlyMap<string, RuleValue> | null = null,
-): ReadonlySet<unknown> | null {
+): ReadonlySet<RuleValue> | null {
   const rules = new Map<string, ReadonlySet<RuleValue>>();
   for (const [k, v] of getitem(_KIND_RULES, OutputFormat.kind(fmt))) rules.set(k, v);
   for (const [k, v] of (_FORMAT_RULES.get(fmt) ?? new Map<string, ReadonlySet<RuleValue>>())) rules.set(k, v);
