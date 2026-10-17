@@ -6,8 +6,9 @@
  */
 
 import { OutputChannels, OutputColorDepth, TimeSpanSource } from "../enums/index.ts";
-import { IndexError, PyException, floordiv, format, getitem, int, mod, num_str, py_or, round } from "../../pyrt/index.ts";
+import { IndexError, PyException, floordiv, format, int, mod, num_str, py_or, round } from "../../pyrt/index.ts";
 import type { CompItem } from "../models/items/composition.ts";
+import type { SettingsView } from "../models/renderqueue/settings.ts";
 
 // Roou format_id (4-char) to file extension.
 export const FORMAT_ID_EXTENSIONS: Map<string, string> = new Map<string, string>([
@@ -391,14 +392,14 @@ export function resolve_output_filename(
  * Time Span mode (Work Area, Length of Comp, or Custom).
  *
  * @param comp - The composition being rendered.
- * @param rq_settings - The render settings map.
+ * @param rq_settings - The render queue item's settings view.
  * @param effective_frame_rate - The effective frame rate for rendering.
  * @returns Object with keys: start_frame, end_frame, duration_frames,
  *   start_time, end_time, duration_time.
  */
 export function resolve_time_span(
   comp: CompItem,
-  rq_settings: Pick<ReadonlyMap<string, number | string>, "has" | "get">,
+  rq_settings: Pick<SettingsView, "__getitem__">,
   effective_frame_rate: number,
 ): {
   start_frame: number;
@@ -408,7 +409,7 @@ export function resolve_time_span(
   end_time: number;
   duration_time: number;
 } {
-  const time_span_mode = getitem(rq_settings, "Time Span");
+  const time_span_mode = rq_settings.__getitem__("Time Span");
 
   let time_span_start: number;
   let duration_time: number;
@@ -422,9 +423,9 @@ export function resolve_time_span(
     duration_frames = round(comp.duration * effective_frame_rate);
     first_rendered_frame = int(comp.display_start_time * effective_frame_rate);
   } else {
-    time_span_start = getitem(rq_settings, "Time Span Start") as number;
-    duration_time = getitem(rq_settings, "Time Span Duration") as number;
-    time_span_end = getitem(rq_settings, "Time Span End") as number;
+    time_span_start = rq_settings.__getitem__("Time Span Start");
+    duration_time = rq_settings.__getitem__("Time Span Duration");
+    time_span_end = rq_settings.__getitem__("Time Span End");
     duration_frames = round(duration_time * effective_frame_rate);
     first_rendered_frame =
       int(comp.display_start_time * effective_frame_rate) +

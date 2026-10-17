@@ -2066,11 +2066,11 @@ export class Property<V extends PropertyValue = any> extends PropertyBase {
       }
     }
     if (comp != null) {
-      const param_def = (comp._project._effect_param_defs.get(effect.match_name) ?? new Map()).get(this.match_name);
+      const param_def = comp._project._effect_param_defs.get(effect.match_name)?.get(this.match_name);
       if (param_def != null) {
-        param_def.set("property_parameters", [...items]);
-        param_def.set("nb_options", items.length);
-        param_def.set("max_value", items.length);
+        param_def.property_parameters = [...items];
+        param_def.nb_options = items.length;
+        param_def.max_value = items.length;
       }
     }
   }

@@ -7,7 +7,7 @@ import { OptiChunk, SspcChunk, TextOptiChunk, build_ai_document_opti_data, build
 import { EmpdChunk } from "../../binary/misc_chunks.ts";
 import { ColorProfileRecord, build_pin_list } from "../../binary/mutations.ts";
 import { Utf8Chunk, type U1Chunk } from "../../binary/scalar_chunks.ts";
-import { build_als2_list, build_stvc_list, ChunkNotFoundError, filter_by_type, find_by_list_type, find_by_list_type_or_null, find_by_type, find_chunks_before, index_by_identity, parse_alas_data, UNDEFINED_FRAME } from "../../binary/utils.ts";
+import { build_als2_list, build_stvc_list, ChunkNotFoundError, filter_by_type, find_by_list_type, find_by_list_type_or_null, find_by_type, find_chunks_before, alas_fullpath, alas_target_is_folder, index_by_identity, parse_alas_data, UNDEFINED_FRAME } from "../../binary/utils.ts";
 import type { Chunk, ListChunk } from "../../binary/chunk.ts";
 import { build_icc_envelope } from "../../color/envelope.ts";
 import { ColorProfileNotFoundError, default_icc_library, icc_profile_description, icc_profile_id } from "../../color/icc.ts";
@@ -38,7 +38,6 @@ import {
   bytes_,
   bytes_eq,
   concat,
-  dict_get,
   floordiv,
   format,
   getattr,
@@ -779,14 +778,11 @@ export class FileSource extends FootageSource {
 
     // Derive file path and target_is_folder from Als2/alas JSON
     const alas_data = parse_alas_data(pin_chunks);
-    this._target_is_folder = dict_get(alas_data, "target_is_folder", false);
+    this._target_is_folder = alas_target_is_folder(alas_data);
     if (this._file_names?.length > 0) {
-      this._file = _join_sequence_frame(
-        dict_get(alas_data, "fullpath", ""),
-        this._file_names[0],
-      );
+      this._file = _join_sequence_frame(alas_fullpath(alas_data), this._file_names[0]);
     } else {
-      this._file = dict_get(alas_data, "fullpath", "");
+      this._file = alas_fullpath(alas_data);
     }
 
     // Old-format AE files lack the StVc LIST that stores per-frame

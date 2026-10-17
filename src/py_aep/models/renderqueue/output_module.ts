@@ -20,7 +20,7 @@ import { LHD3_BLOCK_SINGLE, set_lhd3_count, type LdatChunk, type Lhd3Chunk } fro
 import { HdrmChunk } from "../../binary/misc_chunks.ts";
 import { OutputModuleSettingsItem, RoptChunk, RouuChunk, TiffRoptChunk, type RenderSettingsItem } from "../../binary/render_chunks.ts";
 import { Utf8Chunk } from "../../binary/scalar_chunks.ts";
-import { PENDING_ASCENDCOUNT, alas_platform, build_als2_list, dump_alas, find_by_type, index_by_identity } from "../../binary/utils.ts";
+import { PENDING_ASCENDCOUNT, alas_platform, type AlasData, build_als2_list, dump_alas, find_by_type, index_by_identity } from "../../binary/utils.ts";
 import type { Chunk } from "../../binary/chunk.ts";
 import type { EnumHelpers } from "../../../pyrt/enum.ts";
 import type { OutputModuleTemplate } from "../../parsers/templates.ts";
@@ -54,7 +54,7 @@ import {
 
 // NOTE(port): Python's `isinstance(x, bool) or isinstance(x, int)` accepts bools as ints.
 // `is_int` keeps that so raw bool fields still count as ints in the checks below.
-export function is_int(v: Dynamic): boolean {
+export function is_int(v: unknown): v is number | boolean {
   return (typeof v === "number" && Number.isInteger(v)) || typeof v === "boolean";
 }
 
@@ -82,7 +82,7 @@ export const _KEY_ENUM = new Map<string, KeyEnum>([
   ["Audio Bit Depth", AudioBitDepth],
 ]);
 
-export function _is_enum_member(key: string, value: Dynamic): boolean {
+export function _is_enum_member(key: string, value: unknown): value is RuleValue {
   return getitem(_KEY_ENUM, key).has(value);
 }
 
@@ -637,8 +637,8 @@ export class OutputModule {
    * its key absent, so the rules that condition on it simply do not
    * apply (permissive degradation).
    */
-  _rules_context(): Map<string, Dynamic> {
-    const context = new Map<string, Dynamic>();
+  _rules_context(): Map<string, RuleValue> {
+    const context = new Map<string, RuleValue>();
     for (const key of ["Channels", "Audio Channels", "Audio Sample Rate"]) {
       let value: unknown;
       try {
@@ -1285,7 +1285,7 @@ export class OutputModule {
   }
 
   /** Parsed JSON from the alas chunk. */
-  get _alas_data(): Map<string, Dynamic> {
+  get _alas_data(): AlasData {
     if (this._alas_utf8 == null) {
       return new Map();
     }
@@ -1428,13 +1428,7 @@ export class OutputModule {
 
     const [effective_width, effective_height] = this._effective_dimensions;
     const effective_frame_rate = this._effective_frame_rate;
-    // NOTE(port): Python passes the live SettingsView (read lazily by key); this adapter gives
-    // resolve_time_span the `has`/`get` pair `getitem` uses.
-    const rq_settings_map = {
-      has: (k: string) => rq_settings.__contains__(k),
-      get: (k: string): number | string => rq_settings.__getitem__(k),
-    };
-    const time_span = resolve_time_span(comp, rq_settings_map, effective_frame_rate);
+    const time_span = resolve_time_span(comp, rq_settings, effective_frame_rate);
 
     const project = this._project;
     const project_name = project.file ? new Path(project.file).stem : "Untitled Project";

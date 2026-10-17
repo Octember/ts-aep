@@ -65,6 +65,7 @@ import type { MarkerValue } from "../properties/marker.ts";
 const _item = deferred<typeof import("../../parsers/item.ts")>("py_aep/parsers/item");
 import { parse_layer } from "../../parsers/layer.ts";
 import { renderer_options_for } from "./renderer_options/index.ts";
+import { SettingsView } from "../renderqueue/settings.ts";
 const _composition = deferred<typeof import("../../parsers/composition.ts")>("py_aep/parsers/composition");
 
 // The binary prin chunk stores internal plugin match_names (e.g. ADBE Escher)
@@ -1769,12 +1770,13 @@ export class CompItem extends AVItem {
     return renderer_options_for(this._prda, this);
   }
 
-  set renderer_options(value: Map<string, unknown>) {
-    if (!(value instanceof Map)) {
+  set renderer_options(value: Map<string, unknown> | SettingsView) {
+    // A Python Mapping: a dict, or another comp's renderer options view.
+    if (!(value instanceof Map || value instanceof SettingsView)) {
       throw new ValueError("renderer_options must be a mapping of key-value pairs");
     }
     const view = this.renderer_options;
-    for (const [key, option] of value) {
+    for (const [key, option] of value instanceof Map ? value.entries() : value.items()) {
       view.__setitem__(key, option);
     }
   }

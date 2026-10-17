@@ -16,6 +16,7 @@ import {
   hypot,
   int,
   json_dumps,
+  json_getitem,
   json_loads,
   list_mul,
   pattern_findall,
@@ -70,11 +71,12 @@ describe("json", () => {
 
   test("python types", () => {
     const d = json_loads('{"2": 1.0, "1": 12345678901234567890, "x": -0}');
+    if (!(d instanceof Map)) throw new Error("expected a JSON object");
     expect([...d.keys()]).toEqual(["2", "1", "x"]);
     expect(type_name(d.get("2"))).toBe("float");
     expect(d.get("1")).toBe(12345678901234567890n);
     expect(Object.is(d.get("x"), 0)).toBe(true);
-    expect(json_loads(encode('{"a": 1}', "utf-32")).get("a")).toBe(1);
+    expect(json_getitem(json_loads(encode('{"a": 1}', "utf-32")), "a")).toBe(1);
   });
 });
 

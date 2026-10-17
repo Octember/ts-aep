@@ -13,6 +13,7 @@
 import { parse } from "../index.ts";
 import {
   AttributeError,
+  type_name,
   KeyError,
   Path,
   attrs_has,
@@ -1657,7 +1658,9 @@ export function validate_aep(
 
   // Load expected JSON
   // Python `open(encoding="utf-8")`: bytes are decoded without dropping a BOM.
-  const expected: Dict = json_loads(decode(json_path.read_bytes(), "utf-8"));
+  const loaded = json_loads(decode(json_path.read_bytes(), "utf-8"));
+  if (!(loaded instanceof Map)) throw new AttributeError(`'${type_name(loaded)}' object has no attribute 'get'`);
+  const expected: Dict = loaded;
 
   // Compare project-level properties
   if (verbose) console.log("\n=== Comparing Project Properties ===");

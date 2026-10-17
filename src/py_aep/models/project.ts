@@ -14,7 +14,7 @@ import { HeadChunk, NhedChunk, NnhdChunk, TimeDisplayPrefItem } from "../binary/
 import { DwgaChunk } from "../binary/misc_chunks.ts";
 import { CpidChunk, FdtaChunk, SvapChunk, WsnmChunk, WsnsChunk } from "../binary/project_chunks.ts";
 import { F8Chunk, U1Chunk, U2Chunk, U4Chunk, U4LeChunk, Utf8Chunk } from "../binary/scalar_chunks.ts";
-import { dump_alas, filter_by_type, find_by_list_type, find_by_list_type_or_null, find_by_type, find_by_type_or_null, index_by_identity, PENDING_ASCENDCOUNT, recursive_find, toggle_flag_chunk } from "../binary/utils.ts";
+import { alas_fullpath, dump_alas, filter_by_type, find_by_list_type, find_by_list_type_or_null, find_by_type, find_by_type_or_null, index_by_identity, PENDING_ASCENDCOUNT, recursive_find, toggle_flag_chunk } from "../binary/utils.ts";
 import type { RenderSettingsItem } from "../binary/render_chunks.ts";
 import { build_icc_envelope, build_ocio_display_envelope, envelope_profile_name } from "../color/envelope.ts";
 import { IccProfileLibrary, icc_profile_description, icc_profile_id } from "../color/icc.ts";
@@ -95,6 +95,9 @@ import {
   json_loads,
   type_name,
   type ClassAttributes,
+  AttributeError,
+  json_int,
+  type JsonValue,
 } from "../../pyrt/index.ts";
 import type { PathLike } from "../../pyrt/index.ts";
 import type { Element } from "../../pyrt/etree.ts";
@@ -1050,7 +1053,7 @@ export class Project {
    */
   get color_management_system(): ColorManagementSystem {
     const settings = this._get_cms_settings();
-    return ColorManagementSystem.of(int(getitem(settings, "colorManagementSystem")));
+    return ColorManagementSystem.of(json_int(getitem(settings, "colorManagementSystem")));
   }
 
   set color_management_system(value: ColorManagementSystem | number) {
@@ -1063,7 +1066,7 @@ export class Project {
    */
   get lut_interpolation_method(): LutInterpolationMethod {
     const settings = this._get_cms_settings();
-    return LutInterpolationMethod.of(int(getitem(settings, "lutInterpolationMethod")));
+    return LutInterpolationMethod.of(json_int(getitem(settings, "lutInterpolationMethod")));
   }
 
   set lut_interpolation_method(value: LutInterpolationMethod | number) {
@@ -2158,9 +2161,10 @@ export class Project {
     for (const chunk of recursive_find(this._rifx.chunks, "alas", undefined, true)) {
       const alas = chunk;
       const text = alas.value;
-      const data = text ? json_loads(text) : new Map<string, Dynamic>();
+      const data = text ? json_loads(text) : new Map<string, JsonValue>();
+      if (!(data instanceof Map)) throw new AttributeError(`'${type_name(data)}' object has no attribute 'get'`);
       if (!py_eq(dict_get(data, "ascendcount_base"), PENDING_ASCENDCOUNT)) continue;
-      const counts = relative_path_counts(project_file, dict_get(data, "fullpath", ""), {
+      const counts = relative_path_counts(project_file, alas_fullpath(data), {
         target_is_folder: py_bool(dict_get(data, "target_is_folder")),
       });
       data.set("ascendcount_base", counts[0]);
@@ -2305,24 +2309,25 @@ export class Project {
   };
 
   /** Return the color profile settings Map. */
-  _get_cms_settings(): Map<string, Dynamic> {
+  _get_cms_settings(): Map<string, JsonValue> {
+    const merged = new Map<string, JsonValue>(Object.entries(this.constructor._CMS_DEFAULTS));
     if (this._cms_utf8 != null) {
       const cms_data = json_loads(this._cms_utf8.value);
-      const merged = new Map<string, Dynamic>(Object.entries(this.constructor._CMS_DEFAULTS));
+      if (!(cms_data instanceof Map)) throw new TypeError_(`'${type_name(cms_data)}' object is not a mapping`);
       for (const [k, v] of cms_data) merged.set(k, v);
-      return merged;
     }
-    return new Map<string, Dynamic>(Object.entries(this.constructor._CMS_DEFAULTS));
+    return merged;
   }
 
   /** Update a single key in the CMS settings JSON chunk. */
   _update_cms_setting(key: string, value: number | string): void {
     if (this._cms_utf8 != null) {
       const data = json_loads(this._cms_utf8.value);
+      if (!(data instanceof Map)) throw new TypeError_(`'${type_name(data)}' object does not support item assignment`);
       data.set(key, value);
       this._cms_utf8.value = json_dumps(data);
     } else {
-      const data = new Map<string, Dynamic>(Object.entries(this.constructor._CMS_DEFAULTS));
+      const data = new Map<string, JsonValue>(Object.entries(this.constructor._CMS_DEFAULTS));
       data.set(key, value);
       const chunk = new Utf8Chunk({ value: json_dumps(data) });
       this._rifx.chunks.push(chunk);
@@ -2565,7 +2570,7 @@ export function _stamp_style_tdb4(leaf: Property, match_name: string, timebase: 
 // write a parameter leaf only when its value differs from these (AE 2026);
 // the synthesis tables are the byte-verified source, and only the Layer
 // Styles + Blend Options tables can carry keys the resolver emits.
-export const _STYLE_SPEC_DEFAULTS = new Map<string, Dynamic>();
+export const _STYLE_SPEC_DEFAULTS = new Map<string, number | number[]>();
 for (const spec_list of _LAYER_STYLE_CHILD_SPECS.values()) {
   for (const spec of spec_list) {
     if (spec.value != null) _STYLE_SPEC_DEFAULTS.set(spec.match_name, spec.value);
