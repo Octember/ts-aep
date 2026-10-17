@@ -293,6 +293,7 @@ export function _set_if_present<K extends _LeafName>(
   value: _LeafValue<K>,
 ): void {
   if (group.properties.some((p) => p.match_name === match_name)) {
-    _leaf(group, match_name).value = value;
+    const leaf: Property = _leaf(group, match_name);
+    leaf.value = value;
   }
 }

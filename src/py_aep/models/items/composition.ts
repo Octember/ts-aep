@@ -32,6 +32,7 @@ import {
   repr,
   round,
   sorted,
+  TypeError_,
   ValueError,
   zip,
   type ClassAttributes,
@@ -1540,12 +1541,17 @@ export class CompItem extends AVItem {
       // pard-less properties (Transform > Opacity -> 0..100).
       const min_v = prop._slider_min != null ? prop._slider_min : prop.min_value;
       const max_v = prop._slider_max != null ? prop._slider_max : prop.max_value;
+      // Python's `float()` refuses a list bound (a color or multi-dimensional range).
+      const float_bound = (v: number | number[]): number => {
+        if (Array.isArray(v)) throw new TypeError_("float() argument must be a string or a real number, not 'list'");
+        return float(v);
+      };
       return build_slider_cctl(
         name,
         uuid_str,
         prop.value as number,
-        min_v != null ? float(min_v) : 0.0,
-        max_v != null ? float(max_v) : 100.0,
+        min_v != null ? float_bound(min_v) : 0.0,
+        max_v != null ? float_bound(max_v) : 100.0,
         comp_id,
         layer_id,
         plan.path_json,

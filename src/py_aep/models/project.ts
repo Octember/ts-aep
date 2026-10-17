@@ -34,7 +34,7 @@ import { has_enabled_styles, parse_layer_styles, read_global_light } from "../re
 import type { PsdLayerStyles } from "../resolvers/psd_styles.ts";
 import { LayerGroupSpec, LayerSpec } from "../synthesis/layer.ts";
 import { _ADV_BLEND_SPECS, _BLEND_OPTIONS_SPECS, _LAYER_STYLE_CHILD_SPECS, _STYLE_ANGLE_SUFFIXES, _STYLE_ENUM_SUFFIXES, _STYLE_HINT_BOUNDS, _STYLE_HINT_BOUNDS_EXCEPTIONS, PropSpec } from "../synthesis/property.ts";
-import { ChunkField, type EffectParamDefs, type Dynamic } from "./descriptors.ts";
+import { ChunkField, type EffectParamDefs } from "./descriptors.ts";
 import { ImportOptions } from "./import_options.ts";
 import { CompItem } from "./items/composition.ts";
 import { FolderItem } from "./items/folder.ts";
@@ -132,7 +132,7 @@ export function ET_tostring(el: Element): string {
 
 
 /** `isinstance(x, (list, tuple))` as used by the port. */
-export function is_list_or_tuple(x: Dynamic): boolean {
+export function is_list_or_tuple(x: unknown): x is unknown[] {
   return Array.isArray(x);
 }
 

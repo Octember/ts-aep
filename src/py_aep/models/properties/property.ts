@@ -74,7 +74,7 @@ export const _SYNTHESIZED_KINDS: Map<string, ParallelKind> = new Map<string, Par
   ["gradientFill/gradient", GRADIENT_KIND],
 ]);
 
-export const _UNSET: object = {}; // sentinel for unset min/max fallback
+export const _UNSET: unique symbol = Symbol("_UNSET"); // sentinel for unset min/max fallback
 
 // Match names whose binary values are stored as 0-1 fractions but
 // ExtendScript reports as 0-100 percentages.
@@ -134,7 +134,7 @@ export function _same_path(a: Shape, b: unknown): boolean {
   );
 }
 
-export function _validate_value(prop: Property, value: Dynamic): void {
+export function _validate_value(prop: Property, value: unknown): void {
   // Validate type, length and bounds of a property value.
   // A mask or shape-layer path only holds a Shape: AE 2026 refuses any other
   // value ("Array is not of the correct type"), and the numeric write path
@@ -160,7 +160,7 @@ export function _validate_value(prop: Property, value: Dynamic): void {
   else _validate_scalar(value, prop);
 }
 
-export function _validate_key_value(prop: Property, value: Dynamic): void {
+export function _validate_key_value(prop: Property, value: unknown): void {
   // Validate a keyframe value: `_validate_value`, after refusing `None` for
   // a numeric keyframe, which always holds a number (storing `None` only in
   // the model left the file at whatever the slot held, 0).
@@ -201,7 +201,7 @@ export function _vf_tag_from_str(tag: string): number {
   return n;
 }
 
-export function _values_equal(a: Dynamic, b: Dynamic): boolean {
+export function _values_equal(a: unknown, b: unknown): boolean {
   // Compare two property values with float tolerance.
   //
   // Handles scalars, arrays, booleans, and null.
@@ -544,8 +544,8 @@ export class Property<V extends PropertyValue = any> extends PropertyBase {
   declare _keyframe_positions: Map<Keyframe, number> | null;
   declare _types_memo: [unknown[], [PropertyControlType, PropertyValueType]] | null;
   declare _effect_scale_dict: { value: number[] | null } | null;
-  declare _min_value_fallback: unknown;
-  declare _max_value_fallback: unknown;
+  declare _min_value_fallback: number | null | typeof _UNSET;
+  declare _max_value_fallback: number | null | typeof _UNSET;
   declare _slider_min: number | null;
   declare _slider_max: number | null;
   declare _scale_z_override: number | null;
@@ -1635,7 +1635,7 @@ export class Property<V extends PropertyValue = any> extends PropertyBase {
     return this._mask_inert_z(this._stored_static_value());
   }
 
-  set value(value: Dynamic) {
+  set value(value: V) {
     this._reject_curves_write();
     if (this._separation_followers() != null) {
       throw new ValueError(
@@ -1868,7 +1868,7 @@ export class Property<V extends PropertyValue = any> extends PropertyBase {
    * The minimum permitted value of the named property. Only valid if
    * `has_min` is `true`. Read-only.
    */
-  get min_value(): Dynamic {
+  get min_value(): number | number[] | null {
     if (_UNBOUNDED_MATCH_NAMES.has(this.match_name)) return null;
     if (this._min_value_fallback !== _UNSET) return this._min_value_fallback;
     if (this._tdum != null) {
@@ -1882,7 +1882,7 @@ export class Property<V extends PropertyValue = any> extends PropertyBase {
    * The maximum permitted value of the named property. Only valid if
    * `has_max` is `true`. Read-only.
    */
-  get max_value(): Dynamic {
+  get max_value(): number | number[] | null {
     if (_UNBOUNDED_MATCH_NAMES.has(this.match_name)) return null;
     if (this._max_value_fallback !== _UNSET) return this._max_value_fallback;
     if (this._tduM != null) {
@@ -2199,7 +2199,7 @@ export class Property<V extends PropertyValue = any> extends PropertyBase {
   _recombine_static(followers: Property<number>[]): void {
     const composed = followers.map((follower) => follower.value);
     this._set_separated_flags(false);
-    this.value = composed;
+    this._set_own_value(composed);
     for (const follower of followers) _deactivate_follower(follower);
   }
 
@@ -2912,7 +2912,7 @@ export class Property<V extends PropertyValue = any> extends PropertyBase {
    * AE stores in a key added at `time` (measured on AE 2026: `addKey`
    * between keys at Z 40 and -30 stores Z 5.0005).
    */
-  _stored_value_at(time: number): Dynamic {
+  _stored_value_at(time: number): PropertyValue {
     if (!this.keyframes?.length) {
       const separated = this._separated_value(time);
       if (separated != null) return separated;
@@ -2943,7 +2943,7 @@ export class Property<V extends PropertyValue = any> extends PropertyBase {
    * speeds (measured on AE 2026: a static [100, 120, 40] and keys at Z
    * 40 / -30 on a 2-D layer read Z = 0 and keep the 40 in the file).
    */
-  _mask_inert_z(value: Dynamic): Dynamic {
+  _mask_inert_z(value: PropertyValue): Dynamic {
     if (
       Array.isArray(value) &&
       value.length === 3 &&
@@ -2980,20 +2980,21 @@ export class Property<V extends PropertyValue = any> extends PropertyBase {
    * Mask Expansion, Stroke Width and a Slider all read their bound,
    * never past it).
    */
-  _clamp_to_range(value: Dynamic): Dynamic {
+  _clamp_to_range(value: PropertyValue): PropertyValue {
     const lo = _get_min(this);
     const hi = _get_max(this);
     if (lo == null && hi == null) return value;
 
-    const clamp = (component: Dynamic): Dynamic => {
-      if (typeof component !== "number") return component;
+    const clamp = (component: number): number => {
       if (lo != null && component < lo) return lo;
       if (hi != null && component > hi) return hi;
       return component;
     };
 
-    if (Array.isArray(value)) return value.map((component) => clamp(component));
-    return clamp(value);
+    if (Array.isArray(value)) {
+      return value.map((component) => (typeof component === "number" ? clamp(component) : component));
+    }
+    return typeof value === "number" ? clamp(value) : value;
   }
 
   /**
@@ -3299,13 +3300,13 @@ export class Property<V extends PropertyValue = any> extends PropertyBase {
    * When `value` is omitted, the keyframe takes the property's value at
    * `time` (interpolated when animated, the static value otherwise).
    */
-  _add_key(time: number, value: _ValueType | string | typeof _USE_VALUE = _USE_VALUE): number {
+  _add_key(time: number, value: _ValueType | typeof _USE_VALUE = _USE_VALUE): number {
     validate_number(time);
     if (!this.can_vary_over_time) {
       throw new ValueError(`property ${repr(this.match_name)} cannot vary over time`);
     }
     const kind = this._parallel_kind();
-    if (kind != null) return this._add_parallel_key(time, kind, value as _ValueType | typeof _USE_VALUE);
+    if (kind != null) return this._add_parallel_key(time, kind, value);
     // A no-value numeric property has no value slot to keyframe; building
     // a numeric keyframe item for it produces a wrong-size ldat item.
     // (Complex kinds above store their value in a sibling container and
@@ -4539,12 +4540,12 @@ export class _EssentialOverrideProperty extends Property {
   }
 
 
-  get min_value(): Dynamic {
+  get min_value(): number | number[] | null {
     const src = this._override_source();
     return src != null ? src.min_value : super.min_value;
   }
 
-  get max_value(): Dynamic {
+  get max_value(): number | number[] | null {
     const src = this._override_source();
     return src != null ? src.max_value : super.max_value;
   }

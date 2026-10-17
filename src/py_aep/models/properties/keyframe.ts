@@ -1,7 +1,7 @@
 import { KeyframeInterpolationType, Label } from "../../enums/index.ts";
 import { frame_grid } from "../../binary/composition_chunks.ts";
 import { _DEFAULT_INFLUENCE, auto_path_speed, auto_spatial_tangents, auto_temporal_speeds, color_auto_speed, color_distance, linear_path_speed } from "../../resolvers/interpolation.ts";
-import { ChunkField, type Dynamic } from "../descriptors.ts";
+import { ChunkField } from "../descriptors.ts";
 import { TextDocument } from "../text/text_document.ts";
 import { validate_bool, validate_int, validate_number, validate_sequence } from "../validators.ts";
 import { Gradient } from "./gradient.ts";
@@ -195,7 +195,7 @@ export class Keyframe<V extends PropertyValue = PropertyValue> {
   declare _next: Keyframe | null;
   declare _in_temporal_ease: KeyframeEase[] | null;
   declare _out_temporal_ease: KeyframeEase[] | null;
-  declare _value: Dynamic;
+  declare _value: PropertyValue | typeof _VALUE_FROM_CHUNK;
 
   constructor(kw: { _ldat_item: LdatItem; _frame_rate: number }) {
     const { _ldat_item, _frame_rate } = kw;
