@@ -318,7 +318,7 @@ export class Chunk extends AttrsBase {
 
   __repr__(): string {
     // attrs-generated `__repr__`: repr=True fields in declaration order.
-    const parts = fields(this.constructor).filter((f) => f.repr).map((f) => `${f.name}=${repr((this as unknown as Record<string, unknown>)[f.name])}`);
+    const parts = fields(this.constructor).filter((f) => f.repr).map((f) => `${f.name}=${repr(Reflect.get(this, f.name))}`);
     return `${this.constructor.name}(${parts.join(", ")})`;
   }
 }

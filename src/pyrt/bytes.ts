@@ -280,7 +280,7 @@ function split_whitespace(data: Uint8Array, maxsplit: number): Uint8Array[] {
 export function latin1_str(data: Uint8Array): string {
   let out = "";
   for (let i = 0; i < data.length; i += 0x8000) {
-    out += String.fromCharCode.apply(null, data.subarray(i, i + 0x8000) as unknown as number[]);
+    out += Reflect.apply(String.fromCharCode, null, data.subarray(i, i + 0x8000));
   }
   return out;
 }

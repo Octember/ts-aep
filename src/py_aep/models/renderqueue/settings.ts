@@ -61,8 +61,8 @@ export class SettingsView {
   declare _owner: object;
   declare _specs: SettingsSpec;
 
-  constructor(owner: object, specs: SettingsSpec) {
-    this._owner = owner;
+  constructor(owner: object | null, specs: SettingsSpec) {
+    this._owner = owner ?? this;
     this._specs = specs;
   }
 

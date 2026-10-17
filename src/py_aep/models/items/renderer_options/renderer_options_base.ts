@@ -32,7 +32,7 @@ export class RendererOptionsBase extends SettingsView {
   constructor(kw: { body: any; comp: CompItem }) {
     const { body, comp } = kw;
     // NOTE(port): Python passes `self` as the owner; TS forbids touching `this` before super(), so the owner is patched in just below (SettingsView only stores it).
-    super(null as unknown as object, new.target._SPEC);
+    super(null, new.target._SPEC);
     this._body = body;
     this._comp = comp;
     // Python's owner is the (possibly proxied) instance itself, so writes via

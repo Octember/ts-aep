@@ -143,21 +143,24 @@ export function at<T>(xs: ArrayLike<T>, i: number): T {
   return xs[j];
 }
 
+type Sliceable = { slice(s: number, e: number): Sliceable; length: number; readonly [i: number]: unknown };
+
 /** `xs[start:end]` for arrays and strings with Python's clamping. */
-export function py_slice<T extends { slice(s: number, e: number): T; length: number }>(xs: T, start?: number | null, end?: number | null, step?: number | null): T {
+export function py_slice<T extends Sliceable>(xs: T, start?: number | null, end?: number | null, step?: number | null): T;
+export function py_slice(xs: Sliceable, start?: number | null, end?: number | null, step?: number | null): unknown {
   const n = xs.length;
   if (step != null && step !== 1) {
     const out: unknown[] = [];
     if (step > 0) {
       const s = start == null ? 0 : start < 0 ? Math.max(0, n + start) : Math.min(start, n);
       const e = end == null ? n : end < 0 ? Math.max(0, n + end) : Math.min(end, n);
-      for (let i = s; i < e; i += step) out.push((xs as unknown as ArrayLike<unknown>)[i]);
+      for (let i = s; i < e; i += step) out.push(xs[i]);
     } else {
       const s = start == null ? n - 1 : start < 0 ? n + start : Math.min(start, n - 1);
       const e = end == null ? -1 : end < 0 ? Math.max(-1, n + end) : end;
-      for (let i = s; i > e; i += step) out.push((xs as unknown as ArrayLike<unknown>)[i]);
+      for (let i = s; i > e; i += step) out.push(xs[i]);
     }
-    return (typeof xs === "string" ? out.join("") : out) as unknown as T;
+    return typeof xs === "string" ? out.join("") : out;
   }
   const s = start == null ? 0 : start < 0 ? Math.max(0, n + start) : Math.min(start, n);
   const e = end == null ? n : end < 0 ? Math.max(0, n + end) : Math.min(end, n);
@@ -165,7 +168,7 @@ export function py_slice<T extends { slice(s: number, e: number): T; length: num
 }
 
 /** `d[k]` on a Map with KeyError. */
-export function getitem<K, V>(d: Map<K, V>, k: K): V {
+export function getitem<K, V>(d: Pick<ReadonlyMap<K, V>, "has" | "get">, k: K): V {
   if (!d.has(k)) throw new KeyError(repr(k));
   return d.get(k)!;
 }
@@ -213,6 +216,13 @@ export function getattr(obj: any, name: string, ...dflt: [unknown?]): any {
   if (obj != null && name in Object(obj)) return obj[name];
   if (dflt.length) return dflt[0];
   throw new AttributeError(`'${obj?.constructor?.name}' object has no attribute '${name}'`);
+}
+
+/** `setattr(obj, name, value)`; a getter-only accessor raises AttributeError like a Python property without a setter. */
+export function setattr(obj: object, name: string, value: unknown): void {
+  if (!Reflect.set(obj, name, value)) {
+    throw new AttributeError(`property '${name}' of '${obj.constructor?.name}' object has no setter`);
+  }
 }
 
 /** `hasattr(obj, name)` */
@@ -444,26 +454,26 @@ export function split(s: string, sep?: string | null, maxsplit = -1): string[] {
 export function deepcopy<T>(x: T, memo = new Map<unknown, unknown>()): T {
   if (x === null || typeof x !== "object") return x;
   if (memo.has(x)) return memo.get(x) as T;
-  if (x instanceof Uint8Array) return x.slice() as unknown as T;
+  if (x instanceof Uint8Array) return x.slice() as T;
   if (Array.isArray(x)) {
     const out: unknown[] = [];
     memo.set(x, out);
     for (const v of x) out.push(deepcopy(v, memo));
-    return out as unknown as T;
+    return out as T;
   }
   if (x instanceof Map) {
     const out = new Map();
     memo.set(x, out);
     for (const [k, v] of x) out.set(deepcopy(k, memo), deepcopy(v, memo));
-    return out as unknown as T;
+    return out as T;
   }
   if (x instanceof Set) {
     const out = new Set();
     memo.set(x, out);
     for (const v of x) out.add(deepcopy(v, memo));
-    return out as unknown as T;
+    return out as T;
   }
-  if (typeof (x as unknown as { __deepcopy__(memo: Map<unknown, unknown>): T }).__deepcopy__ === "function") return (x as unknown as { __deepcopy__(memo: Map<unknown, unknown>): T }).__deepcopy__(memo);
+  if ("__deepcopy__" in x && typeof x.__deepcopy__ === "function") return x.__deepcopy__(memo);
   const out =
     x instanceof String
       ? Reflect.construct(String, [x.valueOf()], x.constructor)
@@ -481,14 +491,14 @@ export function deepcopy<T>(x: T, memo = new Map<unknown, unknown>()): T {
 /** `copy.copy`: shallow clone keeping the prototype. */
 export function copy<T>(x: T): T {
   if (x === null || typeof x !== "object") return x;
-  if (Array.isArray(x)) return [...x] as unknown as T;
-  if (x instanceof Uint8Array) return x.slice() as unknown as T;
-  if (x instanceof Map) return new Map(x) as unknown as T;
-  if (x instanceof Set) return new Set(x) as unknown as T;
+  if (Array.isArray(x)) return [...x] as T;
+  if (x instanceof Uint8Array) return x.slice() as T;
+  if (x instanceof Map) return new Map(x) as T;
+  if (x instanceof Set) return new Set(x) as T;
   if (x instanceof String) {
     const out = Reflect.construct(String, [x.valueOf()], x.constructor);
-    for (const k of Object.keys(x)) if (!/^\d+$/.test(k)) out[k] = (x as unknown as Record<string, unknown>)[k];
-    return out as unknown as T;
+    for (const k of Object.keys(x)) if (!/^\d+$/.test(k)) out[k] = Reflect.get(x, k);
+    return out;
   }
   if (x instanceof String) return Object.assign(Object.setPrototypeOf(new String(x.valueOf()), Object.getPrototypeOf(x)), x);
   return Object.assign(Object.create(Object.getPrototypeOf(x)), x);

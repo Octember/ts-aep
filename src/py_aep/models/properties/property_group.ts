@@ -658,7 +658,7 @@ export class PropertyGroup extends PropertyBase {
     let zoom: number;
     try {
       // `None._default_zoom` / a layer without it is an AttributeError in Python.
-      const layer = this._containing_layer as unknown as { _default_zoom?: () => number };
+      const layer = this._containing_layer;
       zoom = getattr(layer, "_default_zoom").call(layer);
     } catch (e) {
       if (e instanceof ValueError || e instanceof AttributeError) return null;

@@ -569,8 +569,8 @@ export class PropertyBase {
       throw new IndexError(`Index ${new_index} out of range [0, ${num_props})`);
     }
 
-    const child = this as unknown as Property | PropertyGroup;
-    const current_index = list_index(parent.properties, child);
+    const current_index = list_index(parent.properties, this);
+    const child = parent.properties[current_index];
     if (current_index === new_index) return;
 
     // Extract chunk span

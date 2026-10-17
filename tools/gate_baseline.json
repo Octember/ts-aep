@@ -6,13 +6,13 @@
   "loose_types": {
     "0 pyrt": {
       "any": 51,
-      "unknown": 109,
-      "casts": 65
+      "unknown": 87,
+      "casts": 37
     },
     "1 binary+enums+data": {
       "any": 9,
-      "unknown": 34,
-      "casts": 44
+      "unknown": 26,
+      "casts": 36
     },
     "2 cos+color": {
       "any": 2,
@@ -25,9 +25,9 @@
       "casts": 12
     },
     "4 models": {
-      "any": 101,
-      "unknown": 116,
-      "casts": 179
+      "any": 100,
+      "unknown": 103,
+      "casts": 160
     },
     "5 resolvers+svg": {
       "any": 5,
