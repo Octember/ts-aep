@@ -1,9 +1,7 @@
 /** Effect and parameter definition parsers. */
 
-import type { Chunk, ContainerChunk, ListChunk } from "../binary/chunk.ts";
-import type { PardChunk } from "../binary/misc_chunks.ts";
-import type { TdmnChunk, TdsbChunk, TdsnChunk } from "../binary/property_chunks.ts";
-import type { Utf8Chunk } from "../binary/scalar_chunks.ts";
+import type { Chunk, ListChunk } from "../binary/chunk.ts";
+import type { TdmnChunk, TdsbChunk } from "../binary/property_chunks.ts";
 import { ChunkNotFoundError, filter_by_list_type, filter_by_type, find_by_list_type, find_by_type } from "../binary/utils.ts";
 import { MATCH_NAME_TO_AUTO_NAME } from "../data/match_names.ts";
 import { EFFECT_PARAM_SPATIAL_FLAGS } from "../data/spatial_flags.ts";
@@ -449,10 +447,10 @@ export const parse_effect = _suppress_materialization().decorate(function parse_
   layer: Layer | null = null,
 ): PropertyGroup {
   const sspc_child_chunks = sspc_chunk.chunks;
-  const fnam_chunk = find_by_type(sspc_child_chunks, "fnam") as ContainerChunk;
+  const fnam_chunk = find_by_type(sspc_child_chunks, "fnam");
 
   // fnam is a ContainerChunk with a Utf8 child
-  const fnam_utf8 = find_by_type(fnam_chunk.chunks, "Utf8") as Utf8Chunk;
+  const fnam_utf8 = find_by_type(fnam_chunk.chunks, "Utf8");
   const tdgp_chunk = find_by_list_type(sspc_child_chunks, "tdgp");
 
   let param_defs: Map<string, ParamDef>;
@@ -476,12 +474,12 @@ export const parse_effect = _suppress_materialization().decorate(function parse_
     effect_param_defs.set(group_match_name, param_defs);
   }
   // Resolve _name_utf8 from the effect tdgp's tdsn child
-  const tdsn = find_by_type(tdgp_chunk.chunks, "tdsn") as TdsnChunk;
+  const tdsn = find_by_type(tdgp_chunk.chunks, "tdsn");
   const effect_name_utf8 = tdsn.utf8;
 
   let effect_tdsb: TdsbChunk | null;
   try {
-    effect_tdsb = find_by_type(tdgp_chunk.chunks, "tdsb") as TdsbChunk;
+    effect_tdsb = find_by_type(tdgp_chunk.chunks, "tdsb");
   } catch (e) {
     if (!(e instanceof ChunkNotFoundError)) throw e;
     effect_tdsb = null;
@@ -664,7 +662,7 @@ _pard_extractor(
 
 /** Parse effect parameter definition from pard chunk, returning a map of values. */
 export function _parse_effect_parameter_def(parameter_chunks: Chunk[]): ParamDef {
-  const pard_chunk = find_by_type(parameter_chunks, "pard") as PardChunk;
+  const pard_chunk = find_by_type(parameter_chunks, "pard");
 
   const control_type = PropertyControlType.of(pard_chunk.property_control_type);
 
@@ -688,9 +686,9 @@ export function _parse_effect_parameter_def(parameter_chunks: Chunk[]): ParamDef
   }
 
   try {
-    const pdnm_chunk = find_by_type(parameter_chunks, "pdnm") as ContainerChunk;
+    const pdnm_chunk = find_by_type(parameter_chunks, "pdnm");
     // pdnm is a ContainerChunk with a Utf8 child
-    const utf8_chunk = find_by_type(pdnm_chunk.chunks, "Utf8") as Utf8Chunk;
+    const utf8_chunk = find_by_type(pdnm_chunk.chunks, "Utf8");
     const pdnm_data = utf8_chunk.value;
     if (control_type === PropertyControlType.ENUM) {
       result.set("property_parameters", split(pdnm_data, "|"));
@@ -766,10 +764,10 @@ export function effect_definition_entries(
 
   const entries: [string, string, ListChunk][] = [];
   for (const efdf_chunk of filter_by_list_type(efdg_chunk.chunks, "EfDf")) {
-    const match_name = (find_by_type(efdf_chunk.chunks, "tdmn") as TdmnChunk).value;
+    const match_name = find_by_type(efdf_chunk.chunks, "tdmn").value;
     const sspc_chunk = find_by_list_type(efdf_chunk.chunks, "sspc");
-    const fnam = find_by_type(sspc_chunk.chunks, "fnam") as ContainerChunk;
-    const display = (find_by_type(fnam.chunks, "Utf8") as Utf8Chunk).value;
+    const fnam = find_by_type(sspc_chunk.chunks, "fnam");
+    const display = find_by_type(fnam.chunks, "Utf8").value;
     entries.push([match_name, display, sspc_chunk]);
   }
   return entries;

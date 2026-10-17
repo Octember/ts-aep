@@ -469,9 +469,9 @@ export class FootageSource {
     const old_clrs = this._clrs,
       new_clrs = new_._clrs;
     if (old_clrs == null || new_clrs == null) return;
-    for (const chunk_type of ["ipws", "linl"]) {
-      const old_chunk = find_by_type(old_clrs.chunks, chunk_type) as U1Chunk;
-      const new_chunk = find_by_type(new_clrs.chunks, chunk_type) as U1Chunk;
+    for (const chunk_type of ["ipws", "linl"] as const) {
+      const old_chunk = find_by_type(old_clrs.chunks, chunk_type);
+      const new_chunk = find_by_type(new_clrs.chunks, chunk_type);
       new_chunk.value = old_chunk.value;
     }
     toggle_flag_chunk(new_clrs, "prgb", this.preserve_rgb);
@@ -565,7 +565,7 @@ export class FootageSource {
    */
   get media_color_space(): string {
     if (this._clrs == null) return "Embedded";
-    const ipws_chunk = find_by_type(this._clrs.chunks, "ipws") as U1Chunk;
+    const ipws_chunk = find_by_type(this._clrs.chunks, "ipws");
     if (ipws_chunk.value) return "Working Color Space";
     // In OCIO mode the assigned color space is carried as an OCIO envelope in
     // the `ocsp` Utf8 (apid is the unmanaged sentinel). In Adobe mode `ocsp`
@@ -587,7 +587,7 @@ export class FootageSource {
           "this footage source.",
       );
     }
-    const ipws_chunk = find_by_type(this._clrs.chunks, "ipws") as U1Chunk;
+    const ipws_chunk = find_by_type(this._clrs.chunks, "ipws");
     const apid_chunk = find_by_type(this._clrs.chunks, "apid");
     if (value === "Working Color Space") {
       // AE sets ipws, clears the override id, and empties the ocsp Utf8.

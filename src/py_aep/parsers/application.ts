@@ -3,7 +3,6 @@
 // are dropped: annotations are types only, and `cast` becomes `as`.
 
 import type { ListChunk } from "../binary/chunk.ts";
-import type { HeadChunk } from "../binary/item_chunks.ts";
 import { find_by_type } from "../binary/utils.ts";
 import { Application } from "../models/application.ts";
 import { _suppress_materialization } from "../models/descriptors.ts";
@@ -32,7 +31,7 @@ export const parse_app = _suppress_materialization()(function parse_app(
   project: Project,
 ): Application {
   const root_chunks = rifx.chunks;
-  const head_chunk = find_by_type(root_chunks, "head") as HeadChunk;
+  const head_chunk = find_by_type(root_chunks, "head");
 
   // Collect viewer panels from the folder tree (parsed during parse_folder)
   const viewers = _collect_viewers(project.root_folder);

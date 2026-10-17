@@ -1,7 +1,6 @@
 import { ValueError } from "../../pyrt/index.ts";
 import type { ListChunk } from "../binary/chunk.ts";
 import type { CmtaChunk, IdtaChunk } from "../binary/item_chunks.ts";
-import type { LdatChunk, Lhd3Chunk } from "../binary/ldat_chunks.ts";
 import type { Utf8Chunk } from "../binary/scalar_chunks.ts";
 import { ChunkNotFoundError, filter_by_list_type, find_by_list_type, find_by_type } from "../binary/utils.ts";
 import { ItemType } from "../enums/index.ts";
@@ -29,11 +28,11 @@ export function parse_item(
 ): CompItem | FolderItem | FootageItem {
   const child_chunks = item_chunk.chunks;
 
-  const idta = find_by_type(child_chunks, "idta") as IdtaChunk;
-  const name_utf8 = find_by_type(child_chunks, "Utf8") as Utf8Chunk;
+  const idta = find_by_type(child_chunks, "idta");
+  const name_utf8 = find_by_type(child_chunks, "Utf8");
   let cmta: CmtaChunk | null;
   try {
-    cmta = find_by_type(child_chunks, "cmta") as CmtaChunk;
+    cmta = find_by_type(child_chunks, "cmta");
   } catch (e) {
     if (!(e instanceof ChunkNotFoundError)) throw e;
     cmta = null;
@@ -178,11 +177,11 @@ export function _parse_guides(child_chunks: Chunk[]): Guide[] {
   }
 
   const list_chunk = find_by_list_type(gide_list.chunks, "list");
-  const lhd3 = find_by_type(list_chunk.chunks, "lhd3") as Lhd3Chunk;
+  const lhd3 = find_by_type(list_chunk.chunks, "lhd3");
   if (lhd3.count === 0) {
     return [];
   }
 
-  const ldat = find_by_type(list_chunk.chunks, "ldat") as LdatChunk;
+  const ldat = find_by_type(list_chunk.chunks, "ldat");
   return ldat.items.map((item) => new Guide(item));
 }

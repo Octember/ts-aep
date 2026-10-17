@@ -105,9 +105,9 @@ export class Item {
       this._ldat = null;
     } else {
       this._inner = find_by_list_type(this._gide.chunks, "list");
-      this._lhd3 = find_by_type(this._inner.chunks, "lhd3") as Lhd3Chunk;
+      this._lhd3 = find_by_type(this._inner.chunks, "lhd3");
       try {
-        this._ldat = find_by_type(this._inner.chunks, "ldat") as LdatChunk;
+        this._ldat = find_by_type(this._inner.chunks, "ldat");
       } catch (e) {
         if (!(e instanceof ChunkNotFoundError)) throw e;
         this._ldat = null;

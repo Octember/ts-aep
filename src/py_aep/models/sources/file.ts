@@ -683,7 +683,7 @@ export class FileSource extends FootageSource {
       );
       return;
     }
-    const ipws = find_by_type(this._clrs.chunks, "ipws") as U1Chunk;
+    const ipws = find_by_type(this._clrs.chunks, "ipws");
     ipws.value = 0;
     find_by_type(this._clrs.chunks, "apid").data = _UNASSIGNED_PROFILE;
     this._write_ocsp(envelope);
@@ -1059,8 +1059,8 @@ export class FileSource extends FootageSource {
       color_managed: embedded_profile_name == null && !_UNPROFILED_FORMATS.has(source_format),
       layer_name,
     });
-    const clrs = find_by_list_type(pin.chunks, "CLRS") as ListChunk;
-    const linl = find_by_type(clrs.chunks, "linl") as U1Chunk;
+    const clrs = find_by_list_type(pin.chunks, "CLRS");
+    const linl = find_by_type(clrs.chunks, "linl");
     if (_LINEAR_LIGHT_OFF_FORMATS.has(source_format) && width > 0 && !is_sequence) {
       linl.value = int(LinearLightMode.OFF);
     }

@@ -14,9 +14,20 @@ const emit = (f: string, text: string) =>
     fileName: f,
     compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext, removeComments: true, verbatimModuleSyntax: false },
   }).outputText;
+const existed = (f: string) => {
+  try {
+    execFileSync("git", ["cat-file", "-e", `${base}:${f}`], { stdio: "ignore" });
+    return true;
+  } catch {
+    return false;
+  }
+};
 const changed: string[] = [];
 for (const f of files) {
-  const before = emit(f, execFileSync("git", ["show", `${base}:${f}`], { encoding: "utf8", maxBuffer: 1 << 26 }));
+  // A file added since `base` must be type-only: it emits nothing but `export {};`.
+  const before = existed(f)
+    ? emit(f, execFileSync("git", ["show", `${base}:${f}`], { encoding: "utf8", maxBuffer: 1 << 26 }))
+    : "export {};\n";
   if (before !== emit(f, fs.readFileSync(f, "utf8"))) changed.push(f);
 }
 console.log(JSON.stringify({ base, files: files.length, js_changed: changed.length }));

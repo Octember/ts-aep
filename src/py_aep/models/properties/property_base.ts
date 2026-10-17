@@ -22,7 +22,6 @@ import { MATCH_NAME_TO_AUTO_NAME } from "../../data/match_names.ts";
 import { ChunkField } from "../descriptors.ts";
 import { validate_bool, validate_name } from "../validators.ts";
 import type { Utf8Chunk } from "../../binary/scalar_chunks.ts";
-import type { MkifChunk } from "../../binary/misc_chunks.ts";
 import type { Layer } from "../layers/layer.ts";
 import type { MaskPropertyGroup } from "./mask_property_group.ts";
 import type { Property } from "./property.ts";
@@ -659,7 +658,7 @@ export class PropertyBase {
     const list_chunk = cloned.at(-1)! as ListChunk;
     let result: PropertyBase;
     if (this._is_mask) {
-      const mkif = find_by_type(cloned, "mkif") as MkifChunk;
+      const mkif = find_by_type(cloned, "mkif");
       result = _property()._parse_mask_atom(
         list_chunk,
         mkif,

@@ -291,10 +291,10 @@ export class RenderQueueItem {
     // with "Invalid read length".
     this._lom.chunks.push(...lom_chunks);
 
-    const om_ldat = find_by_type(this._list_chunk.chunks, "ldat") as LdatChunk;
+    const om_ldat = find_by_type(this._list_chunk.chunks, "ldat");
     om_ldat.items.push(om._om_ldat);
 
-    const om_lhd3 = find_by_type(this._list_chunk.chunks, "lhd3") as Lhd3Chunk;
+    const om_lhd3 = find_by_type(this._list_chunk.chunks, "lhd3");
     set_lhd3_count(om_lhd3, om_lhd3.count + 1, LHD3_BLOCK_SINGLE);
 
     this._output_modules.push(om);
@@ -887,7 +887,7 @@ export class RenderQueueItem {
     insert_at += 1;
     this._litm.chunks.splice(insert_at, 0, new_lom);
 
-    const new_om_ldat = find_by_type(new_list_chunk.chunks, "ldat") as LdatChunk;
+    const new_om_ldat = find_by_type(new_list_chunk.chunks, "ldat");
     const om_groups = split_on_type(new_lom.chunks, "Roou");
 
     // Build model first (OMs need parent ref)

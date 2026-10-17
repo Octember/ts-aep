@@ -3,7 +3,7 @@
 import { ListChunk } from "../binary/chunk.ts";
 import type { Chunk } from "../binary/chunk.ts";
 import type { MkifChunk } from "../binary/misc_chunks.ts";
-import type { TdmnChunk, TdsbChunk, TdsnChunk, VfdnChunk } from "../binary/property_chunks.ts";
+import type { TdmnChunk, TdsbChunk, VfdnChunk } from "../binary/property_chunks.ts";
 import type { U4Chunk, Utf8Chunk } from "../binary/scalar_chunks.ts";
 import { ChunkNotFoundError, filter_by_list_type, filter_by_type, find_by_list_type, find_by_type } from "../binary/utils.ts";
 import { VF_AXIS_PREFIX } from "../data/match_names.ts";
@@ -91,7 +91,7 @@ export class _ParseContext {
 
   /** The group's first match-name chunk. */
   get tdmn(): TdmnChunk {
-    return find_by_type(this.chunks, "tdmn") as TdmnChunk;
+    return find_by_type(this.chunks, "tdmn");
   }
 }
 
@@ -172,7 +172,7 @@ export function parse_properties(
 
 export function _dispatch_sspc(ctx: _ParseContext): (Property | PropertyGroup)[] {
   /** Parse effect chunks - iterates all sspc LISTs for the match name. */
-  const tdmns = filter_by_type(ctx.chunks, "tdmn") as TdmnChunk[];
+  const tdmns = filter_by_type(ctx.chunks, "tdmn");
   const sspcs = filter_by_list_type(ctx.chunks, "sspc");
   const results: (Property | PropertyGroup)[] = [];
   for (const [tdmn, sspc] of zip(tdmns, sspcs)) {
@@ -193,10 +193,10 @@ _property_parser("sspc")(_dispatch_sspc);
 
 export function _dispatch_tdgp(ctx: _ParseContext): (Property | PropertyGroup)[] {
   /** Parse property group chunks - handles masks and indexed groups. */
-  const tdmns = filter_by_type(ctx.chunks, "tdmn") as TdmnChunk[];
+  const tdmns = filter_by_type(ctx.chunks, "tdmn");
   if (ctx.match_name === "ADBE Mask Atom") {
     const tdgps = [...filter_by_list_type(ctx.chunks, "tdgp")];
-    const mkifs = [...filter_by_type(ctx.chunks, "mkif")] as MkifChunk[];
+    const mkifs = [...filter_by_type(ctx.chunks, "mkif")];
     const masks: (Property | PropertyGroup)[] = [];
     for (const [i, [tdmn, tdgp_c, mkif_c]] of enumerate(zip(tdmns, tdgps, mkifs), 1)) {
       const mask = _parse_mask_atom(
@@ -419,7 +419,7 @@ export const parse_property_group = _suppress_materialization().decorate(functio
   // Leaf properties always have a tdsb; groups may or may not.
   let group_tdsb: TdsbChunk | null;
   try {
-    group_tdsb = find_by_type(tdgp_chunk.chunks, "tdsb") as TdsbChunk;
+    group_tdsb = find_by_type(tdgp_chunk.chunks, "tdsb");
   } catch (e) {
     if (!(e instanceof ChunkNotFoundError)) throw e;
     group_tdsb = null;
@@ -428,7 +428,7 @@ export const parse_property_group = _suppress_materialization().decorate(functio
   // Resolve _name_utf8 from the tdgp's tdsn child
   let name_utf8: Utf8Chunk | null;
   try {
-    const tdsn = find_by_type(tdgp_chunk.chunks, "tdsn") as TdsnChunk;
+    const tdsn = find_by_type(tdgp_chunk.chunks, "tdsn");
     name_utf8 = tdsn.utf8;
   } catch (e) {
     if (!(e instanceof ChunkNotFoundError)) throw e;
@@ -490,7 +490,7 @@ export const _parse_mask_atom = _suppress_materialization().decorate(function _p
     if (chunk instanceof ListChunk && chunk.list_type === "om-s") {
       try {
         const tdbs = find_by_list_type(chunk.chunks, "tdbs");
-        mask_shape_tdsb = find_by_type(tdbs.chunks, "tdsb") as TdsbChunk;
+        mask_shape_tdsb = find_by_type(tdbs.chunks, "tdsb");
       } catch (e) {
         if (!(e instanceof ChunkNotFoundError)) throw e;
       }

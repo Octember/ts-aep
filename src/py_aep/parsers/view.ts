@@ -1,5 +1,4 @@
-import type { FipsChunk } from "../binary/misc_chunks.ts";
-import type { AsciiChunk, U1Chunk } from "../binary/scalar_chunks.ts";
+import type { AsciiChunk } from "../binary/scalar_chunks.ts";
 import { ChunkNotFoundError, filter_by_type, find_by_type, group_chunks } from "../binary/utils.ts";
 import { AVItem } from "../models/items/av_item.ts";
 import { View } from "../models/viewer/view.ts";
@@ -52,7 +51,7 @@ export function parse_viewers(folder_chunks: Chunk[], items: Item[]): Viewer[] {
  * @returns A list of {@link View | View} objects.
  */
 export function _parse_views(block: Chunk[], item: Item | null, viewer: Viewer): View[] {
-  const fips_chunks = filter_by_type(block, "fips") as FipsChunk[];
+  const fips_chunks = filter_by_type(block, "fips");
   const av_item = item instanceof AVItem ? item : null;
   // Each locked view owns 4 consecutive fips (3D viewport slots).
   // Create one View per group of 4, using the first slot.
@@ -82,14 +81,14 @@ export function _parse_views(block: Chunk[], item: Item | null, viewer: Viewer):
 export function _build_viewer(block: Chunk[]): Viewer | null {
   let fitt: AsciiChunk;
   try {
-    fitt = find_by_type(block, "fitt") as AsciiChunk;
+    fitt = find_by_type(block, "fitt");
   } catch (e) {
     if (!(e instanceof ChunkNotFoundError)) throw e;
     return null;
   }
 
-  const foac = find_by_type(block, "foac") as U1Chunk;
-  const fiac = find_by_type(block, "fiac") as U1Chunk;
+  const foac = find_by_type(block, "foac");
+  const fiac = find_by_type(block, "fiac");
 
   return new Viewer({
     _fitt: fitt,

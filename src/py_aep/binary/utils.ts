@@ -12,6 +12,7 @@ import {
   len,
 } from "../../pyrt/index.ts";
 import { Chunk } from "./chunk.ts";
+import type { ChunkOf } from "./chunk_types.ts";
 
 export class ChunkNotFoundError extends PyException {
   /** Raised when a required chunk is not found in the AEP chunk tree. */
@@ -25,9 +26,9 @@ export const UNDEFINED_FRAME = 0xFFFFFFFF;
  *
  * @throws {@link ChunkNotFoundError} If no matching chunk is found.
  */
-export function find_by_type(chunks: Chunk[], chunk_type: string): Chunk {
+export function find_by_type<K extends string>(chunks: Chunk[], chunk_type: K): ChunkOf<K> {
   for (const c of chunks) {
-    if (c.chunk_type === chunk_type) return c;
+    if (c.chunk_type === chunk_type) return c as ChunkOf<K>;
   }
   throw new ChunkNotFoundError(`Missing ${chunk_type} chunk`);
 }
@@ -45,8 +46,8 @@ export function find_by_list_type(chunks: Chunk[], list_type: string): ListChunk
 }
 
 /** Return all chunks matching `chunk_type`. */
-export function filter_by_type(chunks: Chunk[], chunk_type: string): Chunk[] {
-  return chunks.filter((c) => c.chunk_type === chunk_type);
+export function filter_by_type<K extends string>(chunks: Chunk[], chunk_type: K): ChunkOf<K>[] {
+  return chunks.filter((c): c is ChunkOf<K> => c.chunk_type === chunk_type);
 }
 
 /** Return all ListChunks with matching `list_type`. */
@@ -132,16 +133,16 @@ export function _find_anchor_index(chunks: Chunk[], anchor_type: string): number
  *
  * @throws {@link ChunkNotFoundError} If no chunk with `before_type` is found.
  */
-export function find_chunks_before(
+export function find_chunks_before<K extends string>(
   chunks: Chunk[],
-  chunk_type: string,
+  chunk_type: K,
   before_type: string,
-): Chunk[] {
+): ChunkOf<K>[] {
   const anchor = _find_anchor_index(chunks, before_type);
-  const result: Chunk[] = [];
+  const result: ChunkOf<K>[] = [];
   for (let i = anchor - 1; i >= 0; i--) {
     if (chunks[i].chunk_type === chunk_type) {
-      result.unshift(chunks[i]);
+      result.unshift(chunks[i] as ChunkOf<K>);
     } else {
       break;
     }
@@ -160,16 +161,16 @@ export function find_chunks_before(
  *
  * @throws {@link ChunkNotFoundError} If no chunk with `after_type` is found.
  */
-export function find_chunks_after(
+export function find_chunks_after<K extends string>(
   chunks: Chunk[],
-  chunk_type: string,
+  chunk_type: K,
   after_type: string,
-): Chunk[] {
+): ChunkOf<K>[] {
   const anchor = _find_anchor_index(chunks, after_type);
-  const result: Chunk[] = [];
+  const result: ChunkOf<K>[] = [];
   for (let i = anchor + 1; i < chunks.length; i++) {
     if (chunks[i].chunk_type === chunk_type) {
-      result.push(chunks[i]);
+      result.push(chunks[i] as ChunkOf<K>);
     } else {
       break;
     }
@@ -238,14 +239,14 @@ export function parse_alas_data(parent_chunks: Chunk[]): Map<string, any> {
     if (!(e instanceof ChunkNotFoundError)) throw e;
     return new Map();
   }
-  let alas_chunk: Chunk;
+  let alas_chunk: Utf8Chunk;
   try {
     alas_chunk = find_by_type(als2_chunk.chunks, "alas");
   } catch (e) {
     if (!(e instanceof ChunkNotFoundError)) throw e;
     return new Map();
   }
-  const alas_text = (alas_chunk as Utf8Chunk).value;
+  const alas_text = alas_chunk.value;
   // `value` may be a `_NulTailStr` (String object), which py_bool would call truthy.
   if (alas_text == null || String(alas_text).length === 0) return new Map();
   const result = json_loads(String(alas_text));
@@ -395,6 +396,18 @@ export function toggle_flag_chunk(
  *
  * @returns All matching chunks across the entire tree, in DFS order.
  */
+export function recursive_find<K extends string>(
+  chunks: Chunk[],
+  chunk_type: K,
+  list_type?: null,
+  skip_unparsed?: boolean,
+): ChunkOf<K>[];
+export function recursive_find(
+  chunks: Chunk[],
+  chunk_type?: string | null,
+  list_type?: string | null,
+  skip_unparsed?: boolean,
+): Chunk[];
 export function recursive_find(
   chunks: Chunk[],
   chunk_type: string | null = null,

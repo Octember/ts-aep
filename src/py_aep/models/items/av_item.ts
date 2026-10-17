@@ -3,7 +3,7 @@
 import type { ListChunk } from "../../binary/chunk.ts";
 import { build_pin_list } from "../../binary/mutations.ts";
 import type { CmtaChunk, IdtaChunk } from "../../binary/item_chunks.ts";
-import type { U1Chunk, Utf8Chunk } from "../../binary/scalar_chunks.ts";
+import type { Utf8Chunk } from "../../binary/scalar_chunks.ts";
 import { find_by_list_type, find_by_type, index_by_identity } from "../../binary/utils.ts";
 import { ChunkField } from "../descriptors.ts";
 import { auto_name } from "../naming.ts";
@@ -526,7 +526,7 @@ export class AVItem extends Item {
     // Link the source to its color record, as parsing does, so the
     // version fit and the color-management setters reach it.
     source._clrs = find_by_list_type(pin.chunks, "CLRS");
-    source._linl = find_by_type(source._clrs.chunks, "linl") as U1Chunk;
+    source._linl = find_by_type(source._clrs.chunks, "linl");
     return pin;
   }
 

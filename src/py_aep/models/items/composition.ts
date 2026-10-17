@@ -413,7 +413,7 @@ export function _rewrite_eg_identity(
     ) {
       continue;
     }
-    for (const cctl of filter_by_list_type(cif.chunks, "CCtl") as ListChunk[]) {
+    for (const cctl of filter_by_list_type(cif.chunks, "CCtl")) {
       const utf8s = filter_by_type(cctl.chunks, "Utf8");
       if (utf8s?.length > 0) {
         const uuid_utf8 = utf8s[0] as Utf8Chunk;
@@ -1089,16 +1089,16 @@ export class CompItem extends AVItem {
     this.__type_cache = null;
     this.__layer_id_to_index = null;
 
-    this._cdta = find_by_type(kw._child_chunks, "cdta") as CdtaChunk;
+    this._cdta = find_by_type(kw._child_chunks, "cdta");
     try {
-      this._cdrp = find_by_type(kw._child_chunks, "cdrp") as U1Chunk;
+      this._cdrp = find_by_type(kw._child_chunks, "cdrp");
     } catch (e) {
       if (!(e instanceof ChunkNotFoundError)) throw e;
       this._cdrp = null;
     }
     this.prin_list = find_by_list_type(kw._child_chunks, "PRin");
-    this._prin = find_by_type(this.prin_list.chunks, "prin") as PrinChunk;
-    this._prda = find_by_type(this.prin_list.chunks, "prda") as PrdaChunk;
+    this._prin = find_by_type(this.prin_list.chunks, "prin");
+    this._prda = find_by_type(this.prin_list.chunks, "prda");
 
     // Layer deferral: collect layer chunks and source IDs now, parse
     // the actual Layer objects on first access via _ensure_layers_loaded.
@@ -1183,18 +1183,18 @@ export class CompItem extends AVItem {
     const new_comp_id = project._allocate_id();
     // Pre-2020 files have no iide; the id then lives only in idta.
     try {
-      (find_by_type(cloned_item.chunks, "iide") as U4LeChunk).value = new_comp_id;
+      find_by_type(cloned_item.chunks, "iide").value = new_comp_id;
     } catch (e) {
       if (!(e instanceof ChunkNotFoundError)) throw e;
     }
-    (find_by_type(cloned_item.chunks, "idta") as IdtaChunk).item_id = new_comp_id;
+    find_by_type(cloned_item.chunks, "idta").item_id = new_comp_id;
 
     // Fresh ids for every ldta - real layers AND viewer pseudo-layers,
     // AE reallocates them all - then remap every intra-comp layer
     // reference. Ids not in the map (0 / stale) stay untouched, and
     // source_id is deliberately kept: footage and precomp sources are
     // shared with the original.
-    const ldta_chunks = recursive_find(cloned_item.chunks, "ldta") as LdtaChunk[];
+    const ldta_chunks = recursive_find(cloned_item.chunks, "ldta");
     const id_map: Map<number, number> = new Map();
     for (const ldta of ldta_chunks) {
       id_map.set(ldta.layer_id, project._allocate_id());
@@ -1224,11 +1224,11 @@ export class CompItem extends AVItem {
 
     // Name (the item block's first direct Utf8), numbered like AE.
     const existing = new Set([...project.items.values()].map((item) => item.name));
-    (find_by_type(cloned_item.chunks, "Utf8") as Utf8Chunk).value = auto_name(this.name, existing);
+    find_by_type(cloned_item.chunks, "Utf8").value = auto_name(this.name, existing);
 
     // AE parks the duplicate's current time at 0 (AE 2026: a copy of a
     // comp whose time is 2.5 s reads time 0).
-    const cdta = find_by_type(cloned_item.chunks, "cdta") as CdtaChunk;
+    const cdta = find_by_type(cloned_item.chunks, "cdta");
     cdta.time_dividend = 0;
     cdta.time_divisor = 600;
 
@@ -1275,7 +1275,7 @@ export class CompItem extends AVItem {
         } else {
           let ldta: LdtaChunk;
           try {
-            ldta = find_by_type(lc.chunks, "ldta") as LdtaChunk;
+            ldta = find_by_type(lc.chunks, "ldta");
           } catch (e) {
             if (!(e instanceof ChunkNotFoundError)) throw e;
             continue;
@@ -1615,7 +1615,7 @@ export class CompItem extends AVItem {
     for (const cif of containers) {
       const [cctl, name_utf8, ctyp] = build();
       cif.chunks.push(cctl);
-      const ccct = find_by_type(cif.chunks, "CcCt") as S4Chunk;
+      const ccct = find_by_type(cif.chunks, "CcCt");
       ccct.value += 1;
       if (cif.list_type === "CIF3" || model_name_utf8 == null) {
         model_name_utf8 = name_utf8;
@@ -2487,7 +2487,7 @@ export class CompItem extends AVItem {
             .slice(m_start, m_end)
             .map((c) => clone_chunk_tree(c));
           const m_list = m_block[0] as ListChunk;
-          const m_ldta = find_by_type(m_list.chunks, "ldta") as LdtaChunk;
+          const m_ldta = find_by_type(m_list.chunks, "ldta");
           const copy_id = project._allocate_id();
           m_ldta.layer_id = copy_id;
           rewrite_owner_tdpi(m_list, copy_id);

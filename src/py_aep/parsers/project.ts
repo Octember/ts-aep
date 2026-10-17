@@ -2,9 +2,9 @@
 // are dropped: annotations are types only and `cast(...)` is `as` in TS.
 import { getattr } from "../../pyrt/index.ts";
 import type { Path } from "../../pyrt/index.ts";
-import { HeadChunk, NhedChunk, NnhdChunk } from "../binary/item_chunks.ts";
+import { NhedChunk, NnhdChunk } from "../binary/item_chunks.ts";
 import { DwgaChunk } from "../binary/misc_chunks.ts";
-import { F8Chunk, U1Chunk, U4Chunk, Utf8Chunk } from "../binary/scalar_chunks.ts";
+import { Utf8Chunk } from "../binary/scalar_chunks.ts";
 import type { Chunk, ListChunk } from "../binary/chunk.ts";
 import { ChunkNotFoundError, filter_by_type, find_by_list_type, find_by_type } from "../binary/utils.ts";
 import { GpuAccelType } from "../enums/index.ts";
@@ -76,23 +76,23 @@ export const parse_project = _suppress_materialization()(function parse_project(
   const root_chunks = rifx.chunks;
 
   const root_folder_chunk = find_by_list_type(root_chunks, "Fold");
-  const head_chunk = find_by_type(root_chunks, "head") as HeadChunk;
-  const nhed_chunk = find_by_type(root_chunks, "nhed") as NhedChunk;
-  const acer_chunk = find_by_type(root_chunks, "acer") as U1Chunk;
-  const adfr_chunk = find_by_type(root_chunks, "adfr") as F8Chunk;
+  const head_chunk = find_by_type(root_chunks, "head");
+  const nhed_chunk = find_by_type(root_chunks, "nhed");
+  const acer_chunk = find_by_type(root_chunks, "acer");
+  const adfr_chunk = find_by_type(root_chunks, "adfr");
   // Older projects (AE CC 12.0) have none of nnhd, dwga and gpuG: their
   // settings come from nhed, and the others take their defaults. The
   // stand-ins are synthetic, so the file is written back without them.
   let nnhd_chunk: NnhdChunk;
   try {
-    nnhd_chunk = find_by_type(root_chunks, "nnhd") as NnhdChunk;
+    nnhd_chunk = find_by_type(root_chunks, "nnhd");
   } catch (e) {
     if (!(e instanceof ChunkNotFoundError)) throw e;
     nnhd_chunk = _nnhd_from_nhed(nhed_chunk);
   }
   let dwga_chunk: DwgaChunk;
   try {
-    dwga_chunk = find_by_type(root_chunks, "dwga") as DwgaChunk;
+    dwga_chunk = find_by_type(root_chunks, "dwga");
   } catch (e) {
     if (!(e instanceof ChunkNotFoundError)) throw e;
     dwga_chunk = new DwgaChunk({ synthetic: true });
@@ -100,7 +100,7 @@ export const parse_project = _suppress_materialization()(function parse_project(
   let gpug_utf8: Utf8Chunk;
   try {
     const gpug_chunk = find_by_list_type(root_chunks, "gpuG");
-    gpug_utf8 = find_by_type(gpug_chunk.chunks, "Utf8") as Utf8Chunk;
+    gpug_utf8 = find_by_type(gpug_chunk.chunks, "Utf8");
   } catch (e) {
     if (!(e instanceof ChunkNotFoundError)) throw e;
     // AE 2026 reports SOFTWARE for a CC 12.0 project.
@@ -114,14 +114,14 @@ export const parse_project = _suppress_materialization()(function parse_project(
   let exen_utf8: Utf8Chunk | null = null;
   try {
     const exen_chunk = find_by_list_type(root_chunks, "ExEn");
-    exen_utf8 = find_by_type(exen_chunk.chunks, "Utf8") as Utf8Chunk;
+    exen_utf8 = find_by_type(exen_chunk.chunks, "Utf8");
   } catch (e) {
     if (!(e instanceof ChunkNotFoundError)) throw e;
   }
 
   // CMS settings JSON
   let cms_utf8: Utf8Chunk | null = null;
-  for (const c of filter_by_type(root_chunks, "Utf8") as Utf8Chunk[]) {
+  for (const c of filter_by_type(root_chunks, "Utf8")) {
     const content = c.value;
     // The color-management settings JSON is fragmented across AE versions:
     // some files store `{"colorManagementSystem":..,"ocioConfigurationFile":..}`,
@@ -176,7 +176,7 @@ export const parse_project = _suppress_materialization()(function parse_project(
   project._render_queue = parse_render_queue(root_chunks, project);
 
   try {
-    const fcid_chunk = find_by_type(root_chunks, "fcid") as U4Chunk;
+    const fcid_chunk = find_by_type(root_chunks, "fcid");
     // `fcid` can name an item that no longer exists (After Effects leaves
     // the id behind when the active item is deleted outside its own
     // bookkeeping, and opens such a file with nothing selected). Treat a

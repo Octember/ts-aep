@@ -1355,7 +1355,7 @@ export class Layer extends PropertyGroup {
     const cloned_list = cloned_block[0] as ListChunk;
 
     // Patch layer ID
-    const cloned_ldta = find_by_type(cloned_list.chunks, "ldta") as LdtaChunk;
+    const cloned_ldta = find_by_type(cloned_list.chunks, "ldta");
     // Layer IDs are unique project-wide, not per-comp.
     cloned_ldta.layer_id = into_comp._project._allocate_id();
     // AE points every effect's hidden -0000 param tdpi at the owning

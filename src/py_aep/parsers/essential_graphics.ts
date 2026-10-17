@@ -40,9 +40,9 @@ export function _parse_source_property_path(raw: string): SourcePropertyRef[] {
  */
 export function _parse_controller(cctl_chunk: ListChunk): EssentialGraphicsController {
   const cps2 = find_by_list_type(cctl_chunk.chunks, "CpS2");
-  const name_utf8 = at(filter_by_type(cps2.chunks, "Utf8"), 0) as Utf8Chunk;
+  const name_utf8 = at(filter_by_type(cps2.chunks, "Utf8"), 0);
 
-  const ctyp = find_by_type(cctl_chunk.chunks, "CTyp") as U4Chunk;
+  const ctyp = find_by_type(cctl_chunk.chunks, "CTyp");
 
   const uuid_chunks = filter_by_type(cctl_chunk.chunks, "Utf8");
   const uuid = uuid_chunks?.length > 0 ? (uuid_chunks[0] as Utf8Chunk).value : "";
@@ -123,7 +123,7 @@ export const parse_essential_graphics = _suppress_materialization().decorate(
 
     // Template name from the first LIST:CpS2
     const cps2 = find_by_list_type(cif_chunks, "CpS2");
-    const template_name_utf8 = at(filter_by_type(cps2.chunks, "Utf8"), 0) as Utf8Chunk;
+    const template_name_utf8 = at(filter_by_type(cps2.chunks, "Utf8"), 0);
 
     const cctl_chunks = filter_by_list_type(cif_chunks, "CCtl");
     const controllers = cctl_chunks.map((cctl) => _parse_controller(cctl));

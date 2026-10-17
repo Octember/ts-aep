@@ -1637,10 +1637,10 @@ export class OutputModule {
     const [roou_idx, end_idx] = this._block_span(lom_chunks);
     lom_chunks.splice(roou_idx, end_idx - roou_idx);
 
-    const om_ldat = find_by_type(rqi._list_chunk.chunks, "ldat") as LdatChunk;
+    const om_ldat = find_by_type(rqi._list_chunk.chunks, "ldat");
     om_ldat.items.splice(om_idx, 1);
 
-    const om_lhd3 = find_by_type(rqi._list_chunk.chunks, "lhd3") as Lhd3Chunk;
+    const om_lhd3 = find_by_type(rqi._list_chunk.chunks, "lhd3");
     set_lhd3_count(om_lhd3, om_lhd3.count - 1, LHD3_BLOCK_SINGLE);
 
     rqi._output_modules.splice(om_idx, 1);

@@ -5,7 +5,7 @@ import { _DEFAULT_INFLUENCE, NORMALIZED_ARC_ACCURACY, ArcMetric, _tangents_are_z
 import { Chunk, ContainerChunk, ListChunk } from "../../binary/chunk.ts";
 import { layer_timebase } from "../../binary/composition_chunks.ts";
 import { LHD3_BLOCK_KEYFRAMES, KfPosition, LdatItemType, ShapePoint, set_lhd3_count, LdatChunk, LdatItem, Lhd3Chunk } from "../../binary/ldat_chunks.ts";
-import { EnumPardChunk, ShphChunk } from "../../binary/misc_chunks.ts";
+import { EnumPardChunk } from "../../binary/misc_chunks.ts";
 import { ITEM_SIZE_BY_TYPE, build_keyframe_list, build_kf_data, build_ldat_item, build_parallel_ldat_item, build_shap } from "../../binary/mutations.ts";
 import { TDSN_SENTINEL, CdatChunk, CurvesArbpChunk, Tdb4Chunk, TdmnChunk, TdsbChunk, TdsnChunk, TdumChunk, VfdnChunk, tdb4_apply_animated_template, tdb4_apply_static_template, tdb4_clear_keyframe_record } from "../../binary/property_chunks.ts";
 import { S4Chunk, Utf8Chunk, U4Chunk } from "../../binary/scalar_chunks.ts";
@@ -3200,8 +3200,8 @@ export class Property extends PropertyBase {
       }
       return [lhd3, ldat];
     }
-    const lhd3 = find_by_type(inner.chunks, "lhd3") as Lhd3Chunk;
-    const ldat = find_by_type(inner.chunks, "ldat") as LdatChunk;
+    const lhd3 = find_by_type(inner.chunks, "lhd3");
+    const ldat = find_by_type(inner.chunks, "ldat");
     return [lhd3, ldat];
   }
 
@@ -3793,7 +3793,7 @@ export class Property extends PropertyBase {
     if (src != null) {
       // Carry over the source header's unknown flag bits; build_shap
       // only knows the open/closed bit.
-      const new_shph = find_by_type(shap.chunks, "shph") as ShphChunk;
+      const new_shph = find_by_type(shap.chunks, "shph");
       new_shph._flags = src._flags;
       new_shph.open = !shape.closed;
     }

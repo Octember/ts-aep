@@ -758,7 +758,7 @@ export class Project {
     if (this._active_item !== removed) return;
     this._active_item = null;
     try {
-      const fcid = find_by_type(this._root_chunks, "fcid") as U4Chunk;
+      const fcid = find_by_type(this._root_chunks, "fcid");
       fcid.value = 0;
     } catch (e) {
       if (!(e instanceof ChunkNotFoundError)) throw e;
@@ -871,7 +871,7 @@ export class Project {
       // whose ICC profile id `cpid` holds (all 0xFF: None).
       const profile_id = this._cpid.data;
       const cppl = find_by_list_type(this._root_chunks, "CPPl");
-      for (const pprf of filter_by_type(cppl.chunks, "pprf") as Chunk[] as { data: Uint8Array }[]) {
+      for (const pprf of filter_by_type(cppl.chunks, "pprf")) {
         if (bytes_eq(icc_profile_id(pprf.data), profile_id)) {
           return icc_profile_description(pprf.data) || "None";
         }
@@ -907,7 +907,7 @@ export class Project {
   }
 
   get _cpid(): CpidChunk {
-    return find_by_type(this._root_chunks, "cpid") as CpidChunk;
+    return find_by_type(this._root_chunks, "cpid");
   }
 
   /** Whether the project is for After Effects on Windows (`_platform`). */
@@ -2267,7 +2267,7 @@ export class Project {
     let name: string;
     try {
       const sfnm = find_by_list_type(this._rifx.chunks, "sfnm");
-      name = (find_by_type(sfnm.chunks, "Utf8") as Utf8Chunk).value;
+      name = find_by_type(sfnm.chunks, "Utf8").value;
     } catch (e) {
       if (!(e instanceof ChunkNotFoundError)) throw e;
       return "Solids";
@@ -2278,7 +2278,7 @@ export class Project {
   get _sfid(): U4LeChunk | null {
     try {
       const sfnm = find_by_list_type(this._rifx.chunks, "sfnm");
-      return find_by_type(sfnm.chunks, "sfid") as U4LeChunk;
+      return find_by_type(sfnm.chunks, "sfid");
     } catch (e) {
       if (!(e instanceof ChunkNotFoundError)) throw e;
       return null;

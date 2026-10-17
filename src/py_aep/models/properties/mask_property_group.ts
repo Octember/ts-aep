@@ -339,7 +339,7 @@ export class MaskPropertyGroup extends PropertyGroup {
       this._properties.splice(0, 0, mask_path);
     }
     const tdbs = find_by_list_type(oms.chunks, "tdbs");
-    this._mask_shape_tdsb = find_by_type(tdbs.chunks, "tdsb") as TdsbChunk;
+    this._mask_shape_tdsb = find_by_type(tdbs.chunks, "tdsb");
   }
 }
 

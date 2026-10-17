@@ -28,7 +28,7 @@ export const _XML_FORMAT_CODES: ReadonlySet<string> = new Set([".AVI", "H264", "
 export function parse_format_options(chunks: Chunk[]): FormatOptions | null {
   let ropt_chunk: RoptChunk;
   try {
-    ropt_chunk = find_by_type(chunks, "Ropt") as RoptChunk;
+    ropt_chunk = find_by_type(chunks, "Ropt");
   } catch (e) {
     if (!(e instanceof ChunkNotFoundError)) throw e;
     return null;
@@ -54,7 +54,7 @@ export function parse_format_options(chunks: Chunk[]): FormatOptions | null {
   if (format_code === "png!") {
     let hdr10_utf8: Utf8Chunk | null;
     try {
-      hdr10_utf8 = find_by_type(chunks, "Utf8") as Utf8Chunk;
+      hdr10_utf8 = find_by_type(chunks, "Utf8");
     } catch (e) {
       if (!(e instanceof ChunkNotFoundError)) throw e;
       hdr10_utf8 = null;
