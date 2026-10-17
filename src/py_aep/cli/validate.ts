@@ -490,10 +490,10 @@ export function _compare_children_by_match_name(
     const idx = (match_name_idx.get(exp_match_name) ?? 0);
     let parsed_prop: Dict;
     if (idx < candidates.length) {
-      parsed_prop = candidates![idx];
+      parsed_prop = candidates[idx];
       match_name_idx.set(exp_match_name, idx + 1);
     } else {
-      parsed_prop = candidates!.at(-1)!;
+      parsed_prop = candidates[candidates.length - 1];
     }
 
     const has_child_properties = exp_prop.has("properties");

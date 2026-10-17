@@ -105,7 +105,7 @@ export class PathNode {
 export function _effect_param_index(layer: Layer, effect_mn: string, param_mn: string): number | null {
   const defs = layer.containing_comp._project._effect_param_defs.get(effect_mn) ?? null;
   if (defs == null || defs.size === 0) return null;
-  const keys = [...defs!.keys()];
+  const keys = [...defs.keys()];
   if (!keys.includes(param_mn)) return null;
   return 1 + keys.indexOf(param_mn);
 }

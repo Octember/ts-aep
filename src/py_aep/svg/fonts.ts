@@ -416,8 +416,8 @@ export function resolve_font(
       continue;
     }
     const styles = _index.get(name) ?? null;
-    if (styles?.size! > 0) {
-      return _pick(styles!, bold, italic);
+    if (styles != null && styles.size > 0) {
+      return _pick(styles, bold, italic);
     }
     if (generic == null && _GENERIC_FALLBACKS.has(name)) {
       generic = name;
@@ -427,8 +427,8 @@ export function resolve_font(
   // requested generic, or sans-serif for an unknown family).
   for (const candidate of (_GENERIC_FALLBACKS.get(generic || "sans-serif") ?? ([] satisfies readonly string[]))) {
     const styles = _index.get(candidate) ?? null;
-    if (styles?.size! > 0) {
-      return _pick(styles!, bold, italic);
+    if (styles != null && styles.size > 0) {
+      return _pick(styles, bold, italic);
     }
   }
   return null;

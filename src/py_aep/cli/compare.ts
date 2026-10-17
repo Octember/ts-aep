@@ -586,18 +586,18 @@ export function print_results(
   print(`${"=".repeat(80)}\n`);
 
   const has_any =
-    differences?.length > 0 || only_in_file1?.length > 0 || only_in_file2?.length > 0 || structural_diffs?.length! > 0;
+    differences?.length > 0 || only_in_file1?.length > 0 || only_in_file2?.length > 0 || structural_diffs != null && structural_diffs.length > 0;
   if (!has_any) {
     print("No differences found!");
     return;
   }
 
   // Print structural differences
-  if (structural_diffs?.length! > 0) {
+  if (structural_diffs != null && structural_diffs.length > 0) {
     print(`\n${"─".repeat(40)}`);
-    print(`Structural differences (${structural_diffs!.length}):`);
+    print(`Structural differences (${structural_diffs.length}):`);
     print(`${"─".repeat(40)}`);
-    for (const sd of structural_diffs!) {
+    for (const sd of structural_diffs) {
       if (sd.count1 === -1) {
         print(`\n[${sd.path}] type mismatch: ${sd.children1[0]} vs ${sd.children2[0]}`);
       } else {
@@ -681,8 +681,8 @@ export function print_results(
   const total_byte_diffs = sum(differences.map((d) => d.byte_diffs.length));
   print(`\n${"=".repeat(80)}`);
   print("Summary:");
-  if (structural_diffs?.length! > 0) {
-    print(`  Structural differences: ${structural_diffs!.length}`);
+  if (structural_diffs != null && structural_diffs.length > 0) {
+    print(`  Structural differences: ${structural_diffs.length}`);
   }
   print(`  Chunks with differences: ${differences.length}`);
   print(`  Total byte differences: ${total_byte_diffs}`);
@@ -756,10 +756,10 @@ export function print_multi_results(
         );
 
         // Context display
-        if (context > 0 && all_data?.length! > 0) {
+        if (context > 0 && all_data != null && all_data.length > 0) {
           for (let i = 0, n = files.length; i < n; i++) {
             const label = i === 0 ? "ref" : `[${i}]`;
-            const data = all_data![i].get(chunk_diff.path) ?? b("");
+            const data = all_data[i].get(chunk_diff.path) ?? b("");
             if (!data?.length) continue;
             print(_format_context_line(label, data, diff.offset, context));
           }

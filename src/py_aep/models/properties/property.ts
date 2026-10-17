@@ -35,7 +35,7 @@ import { PropertyBase } from "./property_base.ts";
 import { Shape } from "./shape.ts";
 import type { PropertyGroup } from "./property_group.ts";
 import { type MaskPropertyGroup } from "./mask_property_group.ts";
-import { deferred, deepcopy, getitem, isclose, py_eq, sorted, warn, int, round, floordiv, TypeError_, ValueError, IndexError, AttributeError, NotImplementedError, py_assert, repr, hasattr, getattr, min, max, range, zip, float, lshift, rshift, and, or, b, descriptor, list_mul, type_name, type ClassAttributes } from "../../../pyrt/index.ts";
+import { deferred, deepcopy, getitem, isclose, py_eq, sorted, warn, int, round, floordiv, TypeError_, ValueError, IndexError, AttributeError, NotImplementedError, py_assert, repr, hasattr, getattr, min, max, range, zip, float, lshift, rshift, and, or, b, descriptor, list_mul, type_name, type ClassAttributes, py_or } from "../../../pyrt/index.ts";
 
 const _property_group = deferred<typeof import("./property_group.ts")>("py_aep/models/properties/property_group");
 import { AVItem } from "../items/av_item.ts";
@@ -349,7 +349,7 @@ export class Property<V extends PropertyValue = any> extends PropertyBase {
   }
 
   set name(value: string) {
-    Object.getOwnPropertyDescriptor(PropertyBase.prototype, "name")!.set!.call(this, value);
+    Reflect.set(PropertyBase.prototype, "name", value, this);
   }
 
   /**
@@ -2229,8 +2229,8 @@ export class Property<V extends PropertyValue = any> extends PropertyBase {
     const keyframes = [...this.keyframes];
     const times = keyframes.map((keyframe) => keyframe.time);
     const values = keyframes.map((keyframe) => keyframe.value as number[]);
-    const in_tangents = keyframes.map((keyframe) => keyframe.in_spatial_tangent?.length! > 0 ? keyframe.in_spatial_tangent! : []);
-    const out_tangents = keyframes.map((keyframe) => keyframe.out_spatial_tangent?.length! > 0 ? keyframe.out_spatial_tangent! : []);
+    const in_tangents = keyframes.map((keyframe) => py_or(keyframe.in_spatial_tangent, []));
+    const out_tangents = keyframes.map((keyframe) => py_or(keyframe.out_spatial_tangent, []));
     const interpolation = keyframes.map(
       (keyframe) => [keyframe.in_interpolation_type, keyframe.out_interpolation_type] as const,
     );
@@ -3528,8 +3528,8 @@ export class Property<V extends PropertyValue = any> extends PropertyBase {
     const v1 = next_kf._stored_value;
     if (!Array.isArray(v0) || !Array.isArray(v1)) return 0.0;
     const ndim = v0.length;
-    const out_tangent = prev_kf.out_spatial_tangent?.length! > 0 ? prev_kf.out_spatial_tangent! : list_mul([0.0], ndim);
-    const in_tangent = next_kf.in_spatial_tangent?.length! > 0 ? next_kf.in_spatial_tangent! : list_mul([0.0], ndim);
+    const out_tangent = py_or(prev_kf.out_spatial_tangent, list_mul([0.0], ndim));
+    const in_tangent = py_or(next_kf.in_spatial_tangent, list_mul([0.0], ndim));
     return motion_path_length(v0, v1, out_tangent, in_tangent, this._arc_metric);
   }
 
@@ -3564,8 +3564,8 @@ export class Property<V extends PropertyValue = any> extends PropertyBase {
     const v1 = next_kf._stored_value;
     if (!Array.isArray(v0) || !Array.isArray(v1)) return;
     const ndim = v0.length;
-    const out_tangent = prev_kf.out_spatial_tangent?.length! > 0 ? prev_kf.out_spatial_tangent! : list_mul([0.0], ndim);
-    const in_tangent = next_kf.in_spatial_tangent?.length! > 0 ? next_kf.in_spatial_tangent! : list_mul([0.0], ndim);
+    const out_tangent = py_or(prev_kf.out_spatial_tangent, list_mul([0.0], ndim));
+    const in_tangent = py_or(next_kf.in_spatial_tangent, list_mul([0.0], ndim));
     if (_tangents_are_zero(out_tangent) && _tangents_are_zero(in_tangent)) return;
     const [left_out, new_in, _split, new_out, right_in] = split_spatial_path(v0, v1, out_tangent, in_tangent, u);
     prev_kf.out_spatial_tangent = left_out;
@@ -3735,7 +3735,7 @@ export class Property<V extends PropertyValue = any> extends PropertyBase {
    * not). A mask path keeps the value's feather points.
    */
   _build_shap_chunk(shape: Shape): Chunk {
-    const points = (shape._points?.length! > 0 ? shape._points! : []).map((p: ShapePoint) => new ShapePoint({ x: p.x, y: p.y }));
+    const points = py_or(shape._points, []).map((p: ShapePoint) => new ShapePoint({ x: p.x, y: p.y }));
     const src = shape._shph;
     let bbox: number[];
     if (src != null) {
@@ -4535,7 +4535,7 @@ export class _EssentialOverrideProperty extends Property {
   }
 
   set name(value: string) {
-    Object.getOwnPropertyDescriptor(PropertyBase.prototype, "name")!.set!.call(this, value);
+    Reflect.set(PropertyBase.prototype, "name", value, this);
   }
 
 
@@ -4612,10 +4612,10 @@ Object.defineProperty(_EssentialOverrideProperty.prototype, "enabled", {
   enumerable: false,
   get(this: _EssentialOverrideProperty): boolean {
     const src = this._override_source();
-    return src != null ? src.enabled : Object.getOwnPropertyDescriptor(PropertyBase.prototype, "enabled")!.get!.call(this);
+    return src != null ? src.enabled : Reflect.get(PropertyBase.prototype, "enabled", this);
   },
   set(this: _EssentialOverrideProperty, value: boolean) {
-    Object.getOwnPropertyDescriptor(PropertyBase.prototype, "enabled")!.set!.call(this, value);
+    Reflect.set(PropertyBase.prototype, "enabled", value, this);
   },
 });
 

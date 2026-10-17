@@ -436,7 +436,7 @@ export class AVLayer extends Layer {
       return raw;
     }
     py_assert(this.source != null); // _should_clamp_times guards
-    const source_duration = this.source!.duration;
+    const source_duration = this.source.duration;
     const max_out = this.start_time + source_duration * this._stretch_factor;
     return min([raw, max_out]);
   }
@@ -902,7 +902,7 @@ export class AVLayer extends Layer {
       // layer offset in time; a single keyframe leaves the remap frozen.
       const source = this.source;
       py_assert(source != null); // can_set_time_remap_enabled guarantees it
-      const duration = source!.duration;
+      const duration = source.duration;
       prop._add_key(this.start_time, 0.0);
       prop._add_key(this.start_time + duration, duration);
     } else if (!value && currently_enabled) {
