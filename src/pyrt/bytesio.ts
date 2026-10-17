@@ -2,7 +2,6 @@
 // `io.StringIO` and a read-only `open(path, "rb")`.
 
 import { fs } from "./host.ts";
-import type { Dynamic } from "./builtins.ts";
 import { FileNotFoundError, OSError } from "./errors.ts";
 import type { PackValue, Struct, Unpacked } from "./struct.ts";
 
@@ -207,7 +206,7 @@ export class FileReader {
   constructor(readonly path: string) {
     try {
       this.fd = fs.openSync(path, "r");
-    } catch (e: Dynamic) {
+    } catch (e: any) {
       if (e?.code === "ENOENT") throw new FileNotFoundError(`[Errno 2] No such file or directory: '${path}'`);
       if (typeof e?.code === "string") throw new OSError(`${e.message}`);
       throw e;

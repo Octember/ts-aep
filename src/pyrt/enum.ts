@@ -22,7 +22,6 @@
 //   export type BlendingMode = EnumValue<typeof BlendingMode>;
 
 import { KeyError, ValueError } from "./errors.ts";
-import type { Dynamic } from "./builtins.ts";
 
 const AUTO: unique symbol = Symbol("auto");
 
@@ -56,10 +55,10 @@ export function py_enum<const M extends Record<string, unknown>, X extends Recor
   members: M,
   methods?: X & ThisType<Resolved<M> & EnumHelpers<Resolved<M>[keyof M]> & X>,
 ): Resolved<M> & EnumHelpers<Resolved<M>[keyof M]> & X;
-export function py_enum(name: string, members: Record<string, Dynamic>, methods?: Record<string, Dynamic>): Dynamic {
-  const by_name = new Map<string, Dynamic>();
-  const by_value = new Map<Dynamic, string>();
-  const canonical: Dynamic[] = [];
+export function py_enum(name: string, members: Record<string, any>, methods?: Record<string, any>): any {
+  const by_name = new Map<string, any>();
+  const by_value = new Map<any, string>();
+  const canonical: any[] = [];
   let last = 0;
   for (const [k, raw] of Object.entries(members)) {
     const v = (raw === AUTO ? last + 1 : raw);
@@ -73,7 +72,7 @@ export function py_enum(name: string, members: Record<string, Dynamic>, methods?
   const self = Object.fromEntries(by_name);
   const helpers = {
     __name__: name,
-    of(value: Dynamic): Dynamic {
+    of(value: any): any {
       if (by_value.has(value)) return value;
       if (typeof self._missing_ === "function") {
         const found = self._missing_(value);
@@ -81,7 +80,7 @@ export function py_enum(name: string, members: Record<string, Dynamic>, methods?
       }
       throw new ValueError(`${typeof value === "string" ? `'${value}'` : String(value)} is not a valid ${name}`);
     },
-    name_of(value: Dynamic): string {
+    name_of(value: any): string {
       const n = by_value.get(value);
       if (n === undefined) throw new ValueError(`${String(value)} is not a valid ${name}`);
       return n;
@@ -89,10 +88,10 @@ export function py_enum(name: string, members: Record<string, Dynamic>, methods?
     has(value: unknown): boolean {
       return by_value.has(value);
     },
-    members(): Dynamic[] {
+    members(): any[] {
       return [...canonical];
     },
-    by_name(n: string): Dynamic {
+    by_name(n: string): any {
       if (!by_name.has(n)) throw new KeyError(`'${n}'`);
       return by_name.get(n);
     },

@@ -5,7 +5,7 @@
   "fault_cases": 2640,
   "loose_types": {
     "0 pyrt": {
-      "any": 1,
+      "any": 98,
       "unknown": 87,
       "casts": 14
     },

@@ -3,14 +3,13 @@
 // `bigint` (Python ints are unbounded; a u64 does not fit a double).
 
 import { OverflowError, StructError } from "./errors.ts";
-import type { Dynamic } from "./builtins.ts";
 
 /** What `pack` accepts: ints, floats and bools (numeric codes), bytes (`c`, `s`, `p`). */
 export type PackValue = number | bigint | boolean | Uint8Array;
 
 type Code = { ch: string; count: number; size: number };
 
-// Type of the tuple `unpack(F, ...)` yields, for a literal format F (`Dynamic[]` otherwise).
+// Type of the tuple `unpack(F, ...)` yields, for a literal format F (`any[]` otherwise).
 type Digit = "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9";
 type DigitTuple = {
   "0": []; "1": [0]; "2": [0, 0]; "3": [0, 0, 0]; "4": [0, 0, 0, 0]; "5": [0, 0, 0, 0, 0];
@@ -41,11 +40,11 @@ type ParseCodes<S extends string> = S extends ""
             ? D extends ""
               ? [CodeValue[C], ...ParseCodes<R>]
               : [...Fill<CountOf<D>, CodeValue[C]>, ...ParseCodes<R>]
-            : Dynamic[]
-      : Dynamic[];
-/** The values `struct.unpack(F, data)` yields: a tuple for a literal format, `Dynamic[]` otherwise. */
+            : any[]
+      : any[];
+/** The values `struct.unpack(F, data)` yields: a tuple for a literal format, `any[]` otherwise. */
 export type Unpacked<F extends string> = string extends F
-  ? Dynamic[]
+  ? any[]
   : F extends `${"<" | ">" | "!" | "=" | "@"}${infer R}`
     ? ParseCodes<R>
     : ParseCodes<F>;
@@ -114,7 +113,7 @@ export class Struct<F extends string = string> {
   private packer: Packer | null | undefined;
 
   unpack(data: Uint8Array): Unpacked<F>;
-  unpack(data: Uint8Array): Dynamic[] {
+  unpack(data: Uint8Array): any[] {
     if (data.length !== this.size) {
       throw new StructError(`unpack requires a buffer of ${this.size} bytes`);
     }
@@ -122,7 +121,7 @@ export class Struct<F extends string = string> {
   }
 
   unpack_from(data: Uint8Array, offset?: number): Unpacked<F>;
-  unpack_from(data: Uint8Array, offset = 0): Dynamic[] {
+  unpack_from(data: Uint8Array, offset = 0): any[] {
     if (data.length - offset < this.size) {
       throw new StructError(`unpack_from requires a buffer of at least ${this.size + offset} bytes`);
     }
@@ -132,7 +131,7 @@ export class Struct<F extends string = string> {
     // `data.buffer` would make JSC materialize a backing store per call.
     const d = data;
     const le = this.le;
-    const out: Dynamic[] = [];
+    const out: any[] = [];
     let p = offset;
     for (const { ch, count } of this.codes) {
       if (ch === "x") {
@@ -475,13 +474,13 @@ export function pack(format: string, ...values: PackValue[]): Uint8Array {
 
 /** `struct.unpack(fmt, data)` */
 export function unpack<F extends string>(format: F, data: Uint8Array): Unpacked<F>;
-export function unpack(format: string, data: Uint8Array): Dynamic[] {
+export function unpack(format: string, data: Uint8Array): any[] {
   return get(format).unpack(data);
 }
 
 /** `struct.unpack_from(fmt, data, offset)` */
 export function unpack_from<F extends string>(format: F, data: Uint8Array, offset?: number): Unpacked<F>;
-export function unpack_from(format: string, data: Uint8Array, offset = 0): Dynamic[] {
+export function unpack_from(format: string, data: Uint8Array, offset = 0): any[] {
   return get(format).unpack_from(data, offset);
 }
 
@@ -507,7 +506,7 @@ export function calcsize(format: string): number {
 }
 
 /** `struct.iter_unpack(fmt, data)` */
-export function* iter_unpack(format: string, data: Uint8Array): Generator<Dynamic[]> {
+export function* iter_unpack(format: string, data: Uint8Array): Generator<any[]> {
   const s = get(format);
   if (data.length % s.size) throw new StructError(`iterative unpacking requires a buffer of a multiple of ${s.size} bytes`);
   for (let p = 0; p < data.length; p += s.size) yield s.unpack_from(data, p);

@@ -14,7 +14,6 @@
 // `object_setattr(this, name, value)`.
 
 import { AttributeError } from "./errors.ts";
-import type { Dynamic } from "./builtins.ts";
 
 /**
  * A descriptor on instances of `O` whose reads produce a `V`. `descriptor()`
@@ -127,7 +126,7 @@ export function py_object<T extends object>(self: T & PyHooks): T {
 const in_setattr = new WeakSet<object>();
 
 /** `object.__setattr__(self, name, value)` - bypasses `__setattr__`, still runs descriptors. */
-export function object_setattr(self: Dynamic, name: string, value: unknown): void {
+export function object_setattr(self: any, name: string, value: unknown): void {
   const target = self?.[TARGET] ?? self;
   in_setattr.add(target);
   try {
@@ -138,7 +137,7 @@ export function object_setattr(self: Dynamic, name: string, value: unknown): voi
 }
 
 /** `object.__getattribute__(self, name)` - no `__getattr__` fallback. */
-export function object_getattr(self: Dynamic, name: string): Dynamic {
+export function object_getattr(self: any, name: string): any {
   const target = self?.[TARGET] ?? self;
   if (!(name in target)) {
     throw new AttributeError(`'${target.constructor?.name}' object has no attribute '${name}'`);
@@ -153,10 +152,10 @@ export function object_getattr(self: Dynamic, name: string): Dynamic {
  * `deepcopy` copies it with the instance and `Object.assign` / spreads skip
  * it; writable and configurable so a class field named `__dict__` may alias it.
  */
-export function instance_dict(obj: Dynamic): Map<string, Dynamic> {
+export function instance_dict(obj: any): Map<string, any> {
   if (!Object.prototype.hasOwnProperty.call(obj, "__dict__")) {
     Object.defineProperty(obj, "__dict__", {
-      value: new Map<string, Dynamic>(),
+      value: new Map<string, any>(),
       enumerable: false,
       writable: true,
       configurable: true,

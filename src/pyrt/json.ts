@@ -8,7 +8,7 @@
 
 import { ValueError, TypeError_ } from "./errors.ts";
 import { float_repr, PyFloat, pyfloat } from "./num.ts";
-import { py_cmp, type_name, type Dynamic } from "./builtins.ts";
+import { py_cmp, type_name } from "./builtins.ts";
 import { decode } from "./codecs.ts";
 
 /** `json.JSONDecodeError` (a `ValueError`) with CPython's message and position fields. */
@@ -79,7 +79,7 @@ const ESC: Record<string, string> = { '"': '"', "\\": "\\", "/": "/", b: "\b", f
  * `json.loads(s)`; `s` may be `str` or `bytes` (encoding sniffed like CPython).
  * NOTE: bytes decode strictly; CPython's `surrogatepass` (encoded surrogates) is not modelled.
  */
-export function json_loads(s: string | Uint8Array, opts: LoadsOptions = {}): Dynamic {
+export function json_loads(s: string | Uint8Array, opts: LoadsOptions = {}): any {
   let text: string;
   if (s instanceof Uint8Array) {
     const enc = detect_encoding(s);

@@ -12,7 +12,6 @@
 // Construction is keyword-only: `new U1Chunk({ chunk_type: "efdc", value: 1 })`.
 
 import { TypeError_ } from "./errors.ts";
-import type { Dynamic } from "./builtins.ts";
 
 export type Factory<T = unknown> = { readonly __factory__: () => T };
 
@@ -26,7 +25,7 @@ const NOTHING: unique symbol = Symbol("NOTHING");
  * `attrs` field metadata: free-form per field and read back by key (a chunk
  * field's struct format, encoding, item class, ...), so its values are dynamic.
  */
-export type Metadata = Readonly<Record<string, Dynamic>>;
+export type Metadata = Readonly<Record<string, any>>;
 
 /** `attrs.field(...)` for a field holding a `V`: the default and converter produce a `V`. */
 export type FieldSpec<V = unknown> = {
@@ -140,7 +139,7 @@ function default_of(a: Attribute): unknown {
 }
 
 /** A generated `__init__`: sets every field and returns how many keys of `kw` it consumed. */
-type Kw = Record<string, Dynamic>;
+type Kw = Record<string, any>;
 type Init = (self: Kw, kw: Kw) => number;
 const INITS = new WeakMap<Function, Init | null>();
 
@@ -223,7 +222,7 @@ export class AttrsBase {
 }
 
 /** The generated `__eq__`: same class and equal `eq=True` fields. */
-export function attrs_eq(a: Dynamic, b: Dynamic, eq: (x: Dynamic, y: Dynamic) => boolean): boolean {
+export function attrs_eq(a: any, b: any, eq: (x: any, y: any) => boolean): boolean {
   if (a === b) return true;
   if (!a || !b || a.constructor !== b.constructor) return false;
   for (const f of fields(a.constructor)) {
