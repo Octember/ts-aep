@@ -33,14 +33,24 @@ import {
 
 const _chunk = deferred<typeof import("./chunk.ts")>("py_aep/binary/chunk");
 
+/** A field's value as unpacked/packed by `struct` (number, bigint, bytes, str, bool) or null; the
+ * concrete type varies per field format, so it is dynamic here. */
+export type FieldValue = any;
+
+/** `coerce=` callable of a `fmt_field` (e.g. `bool`, applied after unpack). */
+export type Coerce = (value: FieldValue) => FieldValue;
+
+/** Keyword arguments for a chunk/item constructor, keyed by init-parameter name. */
+export type InitKwargs = Record<string, FieldValue>;
+
 export type _StructInfo = [
   string,
   readonly Attribute[],
   Map<number, string>,
   number,
   Map<number, string>,
-  [string, Function, number] | null,
-  Map<number, (value: any) => any>,
+  [string, typeof FmtItem, number] | null,
+  Map<number, Coerce>,
   string[],
   boolean,
   number,
@@ -80,8 +90,8 @@ export function _decode_fixed_str(value: Uint8Array, encoding: string): string |
 /** attrs converter for a fixed-size string field: a value holding a NUL
  * is stored as those field bytes, so it reads back as a re-parse of the
  * written file would (the text up to the NUL). */
-export function _fixed_str_converter(encoding: string, size: number): (value: any) => any {
-  function convert(value: any): any {
+export function _fixed_str_converter(encoding: string, size: number): Coerce {
+  function convert(value: FieldValue): FieldValue {
     if (typeof value === "string" && value.includes("\x00")) {
       const raw = encode(value, encoding, "surrogateescape").slice(0, size);
       return _decode_fixed_str(bytes_.ljust(raw, size, 0), encoding);
@@ -93,12 +103,12 @@ export function _fixed_str_converter(encoding: string, size: number): (value: an
 }
 
 export type FmtFieldOptions = {
-  default?: unknown;
+  default?: FieldValue;
   repr?: boolean;
   encoding?: string | null;
   optional?: boolean;
   endian?: string | null;
-  coerce?: ((value: any) => any) | null;
+  coerce?: (Coerce) | null;
 };
 
 /**
@@ -143,8 +153,8 @@ export function fmt_field(fmt: string, kw: FmtFieldOptions = {}): FieldSpec {
       default_ = coerce != null ? coerce(0) : 0;
     }
   }
-  const md: Record<string, string | boolean | ((value: any) => any)> = { fmt };
-  let converter: ((value: any) => any) | null = null;
+  const md: Record<string, string | boolean | (Coerce)> = { fmt };
+  let converter: (Coerce) | null = null;
   if (encoding != null) {
     md["encoding"] = encoding;
     converter = _fixed_str_converter(encoding, struct.calcsize(">" + fmt));
@@ -166,8 +176,8 @@ export function fmt_field(fmt: string, kw: FmtFieldOptions = {}): FieldSpec {
  * @param item_cls - Class used to deserialize each item.
  * @param item_size - Fixed byte size of each serialized item.
  */
-export function items_field(item_cls: Function, item_size: number): FieldSpec {
-  const md: Record<string, any> = {
+export function items_field(item_cls: typeof FmtItem, item_size: number): FieldSpec {
+  const md: Record<string, FieldValue> = {
     items: true,
     item_cls,
     item_size,
@@ -267,9 +277,9 @@ export function _struct_info_uncached(cls: Function): _StructInfo | null {
   const data_fields: Attribute[] = [];
   const encodings = new Map<number, string>();
   const endians = new Map<number, string>();
-  const coerces = new Map<number, (value: any) => any>();
+  const coerces = new Map<number, Coerce>();
   let optional_start: number | null = null;
-  let items_info: [string, Function, number] | null = null;
+  let items_info: [string, typeof FmtItem, number] | null = null;
 
   for (const f of fields(cls)) {
     if (base_names.has(f.name)) continue;
@@ -363,14 +373,14 @@ export function _init_name(name: string): string {
  */
 export function _decode_fields(
   data_fields: readonly Attribute[],
-  values: any[],
+  values: FieldValue[],
   encodings: Map<number, string>,
-  coerces: Map<number, (value: any) => any>,
+  coerces: Map<number, Coerce>,
   init_names: readonly string[] | null = null,
-): Record<string, any> {
+): InitKwargs {
   // NOTE(port): kwargs dict is a plain object: keys are init-name identifiers
   // passed straight to `cls(**kw)`, never iterated for numeric-looking keys.
-  const kw: Record<string, any> = {};
+  const kw: InitKwargs = {};
   for (const [i, [fld, raw]] of zip([...data_fields], values).entries()) {
     let value = raw;
     const enc = encodings.get(i) ?? null;
@@ -390,13 +400,13 @@ export function _decode_fields(
  * `FmtItem.tobytes()`.
  */
 export function _encode_value(
-  value: any,
+  value: FieldValue,
   idx: number,
   encodings: Map<number, string>,
-  coerces: Map<number, (value: any) => any>,
+  coerces: Map<number, Coerce>,
   endian: string,
   fmt_str: string,
-): any {
+): FieldValue {
   const enc = encodings.get(idx) ?? null;
   if (enc != null) {
     const field_size = struct.calcsize(endian + fmt_str);
@@ -412,7 +422,7 @@ export function _encode_value(
 /** Base for item types whose fields are declared with `fmt_field`. */
 export class FmtItem extends AttrsBase {
   /** Construct an item from bytes using its `_struct_info` metadata. */
-  static frombytes<T extends FmtItem>(this: (new (kw: Record<string, any>) => T) & typeof FmtItem, data: Uint8Array): T {
+  static frombytes<T extends FmtItem>(this: (new (kw: InitKwargs) => T) & typeof FmtItem, data: Uint8Array): T {
     const info = _struct_info(this);
     if (info == null) throw new TypeError_(`${this.name} has no fmt_field metadata`);
     const [
@@ -427,7 +437,7 @@ export class FmtItem extends AttrsBase {
       simple,
       expected,
     ] = info;
-    let values: any[];
+    let values: FieldValue[];
     if (endians?.size > 0) {
       values = [];
       let pos = 0;
@@ -442,7 +452,7 @@ export class FmtItem extends AttrsBase {
     } else {
       values = struct.unpack(">" + fmt, data.slice(0, expected));
     }
-    let kw: Record<string, any>;
+    let kw: InitKwargs;
     if (simple) {
       // NOTE(port): kwargs keys are Python identifiers (never numeric-looking), so insertion order matches dict order.
       kw = {};
@@ -485,7 +495,7 @@ export class FmtItem extends AttrsBase {
       }
       return bytes_.join(parts);
     }
-    const values: any[] = [];
+    const values: FieldValue[] = [];
     for (const [i, f] of data_fields.entries()) {
       let value = getattr(this, f.name);
       value = _encode_value(value, i, encodings, coerces, ">", f.metadata["fmt"]);

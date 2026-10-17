@@ -34,7 +34,7 @@ import {
   type IO,
 } from "../../pyrt/index.ts";
 import { _HEADER_STRUCT, read_bytes, read_fmt, read_pad, write_bytes, write_fmt, write_pad } from "./bin_utils.ts";
-import { _decode_fields, _encode_value, _struct_info, type FmtItem } from "./fmt_field.ts";
+import { _decode_fields, _encode_value, _struct_info, type FieldValue, type FmtItem, type InitKwargs } from "./fmt_field.ts";
 import { CHUNK_TYPES, register } from "./registry.ts";
 import type { HeadChunk } from "./item_chunks.ts";
 
@@ -81,7 +81,7 @@ export class Chunk extends AttrsBase {
       // Fast path: no string encodings, endian overrides, optional
       // fields, or items. dict(zip()) replaces the _decode_fields
       // Python loop. Coerces (e.g. bool_field) are handled inline.
-      const kw: Record<string, unknown> = {};
+      const kw: InitKwargs = {};
       for (const [name, v] of zip(init_names, read_fmt(fmt, fp))) kw[name] = v;
       kw.chunk_type = chunk_type;
       for (const [i, crc] of coerces) {
@@ -98,7 +98,7 @@ export class Chunk extends AttrsBase {
       return new cls(kw);
     }
 
-    let values: unknown[];
+    let values: FieldValue[];
     let items_start: number;
     if (mixed_endian) {
       // Per-field read: each field may have its own endian prefix
@@ -143,7 +143,7 @@ export class Chunk extends AttrsBase {
       for (const f of data_fields.slice(optional_start)) {
         const f_size = struct.calcsize(">" + f.metadata["fmt"]);
         if (remaining >= f_size) {
-          values.push(...read_fmt((f.metadata["fmt"] as string), fp));
+          values.push(...read_fmt(f.metadata["fmt"], fp));
           remaining -= f_size;
         } else {
           break;
@@ -154,14 +154,14 @@ export class Chunk extends AttrsBase {
       items_start = size - remaining;
     }
 
-    const kw2: Record<string, unknown> = { chunk_type };
+    const kw2: InitKwargs = { chunk_type };
     Object.assign(kw2, _decode_fields(data_fields, values, encodings, coerces, init_names));
     let extra_trailing: Uint8Array | null = null;
     if (items_info != null) {
       const [items_name, item_cls, item_size] = items_info;
       const items_bytes = size - items_start;
       const count = floordiv(items_bytes, item_size);
-      const fmt_cls = item_cls as unknown as typeof FmtItem;
+      const fmt_cls = item_cls;
       const items: FmtItem[] = [];
       for (let n = 0; n < count; n++) {
         items.push(fmt_cls.frombytes(fp.read(item_size)));
@@ -214,7 +214,7 @@ export class Chunk extends AttrsBase {
         const f = data_fields[i];
         const fe = endians.get(i) ?? ">";
         let value = getattr(this, f.name);
-        value = _encode_value(value, i, encodings, coerces, fe, (f.metadata["fmt"] as string));
+        value = _encode_value(value, i, encodings, coerces, fe, f.metadata["fmt"]);
         written += write_bytes(fp, struct.pack(fe + f.metadata["fmt"], value));
       }
     } else {
@@ -223,11 +223,11 @@ export class Chunk extends AttrsBase {
       for (let i = 0; i < last_idx; i++) write_parts.push((data_fields[i].metadata["fmt"] as string));
       const w_fmt = write_parts.join("");
 
-      const write_values: unknown[] = [];
+      const write_values: FieldValue[] = [];
       for (let i = 0; i < last_idx; i++) {
         const f = data_fields[i];
         let value = getattr(this, f.name);
-        value = _encode_value(value, i, encodings, coerces, ">", (f.metadata["fmt"] as string));
+        value = _encode_value(value, i, encodings, coerces, ">", f.metadata["fmt"]);
         write_values.push(value);
       }
       written = write_parts.length ? write_fmt(fp, w_fmt, ...write_values) : 0;
@@ -310,7 +310,7 @@ export class ListChunk extends Chunk {
     }
     const parent_result = kwargs.parent_result ?? null;
     const child_ctx = new ReadContext(list_type, ctx.parent_list_type, parent_result);
-    if (defer_list_types?.size > 0 && defer_list_types!.has(list_type)) {
+    if (defer_list_types?.size! > 0 && defer_list_types!.has(list_type)) {
       const raw_body = fp.read(size - 4);
       return new DeferredListChunk({
         chunk_type,

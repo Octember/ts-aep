@@ -272,7 +272,7 @@ export const _FORMAT_ID_TO_OUTPUT_FORMAT: Map<string, number> = new Map<string, 
 ]);
 
 export const _OUTPUT_FORMAT_TO_FORMAT_ID: Map<number, string> = new Map<number, string>(
-  Array.from(_FORMAT_ID_TO_OUTPUT_FORMAT, ([k, v]) => [v, k] as [number, string]),
+  Array.from(_FORMAT_ID_TO_OUTPUT_FORMAT, ([k, v]): [number, string] => [v, k]),
 );
 
 /**

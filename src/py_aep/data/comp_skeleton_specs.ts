@@ -219,7 +219,7 @@ export function _view_layer(
   kw: { has_scale: boolean },
 ): SpecBody {
   const { has_scale } = kw;
-  const children: unknown[] = [_ANCHOR_POINT];
+  const children: SpecNode[] = [_ANCHOR_POINT];
   if (position != null) {
     children.push(_position_prop(...position));
   }
@@ -423,7 +423,7 @@ export const _MARKERS_LAYER: SpecBody = {
         "ADBE Material Options Group",
         {
           children: [
-            ...[
+            ...([
               _bool_prop("ADBE Casts Shadows", 0.0),
               _coefficient_prop("ADBE Light Transmission", 0.0),
               _bool_prop("ADBE Accepts Shadows", 1.0),
@@ -448,16 +448,16 @@ export const _MARKERS_LAYER: SpecBody = {
                   cdat: ["$SHADOW_ALPHA", ...Array(11).fill(0.0)],
                 },
               ],
-            ].map((node) => _gated(node as SpecNode, "markers material")),
+            ] satisfies SpecNode[]).map((node) => _gated(node, "markers material")),
             _bool_prop("ADBE Appears in Reflections", 1.0),
-            ...[
+            ...([
               ["ADBE Ambient Coefficient", 100.0],
               ["ADBE Diffuse Coefficient", 50.0],
               ["ADBE Specular Coefficient", 50.0],
               ["ADBE Shininess Coefficient", 5.0],
               ["ADBE Metal Coefficient", 100.0],
-            ].map(([match_name, value]) =>
-              _gated(_coefficient_prop(match_name as string, value as number), "markers material"),
+            ] satisfies [string, number][]).map(([match_name, value]) =>
+              _gated(_coefficient_prop(match_name, value), "markers material"),
             ),
             _coefficient_prop("ADBE Reflection Coefficient", 0.0),
             _coefficient_prop("ADBE Glossiness Coefficient", 100.0),

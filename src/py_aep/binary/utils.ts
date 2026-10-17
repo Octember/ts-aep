@@ -225,13 +225,16 @@ export function split_on_type(chunks: Chunk[], chunk_type: string): Chunk[][] {
   return groups;
 }
 
+/** Parsed `alas` JSON record (fullpath, target_is_folder, ...); shape set by After Effects. */
+export type AlasData = Map<string, any>;
+
 /**
  * Parse path information from an Als2/alas chunk structure.
  *
  * @returns Map of alas data (fullpath, target_is_folder, etc.), or an empty Map if not found
  *   or invalid.
  */
-export function parse_alas_data(parent_chunks: Chunk[]): Map<string, any> {
+export function parse_alas_data(parent_chunks: Chunk[]): AlasData {
   let als2_chunk: ListChunk;
   try {
     als2_chunk = find_by_list_type(parent_chunks, "Als2");

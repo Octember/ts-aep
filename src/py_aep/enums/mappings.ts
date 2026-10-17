@@ -148,7 +148,7 @@ export const _ICC_PROFILE_MAPPING: Map<string, string> = new Map<string, string>
  * `output_profile_id`) without needing the ICC file on disk.
  */
 export const _NAME_TO_ICC_PROFILE: Map<string, string> = new Map<string, string>(
-  Array.from(_ICC_PROFILE_MAPPING, ([uid, name]) => [name, uid] as [string, string]),
+  Array.from(_ICC_PROFILE_MAPPING, ([uid, name]): [string, string] => [name, uid]),
 );
 
 /**

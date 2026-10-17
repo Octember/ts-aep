@@ -10,7 +10,7 @@
  * GUID as zeros for dropdowns.
  */
 
-export const DROPDOWN_CONTROL: Record<string, string> = {
+export const DROPDOWN_CONTROL: { readonly name: string; readonly placeholder: string; readonly part: string } = {
   name: "Dropdown Menu Control",
   placeholder: "Pseudo/@@nZIhArh7Rs+5ywhdiZLBdA",
   part:

@@ -434,12 +434,12 @@ export function build_shap(
   });
   const inner = new ListChunk({ list_type: "list", chunks: [lhd3, ldat] });
   const omtn = new OmtnChunk({
-    tensions: (tensions?.length > 0 ? tensions : []).map((t) => new TensionItem({ value: t })),
+    tensions: (tensions?.length! > 0 ? tensions! : []).map((t) => new TensionItem({ value: t })),
   });
   const chunks: Chunk[] = [shph, inner, omtn];
-  if (feather_points?.length > 0) {
+  if (feather_points?.length! > 0) {
     // NOTE(port): FeatherPointItem has plain int/float fields and no converters, so a shallow copy equals attrs.evolve(fp).
-    chunks.push(new Fth5Chunk({ points: feather_points.map((fp) => copy(fp)) }));
+    chunks.push(new Fth5Chunk({ points: feather_points!.map((fp) => copy(fp)) }));
   }
   return new ListChunk({ list_type: "shap", chunks: chunks });
 }
@@ -790,7 +790,7 @@ export function build_pin_list(
     chunks: [
       sspc,
       new Utf8Chunk({ value: layer_name }),
-      ...(path_chunks?.length > 0 ? path_chunks : []),
+      ...(path_chunks?.length! > 0 ? path_chunks! : []),
       opti,
       PguiChunk.new_(),
       clrs,

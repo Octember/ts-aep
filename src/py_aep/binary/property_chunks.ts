@@ -692,7 +692,7 @@ export class CurvesRecordItem extends FmtItem {
   get points(): [number, number][] {
     const values = struct.unpack(`>${2 * _CURVES_SLOTS}h`, this._point_slots);
     const count = Math.min(this.count, _CURVES_SLOTS);
-    return Array.from({ length: count }, (_, i) => [values[2 * i], values[2 * i + 1]] as [number, number]);
+    return Array.from({ length: count }, (_, i): [number, number] => [values[2 * i], values[2 * i + 1]]);
   }
 }
 define(CurvesRecordItem, {
