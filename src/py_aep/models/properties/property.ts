@@ -11,7 +11,7 @@ import { EnumPardChunk } from "../../binary/misc_chunks.ts";
 import { ITEM_SIZE_BY_TYPE, build_keyframe_list, build_kf_data, build_ldat_item, build_parallel_ldat_item, build_shap } from "../../binary/mutations.ts";
 import { TDSN_SENTINEL, CdatChunk, CurvesArbpChunk, Tdb4Chunk, TdmnChunk, TdsbChunk, TdsnChunk, TdumChunk, VfdnChunk, tdb4_apply_animated_template, tdb4_apply_static_template, tdb4_clear_keyframe_record } from "../../binary/property_chunks.ts";
 import { S4Chunk, Utf8Chunk, U4Chunk } from "../../binary/scalar_chunks.ts";
-import { ChunkNotFoundError, find_by_list_type, find_by_type, index_by_identity } from "../../binary/utils.ts";
+import { ChunkNotFoundError, find_by_list_type_or_null, find_by_type, index_by_identity } from "../../binary/utils.ts";
 import { VF_AXIS_PREFIX } from "../../data/match_names.ts";
 import { UNITS_TEXT_MAP } from "../../data/units.ts";
 import { can_add_property } from "../../resolvers/motion_graphics.ts";
@@ -2005,11 +2005,8 @@ export class Property<V extends PropertyValue = any> extends PropertyBase {
       if (parade._tdgp != null) {
         const sspc = effect._backing_list_chunk(parade._tdgp);
         if (sspc.list_type === "sspc") {
-          try {
-            parts.push(find_by_list_type(sspc.chunks, "parT"));
-          } catch (e) {
-            if (!(e instanceof ChunkNotFoundError)) throw e;
-          }
+          const part = find_by_list_type_or_null(sspc.chunks, "parT");
+          if (part !== null) parts.push(part);
         }
       }
       // The project-level EfdG mirror, via the parade's cached
@@ -2023,11 +2020,8 @@ export class Property<V extends PropertyValue = any> extends PropertyBase {
         entry = null;
       }
       if (entry != null) {
-        try {
-          parts.push(find_by_list_type(entry[2].chunks, "parT"));
-        } catch (e) {
-          if (!(e instanceof ChunkNotFoundError)) throw e;
-        }
+        const part = find_by_list_type_or_null(entry[2].chunks, "parT");
+        if (part !== null) parts.push(part);
       }
     }
     return parts;
@@ -3099,12 +3093,7 @@ export class Property<V extends PropertyValue = any> extends PropertyBase {
 
   /** The `LIST:list` holding the keyframe header chunks, or None. */
   _keyframe_inner(): ListChunk | null {
-    try {
-      return find_by_list_type(this._tdbs.chunks, "list");
-    } catch (e) {
-      if (!(e instanceof ChunkNotFoundError)) throw e;
-      return null;
-    }
+    return find_by_list_type_or_null(this._tdbs.chunks, "list");
   }
 
   /**

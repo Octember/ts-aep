@@ -6,7 +6,7 @@ import { LRDR_CHILD_ORDER, build_rq_settings_list } from "../binary/mutations.ts
 import { ROUT_ITEMS_PER_RQ_ITEM, ArsiChunk, RoutChunk } from "../binary/render_chunks.ts";
 import type { RenderSettingsItem, RoutItem } from "../binary/render_chunks.ts";
 import type { Utf8Chunk } from "../binary/scalar_chunks.ts";
-import { ChunkNotFoundError, find_by_list_type, find_by_type, split_on_type } from "../binary/utils.ts";
+import { find_by_list_type_or_null, find_by_type, find_by_type_or_null, split_on_type } from "../binary/utils.ts";
 import type { CompItem } from "../models/items/composition.ts";
 import { RenderQueue } from "../models/renderqueue/render_queue.ts";
 import { RenderQueueItem } from "../models/renderqueue/render_queue_item.ts";
@@ -22,11 +22,8 @@ import { parse_output_module } from "./output_module.ts";
  *   queue items.
  */
 export function parse_render_queue(root_chunks: Chunk[], project: Project): RenderQueue {
-  let lrdr_chunk: ListChunk;
-  try {
-    lrdr_chunk = find_by_list_type(root_chunks, "LRdr");
-  } catch (e) {
-    if (!(e instanceof ChunkNotFoundError)) throw e;
+  const lrdr_chunk = find_by_list_type_or_null(root_chunks, "LRdr");
+  if (lrdr_chunk === null) {
     // Legacy/hand-built files may omit the render-queue scaffold entirely
     // (AE always writes an LRdr, but a minimal file need not). Synthesize an
     // empty queue and attach its LRdr to the root, marked synthetic so
@@ -46,11 +43,8 @@ export function parse_render_queue(root_chunks: Chunk[], project: Project): Rend
   const lrdr_child_chunks = lrdr_chunk.chunks;
   let synthesized = false;
 
-  let list_settings_chunk: ListChunk;
-  try {
-    list_settings_chunk = find_by_list_type(lrdr_child_chunks, "list");
-  } catch (e) {
-    if (!(e instanceof ChunkNotFoundError)) throw e;
+  let list_settings_chunk = find_by_list_type_or_null(lrdr_child_chunks, "list");
+  if (list_settings_chunk === null) {
     synthesized = true;
     // An LRdr present but lacking its settings 'list' is degenerate;
     // rebuild it so the parse still yields an empty queue instead of
@@ -64,40 +58,28 @@ export function parse_render_queue(root_chunks: Chunk[], project: Project): Rend
   // LSIf/ARsi). Substitute synthetic placeholders attached to the tree so
   // the parse still yields an (empty) render queue; write_aep() skips
   // synthetic chunks, so untouched files round-trip byte-identically.
-  let rout_chunk: RoutChunk;
-  try {
-    rout_chunk = find_by_type(lrdr_child_chunks, "Rout");
-  } catch (e) {
-    if (!(e instanceof ChunkNotFoundError)) throw e;
+  let rout_chunk = find_by_type_or_null(lrdr_child_chunks, "Rout");
+  if (rout_chunk === null) {
     synthesized = true;
     rout_chunk = new RoutChunk({ synthetic: true });
     lrdr_child_chunks.push(rout_chunk);
   }
 
-  let litm_chunk: ListChunk;
-  try {
-    litm_chunk = find_by_list_type(lrdr_child_chunks, "LItm");
-  } catch (e) {
-    if (!(e instanceof ChunkNotFoundError)) throw e;
+  let litm_chunk = find_by_list_type_or_null(lrdr_child_chunks, "LItm");
+  if (litm_chunk === null) {
     synthesized = true;
     litm_chunk = new ListChunk({ list_type: "LItm", synthetic: true });
     lrdr_child_chunks.push(litm_chunk);
   }
 
-  let lsif_chunk: ListChunk;
-  try {
-    lsif_chunk = find_by_list_type(lrdr_child_chunks, "LSIf");
-  } catch (e) {
-    if (!(e instanceof ChunkNotFoundError)) throw e;
+  let lsif_chunk = find_by_list_type_or_null(lrdr_child_chunks, "LSIf");
+  if (lsif_chunk === null) {
     synthesized = true;
     lsif_chunk = new ListChunk({ list_type: "LSIf", synthetic: true });
     lrdr_child_chunks.push(lsif_chunk);
   }
-  let arsi_chunk: ArsiChunk;
-  try {
-    arsi_chunk = find_by_type(lsif_chunk.chunks, "ARsi");
-  } catch (e) {
-    if (!(e instanceof ChunkNotFoundError)) throw e;
+  let arsi_chunk = find_by_type_or_null(lsif_chunk.chunks, "ARsi");
+  if (arsi_chunk === null) {
     arsi_chunk = new ArsiChunk({ synthetic: true });
     lsif_chunk.chunks.push(arsi_chunk);
   }
@@ -127,12 +109,12 @@ export function parse_render_queue(root_chunks: Chunk[], project: Project): Rend
     // untouched empty queue still round-trips byte-identically; the first
     // add() flips it to non-synthetic. (AE may instead write an empty ldat
     // with count==0; reuse it when present.)
-    try {
-      settings_ldat = find_by_type(list_settings_chunk.chunks, "ldat");
-    } catch (e) {
-      if (!(e instanceof ChunkNotFoundError)) throw e;
+    const existing = find_by_type_or_null(list_settings_chunk.chunks, "ldat");
+    if (existing === null) {
       settings_ldat = new LdatChunk({ chunk_type: "ldat", synthetic: true });
       list_settings_chunk.chunks.push(settings_ldat);
+    } else {
+      settings_ldat = existing;
     }
   } else {
     settings_ldat = find_by_type(list_settings_chunk.chunks, "ldat");

@@ -5,12 +5,12 @@ import { DeferredListChunk, ListChunk, type Chunk } from "../../binary/chunk.ts"
 import { _duration_units, _frame_units, build_cps2, build_item_view_chunks, build_layer_view_block, build_new_comp_item } from "../../binary/comp_skeleton.ts";
 import { WORK_AREA_TO_END, type CdtaChunk, frame_grid, layer_timebase, rescale_ticks } from "../../binary/composition_chunks.ts";
 import type { CmtaChunk, IdtaChunk } from "../../binary/item_chunks.ts";
-import { _LDTA_SOURCE_ID_END, _LDTA_SOURCE_ID_OFFSET, type LdtaChunk } from "../../binary/layer_chunks.ts";
+import { _LDTA_SOURCE_ID_END, _LDTA_SOURCE_ID_OFFSET } from "../../binary/layer_chunks.ts";
 import { _PRDA_VARIANTS, PguiChunk, type PrdaChunk, type PrinChunk } from "../../binary/misc_chunks.ts";
 import { build_checkbox_cctl, build_color_cctl, build_media_cctl, build_ovg2, build_slider_cctl, build_source_alternate_extras, build_text_cctl, clone_chunk_tree, collect_layer_ref_tdpi_ids, remap_layer_ref_tdpi, rewrite_owner_tdpi, strip_synthetic } from "../../binary/mutations.ts";
 import { TDSN_SENTINEL, CdatChunk, Tdb4Chunk, TdmnChunk, TdsbChunk, TdsnChunk } from "../../binary/property_chunks.ts";
 import { F8Chunk, S4Chunk, type U1Chunk, type U4Chunk, type U4LeChunk, type Utf8Chunk } from "../../binary/scalar_chunks.ts";
-import { block_slice, ChunkNotFoundError, filter_by_list_type, filter_by_type, find_by_list_type, find_by_type, find_by_type_or_null, index_by_identity, recursive_find } from "../../binary/utils.ts";
+import { block_slice, filter_by_list_type, filter_by_type, find_by_list_type, find_by_list_type_or_null, find_by_type, find_by_type_or_null, index_by_identity, recursive_find } from "../../binary/utils.ts";
 import { Label, LayerType, LineOrientation, ParametricMeshType, PREFType } from "../../enums/index.ts";
 import { parse_essential_graphics } from "../../parsers/essential_graphics.ts";
 import { CONTROLLER_CHECKBOX, CONTROLLER_COLOR, CONTROLLER_SLIDER, can_add_layer, font_caps_json, media_controller_path, property_controller_plan, type PathNode, type PropertyControllerPlan } from "../../resolvers/motion_graphics.ts";
@@ -431,13 +431,8 @@ export function _rewrite_eg_identity(
           chunk.data = bytes_.repeat(b("\x00"), chunk.data.length);
         }
       }
-      let cprp: ListChunk;
-      try {
-        cprp = find_by_list_type(cctl.chunks, "CPrp");
-      } catch (e) {
-        if (!(e instanceof ChunkNotFoundError)) throw e;
-        continue;
-      }
+      const cprp = find_by_list_type_or_null(cctl.chunks, "CPrp");
+      if (cprp === null) continue;
       for (const chunk of cprp.chunks) {
         if (chunk.chunk_type === "CCId") {
           const ccid = chunk as U4Chunk;
@@ -1179,11 +1174,8 @@ export class CompItem extends AVItem {
     const old_comp_id = this.id;
     const new_comp_id = project._allocate_id();
     // Pre-2020 files have no iide; the id then lives only in idta.
-    try {
-      find_by_type(cloned_item.chunks, "iide").value = new_comp_id;
-    } catch (e) {
-      if (!(e instanceof ChunkNotFoundError)) throw e;
-    }
+    const iide = find_by_type_or_null(cloned_item.chunks, "iide");
+    if (iide !== null) iide.value = new_comp_id;
     find_by_type(cloned_item.chunks, "idta").item_id = new_comp_id;
 
     // Fresh ids for every ldta - real layers AND viewer pseudo-layers,
@@ -1270,13 +1262,8 @@ export class CompItem extends AVItem {
             }
           }
         } else {
-          let ldta: LdtaChunk;
-          try {
-            ldta = find_by_type(lc.chunks, "ldta");
-          } catch (e) {
-            if (!(e instanceof ChunkNotFoundError)) throw e;
-            continue;
-          }
+          const ldta = find_by_type_or_null(lc.chunks, "ldta");
+          if (ldta === null) continue;
           if (ldta.source_id !== 0) {
             source_ids.add(ldta.source_id);
           }

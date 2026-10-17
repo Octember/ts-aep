@@ -14,7 +14,7 @@ import { HeadChunk, NhedChunk, NnhdChunk, TimeDisplayPrefItem } from "../binary/
 import { DwgaChunk } from "../binary/misc_chunks.ts";
 import { CpidChunk, FdtaChunk, SvapChunk, WsnmChunk, WsnsChunk } from "../binary/project_chunks.ts";
 import { F8Chunk, U1Chunk, U2Chunk, U4Chunk, U4LeChunk, Utf8Chunk } from "../binary/scalar_chunks.ts";
-import { PENDING_ASCENDCOUNT, ChunkNotFoundError, dump_alas, filter_by_type, find_by_list_type, find_by_type, index_by_identity, recursive_find, toggle_flag_chunk } from "../binary/utils.ts";
+import { dump_alas, filter_by_type, find_by_list_type, find_by_list_type_or_null, find_by_type, find_by_type_or_null, index_by_identity, PENDING_ASCENDCOUNT, recursive_find, toggle_flag_chunk } from "../binary/utils.ts";
 import type { RenderSettingsItem } from "../binary/render_chunks.ts";
 import { build_icc_envelope, build_ocio_display_envelope, envelope_profile_name } from "../color/envelope.ts";
 import { IccProfileLibrary, icc_profile_description, icc_profile_id } from "../color/icc.ts";
@@ -756,12 +756,8 @@ export class Project {
   _clear_active_item(removed: Item): void {
     if (this._active_item !== removed) return;
     this._active_item = null;
-    try {
-      const fcid = find_by_type(this._root_chunks, "fcid");
-      fcid.value = 0;
-    } catch (e) {
-      if (!(e instanceof ChunkNotFoundError)) throw e;
-    }
+    const fcid = find_by_type_or_null(this._root_chunks, "fcid");
+    if (fcid !== null) fcid.value = 0;
   }
 
   /**
@@ -2263,25 +2259,14 @@ export class Project {
    * when the project is created and uses the stored name from then on.
    */
   get _solids_folder_name(): string {
-    let name: string;
-    try {
-      const sfnm = find_by_list_type(this._rifx.chunks, "sfnm");
-      name = find_by_type(sfnm.chunks, "Utf8").value;
-    } catch (e) {
-      if (!(e instanceof ChunkNotFoundError)) throw e;
-      return "Solids";
-    }
-    return name || "Solids";
+    const sfnm = find_by_list_type_or_null(this._rifx.chunks, "sfnm");
+    const utf8 = sfnm === null ? null : find_by_type_or_null(sfnm.chunks, "Utf8");
+    return utf8?.value || "Solids";
   }
 
   get _sfid(): U4LeChunk | null {
-    try {
-      const sfnm = find_by_list_type(this._rifx.chunks, "sfnm");
-      return find_by_type(sfnm.chunks, "sfid");
-    } catch (e) {
-      if (!(e instanceof ChunkNotFoundError)) throw e;
-      return null;
-    }
+    const sfnm = find_by_list_type_or_null(this._rifx.chunks, "sfnm");
+    return sfnm === null ? null : find_by_type_or_null(sfnm.chunks, "sfid");
   }
 
   /** The item id of the Solids folder recorded in `sfid` (0 for none). */

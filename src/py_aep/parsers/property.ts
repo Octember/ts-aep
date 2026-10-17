@@ -5,7 +5,7 @@ import type { Chunk } from "../binary/chunk.ts";
 import type { MkifChunk } from "../binary/misc_chunks.ts";
 import type { TdmnChunk, TdsbChunk } from "../binary/property_chunks.ts";
 import type { Utf8Chunk } from "../binary/scalar_chunks.ts";
-import { ChunkNotFoundError, filter_by_list_type, filter_by_type, find_by_list_type, find_by_type, find_by_type_or_null } from "../binary/utils.ts";
+import { ChunkNotFoundError, filter_by_list_type, filter_by_type, find_by_list_type_or_null, find_by_type, find_by_type_or_null } from "../binary/utils.ts";
 import { VF_AXIS_PREFIX } from "../data/match_names.ts";
 import { _suppress_materialization } from "../models/descriptors.ts";
 import { MaskPropertyGroup } from "../models/properties/mask_property_group.ts";
@@ -487,12 +487,9 @@ export const _parse_mask_atom = _suppress_materialization().decorate(function _p
   const mask_shape_chunks = dict_get(chunks_by_mn, "ADBE Mask Shape", []);
   for (const chunk of mask_shape_chunks) {
     if (chunk instanceof ListChunk && chunk.list_type === "om-s") {
-      try {
-        const tdbs = find_by_list_type(chunk.chunks, "tdbs");
-        mask_shape_tdsb = find_by_type(tdbs.chunks, "tdsb");
-      } catch (e) {
-        if (!(e instanceof ChunkNotFoundError)) throw e;
-      }
+      const tdbs = find_by_list_type_or_null(chunk.chunks, "tdbs");
+      const tdsb = tdbs === null ? null : find_by_type_or_null(tdbs.chunks, "tdsb");
+      if (tdsb !== null) mask_shape_tdsb = tdsb;
       break;
     }
   }

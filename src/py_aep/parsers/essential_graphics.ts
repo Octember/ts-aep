@@ -1,6 +1,6 @@
 /** Parser for Essential Graphics panel data (LIST:CIF3 chunks). */
 
-import { ChunkNotFoundError, filter_by_list_type, filter_by_type, find_by_list_type, find_by_list_type_or_null, find_by_type } from "../binary/utils.ts";
+import { filter_by_list_type, filter_by_type, find_by_list_type, find_by_list_type_or_null, find_by_type } from "../binary/utils.ts";
 import type { Utf8Chunk } from "../binary/scalar_chunks.ts";
 import type { Chunk, ListChunk } from "../binary/chunk.ts";
 import { _suppress_materialization } from "../models/descriptors.ts";
@@ -105,13 +105,8 @@ export const parse_essential_graphics = _suppress_materialization().decorate(
   ): [Utf8Chunk, EssentialGraphicsController[]] | null {
     let cif: ListChunk | null = null;
     for (const list_type of ["CIF3", "CIF2", "CIFO"]) {
-      try {
-        cif = find_by_list_type(child_chunks, list_type);
-        break;
-      } catch (e) {
-        if (e instanceof ChunkNotFoundError) continue;
-        throw e;
-      }
+      cif = find_by_list_type_or_null(child_chunks, list_type);
+      if (cif !== null) break;
     }
     if (cif == null) return null;
 

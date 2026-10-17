@@ -6,7 +6,7 @@ import { OptiChunk, SspcChunk, TextOptiChunk, build_ai_document_opti_data, build
 import { EmpdChunk } from "../../binary/misc_chunks.ts";
 import { ColorProfileRecord, build_pin_list } from "../../binary/mutations.ts";
 import { Utf8Chunk, type U1Chunk } from "../../binary/scalar_chunks.ts";
-import { UNDEFINED_FRAME, ChunkNotFoundError, build_als2_list, build_stvc_list, filter_by_type, find_by_list_type, find_by_type, find_chunks_before, index_by_identity, parse_alas_data } from "../../binary/utils.ts";
+import { build_als2_list, build_stvc_list, ChunkNotFoundError, filter_by_type, find_by_list_type, find_by_list_type_or_null, find_by_type, find_chunks_before, index_by_identity, parse_alas_data, UNDEFINED_FRAME } from "../../binary/utils.ts";
 import type { Chunk, ListChunk } from "../../binary/chunk.ts";
 import { build_icc_envelope } from "../../color/envelope.ts";
 import { ColorProfileNotFoundError, default_icc_library, icc_profile_description, icc_profile_id } from "../../color/icc.ts";
@@ -772,14 +772,8 @@ export class FileSource extends FootageSource {
     const pin_chunks = _pin.chunks;
 
     // Derive file_names from StVc LIST
-    try {
-      const stvc_chunk = find_by_list_type(pin_chunks, "StVc");
-      const utf8_chunks = filter_by_type(stvc_chunk.chunks, "Utf8");
-      this._file_names = utf8_chunks.map((chunk) => chunk.value);
-    } catch (e) {
-      if (!(e instanceof ChunkNotFoundError)) throw e;
-      this._file_names = [];
-    }
+    const stvc_chunk = find_by_list_type_or_null(pin_chunks, "StVc");
+    this._file_names = stvc_chunk === null ? [] : filter_by_type(stvc_chunk.chunks, "Utf8").map((chunk) => chunk.value);
 
     // Derive file path and target_is_folder from Als2/alas JSON
     const alas_data = parse_alas_data(pin_chunks);

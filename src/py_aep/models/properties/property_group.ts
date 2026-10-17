@@ -35,7 +35,7 @@ import { Chunk, ListChunk, read_chunks } from "../../binary/chunk.ts";
 import { build_dropdown_control, build_expression_control, build_text_animator, build_text_selector, build_vector_element, clone_chunk_tree, rewrite_owner_tdpi, rewrite_time_base } from "../../binary/mutations.ts";
 import { TDSN_SENTINEL, TdmnChunk, TdsbChunk, TdsnChunk, TdumChunk, VfdnChunk, tdb4_apply_vf_axis_template } from "../../binary/property_chunks.ts";
 import type { Utf8Chunk } from "../../binary/scalar_chunks.ts";
-import { ChunkNotFoundError, find_by_list_type, index_by_identity } from "../../binary/utils.ts";
+import { find_by_list_type_or_null, index_by_identity } from "../../binary/utils.ts";
 import { DROPDOWN_CONTROL } from "../../data/dropdown_control.ts";
 import { read_design_axes } from "../../resolvers/font_axes.ts";
 import { resolve_font_exact } from "../../svg/fonts.ts";
@@ -143,12 +143,7 @@ export function _insert_before_group_end(tdgp: ListChunk, chunk: Chunk): void {
 
 export function _effect_tdgp(sspc: ListChunk): ListChunk | null {
   /** The instance `tdgp` (param container) inside an effect sspc. */
-  try {
-    return find_by_list_type(sspc.chunks, "tdgp");
-  } catch (e) {
-    if (e instanceof ChunkNotFoundError) return null;
-    throw e;
-  }
+  return find_by_list_type_or_null(sspc.chunks, "tdgp");
 }
 
 export function _set_effect_instance_name(sspc: ListChunk, name: string): void {

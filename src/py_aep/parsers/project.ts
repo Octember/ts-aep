@@ -6,7 +6,7 @@ import { NhedChunk, NnhdChunk } from "../binary/item_chunks.ts";
 import { DwgaChunk } from "../binary/misc_chunks.ts";
 import { Utf8Chunk } from "../binary/scalar_chunks.ts";
 import type { Chunk, ListChunk } from "../binary/chunk.ts";
-import { ChunkNotFoundError, filter_by_type, find_by_list_type, find_by_type } from "../binary/utils.ts";
+import { ChunkNotFoundError, filter_by_type, find_by_list_type, find_by_list_type_or_null, find_by_type, find_by_type_or_null } from "../binary/utils.ts";
 import { GpuAccelType } from "../enums/index.ts";
 import { _suppress_materialization } from "../models/descriptors.ts";
 import { Project } from "../models/project.ts";
@@ -83,20 +83,8 @@ export const parse_project = _suppress_materialization()(function parse_project(
   // Older projects (AE CC 12.0) have none of nnhd, dwga and gpuG: their
   // settings come from nhed, and the others take their defaults. The
   // stand-ins are synthetic, so the file is written back without them.
-  let nnhd_chunk: NnhdChunk;
-  try {
-    nnhd_chunk = find_by_type(root_chunks, "nnhd");
-  } catch (e) {
-    if (!(e instanceof ChunkNotFoundError)) throw e;
-    nnhd_chunk = _nnhd_from_nhed(nhed_chunk);
-  }
-  let dwga_chunk: DwgaChunk;
-  try {
-    dwga_chunk = find_by_type(root_chunks, "dwga");
-  } catch (e) {
-    if (!(e instanceof ChunkNotFoundError)) throw e;
-    dwga_chunk = new DwgaChunk({ synthetic: true });
-  }
+  const nnhd_chunk = find_by_type_or_null(root_chunks, "nnhd") ?? _nnhd_from_nhed(nhed_chunk);
+  const dwga_chunk = find_by_type_or_null(root_chunks, "dwga") ?? new DwgaChunk({ synthetic: true });
   let gpug_utf8: Utf8Chunk;
   try {
     const gpug_chunk = find_by_list_type(root_chunks, "gpuG");
@@ -111,13 +99,8 @@ export const parse_project = _suppress_materialization()(function parse_project(
   }
 
   // Expression engine: LIST:ExEn > Utf8
-  let exen_utf8: Utf8Chunk | null = null;
-  try {
-    const exen_chunk = find_by_list_type(root_chunks, "ExEn");
-    exen_utf8 = find_by_type(exen_chunk.chunks, "Utf8");
-  } catch (e) {
-    if (!(e instanceof ChunkNotFoundError)) throw e;
-  }
+  const exen_chunk = find_by_list_type_or_null(root_chunks, "ExEn");
+  const exen_utf8 = exen_chunk === null ? null : find_by_type_or_null(exen_chunk.chunks, "Utf8");
 
   // CMS settings JSON
   let cms_utf8: Utf8Chunk | null = null;
@@ -175,16 +158,14 @@ export const parse_project = _suppress_materialization()(function parse_project(
 
   project._render_queue = parse_render_queue(root_chunks, project);
 
-  try {
-    const fcid_chunk = find_by_type(root_chunks, "fcid");
+  const fcid_chunk = find_by_type_or_null(root_chunks, "fcid");
+  if (fcid_chunk !== null) {
     // `fcid` can name an item that no longer exists (After Effects leaves
     // the id behind when the active item is deleted outside its own
     // bookkeeping, and opens such a file with nothing selected). Treat a
     // dangling id as "no active item" rather than failing the parse.
     project._active_item = project.items.get(fcid_chunk.value) ?? null;
-  } catch (e) {
-    if (!(e instanceof ChunkNotFoundError)) throw e;
-  }
+    }
 
   return project;
 });

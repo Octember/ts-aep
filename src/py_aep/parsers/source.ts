@@ -1,5 +1,4 @@
-import type { U1Chunk } from "../binary/scalar_chunks.ts";
-import { ChunkNotFoundError, find_by_list_type, find_by_type, find_by_type_or_null } from "../binary/utils.ts";
+import { find_by_list_type_or_null, find_by_type, find_by_type_or_null } from "../binary/utils.ts";
 import { FileSource } from "../models/sources/file.ts";
 import { PlaceholderSource } from "../models/sources/placeholder.ts";
 import { SolidSource } from "../models/sources/solid.ts";
@@ -18,16 +17,8 @@ export function parse_source(
   const sspc_chunk = find_by_type(pin_child_chunks, "sspc");
   const opti_chunk = find_by_type(pin_child_chunks, "opti");
 
-  let clrs: ListChunk | null;
-  let linl: U1Chunk | null;
-  try {
-    clrs = find_by_list_type(pin_child_chunks, "CLRS");
-    linl = find_by_type_or_null(clrs.chunks, "linl");
-  } catch (e) {
-    if (!(e instanceof ChunkNotFoundError)) throw e;
-    clrs = null;
-    linl = null;
-  }
+  const clrs = find_by_list_type_or_null(pin_child_chunks, "CLRS");
+  const linl = clrs === null ? null : find_by_type_or_null(clrs.chunks, "linl");
 
   const asset_type = getattr(opti_chunk, "asset_type", "");
 

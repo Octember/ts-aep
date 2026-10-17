@@ -52,14 +52,13 @@ export function parse_orientation(
 
   // cdat is parameterized with is_le; .value returns the correctly-
   // endian doubles regardless of context.
-  try {
-    const cdat = find_by_type(tdbs_chunk.chunks, "cdat");
+  const cdat = find_by_type_or_null(tdbs_chunk.chunks, "cdat");
+  if (cdat === null) {
+    prop._cache_value(null);
+  } else {
     const values = [...cdat.values];
     while (values.length < 3) values.push(0.0);
     prop._cache_value(values.slice(0, 3));
-  } catch (e) {
-    if (!(e instanceof ChunkNotFoundError)) throw e;
-    prop._cache_value(null);
   }
 
   // Animated orientation keyframes store their 3-component values in
@@ -119,24 +118,12 @@ export function _parse_shape_shap(shap_chunk: ListChunk, layer: Layer | null, ma
 
   // An empty path (no vertices) carries only the lhd3 header, no ldat;
   // treat it as zero points so the value is an empty Shape, not None.
-  let points: Parameters<typeof Shape._from_binary>[0]["_points"];
-  try {
-    const ldat = find_by_type(list_chunk.chunks, "ldat");
-    points = ldat.items;
-  } catch (e) {
-    if (!(e instanceof ChunkNotFoundError)) throw e;
-    points = [];
-  }
+  const ldat = find_by_type_or_null(list_chunk.chunks, "ldat");
+  const points: Parameters<typeof Shape._from_binary>[0]["_points"] = ldat === null ? [] : ldat.items;
 
   // Extract variable-width mask feather data from fth5 chunk (if present).
-  let feather_points: FeatherPoint[];
-  try {
-    const fth5 = find_by_type(shap_chunk.chunks, "fth5");
-    feather_points = fth5.points.map((pt) => new FeatherPoint({ _fp: pt }));
-  } catch (e) {
-    if (!(e instanceof ChunkNotFoundError)) throw e;
-    feather_points = [];
-  }
+  const fth5 = find_by_type_or_null(shap_chunk.chunks, "fth5");
+  const feather_points = fth5 === null ? [] : fth5.points.map((pt) => new FeatherPoint({ _fp: pt }));
 
   const omtn = find_by_type_or_null(shap_chunk.chunks, "omtn");
 
