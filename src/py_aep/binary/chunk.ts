@@ -246,7 +246,7 @@ export class Chunk extends AttrsBase {
   static frombytes(data: Uint8Array, kwargs: Record<string, unknown> = {}): Chunk {
     /** Parse a chunk body from raw bytes. */
     const f = new BytesIO(data);
-    return (this as any).read(f, data.length, kwargs);
+    return this.read(f, data.length, kwargs);
   }
 
   tobytes(): Uint8Array {
@@ -663,7 +663,7 @@ export function _resolve_ldat_context(siblings: Chunk[], ctx: ReadContext): Reco
   if (!siblings?.length) return {};
   const lhd3_sibling: Chunk = siblings[0];
   if (!(lhd3_sibling instanceof Lhd3Chunk)) return {};
-  const lhd3: any = lhd3_sibling;
+  const lhd3 = lhd3_sibling;
   const result: Record<string, unknown> = {
     item_type: lhd3.item_type,
     item_size: lhd3.item_size,
@@ -699,7 +699,7 @@ export function _resolve_prda_context(siblings: Chunk[], ctx: ReadContext): Reco
   const PrinChunk = CHUNK_TYPES.get("prin")!;
   for (const sibling of siblings) {
     if (sibling instanceof PrinChunk) {
-      return { renderer_match_name: (sibling as any).match_name };
+      return { renderer_match_name: sibling.match_name };
     }
   }
   return {};
@@ -778,7 +778,7 @@ export function read_chunks(
   let pos = end - size;
   while (pos < end) {
     const [chunk_type, len_body] = read_header(fp);
-    const cls: any = dict_get(CHUNK_TYPES, chunk_type, Chunk);
+    const cls = dict_get(CHUNK_TYPES, chunk_type, Chunk);
 
     const resolver = _CONTEXT_RESOLVERS.get(chunk_type);
     const ctx_kw = resolver ? resolver(result, ctx) : {};

@@ -63,6 +63,7 @@ if (errors.length) {
 }
 
 const by_file = new Map<string, Set<string>>([["chunk.ts", new Set(["Chunk"])]]);
+const sorted_types = [...types].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
 for (const { cls, file } of types.values()) {
   if (!by_file.has(file)) by_file.set(file, new Set());
   by_file.get(file)!.add(cls);
@@ -78,7 +79,12 @@ const out = [
   "",
   "/** Registered chunk class by `chunk_type`. */",
   "export interface ChunkTypes {",
-  ...[...types].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)).map(([t, { cls }]) => `  ${key(t)}: ${cls};`),
+  ...sorted_types.map(([t, { cls }]) => `  ${key(t)}: ${cls};`),
+  "}",
+  "",
+  "/** Registered chunk class (the constructor) by `chunk_type`: what `CHUNK_TYPES.get` returns. */",
+  "export interface ChunkClasses {",
+  ...sorted_types.map(([t, { cls }]) => `  ${key(t)}: typeof ${cls};`),
   "}",
   "",
   "/** The class a chunk of type `K` is read as: its registered class, else `Chunk`. */",
