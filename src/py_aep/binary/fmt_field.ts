@@ -32,15 +32,23 @@ import { _struct_for } from "./bin_utils.ts";
 
 const _chunk = deferred<typeof import("./chunk.ts")>("py_aep/binary/chunk");
 
-/** A field's value as unpacked/packed by `struct` (number, bigint, bytes, str, bool) or null; the
- * concrete type varies per field format, so it is dynamic here. */
-export type FieldValue = any;
+/**
+ * The value of one `fmt_field`: what `struct` unpacks for its format (a
+ * number, a bigint for `q`/`Q`, a `Uint8Array` for `s`), the text an
+ * `encoding` decodes it to, a `coerce` result (`bool`), or null for an
+ * absent optional field. Which one depends on the format, known per field
+ * only at runtime.
+ */
+export type FieldValue = struct.PackValue | string | _NulTailStr | null;
 
 /** `coerce=` callable of a `fmt_field` (e.g. `bool`, applied after unpack). */
 export type Coerce = (value: FieldValue) => FieldValue;
 
-/** Keyword arguments for a chunk/item constructor, keyed by init-parameter name. */
-export type InitKwargs = Record<string, FieldValue>;
+/** Decoded field values (and `chunk_type`) keyed by init-parameter name. */
+export type FieldKwargs = Record<string, FieldValue>;
+
+/** Keyword arguments for a chunk/item constructor: its field values plus an `items_field` list. */
+export type InitKwargs = Record<string, FieldValue | FmtItem[]>;
 
 export type _StructInfo = [
   string,
@@ -86,11 +94,14 @@ export function _decode_fixed_str(value: Uint8Array, encoding: string): string |
   return tailed;
 }
 
+/** Runs on every assignment to a fixed-size string field: anything else assigned passes through. */
+export type FixedStrConverter = <T>(value: T) => T | string | _NulTailStr;
+
 /** attrs converter for a fixed-size string field: a value holding a NUL
  * is stored as those field bytes, so it reads back as a re-parse of the
  * written file would (the text up to the NUL). */
-export function _fixed_str_converter(encoding: string, size: number): Coerce {
-  function convert(value: FieldValue): FieldValue {
+export function _fixed_str_converter(encoding: string, size: number): FixedStrConverter {
+  function convert<T>(value: T): T | string | _NulTailStr {
     if (typeof value === "string" && value.includes("\x00")) {
       const raw = encode(value, encoding, "surrogateescape").slice(0, size);
       return _decode_fixed_str(bytes_.ljust(raw, size, 0), encoding);
@@ -101,13 +112,14 @@ export function _fixed_str_converter(encoding: string, size: number): Coerce {
   return convert;
 }
 
-export type FmtFieldOptions = {
-  default?: FieldValue;
+/** `fmt_field` options for a field holding a `V`. */
+export type FmtFieldOptions<V extends FieldValue = FieldValue> = {
+  default?: V;
   repr?: boolean;
   encoding?: string | null;
   optional?: boolean;
   endian?: string | null;
-  coerce?: (Coerce) | null;
+  coerce?: ((value: FieldValue) => V) | null;
 };
 
 /**
@@ -130,7 +142,8 @@ export type FmtFieldOptions = {
  * - `coerce`: Type callable applied after unpacking (e.g. `bool`). On write, the inverse is applied
  *     (e.g. `int` for `bool`).
  */
-export function fmt_field(fmt: string, kw: FmtFieldOptions = {}): FieldSpec<FieldValue> {
+export function fmt_field<V extends FieldValue>(fmt: string, kw?: FmtFieldOptions<V>): FieldSpec<V>;
+export function fmt_field(fmt: string, kw: FmtFieldOptions = {}) {
   const {
     default: default_given = _UNSET,
     repr = true,
@@ -152,8 +165,8 @@ export function fmt_field(fmt: string, kw: FmtFieldOptions = {}): FieldSpec<Fiel
       default_ = coerce != null ? coerce(0) : 0;
     }
   }
-  const md: Record<string, string | boolean | (Coerce)> = { fmt };
-  let converter: (Coerce) | null = null;
+  const md: Record<string, string | boolean | Coerce> = { fmt };
+  let converter: FixedStrConverter | null = null;
   if (encoding != null) {
     md["encoding"] = encoding;
     converter = _fixed_str_converter(encoding, struct.calcsize(">" + fmt));
@@ -175,8 +188,8 @@ export function fmt_field(fmt: string, kw: FmtFieldOptions = {}): FieldSpec<Fiel
  * @param item_cls - Class used to deserialize each item.
  * @param item_size - Fixed byte size of each serialized item.
  */
-export function items_field(item_cls: typeof FmtItem, item_size: number): FieldSpec<FieldValue> {
-  const md: Record<string, FieldValue> = {
+export function items_field<T extends FmtItem>(item_cls: (new (kw: InitKwargs) => T) & typeof FmtItem, item_size: number): FieldSpec<T[]> {
+  const md = {
     items: true,
     item_cls,
     item_size,
@@ -189,63 +202,66 @@ export function items_field(item_cls: typeof FmtItem, item_size: number): FieldS
 // ---------------------------------------------------------------------------
 
 /** Unsigned 1-byte integer field (`struct.unpack("B")`). */
-export function u1_field(kw: FmtFieldOptions = {}): FieldSpec<FieldValue> {
+export function u1_field<V extends number | boolean | null = number>(kw: FmtFieldOptions<V> = {}): FieldSpec<NoInfer<V>> {
   return fmt_field("B", kw);
 }
 
 /** Unsigned 2-byte integer field (`struct.unpack("H")`). */
-export function u2_field(kw: FmtFieldOptions = {}): FieldSpec<FieldValue> {
+export function u2_field<V extends number | boolean | null = number>(kw: FmtFieldOptions<V> = {}): FieldSpec<NoInfer<V>> {
   return fmt_field("H", kw);
 }
 
 /** Unsigned 4-byte integer field (`struct.unpack("I")`). */
-export function u4_field(kw: FmtFieldOptions = {}): FieldSpec<FieldValue> {
+export function u4_field<V extends number | boolean | null = number>(kw: FmtFieldOptions<V> = {}): FieldSpec<NoInfer<V>> {
   return fmt_field("I", kw);
 }
 
 /** Unsigned 8-byte integer field (`struct.unpack("Q")`). */
-export function u8_field(kw: FmtFieldOptions = {}): FieldSpec<FieldValue> {
+export function u8_field<V extends number | bigint | null = number | bigint>(kw: FmtFieldOptions<V> = {}): FieldSpec<NoInfer<V>> {
   return fmt_field("Q", kw);
 }
 
 /** Signed 2-byte integer field (`struct.unpack("h")`). */
-export function s2_field(kw: FmtFieldOptions = {}): FieldSpec<FieldValue> {
+export function s2_field<V extends number | boolean | null = number>(kw: FmtFieldOptions<V> = {}): FieldSpec<NoInfer<V>> {
   return fmt_field("h", kw);
 }
 
 /** Signed 4-byte integer field (`struct.unpack("i")`). */
-export function s4_field(kw: FmtFieldOptions = {}): FieldSpec<FieldValue> {
+export function s4_field<V extends number | boolean | null = number>(kw: FmtFieldOptions<V> = {}): FieldSpec<NoInfer<V>> {
   return fmt_field("i", kw);
 }
 
 /** 4-byte IEEE 754 float field (`struct.unpack("f")`). */
-export function f4_field(kw: FmtFieldOptions = {}): FieldSpec<FieldValue> {
+export function f4_field<V extends number | null = number>(kw: FmtFieldOptions<V> = {}): FieldSpec<NoInfer<V>> {
   return fmt_field("f", kw);
 }
 
 /** 8-byte IEEE 754 double field (`struct.unpack("d")`). */
-export function f8_field(kw: FmtFieldOptions = {}): FieldSpec<FieldValue> {
+export function f8_field<V extends number | null = number>(kw: FmtFieldOptions<V> = {}): FieldSpec<NoInfer<V>> {
   return fmt_field("d", kw);
 }
 
 /** Fixed-size raw bytes field (`struct.unpack("Ns")`). */
-export function bytes_field(n: number, kw: FmtFieldOptions = {}): FieldSpec<FieldValue> {
+export function bytes_field<V extends Uint8Array | null = Uint8Array>(n: number, kw: FmtFieldOptions<V> = {}): FieldSpec<NoInfer<V>> {
   return fmt_field(`${n}s`, kw);
 }
 
 /** Fixed-size string field, decoded via `encoding`. */
-export function str_field(n: number, kw: FmtFieldOptions & { encoding?: string } = {}): FieldSpec<FieldValue> {
+export function str_field<V extends string | null = string>(
+  n: number,
+  kw: FmtFieldOptions<V> & { encoding?: string } = {},
+): FieldSpec<NoInfer<V>> {
   const { encoding = "utf-8", ...rest } = kw;
   return fmt_field(`${n}s`, { ...rest, encoding });
 }
 
 /** Fixed-size ASCII string field. */
-export function ascii_field(n: number, kw: FmtFieldOptions = {}): FieldSpec<FieldValue> {
+export function ascii_field<V extends string | null = string>(n: number, kw: FmtFieldOptions<V> = {}): FieldSpec<NoInfer<V>> {
   return fmt_field(`${n}s`, { ...kw, encoding: "ascii" });
 }
 
 /** 1-byte boolean field (`struct.unpack("B")`, coerced to `bool`). */
-export function bool_field(kw: FmtFieldOptions = {}): FieldSpec<FieldValue> {
+export function bool_field(kw: FmtFieldOptions<boolean> = {}): FieldSpec<boolean> {
   return fmt_field("B", { ...kw, coerce: py_bool });
 }
 
@@ -370,7 +386,7 @@ export function _init_name(name: string): string {
   return name.startsWith("_") ? lstrip(name, "_") : name;
 }
 
-type DecodeKw = (values: readonly FieldValue[]) => InitKwargs;
+type DecodeKw = (values: readonly FieldValue[]) => FieldKwargs;
 /** Keyed by a `_struct_info` entry's `init_names`, which fixes its encodings and coerces. */
 const _DECODERS = new WeakMap<readonly string[], DecodeKw | null>();
 
@@ -406,7 +422,7 @@ function _compile_decoder(
   }
 }
 
-type EncodeFields = (self: object) => FieldValue[];
+type EncodeFields = (self: object) => struct.PackValue[];
 const _ENCODERS = new Map<_StructInfo, EncodeFields | null>();
 
 /**
@@ -448,14 +464,17 @@ export function _field_encoder(info: _StructInfo): EncodeFields | null {
  * Applies encoding (bytes \> str) and coerce (e.g. int \> bool) transforms
  * declared via `fmt_field()`. Shared by `Chunk.read()` and
  * `FmtItem.frombytes()`.
+ *
+ * `values` is `struct`'s untyped result for the runtime format: an encoded
+ * field's value is bytes only because its format is `Ns`.
  */
 export function _decode_fields(
   data_fields: readonly Attribute[],
-  values: FieldValue[],
+  values: struct.Unpacked<string>,
   encodings: Map<number, string>,
   coerces: Map<number, Coerce>,
   init_names: readonly string[] | null = null,
-): InitKwargs {
+): FieldKwargs {
   if (init_names != null && values.length === init_names.length && init_names.length === data_fields.length) {
     let decode_kw = _DECODERS.get(init_names);
     if (decode_kw === undefined) {
@@ -466,7 +485,7 @@ export function _decode_fields(
   }
   // NOTE(port): kwargs dict is a plain object: keys are init-name identifiers
   // passed straight to `cls(**kw)`, never iterated for numeric-looking keys.
-  const kw: InitKwargs = {};
+  const kw: FieldKwargs = {};
   const n = Math.min(data_fields.length, values.length);
   for (let i = 0; i < n; i++) {
     let value = values[i];
@@ -485,15 +504,18 @@ export function _decode_fields(
  * Applies encoding (str \> null-padded bytes) and coerce reversal
  * (bool \> int) transforms. Shared by `Chunk.write()` and
  * `FmtItem.tobytes()`.
+ *
+ * `value` is the field read by name, so it is untyped: only the field's
+ * format makes it packable as is, or `int()`-able when it is coerced.
  */
 export function _encode_value(
-  value: FieldValue,
+  value: any,
   idx: number,
   encodings: Map<number, string>,
   coerces: Map<number, Coerce>,
   endian: string,
   fmt_str: string,
-): FieldValue {
+): struct.PackValue {
   const enc = encodings.get(idx) ?? null;
   if (enc != null) {
     const field_size = _struct_for(fmt_str, endian).size;
@@ -524,7 +546,7 @@ export class FmtItem extends AttrsBase {
       simple,
       expected,
     ] = info;
-    let values: FieldValue[];
+    let values: struct.PackValue[];
     if (endians?.size > 0) {
       values = [];
       let pos = 0;
@@ -539,7 +561,7 @@ export class FmtItem extends AttrsBase {
     } else {
       values = struct.unpack(">" + fmt, data.slice(0, expected));
     }
-    let kw: InitKwargs;
+    let kw: FieldKwargs;
     if (simple) {
       // NOTE(port): kwargs keys are Python identifiers (never numeric-looking), so insertion order matches dict order.
       kw = {};
@@ -584,7 +606,7 @@ export class FmtItem extends AttrsBase {
     }
     const encode_fields = _field_encoder(info);
     if (encode_fields !== null) return struct.pack(">" + fmt, ...encode_fields(this));
-    const values: FieldValue[] = [];
+    const values: struct.PackValue[] = [];
     for (const [i, f] of data_fields.entries()) {
       let value = getattr(this, f.name);
       value = _encode_value(value, i, encodings, coerces, ">", f.metadata["fmt"]);
