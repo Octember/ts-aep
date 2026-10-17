@@ -616,11 +616,16 @@ export class Keyframe<V extends PropertyValue = PropertyValue> {
    * that carry no value, this is `null`.
    */
   get value(): V {
-    if (this._property == null) return this._stored_value as V;
+    if (this._property == null) return this._declared(this._stored_value);
     if (this._property._arbs != null) {
-      return this._property._keyframe_curves(this) as V;
+      return this._declared(this._property._keyframe_curves(this));
     }
-    return this._property._mask_inert_z(this._stored_value);
+    return this._declared(this._property._mask_inert_z(this._stored_value));
+  }
+
+  /** A stored value as the keyframe's declared value type (see `Property._declared`). */
+  _declared(value: PropertyValue): V {
+    return value as V;
   }
 
   set value(value: PropertyValue) {

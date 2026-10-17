@@ -1632,7 +1632,7 @@ export class Property<V extends PropertyValue = any> extends PropertyBase {
    * ```
    */
   get value(): V {
-    return this._mask_inert_z(this._stored_static_value());
+    return this._declared(this._mask_inert_z(this._stored_static_value()));
   }
 
   set value(value: V) {
@@ -2904,7 +2904,7 @@ export class Property<V extends PropertyValue = any> extends PropertyBase {
       // last keyframe's value), so only NaN is rejected here.
       throw new ValueError("time must be a number, got NaN");
     }
-    return this._mask_inert_z(this._stored_value_at(time));
+    return this._declared(this._mask_inert_z(this._stored_value_at(time)));
   }
 
   /**
@@ -2935,6 +2935,16 @@ export class Property<V extends PropertyValue = any> extends PropertyBase {
   }
 
   /**
+   * A stored value as this property's declared value type. `V` comes from
+   * the match name a group lookup was typed by (`"ADBE Position"` is
+   * `Property<number[]>`), which the parser guarantees but the compiler
+   * cannot see, so this is the one place the value type is asserted.
+   */
+  _declared(value: PropertyValue): V {
+    return value as V;
+  }
+
+  /**
    * Report a 2-D layer's Position / Anchor Point Z as 0.
    *
    * A 2-D layer ignores Z, and AE reports it as 0 in `value`,
@@ -2943,7 +2953,7 @@ export class Property<V extends PropertyValue = any> extends PropertyBase {
    * speeds (measured on AE 2026: a static [100, 120, 40] and keys at Z
    * 40 / -30 on a 2-D layer read Z = 0 and keep the 40 in the file).
    */
-  _mask_inert_z(value: PropertyValue): Dynamic {
+  _mask_inert_z(value: PropertyValue): PropertyValue {
     if (
       Array.isArray(value) &&
       value.length === 3 &&
