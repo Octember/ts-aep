@@ -19,6 +19,7 @@
 
 import { AutoOrientType, LayerType, LightType } from "../enums/index.ts";
 import type { CompItem } from "../models/items/composition.ts";
+import type { AVLayer } from "../models/layers/av_layer.ts";
 import type { Layer } from "../models/layers/layer.ts";
 import type { MatchNameTypes } from "../models/properties/match_name_types.ts";
 import type { Property } from "../models/properties/property.ts";
