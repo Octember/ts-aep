@@ -5,8 +5,6 @@
 
 import { AttributeError, TypeError_, getattr, getitem, hasattr, int, type_name } from "../pyrt/index.ts";
 
-export type F = (this: any, ...args: any[]) => any;
-
 // The After Effects majors whose saves contain each version-gated part of a
 // new project, item or layer, as `(first, last)` (`last` None: still
 // written). From the projects AE 15 (CC 2018) and AE 22-26 save for newly
@@ -107,10 +105,10 @@ export function get_ae_version_major(obj: any): number {
  * @param min_major - Minimum AE major version number (e.g. 23 for AE 23.x).
  * @throws {@link AttributeError} If the file predates the required version.
  */
-export function requires_version(min_major: number): <M extends F>(method: M) => M {
-  return function decorator<M extends F>(method: M): M {
+export function requires_version(min_major: number) {
+  return function decorator<T, A extends unknown[], R>(method: (this: T, ...args: A) => R): (this: T, ...args: A) => R {
     // NOTE(port): functools.wraps; __name__ is the only attribute read back (error message and introspection).
-    const wrapper = function (this: unknown, ...args: Parameters<M>): ReturnType<M> {
+    const wrapper = function (this: T, ...args: A): R {
       const major = get_ae_version_major(this);
       if (major < min_major) {
         throw new AttributeError(
@@ -121,6 +119,6 @@ export function requires_version(min_major: number): <M extends F>(method: M) =>
       return method.call(this, ...args);
     };
     Object.defineProperty(wrapper, "name", { value: method.name });
-    return wrapper as M;
+    return wrapper;
   };
 }

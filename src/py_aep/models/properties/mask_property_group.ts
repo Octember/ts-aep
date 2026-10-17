@@ -352,7 +352,7 @@ export class MaskPropertyGroup extends PropertyGroup {
 descriptor(
   MaskPropertyGroup,
   "color",
-  new ChunkField<number[]>("_mkif", "color", { validate: validate_rgb_color }),
+  new ChunkField("_mkif", "color", { validate: validate_rgb_color }),
 );
 descriptor(MaskPropertyGroup, "inverted", ChunkField.bool("_mkif", "inverted"));
 descriptor(MaskPropertyGroup, "locked", ChunkField.bool("_mkif", "locked"));

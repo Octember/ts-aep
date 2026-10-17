@@ -19,11 +19,50 @@ import {
   instance_dict,
 } from "../../pyrt/index.ts";
 import type { EnumHelpers, EnumValue } from "../../pyrt/enum.ts";
+import type { FieldValue } from "../binary/fmt_field.ts";
 import { get_ae_version_major } from "../ae_version.ts";
 import { validate_bool, validate_enum } from "./validators.ts";
 
 /** Callable applied to a chunk value on read (`transform`) or write (`reverse`). */
-export type ChunkTransform = (...args: any[]) => any;
+export type ChunkTransform = (value: FieldValue) => FieldValue;
+
+/**
+ * The names of `O`'s methods that take no arguments (`pre_set` / `post_set`
+ * hooks); any name when the owner is not known (`O` is `object`).
+ */
+export type HookName<O> = object extends O
+  ? string
+  : { [K in keyof O]-?: O[K] extends () => unknown ? K : never }[keyof O] & string;
+
+/** The name of an attribute of `O` (a chunk body); any name when the owner is not known. */
+export type AttrName<O> = object extends O ? string : string & keyof O;
+
+/**
+ * The model object a `ChunkField` reads through: its chunk body is found by
+ * name (`getattr(obj, chunk_attr)`) and a synthetic body is materialized
+ * through `obj._ensure_materialized()`, which only owners of synthetic chunks
+ * define (Python duck typing).
+ */
+export type ChunkOwner = any;
+
+/** Python `**kwargs` that `ChunkField.enum` rewrites key by key before forwarding them. */
+type Kwargs = Record<string, any>;
+
+/**
+ * Keyword arguments of `ChunkField` for a field reading as `T` on an `O`.
+ * The owner `O` is never inferred from the callbacks, only from the class
+ * the field is installed on.
+ */
+export type ChunkFieldOptions<T, O> = {
+  transform?: ((value: FieldValue) => T) | null;
+  reverse?: ((value: NoInfer<T>) => unknown) | null;
+  read_only?: boolean;
+  validate?: ((value: NoInfer<T>, obj: NoInfer<O>) => void) | null;
+  default?: NoInfer<T>;
+  pre_set?: HookName<NoInfer<O>> | null;
+  post_set?: ((obj: NoInfer<O>) => void) | HookName<NoInfer<O>> | null;
+  min_version?: number | null;
+};
 
 export const _SENTINEL: unique symbol = Symbol("_SENTINEL");
 
@@ -59,10 +98,10 @@ export function _run_suppressed<R>(body: () => R): R {
  * `@_suppress_materialization()` becomes `.decorate(fn)`.
  */
 export function _suppress_materialization() {
-  function decorate<F extends (...args: never[]) => unknown>(fn: F): F {
-    return function (this: unknown, ...args: Parameters<F>) {
+  function decorate<T, A extends unknown[], R>(fn: (this: T, ...args: A) => R): (this: T, ...args: A) => R {
+    return function (this: T, ...args: A) {
       return _run_suppressed(() => fn.apply(this, args));
-    } as unknown as F;
+    };
   }
   // Callable (`@_suppress_materialization()` applied as `_suppress_materialization()(fn)`),
   // and also exposes `.decorate(fn)` / `.run(body)`.
@@ -73,7 +112,7 @@ export function _suppress_materialization() {
  * Python `isinstance(x, IntEnum)` for a py_enum object (pyrt/enum.ts).
  */
 // NOTE(port): int_enum === py_enum in pyrt, so this also admits non-int enums; the only non-IntEnum enum in py_aep (cos.TokenType) never reaches a descriptor, so the IntEnum check matches Python.
-export function is_enum(x: any): boolean {
+export function is_enum(x: any): x is EnumHelpers<unknown> {
   return x != null && typeof x === "object" && "__members__" in x && typeof x.has === "function";
 }
 
@@ -83,7 +122,7 @@ export function is_enum(x: any): boolean {
  * Detects a `from_binary` classmethod (via `__self__`) or a direct
  * enum class reference.
  */
-export function _enum_class(transform: ChunkTransform | null | undefined): any {
+export function _enum_class(transform: ChunkTransform | null | undefined): EnumHelpers<unknown> | null {
   if (transform == null) return null;
   let enum_cls = getattr(transform, "__self__", null);
   if (enum_cls == null && is_enum(transform)) enum_cls = transform;
@@ -140,7 +179,7 @@ export function enum_or_raw(convert: (value: any) => any): (value: any) => any {
  * Raw ints must appear in the enum's value map; any other type must
  * already be an instance of the enum.
  */
-export function _validate_enum_member(enum_cls: any, value: unknown, public_name: string): void {
+export function _validate_enum_member(enum_cls: EnumHelpers<unknown>, value: unknown, public_name: string): void {
   if (enum_cls.has(value)) return;
   // NOTE(port): int/float — integral values are plain numbers by design (RULEBOOK §4); an integer-valued float such as 2.0 takes the int branch and gets the "Invalid value" message instead of "is not a valid".
   // A Python bool is an int that hashes like 0/1, so it is checked as its int value.
@@ -149,7 +188,7 @@ export function _validate_enum_member(enum_cls: any, value: unknown, public_name
     if (!enum_cls.has(key)) {
       const members = enum_cls
         .members()
-        .map((m: number) => `${enum_cls.name_of(m)} (${m})`)
+        .map((m) => `${enum_cls.name_of(m)} (${m})`)
         .join(", ");
       throw new ValueError(
         `Invalid value ${repr(value)} for ${repr(public_name)}. ` +
@@ -180,34 +219,25 @@ export function _validate_enum_member(enum_cls: any, value: unknown, public_name
  * @param post_set - Optional method name on the model instance, or a callable receiving the model
  *   instance, invoked after the value has been written.
  */
-export class ChunkField<T> {
+export class ChunkField<T, O extends object = object> {
   declare chunk_attr: string;
   declare field: string;
-  declare transform: ChunkTransform | null;
-  declare reverse: ChunkTransform | null;
+  declare transform: ((value: FieldValue) => T) | null;
+  declare reverse: ((value: T) => unknown) | null;
   declare read_only: boolean;
-  declare validate: ((value: T, obj: any) => void) | null;
+  declare validate: ((value: T, obj: O) => void) | null;
   declare default: T | typeof _SENTINEL;
   declare pre_set: string | null;
-  declare post_set: ((obj: any) => void) | string | null;
+  declare post_set: ((obj: O) => void) | string | null;
   declare min_version: number | null;
-  declare _enum_cls: any;
+  declare _enum_cls: EnumHelpers<unknown> | null;
   declare public_name: string;
 
-  constructor(
-    chunk_attr: string,
-    field: string,
-    kw: {
-      transform?: ((value: any) => T) | null;
-      reverse?: ((value: NoInfer<T>) => unknown) | null;
-      read_only?: boolean;
-      validate?: ((value: NoInfer<T>, obj: any) => void) | null;
-      default?: NoInfer<T>;
-      pre_set?: string | null;
-      post_set?: ((obj: any) => void) | string | null;
-      min_version?: number | null;
-    } = {},
-  ) {
+  /**
+   * `O` is the model class the field is installed on and `T` the type it
+   * reads as; both are inferred from the `descriptor(...)` call.
+   */
+  constructor(chunk_attr: NoInfer<AttrName<O>>, field: string, kw: ChunkFieldOptions<T, O> = {}) {
     const {
       transform = null,
       reverse = null,
@@ -237,23 +267,23 @@ export class ChunkField<T> {
     this.public_name = name;
   }
 
-  __get__(obj: any, objtype?: Function | null): T | ChunkField<T> {
+  __get__(obj: O | null, objtype?: Function | null): T | ChunkField<T, O> {
     if (obj == null) return this;
     // Parse-time overrides (e.g. ExtendScript-compatible values that
     // differ from the binary) are stored in __dict__ and take priority
     // over the chunk body.
     const overrides = instance_dict(obj);
-    if (overrides.has(this.public_name)) return overrides.get(this.public_name) as T;
+    if (overrides.has(this.public_name)) return overrides.get(this.public_name);
     const body = getattr(obj, this.chunk_attr);
     if (body == null) {
       if (this.default !== _SENTINEL) return this.default;
       throw new AttributeError(`chunk body ${repr(this.chunk_attr)} is None`);
     }
     const value = getattr(body, this.field);
-    return (this.transform ? this.transform(value) : value) as T;
+    return (this.transform ? this.transform(value) : value);
   }
 
-  __set__(obj: any, value: T): void {
+  __set__(obj: ChunkOwner, value: T): void {
     if (this.read_only) throw new AttributeError(`${repr(this.public_name)} is read-only.`);
     if (this.min_version != null) {
       let major: number | null;
@@ -324,7 +354,11 @@ export class ChunkField<T> {
    * first). For a bool backed by a generic integer chunk field (e.g.
    * `U1Chunk.value`) add `transform=bool, reverse=int`.
    */
-  static bool(chunk_attr: string, field: string, kwargs: Record<string, any> = {}): ChunkField<boolean> {
+  static bool<O extends object = object>(
+    chunk_attr: NoInfer<AttrName<O>>,
+    field: string,
+    kwargs: ChunkFieldOptions<boolean, O> = {},
+  ): ChunkField<boolean, O> {
     kwargs = { ...kwargs };
     if (!("validate" in kwargs)) kwargs.validate = validate_bool;
     return new this(chunk_attr, field, kwargs);
@@ -349,23 +383,23 @@ export class ChunkField<T> {
    *   The field then reads as `EnumValue<E> | Raw`, `Raw` being the rest of the
    *   declared field type (`declare depth: OutputColorDepth | number`).
    */
-  static enum<E extends EnumHelpers<unknown>, Raw = never>(
+  static enum<E extends EnumHelpers<unknown>, Raw = never, O extends object = object>(
     enum_cls: E,
-    chunk_attr: string,
+    chunk_attr: NoInfer<AttrName<O>>,
     field: string,
-    kw: { allow_out_of_enum_values: true; [key: string]: any },
-  ): ChunkField<EnumValue<E> | Raw>;
-  static enum<E extends EnumHelpers<unknown>>(
+    kw: ChunkFieldOptions<EnumValue<E> | Raw, O> & { allow_out_of_enum_values: true },
+  ): ChunkField<EnumValue<E> | Raw, O>;
+  static enum<E extends EnumHelpers<unknown>, O extends object = object>(
     enum_cls: E,
-    chunk_attr: string,
+    chunk_attr: NoInfer<AttrName<O>>,
     field: string,
-    kw?: { allow_out_of_enum_values?: false; [key: string]: any },
-  ): ChunkField<EnumValue<E>>;
+    kw?: ChunkFieldOptions<EnumValue<E>, O> & { allow_out_of_enum_values?: false },
+  ): ChunkField<EnumValue<E>, O>;
   static enum(
-    enum_cls: any,
+    enum_cls: EnumHelpers<unknown>,
     chunk_attr: string,
     field: string,
-    kw: { allow_out_of_enum_values?: boolean; [key: string]: any } = {},
+    kw: { allow_out_of_enum_values?: boolean } & Kwargs = {},
   ): ChunkField<unknown> {
     const { allow_out_of_enum_values = false, ...kwargs } = kw;
     if (!("transform" in kwargs)) kwargs.transform = bound_enum_method(enum_cls, "from_binary", enum_cls);

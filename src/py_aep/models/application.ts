@@ -183,7 +183,7 @@ export class Application {
 descriptor(
   Application,
   "build_number",
-  new ChunkField<number>("_head", "ae_build_number", {
+  new ChunkField("_head", "ae_build_number", {
     // An 8-bit field of the head chunk: a larger build would wrap.
     validate: validate_u1,
   }),
@@ -192,7 +192,7 @@ descriptor(
 descriptor(
   Application,
   "version",
-  new ChunkField<string>("_head", "version", {
+  new ChunkField("_head", "version", {
     validate: _validate_version,
     post_set: (obj: Application) => obj._head.sync_file_format_version(),
   }),

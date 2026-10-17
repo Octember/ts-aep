@@ -198,7 +198,7 @@ descriptor(
 descriptor(
   LightLayer,
   "_light_source_id",
-  new ChunkField<number>("_ldta", "source_id", {
+  new ChunkField("_ldta", "source_id", {
     transform: (v: number) => (v === _UNDEFINED_ID ? 0 : v),
     reverse: (v: number) => (v === 0 ? _UNDEFINED_ID : v),
   }),

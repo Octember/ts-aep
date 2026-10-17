@@ -227,6 +227,9 @@ checks single files.
 - Rule: fix a type at its declaration; a cast is the last resort; `unknown`
   only for opaque values; `any` only behind a named alias for genuinely
   dynamic data (parsed COS/JSON trees, ExtendScript-style duck typing).
+- The gate ratchets the per-layer `any` / `unknown` / cast counts against
+  `loose_types` in `tools/gate_baseline.json`: they may only fall, and a pass
+  that lowers them lowers the baseline.
 
 ## Later passes
 

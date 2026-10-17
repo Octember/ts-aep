@@ -1,5 +1,42 @@
 {
   "pass": 15578,
   "skip": 35,
-  "samples": 644
+  "samples": 644,
+  "loose_types": {
+    "0 pyrt": {
+      "any": 52,
+      "unknown": 109,
+      "casts": 65
+    },
+    "1 binary+enums+data": {
+      "any": 9,
+      "unknown": 34,
+      "casts": 45
+    },
+    "2 cos+color": {
+      "any": 27,
+      "unknown": 37,
+      "casts": 9
+    },
+    "3 parsers+synthesis": {
+      "any": 17,
+      "unknown": 10,
+      "casts": 12
+    },
+    "4 models": {
+      "any": 156,
+      "unknown": 130,
+      "casts": 213
+    },
+    "5 resolvers+svg": {
+      "any": 14,
+      "unknown": 32,
+      "casts": 70
+    },
+    "6 cli+entry": {
+      "any": 28,
+      "unknown": 12,
+      "casts": 27
+    }
+  }
 }

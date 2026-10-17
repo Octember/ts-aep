@@ -17,7 +17,7 @@ import {
 } from "../../../pyrt/index.ts";
 import { to_f4 } from "../../binary/bin_utils.ts";
 import { Utf8Chunk } from "../../binary/scalar_chunks.ts";
-import { validate_normalized_float, validate_positive_int, validate_rgb_color } from "../validators.ts";
+import { validate_normalized_float, validate_positive_int, validate_rgb_color, type Validator } from "../validators.ts";
 
 /**
  * Descriptor triggering gradient XML serialization on write.
@@ -27,10 +27,7 @@ import { validate_normalized_float, validate_positive_int, validate_rgb_color } 
  */
 export class _GradientField<T = unknown> {
   declare ["constructor"]: ClassAttributes<typeof _GradientField>;
-  static _VALIDATORS: Map<string, (value: never, instance?: never) => void> = new Map<
-    string,
-    (value: never, instance?: never) => void
-  >([
+  static _VALIDATORS: Map<string, Validator> = new Map<string, Validator>([
     ["offset", validate_normalized_float],
     ["midpoint", validate_normalized_float],
     ["color", validate_rgb_color],
@@ -53,7 +50,7 @@ export class _GradientField<T = unknown> {
 
   __set__(obj: object, value: T): void {
     const validator = this.constructor._VALIDATORS.get(this._name);
-    if (validator != null) validator(value as never, null as never);
+    if (validator != null) validator(value, null);
     object_setattr(obj, this._slot, value);
     const gradient = getattr(obj, "_gradient", obj);
     const serialize = getattr(gradient, "_serialize", null);

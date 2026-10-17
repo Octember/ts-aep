@@ -145,10 +145,10 @@ export class EssentialGraphicsController {
 descriptor(
   EssentialGraphicsController,
   "name",
-  new ChunkField<string>("_name_utf8", "value", { validate: validate_name }),
+  new ChunkField("_name_utf8", "value", { validate: validate_name }),
 );
 descriptor(
   EssentialGraphicsController,
   "controller_type",
-  new ChunkField<number>("_ctyp", "value", { read_only: true }),
+  new ChunkField("_ctyp", "value", { read_only: true }),
 );

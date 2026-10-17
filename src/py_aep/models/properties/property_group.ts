@@ -313,7 +313,7 @@ export function _reorder_and_fill(
       });
       ordered.push(group);
     } else {
-      const [v, d] = dict_get(value_overrides ?? new Map<string, [unknown, unknown]>(), mn, [_USE_VALUE, _USE_VALUE]);
+      const [v, d] = dict_get<string, [number | number[], number | number[]], [typeof _USE_VALUE, typeof _USE_VALUE]>(value_overrides ?? new Map(), mn, [_USE_VALUE, _USE_VALUE]);
       const prop = Property._new(spec, child_depth, {
         parent_property: container,
         value: v,
@@ -979,7 +979,7 @@ export class PropertyGroup extends PropertyBase {
       if (existing == null) {
         const created = new TdumChunk({ chunk_type, values: [bound] });
         tdbs.chunks.push(created);
-        (slot as unknown as Record<string, TdumChunk>)[attr] = created;
+        slot[attr] = created;
       } else {
         existing.values = [bound];
       }
@@ -1376,7 +1376,7 @@ export class PropertyGroup extends PropertyBase {
 // decorator wraps the method once the class body has been evaluated.
 PropertyGroup.prototype.add_variable_font_axis = requires_version(26)(
   PropertyGroup.prototype.add_variable_font_axis,
-) as any;
+);
 
 /** Class-level attributes (TS statics) of `ctor` and its bases, excluding Function built-ins. */
 function hasClassStatic(ctor: Function, name: string): boolean {

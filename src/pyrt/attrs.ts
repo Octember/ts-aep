@@ -21,21 +21,32 @@ export function Factory<T>(fn: () => T): Factory<T> {
 
 const NOTHING: unique symbol = Symbol("NOTHING");
 
-export type FieldSpec = {
-  default?: any;
-  converter?: ((value: any) => any) | null;
-  metadata?: Record<string, any>;
+/**
+ * `attrs` field metadata: free-form per field and read back by key (a chunk
+ * field's struct format, encoding, item class, ...), so its values are dynamic.
+ */
+export type Metadata = Readonly<Record<string, any>>;
+
+/** `attrs.field(...)` for a field holding a `V`: the default and converter produce a `V`. */
+export type FieldSpec<V = unknown> = {
+  default?: V | Factory<V>;
+  /** Runs on every assignment, so it takes whatever was assigned. */
+  converter?: ((value: unknown) => V) | null;
+  metadata?: Metadata;
   init?: boolean;
   eq?: boolean;
   repr?: boolean;
 };
 
+/** The fields `define` records for instances `I`, each typed by the field it declares. */
+export type FieldSpecs<I> = { [K in keyof I]?: FieldSpec<I[K]> };
+
 /** `attrs.Attribute` as `attrs.fields(cls)` returns it. */
 export type Attribute = {
   readonly name: string;
-  readonly default: any;
-  readonly converter: ((value: any) => any) | null;
-  readonly metadata: Readonly<Record<string, any>>;
+  readonly default: unknown;
+  readonly converter: ((value: unknown) => unknown) | null;
+  readonly metadata: Metadata;
   readonly init: boolean;
   readonly eq: boolean;
   readonly repr: boolean;
@@ -43,7 +54,7 @@ export type Attribute = {
 };
 
 /** `attrs.field(...)` */
-export function field(spec: FieldSpec = {}): FieldSpec {
+export function field<V>(spec: FieldSpec<V> = {}): FieldSpec<V> {
   return spec;
 }
 
@@ -59,7 +70,10 @@ export function init_name(name: string): string {
  * here replaces the inherited one and moves to its new position, as attrs
  * orders them.
  */
-export function define<C extends Function>(cls: C, own: Record<string, FieldSpec> = {}): C {
+export function define<C extends abstract new (...args: never) => object>(
+  cls: C,
+  own: FieldSpecs<InstanceType<C>> & Record<string, FieldSpec> = {},
+): C {
   const base: Function | null = Object.getPrototypeOf(cls);
   const inherited = (base && FIELDS.get(base)) || [];
   const own_attrs: Attribute[] = Object.entries(own).map(([name, spec]) => ({
@@ -201,7 +215,7 @@ function attrs_init_slow(self: any, cls: Function, kw: Record<string, any>): voi
 
 /** Base for attrs classes; subclasses must declare fields with `declare` and register them via `define`. */
 export class AttrsBase {
-  constructor(kw: Record<string, any> | typeof NO_INIT = {}) {
+  constructor(kw: Record<string, unknown> | typeof NO_INIT = {}) {
     if (kw !== NO_INIT) attrs_init(this, new.target, kw);
   }
 }

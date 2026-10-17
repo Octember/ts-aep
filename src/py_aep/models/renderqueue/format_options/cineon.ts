@@ -88,7 +88,7 @@ export class CineonFormatOptions extends FormatOptionsBase {
 descriptor(
   CineonFormatOptions,
   "ten_bit_black_point",
-  new ChunkField<number>("_body", "ten_bit_black_point", {
+  new ChunkField("_body", "ten_bit_black_point", {
     validate: _validate_number({ min: 0, max: 1023, integer: true }),
   }),
 );
@@ -96,7 +96,7 @@ descriptor(
 descriptor(
   CineonFormatOptions,
   "ten_bit_white_point",
-  new ChunkField<number>("_body", "ten_bit_white_point", {
+  new ChunkField("_body", "ten_bit_white_point", {
     validate: _validate_number({ min: 0, max: 1023, integer: true }),
   }),
 );
@@ -104,7 +104,7 @@ descriptor(
 descriptor(
   CineonFormatOptions,
   "converted_black_point",
-  new ChunkField<number>("_body", "converted_black_point", {
+  new ChunkField("_body", "converted_black_point", {
     validate: _validate_number(),
   }),
 );
@@ -112,7 +112,7 @@ descriptor(
 descriptor(
   CineonFormatOptions,
   "converted_white_point",
-  new ChunkField<number>("_body", "converted_white_point", {
+  new ChunkField("_body", "converted_white_point", {
     validate: _validate_number(),
   }),
 );
@@ -120,7 +120,7 @@ descriptor(
 descriptor(
   CineonFormatOptions,
   "current_gamma",
-  new ChunkField<number>("_body", "current_gamma", {
+  new ChunkField("_body", "current_gamma", {
     validate: _validate_number(),
   }),
 );
@@ -130,7 +130,7 @@ descriptor(
   "highlight_expansion",
   // Backed by a u2 field: an out-of-range value overflows `struct`
   // and crashes save() mid-write, leaving a partial .aep on disk.
-  new ChunkField<number>("_body", "highlight_expansion", { validate: validate_u2 }),
+  new ChunkField("_body", "highlight_expansion", { validate: validate_u2 }),
 );
 
 descriptor(
@@ -150,7 +150,7 @@ descriptor(
 descriptor(
   CineonFormatOptions,
   "bit_depth",
-  new ChunkField<number>("_body", "bit_depth", {
+  new ChunkField("_body", "bit_depth", {
     validate: validate_one_of([8, 10, 12, 16]),
   }),
 );
