@@ -148,7 +148,7 @@ export function _name(font: fontkit.Font, ...ids: number[]): string | null {
     return null;
   }
   for (const nid of ids) {
-    const value = font.getName(NAME_KEYS.get(nid));
+    const value = font.getName(NAME_KEYS.get(nid)!);
     if (py_bool(value)) {
       return str(value);
     }
@@ -202,10 +202,10 @@ export function* _iter_faces(path: Path): Generator<[number, fontkit.Font]> {
   let fonts: fontkit.Font[];
   try {
     const opened = fontkit.create(
-      host.fs.readFileSync(path.toString()) as Uint8Array as Buffer,
+      host.fs.readFileSync(path.toString()),
     ) as fontkit.Font & { fonts?: fontkit.Font[] };
     if (path.suffix.toLowerCase() === ".ttc") {
-      fonts = [...opened.fonts];
+      fonts = [...opened.fonts!];
     } else {
       // NOTE(port): TTFont(fontNumber=0) on a non-.ttc file; fontkit returns a
       // collection (with `.fonts`) only for collection files, so take face 0.

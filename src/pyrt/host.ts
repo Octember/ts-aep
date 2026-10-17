@@ -33,13 +33,16 @@ export interface HostDirent {
 }
 
 /** The sync `node:fs` subset py_aep uses. */
+/** Text encodings the port writes with (a host-neutral subset of Node's `BufferEncoding`). */
+export type HostEncoding = "utf8" | "utf-8" | "latin1" | "ascii";
+
 export interface HostFs {
   existsSync(path: string): boolean;
   statSync(path: string, opts?: { bigint?: false }): HostStats;
   statSync(path: string, opts: { bigint: true }): HostBigStats;
   statSync(path: string, opts?: { bigint?: boolean }): HostStats | HostBigStats;
   readFileSync(path: string): Uint8Array;
-  writeFileSync(path: string, data: Uint8Array | string, encoding?: BufferEncoding): void;
+  writeFileSync(path: string, data: Uint8Array | string, encoding?: HostEncoding): void;
   mkdirSync(path: string, opts?: { recursive?: boolean }): void;
   readdirSync(path: string): string[];
   readdirSync(path: string, opts: { withFileTypes: true }): HostDirent[];

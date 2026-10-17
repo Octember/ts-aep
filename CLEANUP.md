@@ -206,6 +206,28 @@ JavaScript TypeScript emits for every touched file is unchanged.
 - Every Python example is a TypeScript example importing from
   `@bevyl-ai/ts-aep`; `tools/doc_examples.ts` typechecks them all (in the gate).
 
+## Pass 4: bottom-up types
+
+Types only (`bun tools/js_equal.ts <base>` = 0). Layers are typed in
+dependency order so precise types flow upward instead of being cast in:
+pyrt → binary/enums/data → cos/color → parsers/synthesis → models →
+resolvers/svg → cli. `bun tools/strict_report.ts` prints strict-mode errors
+and `any` / `unknown` / `as`-cast counts per layer; `tools/strict_file.ts`
+checks single files.
+
+- `src/` is strict (`tsconfig.src.json`, run by `bun run typecheck` and the
+  gate). Tests are not yet.
+- Shared APIs carry the types: generated `ChunkTypes` (`tools/gen_chunk_types.ts`)
+  so `find_by_type(chunks, "ldta")` returns `LdtaChunk`; discriminated
+  keyframe payloads; `ChunkField<T>` / `descriptor()` tied to the declared
+  field type; `MatchNameTypes` so `group.property("ADBE Position")` returns
+  `Property<number[]>`; typed `struct.unpack` for literal formats.
+- Untyped dependencies get accurate ambient declarations in `src/types/`
+  (fontkit 2.0.4, harfbuzzjs), shipped with the package types.
+- Rule: fix a type at its declaration; a cast is the last resort; `unknown`
+  only for opaque values; `any` only behind a named alias for genuinely
+  dynamic data (parsed COS/JSON trees, ExtendScript-style duck typing).
+
 ## Later passes
 
 Each of these changes structure and needs its own guide section first:

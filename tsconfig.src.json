@@ -1,0 +1,10 @@
+{
+  // The library itself is strict (bottom-up typing pass); tests and tools are not yet.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "strict": true,
+    "noImplicitAny": true
+  },
+  "include": ["src"],
+  "exclude": []
+}

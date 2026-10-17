@@ -73,7 +73,7 @@ import type { TextDocument } from "../models/text/text_document.ts";
 // it cannot load (not served there; Cloudflare Workers, which refuse to
 // compile wasm from bytes) the module still loads and shaping raises instead.
 /** The subset of harfbuzzjs's `hbjs()` API this module calls; handles are opaque. */
-interface HbJs {
+export interface HbJs {
   createBlob(data: Uint8Array): object;
   createFace(blob: object, index: number): HbJsFace;
   createFont(face: HbJsFace): object;
@@ -81,10 +81,10 @@ interface HbJs {
   shape(font: object, buffer: HbJsBuffer, features: string): void;
   _load_error?: unknown;
 }
-interface HbJsFace {
+export interface HbJsFace {
   upem: number;
 }
-interface HbJsBuffer {
+export interface HbJsBuffer {
   addText(text: string): void;
   guessSegmentProperties(): void;
   json(): _HbJsGlyph[];
@@ -113,7 +113,7 @@ function _hb(): HbJs {
 }
 
 /** One glyph of harfbuzzjs's `buffer.json()` output. */
-interface _HbJsGlyph {
+export interface _HbJsGlyph {
   g: number;
   cl: number;
   ax: number;
