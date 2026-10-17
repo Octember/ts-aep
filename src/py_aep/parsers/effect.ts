@@ -195,7 +195,7 @@ export function _apply_param_def_metadata(prop: Property, param_def: ParamDef): 
 export function _point_default_pixels(raw: unknown, size: [number, number]): number[] | null {
   if (!Array.isArray(raw) || raw.length < 2) return null;
   const scale = [size[0], size[1], size[1]];
-  return zip(raw as number[], scale).map(([v, factor]) => v / 100.0 * factor);
+  return zip(raw, scale).map(([v, factor]) => v / 100.0 * factor);
 }
 
 /** Convert a synthesized point property's value and default in place. */
@@ -731,7 +731,7 @@ export function parse_effect_definitions(
     const efdf_child_chunks = efdf_chunk.chunks;
     // First tdmn in EfDf contains the effect match name
     const tdmn_chunk = find_by_type(efdf_child_chunks, "tdmn");
-    const effect_match_name = (tdmn_chunk as TdmnChunk).value;
+    const effect_match_name = tdmn_chunk.value;
 
     const sspc_chunk = find_by_list_type(efdf_child_chunks, "sspc");
     const param_defs = parse_effect_param_defs(sspc_chunk.chunks);

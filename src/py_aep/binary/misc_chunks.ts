@@ -104,7 +104,7 @@ export class PrdaChunk extends Chunk {
   ): PrdaChunk {
     const { chunk_type = "", renderer_match_name = "" } = kw;
     if (this !== PrdaChunk) {
-      const result = super.read(fp, size, { chunk_type }) as PrdaChunk;
+      const result = super.read(fp, size, { chunk_type });
       py_assert(result instanceof PrdaChunk);
       return result;
     }
@@ -113,7 +113,7 @@ export class PrdaChunk extends Chunk {
       // preserve unknown raw bytes
       return new this({ chunk_type, data: read_bytes(fp, size) });
     }
-    return variant[0].read(fp, size, { chunk_type }) as PrdaChunk;
+    return variant[0].read(fp, size, { chunk_type });
   }
 }
 define(PrdaChunk, {
@@ -587,7 +587,7 @@ export class PardChunk extends Chunk {
     fp.seek(-16, 1);
     const variant_cls = _PARD_VARIANTS.get(control_type) ?? PardChunk;
     if (variant_cls === PardChunk) return new this({ chunk_type, data: read_bytes(fp, size) });
-    return variant_cls.read(fp, size, { chunk_type }) as PardChunk;
+    return variant_cls.read(fp, size, { chunk_type });
   }
 
   /**

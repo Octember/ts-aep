@@ -69,7 +69,7 @@ export function py_enum<const M extends Record<string, unknown>, X extends Recor
       canonical.push(v);
     }
   }
-  const self = Object.fromEntries(by_name) as Record<string, unknown> & { _missing_?: (value: unknown) => V | null | undefined };
+  const self = Object.fromEntries(by_name);
   const helpers: EnumHelpers<V> = {
     __name__: name,
     of(value: unknown): V {

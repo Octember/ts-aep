@@ -140,7 +140,7 @@ export function validate_sequence(
       } catch (exc) {
         if (!(exc instanceof TypeError_ || exc instanceof ValueError)) throw exc;
         // `raise type(exc)(...) from None`: same exception class, no chained cause.
-        throw new (exc.constructor as new (message: string) => Error)(`element [${i}] ${(exc as Error).message}`);
+        throw new (exc.constructor as new (message: string) => Error)(`element [${i}] ${exc.message}`);
       }
     }
   };

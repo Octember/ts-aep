@@ -121,7 +121,7 @@ export function _parse_shape_shap(shap_chunk: ListChunk, layer: Layer | null, ma
   let points: Parameters<typeof Shape._from_binary>[0]["_points"];
   try {
     const ldat = find_by_type(list_chunk.chunks, "ldat");
-    points = ldat.items as typeof points;
+    points = ldat.items;
   } catch (e) {
     if (!(e instanceof ChunkNotFoundError)) throw e;
     points = [];

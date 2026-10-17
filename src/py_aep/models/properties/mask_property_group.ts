@@ -136,7 +136,7 @@ export class MaskPropertyGroup extends PropertyGroup {
     const path = this.property("ADBE Mask Shape") as Property;
     const shapes = (
       path.keyframes?.length > 0 ? path.keyframes.map((kf) => kf.value) : [path.value]
-    ) as Shape[];
+    );
     if (value) {
       // Measured on AE 2026: switching RotoBezier on gives each vertex
       // of every key tension 1 when both its handles are zero (it stays

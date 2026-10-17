@@ -247,10 +247,10 @@ export function _dispatch_tdbs(ctx: _ParseContext): (Property | PropertyGroup)[]
   if (ctx.match_name === "ADBE Layer Source Alternate") {
     const blsi = filter_by_type(ctx.chunks, "blsi");
     if (blsi?.length > 0) {
-      prop._blsi = blsi[0] as U4Chunk;
+      prop._blsi = blsi[0];
       const blsv = filter_by_type(ctx.chunks, "blsv");
       if (blsv?.length > 0) {
-        prop._blsv = blsv[0] as U4Chunk;
+        prop._blsv = blsv[0];
       }
     }
   }
@@ -259,7 +259,7 @@ export function _dispatch_tdbs(ctx: _ParseContext): (Property | PropertyGroup)[]
   if (ctx.match_name.startsWith(VF_AXIS_PREFIX)) {
     const vfdn = filter_by_type(ctx.chunks, "vfdn");
     if (vfdn?.length > 0) {
-      prop._vfdn = vfdn[0] as VfdnChunk;
+      prop._vfdn = vfdn[0];
     }
   }
   // Curves keeps its curves as the effect's arbitrary data, an aRbp in a

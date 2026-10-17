@@ -664,7 +664,7 @@ export function main(): number {
   const root_node = build_project_node(app, include_properties);
 
   // Output using context manager (get_output): a file when --output is given, else stdout.
-  const output_path = args.output ? new Path(args.output as string) : null;
+  const output_path = args.output ? new Path(args.output) : null;
 
   // @contextlib.contextmanager: returns [output, close] (the `with` enter/exit pair).
   function get_output(): [TextIO, () => void] {

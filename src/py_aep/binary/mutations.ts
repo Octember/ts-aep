@@ -212,7 +212,7 @@ export function remap_layer_ref_tdpi(chunk: Chunk, id_map: Map<number, number>):
  */
 export function rewrite_time_base(chunk: Chunk, time_base: number): void {
   for (const found of recursive_find([chunk], "tdb4")) {
-    const tdb4 = found as Tdb4Chunk;
+    const tdb4 = found;
     if (tdb4._time_base) {
       tdb4._time_base = time_base;
     }

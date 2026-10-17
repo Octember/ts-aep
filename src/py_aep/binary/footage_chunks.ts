@@ -920,7 +920,7 @@ export class OptiChunk extends Chunk {
     const { chunk_type = "" } = kw;
     if (this !== OptiChunk) {
       // Variant subclass - use its own read
-      return super.read(fp, size, { chunk_type }) as OptiChunk; // returns Self
+      return super.read(fp, size, { chunk_type }); // returns Self
     }
     if (size < 6) {
       return new this({ chunk_type, data: read_bytes(fp, size) });

@@ -58,7 +58,7 @@ export class ShapeLayer extends AVLayer {
       duration,
       containing_comp,
       effect_param_defs,
-    }) as ShapeLayer;
+    });
     layer._ldta.layer_type = LayerType.SHAPE;
     // The base factory named the layer from the AV type it started with.
     layer._match_name = getitem(

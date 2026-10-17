@@ -142,7 +142,7 @@ export class SettingsView {
 
   update(other: Map<string, any> | SettingsView | Iterable<[string, any]> = [], kwargs: Record<string, unknown> = {}): void {
     if (other instanceof Map || other instanceof SettingsView) {
-      for (const [k, v] of mapping_items(other) as [string, any][]) this.__setitem__(k, v);
+      for (const [k, v] of mapping_items(other)) this.__setitem__(k, v);
     } else {
       for (const [k, v] of other) this.__setitem__(k, v);
     }
@@ -357,7 +357,7 @@ export function _to_string_value(
  */
 export function settings_to_number(settings: Map<string, any> | SettingsView): Map<string, any> {
   return new Map<string, any>(
-    (mapping_items(settings) as [string, any][]).map(([k, v]): [string, any] => [k, _to_number_value(v)]),
+    mapping_items(settings).map(([k, v]): [string, any] => [k, _to_number_value(v)]),
   );
 }
 
@@ -375,7 +375,7 @@ export function settings_to_string(
   resize_map: Map<string, string> = _RESIZE_TO_STRINGS,
 ): Map<string, string> {
   return new Map<string, string>(
-    (mapping_items(settings) as [string, any][]).map((
+    mapping_items(settings).map((
       [k, v],
     ): [string, string] => [
       k,

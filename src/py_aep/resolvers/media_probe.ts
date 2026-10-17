@@ -166,7 +166,7 @@ export class MediaInfo implements MediaInfoFields {
 
   /** `NamedTuple._replace(**kw)`: a copy with the given fields swapped. */
   _replace(kw: Partial<MediaInfoFields>): MediaInfo {
-    return new MediaInfo({ ...(this as MediaInfoFields), ...kw });
+    return new MediaInfo({ ...this, ...kw });
   }
 
   /** Tuple equality: field-wise, in declaration order. */
@@ -302,7 +302,7 @@ export function probe_media(file: Path, data: Uint8Array | null = null): MediaIn
   // otherwise surface as a raw struct.error / IndexError from deep inside
   // one of them.
   try {
-    if (data != null) return parser(new BytesIO(data) as unknown as IO);
+    if (data != null) return parser(new BytesIO(data));
     const fp = open_rb(file.path);
     try {
       return parser(new _BoundedReader(fp) as unknown as IO);

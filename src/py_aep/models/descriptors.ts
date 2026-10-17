@@ -326,7 +326,7 @@ export class ChunkField<T> {
   static bool(chunk_attr: string, field: string, kwargs: Record<string, any> = {}): ChunkField<boolean> {
     kwargs = { ...kwargs };
     if (!("validate" in kwargs)) kwargs.validate = validate_bool;
-    return new this(chunk_attr, field, kwargs) as ChunkField<boolean>;
+    return new this(chunk_attr, field, kwargs);
   }
 
   /**
@@ -361,6 +361,6 @@ export class ChunkField<T> {
         if (!("validate" in kwargs)) kwargs.validate = validate_enum(enum_cls);
       }
     }
-    return new this(chunk_attr, field, kwargs) as ChunkField<T>;
+    return new this(chunk_attr, field, kwargs);
   }
 }

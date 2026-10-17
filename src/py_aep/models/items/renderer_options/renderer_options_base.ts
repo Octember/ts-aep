@@ -32,7 +32,7 @@ export class RendererOptionsBase extends SettingsView {
   constructor(kw: { body: any; comp: CompItem }) {
     const { body, comp } = kw;
     // NOTE(port): Python passes `self` as the owner; TS forbids touching `this` before super(), so the owner is patched in just below (SettingsView only stores it).
-    super(null as unknown as object, (new.target as typeof RendererOptionsBase)._SPEC);
+    super(null as unknown as object, new.target._SPEC);
     this._body = body;
     this._comp = comp;
     // Python's owner is the (possibly proxied) instance itself, so writes via
@@ -47,7 +47,7 @@ export class RendererOptionsBase extends SettingsView {
     // write to a name with no backing descriptor would vanish with the
     // wrapper. Reject it instead of silently dropping it.
     // NOTE(port): `name in prototype` is `hasattr(type(self), name)`; pyrt `hasattr` would run descriptor getters on the prototype.
-    if (!name.startsWith("_") && !(name in (this.constructor as { prototype: object }).prototype)) {
+    if (!name.startsWith("_") && !(name in this.constructor.prototype)) {
       throw new AttributeError(`${this.constructor.name} has no option ${repr(name)}`);
     }
     object_setattr(this, name, value);

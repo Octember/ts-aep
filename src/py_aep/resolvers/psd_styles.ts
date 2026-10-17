@@ -654,7 +654,7 @@ export function _convert_style(
       // enum) does not silently leave the leaf at its default.
       warn(
         `style parameter ${prefix}/${param.suffix} was skipped ` +
-          `(${(exc as Error).message}); the imported style keeps the AE default`,
+          `(${exc.message}); the imported style keeps the AE default`,
       );
       continue;
     }
@@ -789,7 +789,7 @@ export function parse_layer_styles(
   let imported_any = false;
   for (const [key, instances] of _style_instances(descriptor)) {
     const [prefix, params] = getitem(_STYLES, key);
-    const present_instances = instances.filter((inst) => inst instanceof Map) as Map<string, _Value>[];
+    const present_instances = instances.filter((inst) => inst instanceof Map);
     if (present_instances.length > 1) {
       // AE drops a multi-instance style entirely, even when every
       // instance is representable.

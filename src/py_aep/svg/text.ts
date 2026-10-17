@@ -109,7 +109,7 @@ export function _load_font(path: Path, font_number = 0): FontkitFont {
     font = opened.fonts ? opened.fonts[font_number] : opened;
     _font_cache.set(key, font);
   }
-  return font as FontkitFont;
+  return font;
 }
 
 /**

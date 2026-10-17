@@ -735,7 +735,7 @@ export class CurvesArbpChunk extends Chunk {
     }
     const chunk = this.read(new BytesIO(arbp.data), arbp.data.length, { chunk_type: "aRbp" });
     py_assert(chunk instanceof this);
-    return chunk as CurvesArbpChunk;
+    return chunk;
   }
 }
 define(CurvesArbpChunk, {

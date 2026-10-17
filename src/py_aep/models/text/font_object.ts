@@ -5,7 +5,7 @@ import { CosField } from "../../cos/descriptors.ts";
 
 /** Decode the COS design vector (16.16 fixed-point ints) to floats. */
 export function _design_vector_from_cos(raw: number[]): number[] {
-  if (raw == null || typeof (raw as Partial<Iterable<number>>)[Symbol.iterator] !== "function") {
+  if (raw == null || typeof raw[Symbol.iterator] !== "function") {
     throw new TypeError_("object is not iterable");
   }
   return Array.from(raw, (v: unknown) => {

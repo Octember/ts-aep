@@ -45,7 +45,7 @@ export function _parse_controller(cctl_chunk: ListChunk): EssentialGraphicsContr
   const ctyp = find_by_type(cctl_chunk.chunks, "CTyp");
 
   const uuid_chunks = filter_by_type(cctl_chunk.chunks, "Utf8");
-  const uuid = uuid_chunks?.length > 0 ? (uuid_chunks[0] as Utf8Chunk).value : "";
+  const uuid = uuid_chunks?.length > 0 ? uuid_chunks[0].value : "";
 
   // The controlled-property path is the nested LIST:CPrp's Utf8 (JSON), a
   // different CPrp from the override-side OvG2/CPrp. Absent for some
@@ -63,17 +63,17 @@ export function _parse_controller(cctl_chunk: ListChunk): EssentialGraphicsContr
   if (cprp != null) {
     const path_utf8 = filter_by_type(cprp.chunks, "Utf8");
     if (path_utf8?.length > 0) {
-      source_property_path = _parse_source_property_path((path_utf8[0] as Utf8Chunk).value);
+      source_property_path = _parse_source_property_path(path_utf8[0].value);
     }
     // CCId / CLId identify the source comp + layer that own the
     // controlled property (the layer is matched by its `layer_id`).
     const ccid = filter_by_type(cprp.chunks, "CCId");
     if (ccid?.length > 0) {
-      source_comp_id = (ccid[0] as U4Chunk).value;
+      source_comp_id = ccid[0].value;
     }
     const clid = filter_by_type(cprp.chunks, "CLId");
     if (clid?.length > 0) {
-      source_layer_id = (clid[0] as U4Chunk).value;
+      source_layer_id = clid[0].value;
     }
   }
 

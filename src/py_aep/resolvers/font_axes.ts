@@ -92,7 +92,7 @@ export function read_design_axes(font_file: _PathLike, font_number: number = 0):
       axes.push(
         new FontDesignAxis(
           axis_tag,
-          (axis_name || axis_tag) as string,
+          (axis_name || axis_tag),
           float(info.min),
           float(info.default),
           float(info.max),

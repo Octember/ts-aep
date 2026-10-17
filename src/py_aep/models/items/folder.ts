@@ -79,17 +79,17 @@ export class FolderItem extends Item {
 
   /** All the compositions in the project. */
   get compositions(): CompItem[] {
-    return this.items.filter((item) => item instanceof CompItem) as CompItem[];
+    return this.items.filter((item) => item instanceof CompItem);
   }
 
   /** All the folders in the project. */
   get folders(): FolderItem[] {
-    return this.items.filter((item) => item instanceof FolderItem) as FolderItem[];
+    return this.items.filter((item) => item instanceof FolderItem);
   }
 
   /** All the footages in the project. */
   get footages(): FootageItem[] {
-    return this.items.filter((item) => item instanceof FootageItem) as FootageItem[];
+    return this.items.filter((item) => item instanceof FootageItem);
   }
 
   /** Remove this folder and all its children from the project. */

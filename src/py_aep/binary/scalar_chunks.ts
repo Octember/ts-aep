@@ -32,7 +32,7 @@ export class _StringChunkBase extends Chunk {
     kwargs: { chunk_type?: string; [k: string]: unknown } = {},
   ): _StringChunkBase {
     const { chunk_type = "" } = kwargs;
-    const cls = this as unknown as typeof _StringChunkBase & (new (init: { chunk_type: string; value: string }) => _StringChunkBase);
+    const cls = this;
     const raw = read_bytes(fp, size);
     return new cls({ chunk_type, value: decode(raw, cls._ENCODING) });
   }

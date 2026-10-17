@@ -863,7 +863,7 @@ export class TextDocument {
   /** The Text layer's line orientation. Read / Write. */
   get line_orientation(): LineOrientation {
     const val = cos_get(this._cos_data, "0", "8", "0", 0, "0", "2", "1");
-    if (typeof val === "number" && Number.isInteger(val)) return LineOrientation.from_binary(val as number) as LineOrientation;
+    if (typeof val === "number" && Number.isInteger(val)) return LineOrientation.from_binary(val) as LineOrientation;
     return LineOrientation.HORIZONTAL;
   }
 
@@ -997,7 +997,7 @@ export class TextDocument {
   /** The box's vertical text alignment. Read / Write. */
   get box_vertical_alignment(): BoxVerticalAlignment {
     const raw = cos_get(this._box_frame(), "2", "13");
-    if (typeof raw === "number" && Number.isInteger(raw)) return BoxVerticalAlignment.from_binary(raw as number) as BoxVerticalAlignment;
+    if (typeof raw === "number" && Number.isInteger(raw)) return BoxVerticalAlignment.from_binary(raw) as BoxVerticalAlignment;
     return BoxVerticalAlignment.TOP;
   }
 
@@ -1008,7 +1008,7 @@ export class TextDocument {
   /** The box's auto-fit policy. Read / Write. */
   get box_auto_fit_policy(): BoxAutoFitPolicy {
     const raw = cos_get(this._box_frame(), "2", "14");
-    if (typeof raw === "number" && Number.isInteger(raw)) return BoxAutoFitPolicy.from_binary(raw as number) as BoxAutoFitPolicy;
+    if (typeof raw === "number" && Number.isInteger(raw)) return BoxAutoFitPolicy.from_binary(raw) as BoxAutoFitPolicy;
     return BoxAutoFitPolicy.NONE;
   }
 

@@ -307,7 +307,7 @@ export class AVLayer extends Layer {
 
   set blending_mode(value: BlendingMode) {
     validate_enum(BlendingMode)(value);
-    value = BlendingMode.of(value) as BlendingMode;
+    value = BlendingMode.of(value);
     // Dancing Dissolve has no transfer-mode value of its own: AE stores it
     // as Dissolve plus the dancing-dissolve flag in the ldta transfer byte.
     if (value === BlendingMode.DANCING_DISSOLVE) {
@@ -338,7 +338,7 @@ export class AVLayer extends Layer {
 
   set track_matte_type(value: TrackMatteType | number) {
     validate_enum(TrackMatteType)(value);
-    value = TrackMatteType.of(value) as TrackMatteType;
+    value = TrackMatteType.of(value);
     const old_matte = this.track_matte_layer;
     this._ldta.track_matte_type = TrackMatteType.to_binary(value);
     if (value === TrackMatteType.NO_TRACK_MATTE && this._ldta.matte_layer_id != null) {

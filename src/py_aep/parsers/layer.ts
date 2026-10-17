@@ -44,7 +44,7 @@ export function _parse_ovg2_uuids(tdgp_chunks: Chunk[]): string[] {
     for (const cprp of filter_by_list_type(ovg2_list.chunks, "CPrp")) {
       const utf8_chunks = filter_by_type(cprp.chunks, "Utf8");
       if (utf8_chunks?.length > 0) {
-        uuids.push((utf8_chunks[0] as Utf8Chunk).value);
+        uuids.push(utf8_chunks[0].value);
       }
     }
   }

@@ -322,7 +322,7 @@ export function _aac_bitrate_rows(): Rule[] {
           ["Audio Format", MPEGAudioFormat.AAC],
           ["Audio Codec", codec],
           ["Audio Sample Rate", rate_cond],
-          ["Audio Channels", channels as number],
+          ["Audio Channels", channels],
         ]),
         new Map<string, ReadonlySet<RuleValue>>([["Audio Bitrate", new Set(kbps)]]),
       ]);
@@ -471,7 +471,7 @@ export const _CONDITIONAL_RULES = new Map<OutputFormat, Rule[]>([
       (table as number[][]).map(
         ([kbps, rate]): Rule => [
           new Map<string, RuleValue | RuleValue[]>([
-            ["BitRate", kbps as number],
+            ["BitRate", kbps],
             ["Audio Channels", channels as number],
           ]),
           new Map<string, ReadonlySet<RuleValue>>([["Audio Sample Rate", new Set([rate])]]),

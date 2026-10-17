@@ -459,7 +459,7 @@ export class FmtItem extends AttrsBase {
 
   /** Serialize an item to bytes using its `_struct_info` metadata. */
   tobytes(): Uint8Array {
-    const info = _struct_info(this.constructor as Function);
+    const info = _struct_info(this.constructor);
     if (info == null) {
       throw new TypeError_(`${this.constructor.name} has no fmt_field metadata`);
     }

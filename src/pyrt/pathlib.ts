@@ -258,7 +258,7 @@ export class PurePath {
         paths.push(String(a));
       }
     }
-    (this as { _raw_paths: string[] })._raw_paths = paths;
+    this._raw_paths = paths;
     const f = this._flavour;
     let path = paths.length === 0 ? "" : paths.length === 1 ? paths[0] : f.join(paths[0], ...paths.slice(1));
     let drv = "";
@@ -274,9 +274,9 @@ export class PurePath {
       }
       tail = rel.split(f.sep).filter((x) => x && x !== ".");
     }
-    (this as { drive: string }).drive = drv;
-    (this as { root: string }).root = root;
-    (this as { _tail: string[] })._tail = tail;
+    this.drive = drv;
+    this.root = root;
+    this._tail = tail;
   }
 
   /** A new path of the same flavour from the given segments (`with_segments`). */

@@ -1502,7 +1502,7 @@ export class Project {
         // `name_set` stays off - matching avoids both deltas. A
         // clipping-run precomp instead bakes the base layer's name
         // (still with `name_set` off) and stays uncollapsed.
-        const group_layer = comp.add(nested) as AVLayer;
+        const group_layer = comp.add(nested);
         if (spec.collapsed) group_layer.collapse_transformation = true;
         if (!spec.enabled) group_layer.enabled = false;
         if (spec.layer_name != null) {
@@ -1551,8 +1551,8 @@ export class Project {
         (transform.__getitem__("ADBE Anchor Point") as Property).value = [anchor_x, anchor_y, 0.0];
         (transform.__getitem__("ADBE Position") as Property).value = [position_x, position_y, 0.0];
       }
-      if (spec.is_adjustment) (layer as AVLayer).adjustment_layer = true;
-      if (spec.preserve_transparency) (layer as AVLayer).preserve_transparency = true;
+      if (spec.is_adjustment) layer.adjustment_layer = true;
+      if (spec.preserve_transparency) layer.preserve_transparency = true;
       if (spec.masks?.length > 0) {
         // A PSD vector-mask/shape-layer path: AE creates one mask
         // per subpath (psd_vector_mask* fixtures).
@@ -2077,7 +2077,7 @@ export class Project {
       if (duplicates.length < 2) continue;
       const kept = duplicates[0];
       for (const dup of duplicates.slice(1)) {
-        for (const comp of dup.used_in as CompItem[]) {
+        for (const comp of dup.used_in) {
           for (const layer of comp.av_layers) {
             if (layer._source_id === dup.id) {
               layer._source_id = kept.id;
@@ -2160,11 +2160,11 @@ export class Project {
   _fill_relative_path_counts(project_file: string): [Utf8Chunk, string][] {
     const filled: [Utf8Chunk, string][] = [];
     for (const chunk of recursive_find(this._rifx.chunks, "alas", undefined, true)) {
-      const alas = chunk as Utf8Chunk;
+      const alas = chunk;
       const text = alas.value;
       const data = text ? json_loads(text) : new Map<string, any>();
       if (!py_eq(dict_get(data, "ascendcount_base"), PENDING_ASCENDCOUNT)) continue;
-      const counts = relative_path_counts(project_file, dict_get(data, "fullpath", "") as string, {
+      const counts = relative_path_counts(project_file, dict_get(data, "fullpath", ""), {
         target_is_folder: py_bool(dict_get(data, "target_is_folder")),
       });
       data.set("ascendcount_base", counts[0]);
@@ -2241,7 +2241,7 @@ export class Project {
       const layer_ids: number[] = [];
       for (const comp of this.compositions) {
         for (const ldta of recursive_find(comp._item_list.chunks, "ldta")) {
-          layer_ids.push((ldta as LdtaChunk).layer_id);
+          layer_ids.push(ldta.layer_id);
         }
       }
       const max_layer_id = max(layer_ids, null, 0);
@@ -2505,7 +2505,7 @@ export function _ai_cropped_transform(
 export function _get_effect_names(root_chunks: Chunk[]): string[] {
   const pefl_chunk = find_by_list_type(root_chunks, "Pefl");
   const pjef_chunks = filter_by_type(pefl_chunk.chunks, "pjef");
-  return pjef_chunks.map((chunk) => (chunk as Utf8Chunk).value);
+  return pjef_chunks.map((chunk) => chunk.value);
 }
 
 // tdb4 canon AE writes on materialized Layer Styles leaves, keyed by leaf
@@ -2599,7 +2599,7 @@ export function _style_leaf_map(group: PropertyGroup): Map<string, Property> {
         setdefault(leaves, name, leaf);
       }
     } else if (!leaves.has(child.match_name)) {
-      leaves.set(child.match_name, child as Property);
+      leaves.set(child.match_name, child);
     }
   }
   return leaves;

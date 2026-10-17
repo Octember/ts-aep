@@ -225,7 +225,7 @@ export function text_ink_rect(doc: TextDocument): Record<string, number> {
     styles = tc._char_styles(doc, raw);
   } catch (exc) {
     if (!(exc instanceof tc.CompositionUnsupported)) throw exc;
-    throw Object.assign(_refuse(str((exc as Error).message)), { cause: exc });
+    throw Object.assign(_refuse(str(exc.message)), { cause: exc });
   }
   const strokes: number[] = [];
   for (const [start, end, style] of run_spans(doc._doc, "6", "6")) {
@@ -242,7 +242,7 @@ export function text_ink_rect(doc: TextDocument): Record<string, number> {
     }
   } catch (exc) {
     if (!(exc instanceof tc.CompositionUnsupported)) throw exc;
-    throw Object.assign(_refuse(str((exc as Error).message)), { cause: exc });
+    throw Object.assign(_refuse(str(exc.message)), { cause: exc });
   }
   return box.rect();
 }

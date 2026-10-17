@@ -54,7 +54,7 @@ export interface HostPath {
   isAbsolute(path: string): boolean;
 }
 
-const _process = (globalThis as { process?: { platform: string; env: Record<string, string | undefined>; cwd(): string; getBuiltinModule?(name: string): unknown } }).process;
+const _process = globalThis.process;
 
 function _builtin(name: string): any {
   try {
@@ -396,7 +396,7 @@ export const fs: HostFs = new Proxy({} as HostFs, {
     const v = (target as unknown as Record<string, unknown>)[name];
     return typeof v === "function" ? v.bind(target) : v;
   },
-}) as HostFs;
+});
 
 /**
  * Move bytes in and out of the in-memory file system (the backend in

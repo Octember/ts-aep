@@ -2042,7 +2042,7 @@ export class Property extends PropertyBase {
             chunk.nb_options = items.length;
           } else if (chunk.chunk_type === "pdnm") {
             const utf8 = find_by_type((chunk as ContainerChunk).chunks, "Utf8");
-            (utf8 as Utf8Chunk).value = joined;
+            utf8.value = joined;
             written = true;
           }
         }

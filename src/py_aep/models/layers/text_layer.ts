@@ -83,7 +83,7 @@ export class TextLayer extends AVLayer {
       containing_comp,
       root_tdgp_extra: [text_props_tdmn, text_props_tdgp],
       effect_param_defs,
-    }) as TextLayer;
+    });
     layer._ldta.layer_type = LayerType.TEXT;
     // The base factory named the layer from the AV type it started with.
     layer._match_name = getitem(

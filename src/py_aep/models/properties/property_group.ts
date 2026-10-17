@@ -271,31 +271,31 @@ export function _reorder_and_fill(
       const child = existing.get(mn);
       child._auto_name = spec.auto_name;
       if (!(spec instanceof GroupSpec) && child instanceof Property) {
-        instance_dict(child).set("_color", (spec as PropSpec).color);
-        if ((spec as PropSpec).chunk_bounds_are_hints) {
+        instance_dict(child).set("_color", spec.color);
+        if (spec.chunk_bounds_are_hints) {
           // tdum/tduM hold UI slider hints, not real bounds:
           // the spec is authoritative (None = unbounded).
-          child._min_value_fallback = (spec as PropSpec).min_value;
-          child._max_value_fallback = (spec as PropSpec).max_value;
+          child._min_value_fallback = spec.min_value;
+          child._max_value_fallback = spec.max_value;
         } else {
-          if ((spec as PropSpec).min_value != null) {
-            child._min_value_fallback = (spec as PropSpec).min_value;
+          if (spec.min_value != null) {
+            child._min_value_fallback = spec.min_value;
           }
-          if ((spec as PropSpec).max_value != null) {
-            child._max_value_fallback = (spec as PropSpec).max_value;
+          if (spec.max_value != null) {
+            child._max_value_fallback = spec.max_value;
           }
         }
-        if ((spec as PropSpec).can_vary_over_time != null) {
-          child._can_vary_over_time = (spec as PropSpec).can_vary_over_time;
+        if (spec.can_vary_over_time != null) {
+          child._can_vary_over_time = spec.can_vary_over_time;
         }
-        if ((spec as PropSpec).units_text != null) {
-          child._units_text = (spec as PropSpec).units_text;
+        if (spec.units_text != null) {
+          child._units_text = spec.units_text;
         }
         if (child.default_value == null) {
           const dv =
-            (spec as PropSpec).default_value === _USE_VALUE
-              ? (spec as PropSpec).value
-              : (spec as PropSpec).default_value;
+            spec.default_value === _USE_VALUE
+              ? spec.value
+              : spec.default_value;
           if (dv != null) child.default_value = dv;
         }
       }
@@ -313,7 +313,7 @@ export function _reorder_and_fill(
       ordered.push(group);
     } else {
       const [v, d] = dict_get(value_overrides ?? new Map(), mn, [_USE_VALUE, _USE_VALUE]);
-      const prop = Property._new(spec as PropSpec, child_depth, {
+      const prop = Property._new(spec, child_depth, {
         parent_property: container,
         value: v,
         default_value: d,
@@ -587,7 +587,7 @@ export class PropertyGroup extends PropertyBase {
     // Flip synthetic flags on tdmn + group-owned chunks (not children).
     if (this._tdmn != null) this._tdmn.synthetic = false;
     py_assert(this._tdgp != null);
-    const tdgp = this._tdgp as ListChunk;
+    const tdgp = this._tdgp;
     tdgp.synthetic = false;
     this._tdsb.synthetic = false;
     if (this._name_utf8 != null) {
@@ -984,7 +984,7 @@ export class PropertyGroup extends PropertyBase {
     // AE stores the axis display name in a vfdn sibling after the tdbs.
     const vfdn = VfdnChunk.new_(`Font Axis ${axis.name}`);
     py_assert(this._tdgp != null);
-    const tdgp = this._tdgp as ListChunk;
+    const tdgp = this._tdgp;
     tdgp.chunks.splice(index_by_identity(tdgp.chunks, tdbs) + 1, 0, vfdn);
     slot._vfdn = vfdn;
     slot._vf_tag_cache = tag_raw;
