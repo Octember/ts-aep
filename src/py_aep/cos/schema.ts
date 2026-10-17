@@ -18,12 +18,10 @@
  *   through the operations in `kinds.ts`, which raise what the builtin
  *   raises.
  *
- * Keys and kinds are the ones py_aep reads or writes (cos/descriptors.py,
- * models/text/*.py, resolvers/text_*.py). The readers `read` through
- * `char_style`, `cache_line`, `first_baseline` and `font_ref`; the other
- * layouts document the format. `tests/unit/test_cos_schema.test.ts` checks
- * that every sample's tree, and the trees py_aep writes, match every layout
- * wherever it sits, so real files take the typed path.
+ * The layouts are the dicts py_aep reads with `isinstance` checks.
+ * `tests/unit/test_cos_schema.test.ts` checks that every sample's tree, and
+ * the trees py_aep writes, match them wherever they sit, so real files take
+ * the typed path.
  */
 
 import * as z from "zod/mini";
@@ -110,55 +108,10 @@ export const char_style = {
   "70": py_int, // digit set
 } as const;
 
-/** A paragraph style (run payload). */
-export const para_style = {
-  "0": py_int, // justification
-  "1": py_number, // first line indent
-  "2": py_number, // start indent
-  "3": py_number, // end indent
-  "4": py_number, // space before
-  "5": py_number, // space after
-  "7": py_number, // auto leading factor
-  "8": py_int, // leading type
-  "9": z.boolean(), // auto hyphenate
-  "21": z.boolean(), // hanging roman
-  "29": z.boolean(), // every-line composer
-  "33": py_int, // paragraph direction
-} as const;
-
-/** A `{"0": payload, "1": count}` style, kern or line-count run entry. */
-export const run = { "1": py_int } as const;
-
-/** A manual-kerning run payload: `"0"` is the kern value (absent in gap runs). */
-export const kern_payload = { "0": py_int } as const;
-
-/** A document's text dict (`doc["0"]`): text, runs, leading-edge kern value. */
-export const doc_text = {
-  "0": py_str, // the raw text, CR line breaks plus a terminator CR
-  "7": py_int, // leading-edge manual kern value
-} as const;
-
-/** A layout-cache node (`doc["1"]["2"]`, nested through `"6"`), tagged `/PC`, `/F`, `/R`, `/L`, `/S` or `/G`. */
-export const cache_node = {
-  "99": cos_name, // tag
-} as const;
-
 /** A `/L` (line) cache node: its baseline (`"10"` is a dict on other tags). */
 export const cache_line = {
   "99": cos_name,
   "10": py_number, // baseline
-} as const;
-
-/** A `/S` segment's record (`seg["15"]`): its UTF-16 count. */
-export const cache_segment = { "0": py_int } as const;
-
-/** Box metadata (`frame["2"]`). */
-export const frame_meta = {
-  "0": py_int,
-  "1": py_int, // line orientation
-  "9": py_number, // inset spacing
-  "13": py_int, // vertical alignment
-  "14": py_int, // auto-fit policy
 } as const;
 
 /** First-baseline settings (`frame["2"]["10"]`): alignment and minimum. */
@@ -166,9 +119,3 @@ export const first_baseline = { "0": py_int, "1": py_number } as const;
 
 /** A font-index holder: a style, typography settings or used-font record (`"0"`). */
 export const font_ref = { "0": py_int } as const;
-
-/** A font's CoolType record (`cos["0"]["1"]["0"][i]["0"]["0"]`). */
-export const font_data = {
-  "0": py_str, // PostScript name
-  "5": py_str, // version (name ID 5)
-} as const;
