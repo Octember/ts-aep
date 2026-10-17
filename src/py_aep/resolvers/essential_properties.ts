@@ -74,8 +74,8 @@ export function _resolve_indexed_child(group: PropertyGroup, ref: SourceProperty
   if (ref.prop_index == null) return null;
   if (group.is_effect) {
     const defs = project._effect_param_defs.get(group.match_name);
-    if (defs?.size > 0) {
-      const keys = [...defs.keys()];
+    if (defs?.size! > 0) {
+      const keys = [...defs!.keys()];
       const pos = ref.prop_index - 1;
       if (0 <= pos && pos < keys.length && keys[pos] === ref.match_name) {
         try {

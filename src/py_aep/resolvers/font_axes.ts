@@ -81,7 +81,7 @@ export function read_design_axes(font_file: _PathLike, font_number: number = 0):
     // order follows JS key order; only a font whose fvar tag is an integer-like
     // string (e.g. "1234") would be reordered vs fvar table order.
     for (const [axis_tag, info] of Object.entries(font.variationAxes)) {
-      let axis_name: string | null = null;
+      let axis_name: string | null | undefined = null;
       if (name_table != null) {
         // TODO(port): fontTools getDebugName(axis.axisNameID) falls back across
         // name records and languages; fontkit's variationAxes name reads the

@@ -93,16 +93,16 @@ export class PsdStyleBlocks {
     yield this.channel_restrictions;
   }
 
-  static readonly _fields = ["effects", "fill_opacity", "blend_interior", "channel_restrictions"];
+  static readonly _fields = ["effects", "fill_opacity", "blend_interior", "channel_restrictions"] as const satisfies readonly (keyof PsdStyleBlocks)[];
 
   /** `t._replace(field=...)`: a copy with the given fields replaced. */
   _replace(kw: Partial<PsdStyleBlocks>): PsdStyleBlocks {
-    const args = PsdStyleBlocks._fields.map((f) => (f in kw ? (kw as Record<string, unknown>)[f] : (this as unknown as Record<string, unknown>)[f]));
-    return new (PsdStyleBlocks as unknown as new (...a: unknown[]) => PsdStyleBlocks)(...args);
+    const args = PsdStyleBlocks._fields.map((f) => (f in kw ? kw[f] : this[f]));
+    return new PsdStyleBlocks(...(args as ConstructorParameters<typeof PsdStyleBlocks>));
   }
 
-  _asdict(): Record<string, unknown> {
-    return Object.fromEntries(PsdStyleBlocks._fields.map((f) => [f, (this as unknown as Record<string, unknown>)[f]]));
+  _asdict(): Record<string, PsdStyleBlocks[(typeof PsdStyleBlocks._fields)[number]]> {
+    return Object.fromEntries(PsdStyleBlocks._fields.map((f) => [f, this[f]]));
   }
 
   /** NamedTuple equality: tuple-wise comparison of the fields. */
@@ -230,16 +230,16 @@ export class PsdLayer {
     yield this.visible;
   }
 
-  static readonly _fields = ["name", "layer_id", "bounds", "record_index", "is_adjustment", "style_blocks", "vector_mask", "clipped", "is_fill", "mask_box", "has_transparency", "visible"];
+  static readonly _fields = ["name", "layer_id", "bounds", "record_index", "is_adjustment", "style_blocks", "vector_mask", "clipped", "is_fill", "mask_box", "has_transparency", "visible"] as const satisfies readonly (keyof PsdLayer)[];
 
   /** `t._replace(field=...)`: a copy with the given fields replaced. */
   _replace(kw: Partial<PsdLayer>): PsdLayer {
-    const args = PsdLayer._fields.map((f) => (f in kw ? (kw as Record<string, unknown>)[f] : (this as unknown as Record<string, unknown>)[f]));
-    return new (PsdLayer as unknown as new (...a: unknown[]) => PsdLayer)(...args);
+    const args = PsdLayer._fields.map((f) => (f in kw ? kw[f] : this[f]));
+    return new PsdLayer(...(args as ConstructorParameters<typeof PsdLayer>));
   }
 
-  _asdict(): Record<string, unknown> {
-    return Object.fromEntries(PsdLayer._fields.map((f) => [f, (this as unknown as Record<string, unknown>)[f]]));
+  _asdict(): Record<string, PsdLayer[(typeof PsdLayer._fields)[number]]> {
+    return Object.fromEntries(PsdLayer._fields.map((f) => [f, this[f]]));
   }
 
   /** NamedTuple equality: tuple-wise comparison of the fields. */
@@ -296,16 +296,16 @@ export class PsdGroup {
     yield this.visible;
   }
 
-  static readonly _fields = ["name", "layer_id", "children", "style_blocks", "visible"];
+  static readonly _fields = ["name", "layer_id", "children", "style_blocks", "visible"] as const satisfies readonly (keyof PsdGroup)[];
 
   /** `t._replace(field=...)`: a copy with the given fields replaced. */
   _replace(kw: Partial<PsdGroup>): PsdGroup {
-    const args = PsdGroup._fields.map((f) => (f in kw ? (kw as Record<string, unknown>)[f] : (this as unknown as Record<string, unknown>)[f]));
-    return new (PsdGroup as unknown as new (...a: unknown[]) => PsdGroup)(...args);
+    const args = PsdGroup._fields.map((f) => (f in kw ? kw[f] : this[f]));
+    return new PsdGroup(...(args as ConstructorParameters<typeof PsdGroup>));
   }
 
-  _asdict(): Record<string, unknown> {
-    return Object.fromEntries(PsdGroup._fields.map((f) => [f, (this as unknown as Record<string, unknown>)[f]]));
+  _asdict(): Record<string, PsdGroup[(typeof PsdGroup._fields)[number]]> {
+    return Object.fromEntries(PsdGroup._fields.map((f) => [f, this[f]]));
   }
 
   /** NamedTuple equality: tuple-wise comparison of the fields. */

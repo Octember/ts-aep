@@ -74,7 +74,7 @@ export function _is_os_error(exc: unknown): boolean {
 export function _open_face(path: string, face_index: number): fontkit.Font {
   // NOTE(port): fontTools `TTFont(fontNumber=...)` picks a face of a .ttc;
   // fontkit exposes collection faces through `.fonts`; a plain font is its own face.
-  const opened = fontkit.create(host.fs.readFileSync(path) as never) as fontkit.Font & { fonts?: fontkit.Font[] };
+  const opened = fontkit.create(host.fs.readFileSync(path)) as fontkit.Font & { fonts?: fontkit.Font[] };
   return opened.fonts ? opened.fonts[face_index] : opened;
 }
 

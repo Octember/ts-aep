@@ -32,6 +32,7 @@
  */
 
 import * as zlib from "../../pyrt/zlib.ts";
+import type { CosDict, CosValue } from "../cos/cos.ts";
 import { IndirectReference } from "../cos/index.ts";
 import { STD14_EXTENT, STD14_FIRST_CODE, STD14_STANDARD_QUOTES, STD14_WIDTHS } from "../data/std14_metrics.ts";
 import { UnsupportedAiLayersError, _find_ai_icc, _object_offsets, _parse_object_at, read_ai_layer_ocgs } from "./ai_layers.ts";
@@ -238,7 +239,7 @@ export class _Acc {
 }
 
 /** The dictionary of a plain dict or of a `Stream` object. */
-export function _as_dict(value: unknown): Map<string, any> | null {
+export function _as_dict(value: unknown): CosDict | null {
   if (value instanceof Map) return value;
   const dictionary = getattr(value, "dictionary", null);
   return dictionary instanceof Map ? dictionary : null;
@@ -287,7 +288,7 @@ export class _Document {
   _name: string;
   _offsets: Map<number, number>;
   _cache: Map<number, unknown>;
-  _catalog: Map<string, any> | null;
+  _catalog: CosDict | null;
 
   constructor(data: Uint8Array, name: string) {
     this._data = data;
@@ -323,7 +324,7 @@ export class _Document {
   }
 
   /** Follow an indirect reference to its object; pass values through. */
-  resolve(value: unknown): any {
+  resolve(value: unknown): CosValue {
     while (value instanceof IndirectReference) {
       const number = value.object_number;
       if (this._cache.has(number)) {
@@ -345,7 +346,7 @@ export class _Document {
     return float(resolved);
   }
 
-  get(mapping: unknown, key: string, default_: unknown = null): any {
+  get(mapping: unknown, key: string, default_: unknown = null): CosValue {
     const table = _as_dict(this.resolve(mapping));
     if (table == null || !table.has(key)) return default_;
     return this.resolve(table.get(key));
@@ -356,12 +357,12 @@ export class _Document {
     const reference = value;
     value = this.resolve(value);
     let body: Uint8Array | null = null;
-    let info: Map<string, any> = new Map<string, any>();
+    let info: CosDict = new Map<string, CosValue>();
     // `Stream` instances carry (dict, raw); a plain dict needs the raw
     // bytes located from the object's own offset.
     const raw = getattr(value, "data", null);
     if (raw instanceof Uint8Array) {
-      info = py_or(getattr(value, "dictionary", null), new Map<string, any>());
+      info = py_or(getattr(value, "dictionary", null), new Map<string, CosValue>());
       body = raw;
     } else if (value instanceof Map && reference instanceof IndirectReference) {
       info = value;
@@ -428,7 +429,7 @@ export class _Document {
    * for the first `/Type /Catalog`, which is what the object scanner can
    * see without a cross-reference table.
    */
-  catalog(): Map<string, any> {
+  catalog(): CosDict {
     if (this._catalog !== null) return this._catalog;
     const numbers = [...decode(this._data, "latin-1").matchAll(_ROOT_RE)].map((m) => int(m[1]));
     // The last trailer wins: an incrementally updated file supersedes the
@@ -446,13 +447,13 @@ export class _Document {
   }
 
   /** The page dictionaries, in `/Kids` order (at least one). */
-  pages(): Map<string, any>[] {
+  pages(): CosDict[] {
     const pages = [...this._walk_pages(this.get(this.catalog(), "Pages"), 0)];
     if (pages.length === 0) throw this._reject("the document has no pages");
     return pages;
   }
 
-  *_walk_pages(node: any, depth: number): Generator<Map<string, any>> {
+  *_walk_pages(node: any, depth: number): Generator<CosDict> {
     node = _as_dict(this.resolve(node));
     if (node == null || depth > 32) return;
     if (str(dict_get(node, "Type", "")) === "Page") {
@@ -466,7 +467,7 @@ export class _Document {
   }
 
   /** The page's content stream(s), concatenated and decoded. */
-  page_content(page: Map<string, any>): Uint8Array {
+  page_content(page: CosDict): Uint8Array {
     const contents = this.resolve(dict_get(this.resolve(page), "Contents"));
     const parts: unknown[] = Array.isArray(contents) ? contents : [contents];
     return join_bytes(
@@ -487,7 +488,7 @@ export class _Document {
  * unknown barewords and only accepts alphabetic ones, so content-stream
  * operators (`re`, `f*`, `W*`, `'`) would all raise.
  */
-export function* _tokenize(data: Uint8Array): Generator<[string, any]> {
+export function* _tokenize(data: Uint8Array): Generator<[string, CosValue]> {
   let pos = 0;
   const size = data.length;
   while (pos < size) {
@@ -665,9 +666,9 @@ export function _read_array(data: Uint8Array, pos: number): [unknown[], number] 
   return [out, pos];
 }
 
-export function _read_dict(data: Uint8Array, pos: number): [Map<string, any>, number] {
+export function _read_dict(data: Uint8Array, pos: number): [CosDict, number] {
   pos += 2;
-  const out = new Map<string, any>();
+  const out = new Map<string, CosValue>();
   const size = data.length;
   let key: string | null = null;
   while (pos < size) {
@@ -691,7 +692,7 @@ export function _read_dict(data: Uint8Array, pos: number): [Map<string, any>, nu
 }
 
 /** Read one array/dictionary element starting at `pos`. */
-export function _next_simple(data: Uint8Array, pos: number): [any, number] | null {
+export function _next_simple(data: Uint8Array, pos: number): [CosValue, number] | null {
   const char = data.subarray(pos, pos + 1);
   const size = data.length;
   if (bytes_eq(char, SLASH)) {
@@ -741,7 +742,7 @@ export class _GState {
   clip: Box | null = null;
   line_width = 1.0;
   miter = 10.0;
-  font: Map<string, any> | null = null;
+  font: CosDict | null = null;
   metrics: Metrics = _NO_FONT_METRICS;
   size = 0.0;
   char_spacing = 0.0;
@@ -773,7 +774,7 @@ export class _GState {
 }
 
 /** The font's base encoding name, empty when it uses its built-in one. */
-export function _base_encoding(doc: _Document, font: Map<string, any>): string {
+export function _base_encoding(doc: _Document, font: CosDict): string {
   const encoding = doc.get(font, "Encoding");
   const table = _as_dict(doc.resolve(encoding));
   if (table != null) return str(doc.get(table, "BaseEncoding", ""));
@@ -781,7 +782,7 @@ export function _base_encoding(doc: _Document, font: Map<string, any>): string {
 }
 
 /** The advances After Effects supplies for a font with no `/Widths`. */
-export function _builtin_widths(doc: _Document, font: Map<string, any>, base: string): Map<number, number> {
+export function _builtin_widths(doc: _Document, font: CosDict, base: string): Map<number, number> {
   const table = STD14_WIDTHS.get(base);
   if (table == null) return new Map();
   const widths = new Map<number, number>();
@@ -802,7 +803,7 @@ export function _builtin_widths(doc: _Document, font: Map<string, any>, base: st
  * the same values, but a font where they disagree measures by the
  * `/FontBBox`.
  */
-export function _font_metrics(doc: _Document, font: Map<string, any> | null): Metrics {
+export function _font_metrics(doc: _Document, font: CosDict | null): Metrics {
   if (!(font instanceof Map)) return _NO_FONT_METRICS;
   const subtype = str(doc.get(font, "Subtype", ""));
   if (subtype === "Type0") return _type0_metrics(doc, font);
@@ -822,12 +823,12 @@ export function _font_metrics(doc: _Document, font: Map<string, any> | null): Me
   return [widths, default_ !== 0 ? default_ : _DEFAULT_WIDTH, y_min, y_max, false];
 }
 
-export function _type0_metrics(doc: _Document, font: Map<string, any>): Metrics {
+export function _type0_metrics(doc: _Document, font: CosDict): Metrics {
   const descendants = doc.get(font, "DescendantFonts");
-  const child: any =
+  const child: CosValue =
     Array.isArray(descendants) && descendants.length > 0
       ? doc.resolve(descendants[0])
-      : new Map<string, any>();
+      : new Map<string, CosValue>();
   const dw = doc.number(doc.get(child, "DW"), 1000.0);
   const default_ = dw !== 0 ? dw : 1000.0;
   const widths = new Map<number, number>();
@@ -904,11 +905,11 @@ export class _Measurer {
     return null;
   }
 
-  _resource(resources: unknown, category: string, name: unknown): any {
+  _resource(resources: unknown, category: string, name: unknown): CosValue {
     return this._doc.get(this._doc.get(resources, category), _operand_str(name));
   }
 
-  _resource_ref(resources: unknown, category: string, name: unknown): any {
+  _resource_ref(resources: unknown, category: string, name: unknown): CosValue {
     const table = _as_dict(this._doc.resolve(this._doc.get(resources, category)));
     if (table == null) return null;
     return table.get(_operand_str(name)) ?? null;
@@ -917,7 +918,7 @@ export class _Measurer {
   run(content: Uint8Array, resources: unknown): void {
     let gs = new _GState();
     const saved: _GState[] = [];
-    let operands: any[] = [];
+    let operands: CosValue[] = [];
     let segments: Segment[] = [];
     let current: Pt | null = null;
     let start: Pt | null = null;

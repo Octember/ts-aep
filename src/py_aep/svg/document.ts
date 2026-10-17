@@ -17,7 +17,7 @@ export type ViewBox = readonly [number, number, number, number];
  */
 export function _view_box(value: string | null): ViewBox | null {
   if (!value) return null;
-  const nums = (pattern_findall(NUMBER_RE, value!) as string[]).map((n) => float(n));
+  const nums = (pattern_findall(NUMBER_RE, value) as string[]).map((n) => float(n));
   if (nums.length !== 4 || !nums.every((n) => Number.isFinite(n))) return null;
   if (nums[2] <= 0 || nums[3] <= 0) return null;
   return [nums[0], nums[1], nums[2], nums[3]];

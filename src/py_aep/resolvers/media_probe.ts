@@ -517,7 +517,7 @@ export const _EXR_MULTIPART = 0x1000;
 export function _probe_exr(fp: IO): MediaInfo {
   if (!bytes_eq(fp.read(4), _EXR_MAGIC)) throw new ValueError("Not a valid EXR file (bad magic)");
   const multipart = (struct.unpack("<I", fp.read(4))[0] & _EXR_MULTIPART) !== 0;
-  const parts: Map<string, any>[] = [_read_exr_header(fp)];
+  const parts: ExrHeader[] = [_read_exr_header(fp)];
   while (multipart) {
     const c = fp.read(1);
     if (c.length === 0 || c[0] === 0) break; // the empty header ends the list
@@ -528,7 +528,7 @@ export function _probe_exr(fp: IO): MediaInfo {
   const first_list: string[] = dict_get(first, "channels", []);
   const has_alpha = first_list.some((c) => c === "A" || c === "a");
   const channel_names = parts.flatMap((part) =>
-    (dict_get(part, "channels", []) as string[]).map((c) => {
+    dict_get(part, "channels", []).map((c: string) => {
       const part_name = part.get("name") ?? null;
       return py_bool(part_name) ? `${part_name}.${c}` : c;
     }),
@@ -551,9 +551,12 @@ export function _probe_exr(fp: IO): MediaInfo {
   });
 }
 
+/** Attributes of one EXR part header keyed by name: width/height/compression (number), channels (string[]), name (string). */
+export type ExrHeader = Map<string, any>;
+
 /** The attributes `_probe_exr` uses from one EXR part header. */
-export function _read_exr_header(fp: IO): Map<string, any> {
-  const out = new Map<string, any>();
+export function _read_exr_header(fp: IO): ExrHeader {
+  const out: ExrHeader = new Map();
   for (;;) {
     const name = _read_cstr(fp);
     if (name.length === 0) return out; // empty name terminates the header
@@ -1819,13 +1822,16 @@ export function _parse_mgjson_time(t: string): number | null {
   return null;
 }
 
-export function _json_get(d: any, key: string, default_: any = null): any {
+/** A parsed JSON value: Map for objects, arrays, strings, numbers, booleans, null. */
+export type JsonValue = any;
+
+export function _json_get(d: JsonValue, key: string, default_: JsonValue = null): JsonValue {
   if (!(d instanceof Map)) throw new AttributeError(`'${type_name(d)}' object has no attribute 'get'`);
   return dict_get(d, key, default_);
 }
 
 /** `iter(x)` on a parsed JSON value: list items, str characters, dict keys. */
-export function _json_iter(x: any): any[] {
+export function _json_iter(x: JsonValue): JsonValue[] {
   if (Array.isArray(x)) return x;
   if (typeof x === "string") return Array.from(x);
   if (x instanceof Map) return [...x.keys()];

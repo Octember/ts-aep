@@ -1183,7 +1183,7 @@ export function _spatial_tangents(keyframes: Keyframe[], first: number, last: nu
       continue;
     }
     const zero = new Array<number>((kf._stored_value as number[]).length).fill(0.0);
-    result.set(i, [kf.out_spatial_tangent?.length > 0 ? kf.out_spatial_tangent : zero, kf.in_spatial_tangent?.length > 0 ? kf.in_spatial_tangent : zero]);
+    result.set(i, [kf.out_spatial_tangent!?.length > 0 ? kf.out_spatial_tangent! : zero, kf.in_spatial_tangent!?.length > 0 ? kf.in_spatial_tangent! : zero]);
   }
   return result;
 }

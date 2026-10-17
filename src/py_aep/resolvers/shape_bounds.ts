@@ -392,7 +392,7 @@ export function _walk(
         pending.push(_map_path(local, path));
       }
     } else if (_PATH_BUILDERS.has(match_name)) {
-      pending.push(_PATH_BUILDERS.get(match_name)(item as PropertyGroup, time));
+      pending.push(_PATH_BUILDERS.get(match_name)!(item as PropertyGroup, time));
     } else if (_FILLS.has(match_name) || _STROKES.has(match_name)) {
       const reach = _STROKES.has(match_name)
         ? _stroke_reach(item as PropertyGroup, time)

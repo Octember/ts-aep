@@ -103,9 +103,9 @@ export class PathNode {
  * every `* Control-0001` -\> 1).
  */
 export function _effect_param_index(layer: Layer, effect_mn: string, param_mn: string): number | null {
-  const defs: Map<string, unknown> | null = dict_get(layer.containing_comp._project._effect_param_defs, effect_mn);
+  const defs = dict_get(layer.containing_comp._project._effect_param_defs, effect_mn);
   if (!py_bool(defs)) return null;
-  const keys = [...defs.keys()];
+  const keys = [...defs!.keys()];
   if (!keys.includes(param_mn)) return null;
   return 1 + keys.indexOf(param_mn);
 }
@@ -304,7 +304,7 @@ export function can_add_property(prop: Property, comp: CompItem): boolean {
  * current TextDocument (AE 2025 key order).
  */
 export function font_caps_json(prop: Property): string {
-  const value: unknown = prop.value;
+  const value = prop.value;
   let font: string | null = "";
   let size: number = 0;
   if (value instanceof TextDocument) {

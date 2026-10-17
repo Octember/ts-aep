@@ -328,7 +328,7 @@ export const _STROKE_POSITION = new Map<string, number>([
 
 /** Python `repr()` of a parsed descriptor value (dicts print as `{'k': v}`). */
 // NOTE(port): int/float — integral values are plain numbers by design (RULEBOOK §4); a whole-valued double prints as "5" not "5.0" in unsupported-style error messages.
-export function _repr(value: unknown): string {
+export function _repr(value: _Value): string {
   if (value instanceof Map) {
     return `{${[...value].map(([k, v]) => `${repr(k)}: ${_repr(v)}`).join(", ")}}`;
   }
@@ -336,8 +336,8 @@ export function _repr(value: unknown): string {
   return repr(value);
 }
 
-export function _enum(table: Map<string, number>): (value: unknown) => number {
-  return function convert(value: unknown): number {
+export function _enum(table: Map<string, number>): (value: _Value) => number {
+  return function convert(value: _Value): number {
     // Map.get, not a plain-object lookup: descriptor strings such as
     // "constructor" must not reach Object.prototype.
     const hit = table.get(value as string);
@@ -346,41 +346,41 @@ export function _enum(table: Map<string, number>): (value: unknown) => number {
   };
 }
 
-export function _number(value: unknown): number {
+export function _number(value: _Value): number {
   if (typeof value !== "number") {
     throw new UnsupportedStyleError(`expected a number, got ${_repr(value)}`);
   }
   return value;
 }
 
-export function _bool01(value: unknown): number {
+export function _bool01(value: _Value): number {
   return py_bool(value) ? 1.0 : 0.0;
 }
 
 /** Python int/float/bool operand for `/`: bool counts as 0/1, anything else raises. */
 // NOTE(port): bool->int, number passthrough, everything else TypeError, exactly Python's `/` operand rules for descriptor values
-export function _arith(value: unknown): number {
+export function _arith(value: _Value): number {
   if (typeof value === "number") return value;
   if (typeof value === "boolean") return value ? 1 : 0;
   throw new TypeError_(`unsupported operand type for /: ${repr(value)}`);
 }
 
 /** Python `obj[key]` for a descriptor value: only dicts (Maps) are subscriptable here. */
-export function _subscript(obj: unknown, key: string): _Value {
+export function _subscript(obj: _Value, key: string): _Value {
   if (obj instanceof Map) return getitem(obj, key);
   throw new TypeError_(`${repr(obj)} is not subscriptable with ${repr(key)}`);
 }
 
 /** Python `for x in value` over a parsed descriptor value. */
 // NOTE(port): list, dict keys, str chars (by code point) cover every type the descriptor parser yields; others raise TypeError like Python
-export function _py_iter(value: unknown): _Value[] {
+export function _py_iter(value: _Value): _Value[] {
   if (Array.isArray(value)) return value;
   if (value instanceof Map) return [...value.keys()];
   if (typeof value === "string") return Array.from(value);
   throw new TypeError_(`${repr(value)} object is not iterable`);
 }
 
-export function _color(value: unknown): number[] {
+export function _color(value: _Value): number[] {
   if (!(value instanceof Map) || (value.get("_class") ?? null) !== "RGBC") {
     throw new UnsupportedStyleError(`unsupported color model ${_repr(value)}`);
   }
@@ -392,14 +392,14 @@ export function _color(value: unknown): number[] {
   ];
 }
 
-export function _point(value: unknown): number[] {
+export function _point(value: _Value): number[] {
   if (!(value instanceof Map)) {
     throw new UnsupportedStyleError(`expected a point, got ${_repr(value)}`);
   }
   return [_number(getitem(value, "Hrzn")), _number(getitem(value, "Vrtc"))];
 }
 
-export function _gradient(value: unknown): Gradient {
+export function _gradient(value: _Value): Gradient {
   if (!(value instanceof Map) || (value.get("_class") ?? null) !== "Grdn") {
     throw new UnsupportedStyleError(`expected a gradient, got ${_repr(value)}`);
   }
@@ -438,9 +438,9 @@ export function _gradient(value: unknown): Gradient {
 export class _Param {
   descriptor_key: string;
   suffix: string;
-  convert: (value: unknown) => StyleValue;
+  convert: (value: _Value) => StyleValue;
 
-  constructor(descriptor_key: string, suffix: string, convert: (value: unknown) => StyleValue) {
+  constructor(descriptor_key: string, suffix: string, convert: (value: _Value) => StyleValue) {
     this.descriptor_key = descriptor_key;
     this.suffix = suffix;
     this.convert = convert;
@@ -644,7 +644,7 @@ export function _convert_style(
     try {
       values.set(
         `${prefix}/${param.suffix}`,
-        param.convert(instance.get(param.descriptor_key)),
+        param.convert(instance.get(param.descriptor_key)!),
       );
     } catch (exc) {
       if (!(exc instanceof UnsupportedStyleError)) throw exc;

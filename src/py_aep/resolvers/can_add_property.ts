@@ -41,7 +41,7 @@ export const _ADDABLE_EFFECT_MATCH_NAMES: ReadonlySet<string> = new Set([
 ]);
 
 export const _EFFECT_DISPLAY_TO_MATCH: Map<string, string> = new Map(
-  [...EXPRESSION_CONTROLS].map(([mn, entry]) => [entry.name, mn] as [string, string]),
+  [...EXPRESSION_CONTROLS].map(([mn, entry]): [string, string] => [entry.name, mn]),
 );
 _EFFECT_DISPLAY_TO_MATCH.set("Dropdown Menu Control", "ADBE Dropdown Control");
 
@@ -62,7 +62,7 @@ export const _ADDABLE_ANIMATOR_PROPERTY_MATCH_NAMES: ReadonlySet<string> = new S
 export const _ANIMATOR_PROPERTY_DISPLAY_TO_MATCH: Map<string, string> = new Map(
   TEXT_ANIMATOR_POOL.filter(
     (e) => py_bool(e.name) && !e.mn.startsWith("ADBE Text VF Axis"),
-  ).map((e) => [e.name, e.mn] as [string, string]),
+  ).map((e): [string, string] => [e.name, e.mn]),
 );
 
 // Shape elements that can be added to a Root Vectors Group (Contents).
@@ -104,7 +104,7 @@ for (const _mn of new Set([
 
 // Per-group addable sets + builder kind, keyed by parent match name.
 // "ADBE Vectors Group" is a nested shape group's own contents.
-export const _ADDABLE_BY_GROUP: Map<string, readonly [ReadonlySet<string>, AddableKind]> = new Map([
+export const _ADDABLE_BY_GROUP = new Map<string, readonly [ReadonlySet<string>, AddableKind]>([
   ["ADBE Mask Parade", [_ADDABLE_MASK_MATCH_NAMES, AddableKind.MASK]],
   ["ADBE Effect Mask Parade", [_ADDABLE_MASK_MATCH_NAMES, AddableKind.MASK]],
   ["ADBE Text Animators", [_ADDABLE_TEXT_ANIMATOR_MATCH_NAMES, AddableKind.TEXT_ANIMATOR]],
@@ -115,7 +115,7 @@ export const _ADDABLE_BY_GROUP: Map<string, readonly [ReadonlySet<string>, Addab
     "ADBE Text Animator Properties",
     [_ADDABLE_ANIMATOR_PROPERTY_MATCH_NAMES, AddableKind.ANIMATOR_PROPERTY],
   ],
-] as [string, readonly [ReadonlySet<string>, AddableKind]][]);
+]);
 
 // Addable groups that are NAMED (not indexed) - the ExtendScript
 // "named-group exception". Adding to them materializes a fixed-pool

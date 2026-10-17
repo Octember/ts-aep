@@ -58,6 +58,7 @@ import {
   zip,
 } from "../../pyrt/index.ts";
 import { cos_get, run_spans } from "../cos/index.ts";
+import type { CosDict } from "../cos/cos.ts";
 import { BoxAutoFitPolicy, BoxFirstBaselineAlignment, BoxVerticalAlignment } from "../enums/index.ts";
 import { resolve_postscript } from "../svg/fonts.ts";
 import type { TextDocument } from "../models/text/text_document.ts";
@@ -71,7 +72,25 @@ import type { TextDocument } from "../models/text/text_document.ts";
 // Off Node/Bun the wasm is fetched from `hb.wasm` next to the bundle. Where
 // it cannot load (not served there; Cloudflare Workers, which refuse to
 // compile wasm from bytes) the module still loads and shaping raises instead.
-const _hbjs: any = await (async () => {
+/** The subset of harfbuzzjs's `hbjs()` API this module calls; handles are opaque. */
+interface HbJs {
+  createBlob(data: Uint8Array): object;
+  createFace(blob: object, index: number): HbJsFace;
+  createFont(face: HbJsFace): object;
+  createBuffer(): HbJsBuffer;
+  shape(font: object, buffer: HbJsBuffer, features: string): void;
+  _load_error?: unknown;
+}
+interface HbJsFace {
+  upem: number;
+}
+interface HbJsBuffer {
+  addText(text: string): void;
+  guessSegmentProperties(): void;
+  json(): _HbJsGlyph[];
+}
+
+const _hbjs: HbJs = await (async () => {
   try {
     if (host.platform !== "browser") return await (await import("harfbuzzjs")).default;
     const [{ default: hb_wasm }, { default: hbjs }] = await Promise.all([
@@ -80,11 +99,11 @@ const _hbjs: any = await (async () => {
     ]);
     return hbjs(await hb_wasm({ locateFile: (file: string) => new URL(file, import.meta.url).href }));
   } catch (e) {
-    return { _load_error: e };
+    return { _load_error: e } as HbJs;
   }
 })();
 
-function _hb(): any {
+function _hb(): HbJs {
   if (_hbjs._load_error) {
     throw Object.assign(new Error(`harfbuzzjs is unavailable on this host: ${_hbjs._load_error}`), {
       cause: _hbjs._load_error,
@@ -114,7 +133,7 @@ class _HbBlob {
 }
 
 class _HbFace {
-  declare _face: any;
+  declare _face: HbJsFace;
   declare upem: number;
   constructor(blob: _HbBlob, index: number = 0) {
     const b = _hb().createBlob(blob.data);
@@ -124,14 +143,14 @@ class _HbFace {
 }
 
 class _HbFont {
-  declare _font: any;
+  declare _font: object;
   constructor(face: _HbFace) {
     this._font = _hb().createFont(face._face);
   }
 }
 
 class _HbBuffer {
-  declare _buf: any;
+  declare _buf: HbJsBuffer;
   constructor() {
     this._buf = _hb().createBuffer();
   }
@@ -142,16 +161,26 @@ class _HbBuffer {
     this._buf.guessSegmentProperties();
   }
   get glyph_infos(): { codepoint: number; cluster: number }[] {
-    return this._buf.json().map((g: _HbJsGlyph) => ({ codepoint: g.g, cluster: g.cl }));
+    return this._buf.json().map((g) => ({ codepoint: g.g, cluster: g.cl }));
   }
   get glyph_positions(): { x_advance: number; y_advance: number; x_offset: number; y_offset: number }[] {
     return this._buf
       .json()
-      .map((g: _HbJsGlyph) => ({ x_advance: g.ax, y_advance: g.ay, x_offset: g.dx, y_offset: g.dy }));
+      .map((g) => ({ x_advance: g.ax, y_advance: g.ay, x_offset: g.dx, y_offset: g.dy }));
   }
 }
 
-export let hb: any = {
+/** The uharfbuzz-shaped binding built over harfbuzzjs. */
+interface HbBinding {
+  Blob: typeof _HbBlob;
+  Face: typeof _HbFace;
+  Font: typeof _HbFont;
+  Buffer: typeof _HbBuffer;
+  shape(font: _HbFont, buf: _HbBuffer, features: Record<string, boolean>): void;
+  HarfBuzzError?: abstract new (...args: never[]) => object;
+}
+
+export let hb: HbBinding = {
   Blob: _HbBlob,
   Face: _HbFace,
   Font: _HbFont,
@@ -182,9 +211,9 @@ export const _RTL_BIDI_SCRIPT =
 // The font index is process-lifetime, so an indexed file can vanish
 // (CoreSync eviction, uninstall) before its first shaping; those opens
 // must refuse, not leak OS/HarfBuzz errors into innocuous reads.
-export const _FONT_OPEN_ERRORS: (abstract new (...args: never[]) => unknown)[] = [OSError];
+export const _FONT_OPEN_ERRORS: (abstract new (...args: never[]) => object)[] = [OSError];
 if (hb != null && "HarfBuzzError" in hb) {
-  _FONT_OPEN_ERRORS.push(hb.HarfBuzzError);
+  _FONT_OPEN_ERRORS.push(hb.HarfBuzzError!);
 }
 
 export function _bidirectional_is_rtl(char: string): boolean {
@@ -253,6 +282,14 @@ export function _hb_font(ps_name: string): [_HbFont, number] {
   return _hb_cache.get(key)!;
 }
 
+/** The subset of a fontkit font (or `.ttc` collection) this module reads. */
+interface FontkitFace {
+  fonts?: FontkitFace[];
+  unitsPerEm: number;
+  hhea: { ascent: number };
+  glyphForCodePoint(codePoint: number): { id: number; path: { commands: unknown[] }; bbox: { maxY: number } };
+}
+
 /**
  * CoolType's ascent as a fraction of the em: the lowercase 'd'
  * glyph height (fixture-matched: Myriad 710/1000 while every table
@@ -262,12 +299,12 @@ export function _ascender_ratio(ps_name: string): number {
   const [path, face_index] = _resolve_face(ps_name);
   const key = tkey(str(path), face_index);
   if (!_ascender_cache.has(key)) {
-    let font: any;
+    let font: FontkitFace;
     try {
       // NOTE(port): fontTools TTFont(path, fontNumber=face_index, lazy=True) ->
       // fontkit. fontkit's openSync returns a FontCollection for .ttc files, so the
       // face is picked with `.fonts[face_index]`.
-      font = fontkit.create(host.fs.readFileSync(str(path)) as any);
+      font = fontkit.create(host.fs.readFileSync(str(path)) as never) as unknown as FontkitFace;
       if (font.fonts) font = font.fonts[face_index];
     } catch (exc) {
       if (!_is_font_open_error(exc)) throw exc;
@@ -307,7 +344,7 @@ export class _CharStyle {
   declare caps: number;
   declare leading: number;
 
-  constructor(ps_name: string, style: Map<string, any>) {
+  constructor(ps_name: string, style: CosDict) {
     this.font = ps_name;
     this.size = float(dict_get(style, "1", 36.0));
     this.tracking = float(dict_get(style, "8", 0.0));

@@ -213,7 +213,7 @@ export function _glyph_contours(glyph_set: FontkitFont, glyph_name: number): Raw
 }
 
 /** `gname in glyph_set`: a mapped glyph id that exists in the font. */
-export function _in_glyph_set(glyph_set: FontkitFont, gname: number | null): boolean {
+export function _in_glyph_set(glyph_set: FontkitFont, gname: number | null): gname is number {
   return gname != null && gname < glyph_set.numGlyphs;
 }
 
