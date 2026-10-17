@@ -16,13 +16,13 @@
     },
     "2 cos+color": {
       "any": 0,
-      "unknown": 4,
-      "casts": 1
+      "unknown": 3,
+      "casts": 0
     },
     "3 parsers+synthesis": {
       "any": 0,
       "unknown": 0,
-      "casts": 11
+      "casts": 1
     },
     "4 models": {
       "any": 1,
@@ -35,9 +35,9 @@
       "casts": 30
     },
     "6 cli+entry": {
-      "any": 3,
+      "any": 2,
       "unknown": 0,
-      "casts": 1
+      "casts": 0
     }
   }
 }

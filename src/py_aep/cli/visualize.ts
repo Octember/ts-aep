@@ -499,18 +499,18 @@ type JsonNode = Omit<Node, "children"> & { children: JsonNode[] | string };
 
 /** Output as JSON. */
 export function format_json(node: Node, output: TextIO, max_depth: number | null = null): void {
-  function filter_depth(n: JsonNode, depth: number = 0): JsonNode {
+  function filter_depth(n: Node, depth: number = 0): JsonNode {
     if (max_depth != null && depth >= max_depth) {
       const result: JsonNode = { ...n };
-      if (py_bool(result.children)) {
-        result.children = `[${len(result.children)} children omitted]`;
+      if (py_bool(n.children)) {
+        result.children = `[${len(n.children)} children omitted]`;
       }
       return result;
     }
 
     const result: JsonNode = { ...n };
-    if (py_bool(result.children)) {
-      result.children = (result.children as JsonNode[]).map((c) => filter_depth(c, depth + 1));
+    if (py_bool(n.children)) {
+      result.children = n.children.map((c) => filter_depth(c, depth + 1));
     }
     return result;
   }

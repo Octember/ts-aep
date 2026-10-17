@@ -18,6 +18,10 @@
 import "../binary/_register.ts";
 import { ListChunk, read_aep } from "../binary/chunk.ts";
 import type { Chunk } from "../binary/chunk.ts";
+import { LdatChunk } from "../binary/ldat_chunks.ts";
+import { ShphChunk } from "../binary/misc_chunks.ts";
+import { CdatChunk } from "../binary/property_chunks.ts";
+import { Utf8Chunk } from "../binary/scalar_chunks.ts";
 import { chunk_label, extract_leaf_chunks, extract_leaf_chunks_typed } from "./_chunk_helpers.ts";
 import {
   BytesIO,
@@ -215,31 +219,22 @@ export function _floats_close(a: number, b_: number): boolean {
 }
 
 /**
- * A decoded leaf chunk read by its `chunk_type` at runtime (Python duck
- * typing): `_chunk_floats` / `_with_floats` reach the `cdat` `values`, `shph`
- * bounds and `ldat` `items` fields under chunk-type string guards, and a
- * `Utf8` chunk's `.value` likewise. Genuinely dynamic (pass 4: `any` only
- * behind a named alias), so the duck-typed fields type-check at their reads.
- */
-export type FloatChunk = any;
-
-/**
  * Return a chunk's coordinate float fields, or None if it has none.
  *
  * Covers the float-bearing leaf chunks whose values AE and py_aep may
  * encode with slightly different rounding: `cdat` (doubles), `shph`
  * (bounding-box f4), and `ldat` shape-point lists (f4 x/y).
  */
-export function _chunk_floats(chunk: FloatChunk): number[] | null {
+export function _chunk_floats(chunk: Chunk): number[] | null {
   const ct = getattr(chunk, "chunk_type", null);
-  if (ct === "cdat") {
+  if (ct === "cdat" && chunk instanceof CdatChunk) {
     const values = [...chunk.values];
     return values.length > 0 ? values : null;
   }
-  if (ct === "shph") {
+  if (ct === "shph" && chunk instanceof ShphChunk) {
     return [chunk.top_left_x, chunk.top_left_y, chunk.bottom_right_x, chunk.bottom_right_y];
   }
-  if (ct === "ldat") {
+  if (ct === "ldat" && chunk instanceof LdatChunk) {
     const items = chunk.items;
     if (py_bool(items) && items.every((i: { x: number; y: number }) => "x" in i && "y" in i)) {
       return items.flatMap((i: { x: number; y: number }) => [i.x, i.y]);
@@ -249,14 +244,14 @@ export function _chunk_floats(chunk: FloatChunk): number[] | null {
 }
 
 /** Return a copy of `chunk` with its coordinate floats replaced. */
-export function _with_floats(chunk: FloatChunk, floats: number[]): FloatChunk {
+export function _with_floats(chunk: Chunk, floats: number[]): Chunk {
   const clone = deepcopy(chunk);
   const ct = clone.chunk_type;
-  if (ct === "cdat") {
+  if (ct === "cdat" && clone instanceof CdatChunk) {
     clone.values = [...floats];
-  } else if (ct === "shph") {
+  } else if (ct === "shph" && clone instanceof ShphChunk) {
     [clone.top_left_x, clone.top_left_y, clone.bottom_right_x, clone.bottom_right_y] = floats;
-  } else if (ct === "ldat") {
+  } else if (ct === "ldat" && clone instanceof LdatChunk) {
     for (const [idx, item] of clone.items.entries()) {
       item.x = floats[2 * idx];
       item.y = floats[2 * idx + 1];
@@ -309,11 +304,11 @@ export function _gradient_xml_only_float_diff(s1: string | String, s2: string | 
  * tolerance (so the byte difference is float-precision noise, not a real
  * change). Non-float bytes must still match exactly.
  */
-export function _only_float_diff(c1: FloatChunk, c2: FloatChunk): boolean {
+export function _only_float_diff(c1: Chunk, c2: Chunk): boolean {
   const ct = getattr(c1, "chunk_type", null);
   if (ct !== getattr(c2, "chunk_type", null)) return false;
-  if (ct === "Utf8") {
-    return _gradient_xml_only_float_diff(getattr(c1, "value", null), getattr(c2, "value", null));
+  if (ct === "Utf8" && c1 instanceof Utf8Chunk && c2 instanceof Utf8Chunk) {
+    return _gradient_xml_only_float_diff(c1.value, c2.value);
   }
   const f1 = _chunk_floats(c1);
   if (f1 == null) return false;
@@ -392,7 +387,7 @@ export function _compare_chunk_dicts(
       typed2 != null &&
       typed1.has(path) &&
       typed2.has(path) &&
-      _only_float_diff(typed1.get(path), typed2.get(path))
+      _only_float_diff(getitem(typed1, path), getitem(typed2, path))
     ) {
       suppressed.push(path);
       continue;

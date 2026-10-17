@@ -139,7 +139,7 @@ export function _resolve_effect_value(
     }
     return [value, value];
   }
-  if (([PropertyControlType.TWO_D, PropertyControlType.THREE_D] as number[]).includes(control_type)) {
+  if (control_type === PropertyControlType.TWO_D || control_type === PropertyControlType.THREE_D) {
     // An omitted point is its pard default, a percentage of the layer
     // size. The cached value is that same percentage or a 16.16-rounded
     // fraction: Path Text's 80 % caches 0.7999878, ExtendScript reports
@@ -403,9 +403,8 @@ export function _parse_effect_properties(
       });
       if (
         synth instanceof Property &&
-        ([PropertyControlType.TWO_D, PropertyControlType.THREE_D] as (number | null)[]).includes(
-          synth._property_control_type,
-        )
+        (synth._property_control_type === PropertyControlType.TWO_D ||
+          synth._property_control_type === PropertyControlType.THREE_D)
       ) {
         _scale_point_to_pixels(synth, point_size);
       }
@@ -478,8 +477,9 @@ export const parse_effect = _suppress_materialization().decorate(function parse_
   // Layer-level sspc may have an empty parT when the same effect type
   // is used more than once (AE doesn't duplicate the data).  Fall back
   // to previously cached or project-level EfdG definitions.
-  if (!param_defs?.size && effect_param_defs.has(group_match_name)) {
-    param_defs = effect_param_defs.get(group_match_name)!;
+  const cached_param_defs = effect_param_defs.get(group_match_name);
+  if (!param_defs?.size && cached_param_defs !== undefined) {
+    param_defs = cached_param_defs;
   }
 
   // Cache successful parT parsing so later instances of the same
