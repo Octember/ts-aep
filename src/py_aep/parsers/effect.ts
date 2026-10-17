@@ -9,6 +9,7 @@ import { PropertyControlType, PropertyType, PropertyValueType } from "../enums/i
 import { _suppress_materialization } from "../models/descriptors.ts";
 import { _CANVARY_OVERRIDES, _PROPERTY_DEFAULTS } from "../models/properties/overrides.ts";
 import { Property } from "../models/properties/property.ts";
+import type { PropertyValue } from "../models/properties/keyframe.ts";
 import { PropertyGroup } from "../models/properties/property_group.ts";
 import { PropSpec } from "../synthesis/property.ts";
 import { get_chunks_by_match_name, get_match_name_runs } from "./utils.ts";
@@ -38,8 +39,14 @@ export const logger = {
   warning: (m: string) => warn(m),
 };
 
+/**
+ * A pard body or a parameter-definition value. The shape depends on the
+ * control type (ExtendScript duck typing), so one alias covers every read.
+ */
+export type ParamValue = any;
+
 /** A parsed pard parameter definition: heterogeneous values keyed by field name. */
-export type ParamDef = Map<string, any>;
+export type ParamDef = Map<string, ParamValue>;
 
 export const _PVT_DIMENSIONS: Map<number, number> = new Map<number, number>([
   [PropertyValueType.COLOR, 4],
@@ -98,7 +105,7 @@ export function _resolve_effect_value(
   match_name: string,
   param_def: ParamDef,
   control_type: PropertyControlType,
-): [any, any] {
+): [number | number[] | null, number | number[] | null] {
   if (control_type === PropertyControlType.ENUM) {
     // An omitted popup holds its pard default (1-based), not the value
     // cached in the definition: ExtendScript reports the default for
@@ -190,7 +197,7 @@ export function _apply_param_def_metadata(prop: Property, param_def: ParamDef): 
  *
  * Returns `null` when the value is not a point.
  */
-export function _point_default_pixels(raw: unknown, size: [number, number]): number[] | null {
+export function _point_default_pixels(raw: PropertyValue, size: [number, number]): number[] | null {
   if (!Array.isArray(raw) || raw.length < 2) return null;
   const scale = [size[0], size[1], size[1]];
   return zip(raw, scale).map(([v, factor]) => v / 100.0 * factor);
@@ -365,7 +372,7 @@ export function _parse_effect_properties(
 
   // Index parsed children by match_name for O(1) lookup.
   const parsed_by_mn = new Map<string, Property | PropertyGroup>(
-    parsed.map((p) => [p.match_name, p] as [string, Property | PropertyGroup]),
+    parsed.map((p): [string, Property | PropertyGroup] => [p.match_name, p]),
   );
 
   // Single ordered walk over param_defs: merge existing or synthesize
@@ -513,7 +520,7 @@ export const parse_effect = _suppress_materialization().decorate(function parse_
   return effect_group;
 });
 
-export type PardExtractor = (body: any, result: ParamDef) => void;
+export type PardExtractor = (body: ParamValue, result: ParamDef) => void;
 
 export const _PARD_EXTRACTORS: Map<number, PardExtractor> = new Map();
 
@@ -530,14 +537,14 @@ export function _pard_extractor(
 
 // Python's `@_pard_extractor(...)` decorator is applied as a registration call
 // directly after each definition, which keeps the registration order.
-export function _extract_angle(body: any, result: ParamDef): void {
+export function _extract_angle(body: ParamValue, result: ParamDef): void {
   result.set("last_value", body.last_value);
   if (body.default_ != null) result.set("default", _intify(body.default_));
   result.set("property_value_type", PropertyValueType.OneD);
 }
 _pard_extractor(PropertyControlType.ANGLE)(_extract_angle);
 
-export function _extract_boolean(body: any, result: ParamDef): void {
+export function _extract_boolean(body: ParamValue, result: ParamDef): void {
   result.set("last_value", body.last_value);
   result.set("default_value", body.default_);
   result.set("min_value", 0);
@@ -545,7 +552,7 @@ export function _extract_boolean(body: any, result: ParamDef): void {
 }
 _pard_extractor(PropertyControlType.BOOLEAN)(_extract_boolean);
 
-export function _extract_color(body: any, result: ParamDef): void {
+export function _extract_color(body: ParamValue, result: ParamDef): void {
   // pard stores colors as [A, R, G, B] in 0-255 range;
   // ExtendScript uses [R, G, B, A] in 0-1 range.
   {
@@ -562,7 +569,7 @@ export function _extract_color(body: any, result: ParamDef): void {
 }
 _pard_extractor(PropertyControlType.COLOR)(_extract_color);
 
-export function _extract_enum(body: any, result: ParamDef): void {
+export function _extract_enum(body: ParamValue, result: ParamDef): void {
   result.set("last_value", body.last_value);
   result.set("nb_options", body.nb_options);
   result.set("default_value", body.default_);
@@ -577,14 +584,14 @@ export function _intify(value: number): number {
   return Number.isInteger(value) ? int(value) : value;
 }
 
-export function _extract_integer(body: any, result: ParamDef): void {
+export function _extract_integer(body: ParamValue, result: ParamDef): void {
   if (body.default_ != null) result.set("default", body.default_);
   result.set("min_value", body.valid_min);
   result.set("max_value", body.valid_max);
 }
 _pard_extractor(PropertyControlType.INTEGER)(_extract_integer);
 
-export function _extract_scalar(body: any, result: ParamDef): void {
+export function _extract_scalar(body: ParamValue, result: ParamDef): void {
   result.set("last_value", body.last_value);
   if (body.default_ != null) result.set("default", _intify(body.default_));
   result.set("min_value", _intify(body.valid_min));
@@ -594,7 +601,7 @@ export function _extract_scalar(body: any, result: ParamDef): void {
 }
 _pard_extractor(PropertyControlType.SCALAR)(_extract_scalar);
 
-export function _extract_slider(body: any, result: ParamDef): void {
+export function _extract_slider(body: ParamValue, result: ParamDef): void {
   result.set("last_value", body.last_value);
   if (body.default_ != null && Number.isFinite(body.default_)) {
     result.set("default", _intify(body.default_));
@@ -610,7 +617,7 @@ export function _extract_slider(body: any, result: ParamDef): void {
 }
 _pard_extractor(PropertyControlType.SLIDER)(_extract_slider);
 
-export function _extract_three_d(body: any, result: ParamDef): void {
+export function _extract_three_d(body: ParamValue, result: ParamDef): void {
   result.set("last_value", [body.last_value_x, body.last_value_y, body.last_value_z]);
   // Percent of the layer size; `_point_default_pixels` converts it.
   result.set("default_value", body.default_);
@@ -618,31 +625,31 @@ export function _extract_three_d(body: any, result: ParamDef): void {
 }
 _pard_extractor(PropertyControlType.THREE_D)(_extract_three_d);
 
-export function _extract_two_d(body: any, result: ParamDef): void {
+export function _extract_two_d(body: ParamValue, result: ParamDef): void {
   result.set("last_value", [body.last_value_x, body.last_value_y]);
   result.set("default_value", body.default_);
   result.set("property_value_type", PropertyValueType.TwoD_SPATIAL);
 }
 _pard_extractor(PropertyControlType.TWO_D)(_extract_two_d);
 
-export function _extract_layer(body: any, result: ParamDef): void {
+export function _extract_layer(body: ParamValue, result: ParamDef): void {
   result.set("property_value_type", PropertyValueType.LAYER_INDEX);
   result.set("default_value", 0);
 }
 _pard_extractor(PropertyControlType.LAYER)(_extract_layer);
 
-export function _extract_mask(body: any, result: ParamDef): void {
+export function _extract_mask(body: ParamValue, result: ParamDef): void {
   result.set("property_value_type", PropertyValueType.MASK_INDEX);
   result.set("default_value", 0);
 }
 _pard_extractor(PropertyControlType.MASK)(_extract_mask);
 
-export function _extract_curve(body: any, result: ParamDef): void {
+export function _extract_curve(body: ParamValue, result: ParamDef): void {
   result.set("property_value_type", PropertyValueType.CUSTOM_VALUE);
 }
 _pard_extractor(PropertyControlType.CURVE)(_extract_curve);
 
-export function _extract_no_value(body: any, result: ParamDef): void {
+export function _extract_no_value(body: ParamValue, result: ParamDef): void {
   result.set("property_value_type", PropertyValueType.NO_VALUE);
 }
 _pard_extractor(
@@ -658,7 +665,7 @@ export function _parse_effect_parameter_def(parameter_chunks: Chunk[]): ParamDef
 
   const control_type = PropertyControlType.of(pard_chunk.property_control_type);
 
-  const result = new Map<string, unknown>([
+  const result = new Map<string, ParamValue>([
     ["name", pard_chunk.name],
     ["property_control_type", control_type],
     // PF param flags bit 1 = CANNOT_TIME_VARY (the tdb4 byte is

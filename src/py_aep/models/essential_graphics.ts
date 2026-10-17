@@ -7,7 +7,7 @@
  */
 
 import { descriptor, repr } from "../../pyrt/index.ts";
-import { ChunkField } from "./descriptors.ts";
+import { ChunkField, type Dynamic } from "./descriptors.ts";
 import { validate_name } from "./validators.ts";
 import type { U4Chunk, Utf8Chunk } from "../binary/scalar_chunks.ts";
 
@@ -39,7 +39,7 @@ export class SourcePropertyRef {
   }
 
   /** NamedTuple equality: elementwise over the fields (also against a plain tuple). */
-  __eq__(other: any): boolean {
+  __eq__(other: Dynamic): boolean {
     if (other == null || typeof other === "string" || typeof other[Symbol.iterator] !== "function") return false;
     const o = [...other];
     return o.length === 2 && o[0] === this.match_name && o[1] === this.prop_index;

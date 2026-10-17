@@ -15,24 +15,24 @@
       "casts": 36
     },
     "2 cos+color": {
-      "any": 2,
-      "unknown": 15,
-      "casts": 7
+      "any": 0,
+      "unknown": 6,
+      "casts": 6
     },
     "3 parsers+synthesis": {
-      "any": 17,
-      "unknown": 10,
-      "casts": 12
+      "any": 1,
+      "unknown": 0,
+      "casts": 11
     },
     "4 models": {
-      "any": 100,
-      "unknown": 103,
-      "casts": 160
+      "any": 2,
+      "unknown": 56,
+      "casts": 137
     },
     "5 resolvers+svg": {
-      "any": 5,
-      "unknown": 17,
-      "casts": 38
+      "any": 1,
+      "unknown": 9,
+      "casts": 33
     },
     "6 cli+entry": {
       "any": 4,

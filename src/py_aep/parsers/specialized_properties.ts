@@ -21,8 +21,8 @@ import { BytesIO, OverflowError, ValueError, warn, zip, instance_dict } from "..
 
 // `logging.getLogger(__name__)`: only the warning path is wired to pyrt `warn`.
 export const logger = {
-  debug(..._args: unknown[]) {},
-  info(..._args: unknown[]) {},
+  debug(..._args: string[]) {},
+  info(..._args: string[]) {},
   warning: (m: string) => warn(m),
 };
 

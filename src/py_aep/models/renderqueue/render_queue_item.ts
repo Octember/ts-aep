@@ -7,7 +7,7 @@ import { build_om_container, build_rout_block, clone_chunk_tree } from "../../bi
 import { RenderSettingsItem, type RoutItem } from "../../binary/render_chunks.ts";
 import { Utf8Chunk } from "../../binary/scalar_chunks.ts";
 import { find_by_type, index_by_identity, split_on_type } from "../../binary/utils.ts";
-import { ChunkField } from "../descriptors.ts";
+import { ChunkField, type Dynamic } from "../descriptors.ts";
 import type { CompItem } from "../items/composition.ts";
 import type { Project } from "../project.ts";
 import { _validate_number, validate_bool, validate_positive_int, validate_positive_number, validate_sequence, validate_string } from "../validators.ts";
@@ -59,7 +59,7 @@ export function _next_item_id(rq: RenderQueue): number {
  */
 export class _RenderSettingsView extends SettingsView {
   declare _owner: RenderQueueItem;
-  __setitem__(key: string, value: any): void {
+  __setitem__(key: string, value: Dynamic): void {
     super.__setitem__(key, value);
     this._owner._ldat.settings_written = 1;
   }
@@ -515,7 +515,7 @@ export class RenderQueueItem {
     return new _RenderSettingsView(this, RENDER_SETTINGS);
   }
 
-  set settings(value: Map<string, any> | SettingsView) {
+  set settings(value: Map<string, Dynamic> | SettingsView) {
     // NOTE(port): Python isinstance(value, Mapping) accepts dict and SettingsView (a MutableMapping); Map and SettingsView are their TS counterparts.
     if (!(value instanceof Map || value instanceof SettingsView)) {
       throw new ValueError("Settings must be a dictionary of key-value pairs");
@@ -727,7 +727,7 @@ export class RenderQueueItem {
    * @param format_ - The output format. `GetSettingsFormat.NUMBER` returns numeric values (enums
    *   unwrapped to ints). `GetSettingsFormat.STRING` returns all values as strings
    */
-  get_settings(format_: GetSettingsFormat = GetSettingsFormat.STRING): Map<string, any> {
+  get_settings(format_: GetSettingsFormat = GetSettingsFormat.STRING): Map<string, Dynamic> {
     if (format_ === GetSettingsFormat.STRING) {
       return settings_to_string(this.settings);
     }
@@ -747,7 +747,7 @@ export class RenderQueueItem {
    * @param key - The setting key (e.g. `"Quality"`, `"Frame Rate"`).
    * @param format_ - The output format.
    */
-  get_setting(key: string, format_: GetSettingsFormat = GetSettingsFormat.STRING): any {
+  get_setting(key: string, format_: GetSettingsFormat = GetSettingsFormat.STRING): Dynamic {
     return getitem(this.get_settings(format_), key);
   }
 

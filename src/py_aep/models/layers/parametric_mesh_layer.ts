@@ -11,7 +11,7 @@ import {
   str,
   type ClassAttributes,
 } from "../../../pyrt/index.ts";
-import { ChunkField } from "../descriptors.ts";
+import { ChunkField, type EffectParamDefs, type Dynamic } from "../descriptors.ts";
 import { label_index } from "../preferences.ts";
 import { AVLayer } from "./av_layer.ts";
 import type { CompItem } from "../items/composition.ts";
@@ -69,17 +69,17 @@ export class ParametricMeshLayer extends AVLayer {
   }
 
   // Python `# type: ignore[override]`: keyword shape differs from AVLayer._new's; overloads keep the base static side assignable.
-  static _new(match_name: string, auto_name: string, property_depth: number, kw?: any): PropertyGroup;
+  static _new(match_name: string, auto_name: string, property_depth: number, kw?: Dynamic): PropertyGroup;
   static _new(kw: {
     name: string;
     layer_id: number;
     duration: number;
     containing_comp: CompItem;
     mesh_type: ParametricMeshType;
-    effect_param_defs?: Map<string, Map<string, Map<string, unknown>>> | null;
+    effect_param_defs?: EffectParamDefs | null;
   }): ParametricMeshLayer;
-  static _new(kw: any): ParametricMeshLayer;
-  static _new(kw: any): any {
+  static _new(kw: Dynamic): ParametricMeshLayer;
+  static _new(kw: Dynamic): Dynamic {
     const { name, layer_id, duration, containing_comp, mesh_type, effect_param_defs = null } = kw;
     const layer = super._new({
       name,

@@ -27,8 +27,14 @@ import { CosParser, IndirectObject, IndirectReference, decode_pdf_text_string } 
 // NOTE(port): `SyntaxError_` is the pyrt class the COS parser raises (re-exported by cos.ts), i.e. Python's `SyntaxError`.
 import { SyntaxError_ } from "../cos/cos.ts";
 
+/**
+ * A value whose kind is chosen by a tag read at runtime: PDF COS objects,
+ * EXR header attributes, and host errors with ad-hoc fields.
+ */
+export type Dynamic = any;
+
 /** PDF objects are walked dynamically (outside the typed text-document tree). */
-type CosValue = any;
+export type CosValue = Dynamic;
 
 /** Raised when a `.ai`/`.pdf` file's layers cannot be enumerated. */
 export class UnsupportedAiLayersError extends ValueError {}

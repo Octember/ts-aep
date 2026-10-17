@@ -3,6 +3,8 @@
 import { AttributeError, object_setattr, py_object, repr } from "../../../../pyrt/index.ts";
 import { SettingsView, type SettingsSpec } from "../../renderqueue/settings.ts";
 import type { CompItem } from "../composition.ts";
+import type { Dynamic } from "../../descriptors.ts";
+
 
 /**
  * A renderer's options, as both a mapping and a typed object.
@@ -26,10 +28,10 @@ export class RendererOptionsBase extends SettingsView {
   // ExtendScript-style key -> (attribute name, optional enum class)
   static _SPEC: SettingsSpec = new Map();
 
-  declare _body: any;
+  declare _body: Dynamic;
   declare _comp: CompItem;
 
-  constructor(kw: { body: any; comp: CompItem }) {
+  constructor(kw: { body: Dynamic; comp: CompItem }) {
     const { body, comp } = kw;
     // NOTE(port): Python passes `self` as the owner; TS forbids touching `this` before super(), so the owner is patched in just below (SettingsView only stores it).
     super(null, new.target._SPEC);
@@ -42,7 +44,7 @@ export class RendererOptionsBase extends SettingsView {
     return self;
   }
 
-  __setattr__(name: string, value: unknown): void {
+  __setattr__(name: string, value: Dynamic): void {
     // A fresh wrapper is built on every `renderer_options` access, so a
     // write to a name with no backing descriptor would vanish with the
     // wrapper. Reject it instead of silently dropping it.
