@@ -385,7 +385,7 @@ export function _compare_chunk_dicts(
       typed2 != null &&
       typed1.has(path) &&
       typed2.has(path) &&
-      _only_float_diff(getitem(typed1, path), getitem(typed2, path))
+      _only_float_diff(typed1.get(path), typed2.get(path))
     ) {
       suppressed.push(path);
       continue;

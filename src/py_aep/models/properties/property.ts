@@ -17,8 +17,6 @@ import { _USE_VALUE, PropSpec } from "../../synthesis/property.ts";
 import { ChunkField } from "../descriptors.ts";
 import { TextDocument } from "../text/text_document.ts";
 import { _validate_number, validate_bool, validate_enum, validate_f8, validate_name, validate_number, validate_sequence, validate_text } from "../validators.ts";
-import type { AVItem } from "../items/av_item.ts";
-import type { FootageItem } from "../items/footage.ts";
 import type { FolderItem } from "../items/folder.ts";
 import type { CompItem } from "../items/composition.ts";
 import type { AVLayer } from "../layers/av_layer.ts";
@@ -34,13 +32,13 @@ import { PropertyBase } from "./property_base.ts";
 import { Shape } from "./shape.ts";
 import type { PropertyGroup } from "./property_group.ts";
 import { type MaskPropertyGroup } from "./mask_property_group.ts";
-import { deferred, deepcopy, dict_get, getitem, isclose, py_bool, py_eq, py_or, py_and, sorted, warn, int, round, floordiv, TypeError_, ValueError, KeyError, IndexError, AttributeError, NotImplementedError, py_assert, repr, hasattr, getattr, min, max, range, zip, len, float, lshift, rshift, and, or, b, descriptor, list_mul, type_name } from "../../../pyrt/index.ts";
+import { deferred, deepcopy, dict_get, getitem, isclose, py_bool, py_eq, sorted, warn, int, round, floordiv, TypeError_, ValueError, KeyError, IndexError, AttributeError, NotImplementedError, py_assert, repr, hasattr, getattr, min, max, range, zip, len, float, lshift, rshift, and, or, b, descriptor, list_mul, type_name } from "../../../pyrt/index.ts";
 
 const _property_group = deferred<typeof import("./property_group.ts")>("py_aep/models/properties/property_group");
-const _av_item = deferred<typeof import("../items/av_item.ts")>("py_aep/models/items/av_item");
-const _footage = deferred<typeof import("../items/footage.ts")>("py_aep/models/items/footage");
+import { AVItem } from "../items/av_item.ts";
+import { FootageItem } from "../items/footage.ts";
+import { resolve_essential_property_controller, resolve_essential_property_source } from "../../resolvers/essential_properties.ts";
 const _folder = deferred<typeof import("../items/folder.ts")>("py_aep/models/items/folder");
-const _essential_properties = deferred<typeof import("../../resolvers/essential_properties.ts")>("py_aep/resolvers/essential_properties");
 
 export const logger = {
   debug(_m: string) {},
@@ -479,7 +477,7 @@ export class Property extends PropertyBase {
       match_name: spec.match_name,
       auto_name: spec.auto_name,
       parent_property,
-      property_control_type: py_or(control_type, PropertyControlType.UNKNOWN),
+      property_control_type: control_type || PropertyControlType.UNKNOWN,
       property_depth,
       property_value_type: spec.pvt,
       value: final_value,
@@ -1043,7 +1041,7 @@ export class Property extends PropertyBase {
     if (comp != null) {
       // The layer's own base, not the comp's: a stretched layer counts
       // its keyframe ticks against `internal_timebase * |stretch|`.
-      this._tdb4._time_base = int(py_or(this._layer_timebase, comp._cdta.internal_timebase));
+      this._tdb4._time_base = int(this._layer_timebase || comp._cdta.internal_timebase);
       if (this._tdb4._spatial_marker && !this._tdb4.color && !this._tdb4.no_value && this._effect_scale == null) {
         // AE writes the comp's pixel aspect into a layer's spatial
         // point tdb4s (not orientation / color). A point stored
@@ -2086,7 +2084,7 @@ export class Property extends PropertyBase {
     // The residue table first: a synthesized effect parameter carries its
     // pard's verdict in `_can_vary_over_time`, and the Puppet Engine's
     // pard claims it varies where AE says it does not.
-    if (_CANVARY_OVERRIDES.has(this.match_name)) return getitem(_CANVARY_OVERRIDES, this.match_name);
+    if (_CANVARY_OVERRIDES.has(this.match_name)) return _CANVARY_OVERRIDES.get(this.match_name);
     if (this._can_vary_over_time != null) return this._can_vary_over_time;
     // NO_VALUE properties always report canVaryOverTime=True in AE,
     // even though the binary byte says otherwise.
@@ -2783,7 +2781,7 @@ export class Property extends PropertyBase {
         "This property does not support media replacement " + "(can_set_alternate_source is False).",
       );
     }
-    if (!(source instanceof _av_item().AVItem)) {
+    if (!(source instanceof AVItem)) {
       throw new TypeError_(`alternate source must be an AVItem, not ${type_name(source)}`);
     }
     if (this._composition == null || !this._composition._project.items.has(source.id)) {
@@ -2797,7 +2795,7 @@ export class Property extends PropertyBase {
           "alternate source (is_media_replacement_compatible is False).",
       );
     }
-    if (source instanceof _footage().FootageItem) {
+    if (source instanceof FootageItem) {
       this._blsi.value = this._build_replacement_wrapper(source).id;
     } else {
       this._blsi.value = source.id;
@@ -2852,7 +2850,7 @@ export class Property extends PropertyBase {
    * source-property path by match name.
    */
   get essential_property_source(): Property | PropertyGroup | AVLayer | null {
-    return _essential_properties().resolve_essential_property_source(this);
+    return resolve_essential_property_source(this);
   }
 
   /** `True` if the property is the Menu property of a Dropdown Menu Control effect. */
@@ -2862,7 +2860,7 @@ export class Property extends PropertyBase {
 
   /** `True` if the named property has keyframes or an enabled expression. */
   get is_time_varying(): boolean {
-    return py_bool(py_or(py_and(this.expression, this.expression_enabled), this._animated));
+    return !!((this.expression && this.expression_enabled) || this._animated);
   }
 
   /** `True` if there is a maximum permitted value for the named property. */
@@ -2970,7 +2968,7 @@ export class Property extends PropertyBase {
    */
   _evaluated_layer_time(time: number): number {
     const base = this._layer_timebase;
-    if (!py_bool(base) || !Number.isFinite(time)) return this._layer_time_from_comp(time);
+    if (base === 0 || !Number.isFinite(time)) return this._layer_time_from_comp(time);
     const snapped = Math.floor(time * base + 0.5) / base;
     const layer = this._layer_time_from_comp(snapped);
     return Math.floor(layer * base + 0.5) / base;
@@ -3231,7 +3229,7 @@ export class Property extends PropertyBase {
    */
   _keyframe_units_at(time: number): number {
     let timebase: number = this._layer_timebase;
-    if (py_bool(timebase)) return round(this._evaluated_layer_time(time) * timebase);
+    if (timebase !== 0) return round(this._evaluated_layer_time(time) * timebase);
     timebase = _timebase_units(this._keyframe_frame_rate());
     return round(((time - this._start_time_offset) / this._time_stretch) * timebase);
   }
@@ -4322,7 +4320,7 @@ export class Property extends PropertyBase {
     const comp = this._owning_comp();
     if (comp == null) return 0.0;
     const base = comp._cdta.internal_timebase;
-    if (!py_bool(base)) return 0.0;
+    if (base === 0) return 0.0;
     return float(layer_timebase(base, this._time_stretch));
   }
 
@@ -4530,7 +4528,7 @@ export class _EssentialOverrideProperty extends Property {
   _override_controller_name(): string | null {
     const cached = this._ov_ctrl_name !== undefined ? this._ov_ctrl_name : _UNSET;
     if (cached !== _UNSET) return cached as string | null;
-    const controller = _essential_properties().resolve_essential_property_controller(this);
+    const controller = resolve_essential_property_controller(this);
     const name = controller != null ? controller.name : null;
     this._ov_ctrl_name = name;
     return name;

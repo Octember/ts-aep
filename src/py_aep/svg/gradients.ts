@@ -11,7 +11,7 @@
  * module only produces the geometric/stop representation.
  */
 
-import { py_bool, py_or, setdefault, max, degrees, hypot } from "../../pyrt/index.ts";
+import { setdefault, max, degrees, hypot } from "../../pyrt/index.ts";
 import { LengthContext, local_name, parse_length, parse_ratio } from "./_util.ts";
 import { parse_color } from "./colors.ts";
 import { _split_declarations } from "./style.ts";
@@ -99,10 +99,7 @@ export function _parse_stops(elem: Element): GradientStop[] {
     const parsed_offset = parse_ratio(child.get("offset"), 0.0);
     const offset = stops.length > 0 ? max([parsed_offset, stops.at(-1)!.offset]) : parsed_offset;
     const style = _stop_style(child);
-    const color = py_or(
-      parse_color(style.get("stop-color") ?? "#000000"),
-      [0.0, 0.0, 0.0, 1.0],
-    );
+    const color = parse_color(style.get("stop-color") ?? "#000000") ?? [0.0, 0.0, 0.0, 1.0];
     const opacity = parse_ratio(style.get("stop-opacity") ?? null, 1.0);
     stops.push(
       new GradientStop(offset, [color[0], color[1], color[2], color[3] * opacity]),
@@ -204,7 +201,7 @@ export function resolve_gradient(
   const x_radius = hypot(end[0] - start[0], end[1] - start[1]);
   const y_radius = hypot(edge_y[0] - start[0], edge_y[1] - start[1]);
   // Python truthiness of a float: NaN is truthy, so use py_bool, not `?:`.
-  const scale_y = py_bool(x_radius) ? (100.0 * y_radius) / x_radius : 100.0;
+  const scale_y = x_radius !== 0 ? (100.0 * y_radius) / x_radius : 100.0;
   const angle = degrees(Math.atan2(end[1] - start[1], end[0] - start[0]));
   const rotation = 360.0 - angle;
   return new GradientPaint(

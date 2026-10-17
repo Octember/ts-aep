@@ -1,20 +1,17 @@
 /** Chunk tree navigation helpers for the binary I/O layer. */
 
-import type { Chunk } from "./chunk.ts";
 import { DeferredListChunk, ListChunk } from "./chunk.ts";
 import { U4LeChunk, Utf8Chunk } from "./scalar_chunks.ts";
 import {
   PyException,
   ValueError,
   b,
-  deferred,
   getattr,
   json_dumps,
   json_loads,
   len,
 } from "../../pyrt/index.ts";
-
-const _chunk = deferred<typeof import("./chunk.ts")>("py_aep/binary/chunk");
+import { Chunk } from "./chunk.ts";
 
 export class ChunkNotFoundError extends PyException {
   /** Raised when a required chunk is not found in the AEP chunk tree. */
@@ -373,7 +370,7 @@ export function toggle_flag_chunk(
 
   const existing = container.chunks.flatMap((c, i) => (c.chunk_type === chunk_type ? [i] : []));
   if (enable && existing.length === 0) {
-    const new_chunk = new (_chunk().Chunk)({ chunk_type, data: b("\x01") });
+    const new_chunk = new Chunk({ chunk_type, data: b("\x01") });
     const anchors = container.chunks.flatMap((c, i) =>
       after_types.includes(c.chunk_type) ? [i] : [],
     );

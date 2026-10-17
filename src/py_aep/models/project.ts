@@ -92,7 +92,6 @@ import {
   bytes_eq,
   descriptor,
   format,
-  deferred,
   instance_dict,
   json_dumps,
   json_loads,
@@ -106,12 +105,11 @@ import type { PathLike } from "../../pyrt/index.ts";
  * through this holder instead.
  */
 export const module_globals: { write_aep: typeof _write_aep } = { write_aep: _write_aep };
-
-const _effect = deferred<typeof import("../parsers/effect.ts")>("py_aep/parsers/effect");
-const _templates = deferred<typeof import("../parsers/templates.ts")>("py_aep/parsers/templates");
-const _placeholder = deferred<typeof import("./sources/placeholder.ts")>("py_aep/models/sources/placeholder");
-const _svg = deferred<typeof import("../svg/index.ts")>("py_aep/svg/index");
-const _build = deferred<typeof import("../svg/build.ts")>("py_aep/svg/build");
+import { effect_definition_entries } from "../parsers/effect.ts";
+import { parse_output_templates, parse_render_templates } from "../parsers/templates.ts";
+import { PlaceholderSource } from "./sources/placeholder.ts";
+import { UnsupportedSVGError, read_svg } from "../svg/index.ts";
+import { build_shape_layer_contents } from "../svg/build.ts";
 
 /** `itertools.count(start)` (the clip-run counter). */
 // NOTE(port): matches `itertools.count(start)`: an unbounded counter yielding start, start+1, ...
@@ -151,7 +149,7 @@ export function _font_post_script_name(font: FontObject | string): string {
     validate_font_name(font);
     return font;
   }
-  const name = getattr(font, "post_script_name", null);
+  const name = font?.post_script_name ?? null;
   if (typeof name !== "string" || !name) {
     throw new TypeError_("expected a FontObject or a PostScript name string");
   }
@@ -473,7 +471,7 @@ export class Project {
      * walk is computed lazily on first lookup and reused across adds.
      */
     if (this._effect_definitions_cache == null) {
-      this._effect_definitions_cache = _effect().effect_definition_entries(this._rifx.chunks);
+      this._effect_definitions_cache = effect_definition_entries(this._rifx.chunks);
     }
     return this._effect_definitions_cache;
   }
@@ -1173,7 +1171,7 @@ export class Project {
       name = "Placeholder";
     }
 
-    const source = _placeholder().PlaceholderSource._new(name, width, height, frame_rate, duration);
+    const source = PlaceholderSource._new(name, width, height, frame_rate, duration);
     const item = FootageItem._new(source, { project: this, parent_folder: this.root_folder });
 
     // Insert into root folder's chunk tree and register
@@ -1365,7 +1363,7 @@ export class Project {
 
   /** Import an SVG as a cropped comp (one shape layer of its art). */
   _import_svg_cropped(file: Path): CompItem {
-    const doc = _svg().read_svg(file);
+    const doc = read_svg(file);
     // AE truncates the canvas to whole pixels (2434.9 -> 2434).
     const width = int(doc.width);
     const height = int(doc.height);
@@ -1373,7 +1371,7 @@ export class Project {
       // AE's own import refuses a canvas under 1 px a side ("width and
       // height must be > 0") but builds 1 to 3 px compositions, below
       // the 4 px `addComp` floor (AE 2026).
-      throw new (_svg().UnsupportedSVGError)(
+      throw new UnsupportedSVGError(
         `SVG canvas ${format(doc.width, "g")} x ${format(doc.height, "g")} is outside the ` +
           "1 to 30000 px composition size range (width / height or " +
           "viewBox missing, invalid or out of range)",
@@ -1396,7 +1394,7 @@ export class Project {
     (transform.__getitem__("ADBE Anchor Point") as Property).value = [0.0, 0.0, 0.0];
     (transform.__getitem__("ADBE Position") as Property).value = [0.0, 0.0, 0.0];
     const contents = layer.property("ADBE Root Vectors Group") as PropertyGroup;
-    _build().build_shape_layer_contents(contents, doc.drawables);
+    build_shape_layer_contents(contents, doc.drawables);
     return comp;
   }
 
@@ -2047,7 +2045,7 @@ export class Project {
     let removed = 0;
     for (const item_id of [...this.items.keys()]) {
       if (keep_ids.has(item_id) || !this.items.has(item_id)) continue;
-      getitem(this.items, item_id).remove();
+      this.items.get(item_id).remove();
       removed += 1;
     }
     return removed;
@@ -2197,7 +2195,7 @@ export class Project {
     if (this._render_templates_cache != null) return this._render_templates_cache;
 
     const prefs_dir = this._require_prefs_dir("render settings");
-    const [templates, default_index] = _templates().parse_render_templates(prefs_dir);
+    const [templates, default_index] = parse_render_templates(prefs_dir);
     this._default_render_template_index = default_index;
 
     this._render_templates_cache = templates;
@@ -2216,7 +2214,7 @@ export class Project {
     if (this._output_templates_cache != null) return this._output_templates_cache;
 
     const prefs_dir = this._require_prefs_dir("output module");
-    const [templates] = _templates().parse_output_templates(prefs_dir);
+    const [templates] = parse_output_templates(prefs_dir);
 
     this._output_templates_cache = templates;
     return this._output_templates_cache;

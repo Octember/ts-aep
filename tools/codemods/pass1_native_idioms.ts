@@ -8,7 +8,7 @@ import * as path from "node:path";
 const ROOT = path.resolve(import.meta.dir, "../..");
 const DRY = process.argv.includes("--dry");
 const REPORT = process.argv.includes("--report");
-const HELPERS = new Set(["py_bool", "py_or", "dict_get", "py_eq", "contains", "len", "range", "enumerate", "py_slice"]);
+const HELPERS = new Set(["py_bool", "py_or", "dict_get", "py_eq", "contains", "len", "range", "enumerate", "py_slice", "getattr", "getitem"]);
 
 type Cat = "bool" | "str" | "num" | "array" | "bytes" | "map" | "set" | "obj";
 interface Edit {
@@ -35,11 +35,15 @@ function run(): { edits: number; kept: Map<string, number> } {
 
   // Types whose Python truth is not "is not None": anything with __len__ / __bool__, PyFloat, containers.
   const truthProbes: ts.Type[] = [];
+  // Proxied classes: a plain read of a missing name throws, where getattr's `in` check returns the default.
+  const proxyProbes: ts.Type[] = [];
   for (const f of program.getSourceFiles().filter((f) => f.fileName.startsWith(path.join(ROOT, "src/")))) {
     const visit = (n: ts.Node) => {
       if (ts.isClassDeclaration(n) && n.name) {
-        const special = n.members.some((m) => m.name && ts.isIdentifier(m.name) && ["__len__", "__bool__"].includes(m.name.text));
-        if (special || n.name.text === "PyFloat") truthProbes.push(checker.getDeclaredTypeOfSymbol(checker.getSymbolAtLocation(n.name)!));
+        const has = (name: string) => n.members.some((m) => m.name && ts.isIdentifier(m.name) && m.name.text === name);
+        const declared = checker.getDeclaredTypeOfSymbol(checker.getSymbolAtLocation(n.name)!);
+        if (has("__len__") || has("__bool__") || n.name.text === "PyFloat") truthProbes.push(declared);
+        if (has("__getattr__")) proxyProbes.push(declared);
       }
       ts.forEachChild(n, visit);
     };
@@ -100,6 +104,106 @@ function run(): { edits: number; kept: Map<string, number> } {
     if (!sym) return false;
     if (sym.flags & ts.SymbolFlags.Alias) sym = checker.getAliasedSymbol(sym);
     return !!sym.declarations?.some((d) => d.getSourceFile().fileName.includes("/src/pyrt/"));
+  }
+
+  // An expression that can never evaluate to null/undefined.
+  function literalNonNull(e: ts.Expression): boolean {
+    if (ts.isParenthesizedExpression(e) || ts.isAsExpression(e) || ts.isSatisfiesExpression(e)) return literalNonNull(e.expression);
+    if (ts.isStringLiteralLike(e) || ts.isNumericLiteral(e) || ts.isTemplateExpression(e) || ts.isRegularExpressionLiteral(e)) return true;
+    if (e.kind === ts.SyntaxKind.TrueKeyword || e.kind === ts.SyntaxKind.FalseKeyword) return true;
+    if (ts.isArrayLiteralExpression(e) || ts.isObjectLiteralExpression(e) || ts.isNewExpression(e)) return true;
+    if (ts.isArrowFunction(e) || ts.isFunctionExpression(e)) return true;
+    if (ts.isPrefixUnaryExpression(e) && ts.isNumericLiteral(e.operand)) return true;
+    if (ts.isBinaryExpression(e) && [ts.SyntaxKind.PlusToken, ts.SyntaxKind.MinusToken, ts.SyntaxKind.AsteriskToken, ts.SyntaxKind.SlashToken].includes(e.operatorToken.kind)) {
+      return literalNonNull(e.left) && literalNonNull(e.right);
+    }
+    if (ts.isIdentifier(e)) {
+      let s = checker.getSymbolAtLocation(e);
+      if (s && s.flags & ts.SymbolFlags.Alias) s = checker.getAliasedSymbol(s);
+      return !!s && !!(s.flags & (ts.SymbolFlags.Class | ts.SymbolFlags.Function));
+    }
+    // `Enum.MEMBER` / `TABLE.KEY` on a module-level const object literal or int_enum.
+    if (ts.isPropertyAccessExpression(e) && ts.isIdentifier(e.expression)) {
+      const c = cat(checker.getTypeAtLocation(e));
+      if (c !== "num" && c !== "str" && c !== "bool") return false;
+      const d = checker.getSymbolAtLocation(e.expression)?.valueDeclaration;
+      return !!d && ts.isVariableDeclaration(d) && ts.isVariableDeclarationList(d.parent) && !!(d.parent.flags & ts.NodeFlags.Const) &&
+        ts.isSourceFile(d.parent.parent.parent);
+    }
+    return false;
+  }
+
+  const allFiles = program.getSourceFiles().filter((f) => f.fileName.startsWith(ROOT) && !f.fileName.includes("node_modules"));
+  const nonNullMaps = new Map<ts.Symbol, boolean>();
+  const READS = new Set(["get", "has", "keys", "values", "entries", "size", "forEach"]);
+  const READ_HELPERS = new Set(["dict_get", "getitem", "contains", "len", "sorted", "mapping_items", "py_bool", "dict"]);
+
+  /**
+   * A Map stored in a const or class property whose initializer and every
+   * `.set` store non-null values, and that is never handed elsewhere.
+   */
+  function mapValuesNonNull(e: ts.Expression): boolean {
+    const nameNode = ts.isPropertyAccessExpression(e) ? e.name : ts.isIdentifier(e) ? e : null;
+    if (!nameNode) return false;
+    const sym = checker.getSymbolAtLocation(nameNode);
+    if (!sym) return false;
+    const cached = nonNullMaps.get(sym);
+    if (cached != null) return cached;
+    nonNullMaps.set(sym, false);
+    const decls = sym.declarations ?? [];
+    if (decls.length !== 1) return false;
+    const d = decls[0];
+    let init: ts.Expression | undefined;
+    if (ts.isVariableDeclaration(d) && ts.isVariableDeclarationList(d.parent) && d.parent.flags & ts.NodeFlags.Const) init = d.initializer;
+    else if (ts.isPropertyDeclaration(d)) init = d.initializer;
+    if (!init || !ts.isNewExpression(init) || !ts.isIdentifier(init.expression) || init.expression.text !== "Map") return false;
+    const arg = init.arguments?.[0];
+    if (arg) {
+      if (!ts.isArrayLiteralExpression(arg)) return false;
+      for (const pair of arg.elements) {
+        if (!ts.isArrayLiteralExpression(pair) || pair.elements.length !== 2 || !literalNonNull(pair.elements[1])) return false;
+      }
+    }
+    const name = nameNode.text;
+    // A static overridden in a subclass could hold other values.
+    if (ts.isPropertyDeclaration(d)) {
+      for (const f of allFiles) {
+        let clash = false;
+        const scan = (n: ts.Node) => {
+          if (clash) return;
+          if (ts.isPropertyDeclaration(n) && n !== d && n.name && ts.isIdentifier(n.name) && n.name.text === name) clash = true;
+          ts.forEachChild(n, scan);
+        };
+        scan(f);
+        if (clash) return false;
+      }
+    }
+    for (const f of allFiles) {
+      let ok = true;
+      const scan = (n: ts.Node) => {
+        if (!ok) return;
+        if (ts.isIdentifier(n) && n.text === name && n !== (d as ts.NamedDeclaration).name && checker.getSymbolAtLocation(n) === sym) {
+          const ref: ts.Node = ts.isPropertyAccessExpression(n.parent) && n.parent.name === n ? n.parent : n;
+          const p = ref.parent;
+          if (ts.isPropertyAccessExpression(p) && p.expression === ref) {
+            if (READS.has(p.name.text)) return;
+            if (p.name.text === "set" && ts.isCallExpression(p.parent) && p.parent.arguments.length === 2 && literalNonNull(p.parent.arguments[1])) return;
+            ok = false;
+          } else if (ts.isCallExpression(p) && p.arguments[0] === ref && ts.isIdentifier(p.expression) && READ_HELPERS.has(p.expression.text)) {
+            return;
+          } else if ((ts.isForOfStatement(p) && p.expression === ref) || ts.isSpreadElement(p)) {
+            return;
+          } else {
+            ok = false;
+          }
+        }
+        ts.forEachChild(n, scan);
+      };
+      scan(f);
+      if (!ok) return false;
+    }
+    nonNullMaps.set(sym, true);
+    return true;
   }
 
   const kept = new Map<string, number>();
@@ -197,6 +301,90 @@ function run(): { edits: number; kept: Map<string, number> } {
       }
     }
 
+    const unparen = (e: ts.Expression): ts.Expression => (ts.isParenthesizedExpression(e) ? unparen(e.expression) : e);
+    // `m.has(k)` / `contains(m, k)`, possibly inside `&&`.
+    const isHas = (e: ts.Expression, mT: string, kT: string): boolean => {
+      e = unparen(e);
+      if (ts.isCallExpression(e) && e.arguments.length >= 1) {
+        const c = e.expression;
+        if (ts.isPropertyAccessExpression(c) && c.name.text === "has" && text(c.expression) === mT && text(e.arguments[0]) === kT) return true;
+        if (ts.isIdentifier(c) && c.text === "contains" && e.arguments.length === 2 && text(e.arguments[0]) === mT && text(e.arguments[1]) === kT) return true;
+      }
+      if (ts.isBinaryExpression(e) && e.operatorToken.kind === ts.SyntaxKind.AmpersandAmpersandToken) return isHas(e.left, mT, kT) || isHas(e.right, mT, kT);
+      return false;
+    };
+    // `!m.has(k)`, possibly inside `||`: when false, the key is present.
+    const isNotHas = (e: ts.Expression, mT: string, kT: string): boolean => {
+      e = unparen(e);
+      if (ts.isPrefixUnaryExpression(e) && e.operator === ts.SyntaxKind.ExclamationToken) return isHas(e.operand, mT, kT);
+      if (ts.isBinaryExpression(e) && e.operatorToken.kind === ts.SyntaxKind.BarBarToken) return isNotHas(e.left, mT, kT) || isNotHas(e.right, mT, kT);
+      return false;
+    };
+    const exits = (s: ts.Statement): boolean => {
+      if (ts.isReturnStatement(s) || ts.isThrowStatement(s) || ts.isContinueStatement(s) || ts.isBreakStatement(s)) return true;
+      if (ts.isBlock(s)) return s.statements.length > 0 && exits(s.statements[s.statements.length - 1]);
+      return false;
+    };
+    // Nothing in `region` can remove the key or rebind the names, and no call
+    // (which could remove it indirectly) runs before `target`.
+    let target: ts.Node;
+    const undisturbed = (region: ts.Node, mT: string, kT: string): boolean => {
+      let ok = true;
+      const scan = (n: ts.Node) => {
+        if (!ok) return;
+        const mapRead = ts.isCallExpression(n) && ts.isPropertyAccessExpression(n.expression) && ["get", "has"].includes(n.expression.name.text);
+        if ((ts.isCallExpression(n) || ts.isNewExpression(n)) && !mapRead && n.end <= target.getStart(sf)) ok = false;
+        if (ts.isCallExpression(n)) {
+          const c = n.expression;
+          if (ts.isPropertyAccessExpression(c) && ["delete", "clear"].includes(c.name.text) && text(c.expression) === mT) ok = false;
+          if (ts.isIdentifier(c) && c.text === "dict_pop" && n.arguments[0] && text(n.arguments[0]) === mT) ok = false;
+        }
+        if (ts.isBinaryExpression(n) && n.operatorToken.kind >= ts.SyntaxKind.FirstAssignment && n.operatorToken.kind <= ts.SyntaxKind.LastAssignment) {
+          const l = text(n.left);
+          if (l === mT || l === kT || mT.startsWith(l + ".") || kT.startsWith(l + ".")) ok = false;
+        }
+        if ((ts.isPrefixUnaryExpression(n) || ts.isPostfixUnaryExpression(n)) && [kT, mT].includes(text(n.operand))) ok = false;
+        ts.forEachChild(n, scan);
+      };
+      scan(region);
+      return ok;
+    };
+    function keyPresent(call: ts.Node, mT: string, kT: string): boolean {
+      target = call;
+      let child: ts.Node = call;
+      for (let p = call.parent; p && !ts.isFunctionLike(p) && !ts.isSourceFile(p); child = p, p = p.parent) {
+        if (ts.isBinaryExpression(p) && p.operatorToken.kind === ts.SyntaxKind.AmpersandAmpersandToken && p.right === child && isHas(p.left, mT, kT)) {
+          return undisturbed(p.right, mT, kT);
+        }
+        if (ts.isConditionalExpression(p) && p.whenTrue === child && isHas(p.condition, mT, kT)) return undisturbed(p.whenTrue, mT, kT);
+        if (ts.isIfStatement(p)) {
+          if (p.thenStatement === child && isHas(p.expression, mT, kT)) return undisturbed(p.thenStatement, mT, kT);
+          if (p.elseStatement === child && isNotHas(p.expression, mT, kT)) return undisturbed(p.elseStatement, mT, kT);
+        }
+        if (ts.isBlock(p)) {
+          const idx = p.statements.indexOf(child as ts.Statement);
+          for (let i = idx - 1; i >= 0; i--) {
+            const s = p.statements[i];
+            if (ts.isIfStatement(s) && !s.elseStatement && isNotHas(s.expression, mT, kT) && exits(s.thenStatement)) {
+              return p.statements.slice(i + 1, idx + 1).every((t) => undisturbed(t, mT, kT));
+            }
+          }
+        }
+        if (ts.isForOfStatement(p) && p.statement === child && ts.isVariableDeclarationList(p.initializer) && p.initializer.flags & ts.NodeFlags.Const) {
+          const it = unparen(p.expression);
+          const name = p.initializer.declarations[0]?.name;
+          const fromKeys = ts.isCallExpression(it) && ts.isPropertyAccessExpression(it.expression) && it.expression.name.text === "keys" &&
+            text(it.expression.expression) === mT && name && ts.isIdentifier(name) && name.text === kT;
+          const fromEntries = (text(it) === mT || (ts.isCallExpression(it) && ts.isPropertyAccessExpression(it.expression) &&
+            it.expression.name.text === "entries" && text(it.expression.expression) === mT)) &&
+            name && ts.isArrayBindingPattern(name) && name.elements[0] && ts.isBindingElement(name.elements[0]) &&
+            ts.isIdentifier(name.elements[0].name) && name.elements[0].name.text === kT;
+          if (fromKeys || fromEntries) return undisturbed(p.statement, mT, kT);
+        }
+      }
+      return false;
+    }
+
     function inCondition(n: ts.Node): boolean {
       const p = n.parent;
       if (ts.isParenthesizedExpression(p)) return inCondition(p);
@@ -246,7 +434,7 @@ function run(): { edits: number; kept: Map<string, number> } {
         const d = a[2];
         if (d && d.kind !== ts.SyntaxKind.NullKeyword) {
           const vc = mapValueCat(a[0]);
-          if (vc !== "num" && vc !== "str" && vc !== "bool") return keep("dict_get:default-over-nullable-values"), null;
+          if (vc !== "num" && vc !== "str" && vc !== "bool" && !mapValuesNonNull(a[0])) return keep("dict_get:default-over-nullable-values"), null;
         }
         const dflt = d ? operand(d) : "null";
         const r = `${atom(a[0])}.get(${text(a[1])}) ?? ${dflt}`;
@@ -288,6 +476,40 @@ function run(): { edits: number; kept: Map<string, number> } {
       }
 
       if (name === "enumerate" && a.length === 1 && typeCat(a[0]) === "array") return at(`${atom(a[0])}.entries()`);
+
+      if (name === "getitem" && a.length === 2) {
+        const [m, k] = a;
+        if (typeCat(m) !== "map" || !pure(m) || !pure(k)) return keep("getitem:unproven"), null;
+        if (!keyPresent(call, text(m), text(k))) return keep("getitem:unproven"), null;
+        return at(`${atom(m)}.get(${text(k)})`);
+      }
+
+      if (name === "getattr" && a.length === 3 && ts.isStringLiteral(a[1]) && /^[A-Za-z_$][\w$]*$/.test(a[1].text)) {
+        const [obj, , d] = a;
+        const t = checker.getTypeAtLocation(obj);
+        if (t.flags & (ts.TypeFlags.Any | ts.TypeFlags.Unknown)) return keep("getattr:untyped"), null;
+        const prop = checker.getPropertyOfType(checker.getNonNullableType(t), a[1].text);
+        if (!prop) return keep("getattr:duck-typed"), null;
+        const recv = checker.getApparentType(checker.getNonNullableType(t));
+        if (proxyProbes.some((p) => isAssignable(p, recv) || isAssignable(recv, p))) return keep("getattr:proxied"), null;
+        const access = obj.kind === ts.SyntaxKind.ThisKeyword || nonNull(obj) ? `${atom(obj)}.${a[1].text}` : `${atom(obj)}?.${a[1].text}`;
+        if (d.kind === ts.SyntaxKind.NullKeyword) {
+          const p = call.parent;
+          const clash = ts.isBinaryExpression(p) && [ts.SyntaxKind.BarBarToken, ts.SyntaxKind.AmpersandAmpersandToken].includes(p.operatorToken.kind);
+          const r = `${access} ?? null`;
+          return at(clash ? `(${r})` : slot(call, r));
+        }
+        // A falsy default under a truth test: absent and default are both false.
+        const falsy = d.kind === ts.SyntaxKind.FalseKeyword || (ts.isStringLiteral(d) && d.text === "") || (ts.isNumericLiteral(d) && d.text === "0");
+        const pc = cat(checker.getTypeOfSymbolAtLocation(prop, call));
+        const p = call.parent;
+        const truthArg = ts.isCallExpression(p) && p.arguments.length === 1 && ts.isIdentifier(p.expression) && p.expression.text === "py_bool";
+        if (falsy && (pc === "bool" || pc === "str" || pc === "obj") && (inCondition(call) || truthArg ||
+          (ts.isPrefixUnaryExpression(p) && p.operator === ts.SyntaxKind.ExclamationToken))) {
+          return at(access);
+        }
+        return keep("getattr:default"), null;
+      }
 
       if (name === "py_slice" && (a.length === 2 || a.length === 3)) {
         const c = typeCat(a[0]);

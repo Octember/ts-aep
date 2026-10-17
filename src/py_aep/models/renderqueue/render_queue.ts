@@ -3,13 +3,10 @@ import { LHD3_BLOCK_SINGLE, set_lhd3_count, type LdatChunk, type Lhd3Chunk } fro
 import { build_rq_settings_list } from "../../binary/mutations.ts";
 import { RhedChunk } from "../../binary/project_chunks.ts";
 import { ArsiChunk, RoutChunk } from "../../binary/render_chunks.ts";
-import { deferred, getattr, TypeError_ } from "../../../pyrt/index.ts";
-import type { CompItem } from "../items/composition.ts";
+import { getattr, TypeError_ } from "../../../pyrt/index.ts";
 import type { Project } from "../project.ts";
-import type { RenderQueueItem } from "./render_queue_item.ts";
-
-const _composition = deferred<typeof import("../items/composition.ts")>("py_aep/models/items/composition");
-const _render_queue_item = deferred<typeof import("./render_queue_item.ts")>("py_aep/models/renderqueue/render_queue_item");
+import { CompItem } from "../items/composition.ts";
+import { RenderQueueItem } from "./render_queue_item.ts";
 
 /**
  * Clear the `synthetic` flag on a chunk and its container subtree.
@@ -157,12 +154,12 @@ export class RenderQueue {
    * @returns The newly created {@link RenderQueueItem}.
    */
   add(comp: CompItem): RenderQueueItem {
-    if (!(comp instanceof _composition().CompItem)) {
+    if (!(comp instanceof CompItem)) {
       throw new TypeError_("comp must be a CompItem");
     }
 
     // Create the new RQ item with all backing chunks
-    const rqi = _render_queue_item().RenderQueueItem._new(comp, { parent: this });
+    const rqi = RenderQueueItem._new(comp, { parent: this });
 
     // Materialize any synthesized scaffold the parser left synthetic (an
     // empty-queue ldat, or - for a queue-less file - the whole LRdr tree),

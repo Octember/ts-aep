@@ -27,18 +27,16 @@ import { shape_layer_rect } from "../../resolvers/shape_bounds.ts";
 import { text_ink_rect } from "../../resolvers/text_ink.ts";
 import { type Mat4, build_world_matrix, camera_ray, intersect_layer_plane, project_to_comp, transform_from_points } from "../../resolvers/transform.ts";
 import { ChunkField } from "../descriptors.ts";
-import type { AVItem } from "../items/av_item.ts";
 import type { CompItem } from "../items/composition.ts";
 import { Property } from "../properties/property.ts";
 import type { PropertyGroup } from "../properties/property_group.ts";
 import type { TextDocument } from "../text/text_document.ts";
 import { validate_bool, validate_enum, validate_name, validate_number, validate_vector2, validate_vector3 } from "../validators.ts";
 import { Layer } from "./layer.ts";
-
-const _av_item = deferred<typeof import("../items/av_item.ts")>("py_aep/models/items/av_item");
+import { AVItem } from "../items/av_item.ts";
+import { FootageItem } from "../items/footage.ts";
+import { SolidSource } from "../sources/solid.ts";
 const _composition = deferred<typeof import("../items/composition.ts")>("py_aep/models/items/composition");
-const _footage = deferred<typeof import("../items/footage.ts")>("py_aep/models/items/footage");
-const _solid = deferred<typeof import("../sources/solid.ts")>("py_aep/models/sources/solid");
 const _core = deferred<typeof import("../../synthesis/core.ts")>("py_aep/synthesis/core");
 
 export function _finite(point: number[]): number[] {
@@ -847,9 +845,9 @@ export class AVLayer extends Layer {
     if (source instanceof _composition().CompItem) {
       return true;
     }
-    if (source instanceof _footage().FootageItem) {
+    if (source instanceof FootageItem) {
       const ms = source.main_source;
-      if (ms instanceof _solid().SolidSource) {
+      if (ms instanceof SolidSource) {
         return true;
       }
     }
@@ -1177,7 +1175,7 @@ export class AVLayer extends Layer {
       throw new ValueError("replace_source is not supported on 3D model layers");
     }
 
-    if (!(new_source instanceof _av_item().AVItem)) {
+    if (!(new_source instanceof AVItem)) {
       throw new ValueError("new_source must be an AVItem.");
     }
 

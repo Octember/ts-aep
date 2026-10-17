@@ -30,7 +30,6 @@ import {
   py_assert,
   py_bool,
   py_eq,
-  py_or,
   repr,
   round,
   sorted,
@@ -65,9 +64,9 @@ import type { Project } from "../project.ts";
 import type { MarkerValue } from "../properties/marker.ts";
 
 const _item = deferred<typeof import("../../parsers/item.ts")>("py_aep/parsers/item");
-const _layer = deferred<typeof import("../../parsers/layer.ts")>("py_aep/parsers/layer");
+import { parse_layer } from "../../parsers/layer.ts";
+import { renderer_options_for } from "./renderer_options/index.ts";
 const _composition = deferred<typeof import("../../parsers/composition.ts")>("py_aep/parsers/composition");
-const _renderer_options = deferred<typeof import("./renderer_options/index.ts")>("py_aep/models/items/renderer_options/index");
 
 // The binary prin chunk stores internal plugin match_names (e.g. ADBE Escher)
 // but ExtendScript exposes different module names (e.g. ADBE Advanced 3d).
@@ -353,7 +352,7 @@ export function _insert_layer_skeleton_extras(layer: Layer): void {
 
   function has_following(chunks: Chunk[], i: number, kind: string): boolean {
     const nxt = i + 1 < chunks.length ? chunks[i + 1] : null;
-    return getattr(nxt, "list_type", getattr(nxt, "chunk_type", null)) === kind;
+    return getattr(nxt, "list_type", nxt?.chunk_type ?? null) === kind;
   }
 
   const chunks = root.chunks;
@@ -1197,7 +1196,7 @@ export class CompItem extends AVItem {
       // matte_layer_id is absent (None) in pre-AE23 files.
       const matte = ldta.matte_layer_id;
       if (matte != null && id_map.has(matte)) {
-        ldta.matte_layer_id = getitem(id_map, matte);
+        ldta.matte_layer_id = id_map.get(matte);
       }
     }
     // tdpi layer references: the effect owner (hidden -0000 param) and
@@ -1206,7 +1205,7 @@ export class CompItem extends AVItem {
     for (const tdpi of recursive_find(cloned_item.chunks, "tdpi")) {
       const value = (tdpi as S4Chunk).value;
       if (id_map.has(value)) {
-        (tdpi as S4Chunk).value = getitem(id_map, value);
+        (tdpi as S4Chunk).value = id_map.get(value);
       }
     }
 
@@ -1312,7 +1311,7 @@ export class CompItem extends AVItem {
 
     const parsed_layers: Layer[] = [];
     for (const layer_chunk of layer_chunks) {
-      parsed_layers.push(_layer().parse_layer(layer_chunk, this, effect_param_defs));
+      parsed_layers.push(parse_layer(layer_chunk, this, effect_param_defs));
     }
 
     this._layers = parsed_layers;
@@ -1772,7 +1771,7 @@ export class CompItem extends AVItem {
    * ```
    */
   get renderer_options(): RendererOptions {
-    return _renderer_options().renderer_options_for(this._prda, this);
+    return renderer_options_for(this._prda, this);
   }
 
   set renderer_options(value: Map<string, any>) {
@@ -2500,7 +2499,7 @@ export class CompItem extends AVItem {
       }
       const matte_id = ldta.matte_layer_id || 0;
       if (matte_id) {
-        ldta.matte_layer_id = py_or(id_map.get(matte_id), matte_map.get(matte_id) ?? 0);
+        ldta.matte_layer_id = id_map.get(matte_id) || (matte_map.get(matte_id) ?? 0);
       }
     }
 
@@ -2525,7 +2524,7 @@ export class CompItem extends AVItem {
     for (const block of final_blocks) {
       new_comp._item_list.chunks.splice(insert_at, 0, ...block);
       insert_at += block.length;
-      const new_layer = _layer().parse_layer(block[0] as ListChunk, new_comp, effect_defs);
+      const new_layer = parse_layer(block[0] as ListChunk, new_comp, effect_defs);
       new_comp._layers.push(new_layer);
     }
     new_comp._invalidate_layer_cache();

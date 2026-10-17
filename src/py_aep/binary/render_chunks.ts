@@ -6,7 +6,7 @@
  * RoutChunk uses `items_field()` for repeating render-flag entries.
  */
 
-import { b, bytes_, decode, define, descriptor, dict_get, fields, getattr, len, py_bool, strip } from "../../pyrt/index.ts";
+import { b, bytes_, decode, define, descriptor, fields, getattr, len, py_bool, strip } from "../../pyrt/index.ts";
 import type { IO } from "../../pyrt/index.ts";
 import { read_bytes, to_dividend_divisor, to_fixed_16_16 } from "./bin_utils.ts";
 import { BitField } from "./bitfield.ts";
@@ -187,7 +187,7 @@ export class RoptChunk extends Chunk {
     const disc_raw = read_bytes(fp, 4);
     const format_code = decode(disc_raw, "ascii");
     fp.seek(-4, 1);
-    const variant_cls = dict_get(_ROPT_VARIANTS, format_code, RoptChunk);
+    const variant_cls = _ROPT_VARIANTS.get(format_code) ?? RoptChunk;
     if (variant_cls === RoptChunk) return new this({ chunk_type, data: read_bytes(fp, size) });
     return variant_cls.read(fp, size, { chunk_type });
   }
