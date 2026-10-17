@@ -21,9 +21,15 @@ import type { Document, Node, DocumentOptions, ParseOptions, SchemaOptions, ToJS
 import {
   Path,
   lru_cache,
+  AttributeError,
   OSError,
+  TypeError_,
   ValueError,
+  getitem,
   py_bool,
+  py_iter,
+  str,
+  type_name,
   py_or,
   tkey,
   setdefault,
@@ -58,22 +64,47 @@ export class _OcioLoader {
 }
 
 /**
- * A value `yaml` `parse` yields for an OCIO config (`mapAsMap: true`):
- * scalars, a list, or a mapping.
+ * A value `yaml` `parse` yields for an OCIO config under `_OcioLoader`
+ * (YAML 1.1, `mapAsMap: true`): a scalar (`!!timestamp` is a `Date`,
+ * `!!binary` a `Uint8Array`), a list, a set, or a mapping. Nothing about
+ * its shape is checked on load - py_aep never validates the config - so
+ * each reader narrows the value where it reads it.
  */
-export type OcioValue = string | number | boolean | null | OcioValue[] | OcioNode;
+export type OcioValue =
+  | string
+  | number
+  | boolean
+  | null
+  | Date
+  | Uint8Array
+  | OcioValue[]
+  | Set<OcioValue>
+  | OcioNode;
+
+/** An OCIO mapping. Its keys are YAML values too (`3: x`, `~: x`), not only strings. */
+export interface OcioNode extends Map<OcioValue, OcioValue> {}
 
 /**
- * An OCIO mapping. Keys the readers use are named so a missing entry is
- * `undefined` and a present one has the shape that reader expects.
+ * Whether `value` holds a list, dict or set as a mapping key or set member.
+ *
+ * NOTE(port): PyYAML refuses one ("found unhashable key", a `YAMLError`), so
+ * Python's `_load_config_cached` returns `None` for such a config; `yaml`
+ * (npm) builds it. `seen` guards the cycles anchors can build.
  */
-export interface OcioNode {
-  get(key: "colorspaces" | "display_colorspaces" | "inactive_colorspaces" | "aliases"): OcioValue[] | undefined;
-  get(key: "file_rules"): OcioValue[];
-  get(key: "roles"): Map<string, OcioValue> | undefined;
-  get(key: "displays"): Map<string, OcioValue[]> | undefined;
-  get(key: "name" | "family" | "regex" | "pattern" | "extension" | "colorspace"): string | undefined;
-  get(key: string): OcioValue | undefined;
+export function _has_unhashable_key(value: OcioValue, seen: Set<OcioValue> = new Set()): boolean {
+  if (!(Array.isArray(value) || value instanceof Map || value instanceof Set) || seen.has(value)) return false;
+  seen.add(value);
+  const unhashable = (x: OcioValue): boolean => Array.isArray(x) || x instanceof Map || x instanceof Set;
+  if (value instanceof Map) {
+    for (const [k, v] of value) {
+      if (unhashable(k) || _has_unhashable_key(v, seen)) return true;
+    }
+    return false;
+  }
+  for (const item of value) {
+    if ((value instanceof Set && unhashable(item)) || _has_unhashable_key(item, seen)) return true;
+  }
+  return false;
 }
 
 /**
@@ -109,16 +140,19 @@ export function _ignore_tag(loader: Document, suffix: string, node: Node): OcioV
  */
 export const _load_config_cached = lru_cache(
   (config_path: string, _mtime_ns: bigint, _size: number): OcioNode | null => {
-    let doc: OcioNode;
+    let doc: OcioValue;
     try {
       doc = parse(decode(new Path(config_path).read_bytes(), "utf-8"), {
         ..._OcioLoader.options,
       });
     } catch (e: unknown) {
       // `except (OSError, yaml.YAMLError)`; node fs errors carry a `code`.
-      if (!(e instanceof OSError || e instanceof YAMLError || (e as { code?: unknown })?.code)) throw e;
+      if (!(e instanceof OSError || e instanceof YAMLError || (e instanceof Error && "code" in e && py_bool(e.code)))) {
+        throw e;
+      }
       return null;
     }
+    if (_has_unhashable_key(doc)) return null;
     return doc instanceof Map ? doc : null;
   },
 );
@@ -130,7 +164,7 @@ export function _config_stamp(config_path: Path): [bigint, number] | null {
     st = host.fs.statSync(config_path.path, { bigint: true });
   } catch (e: unknown) {
     // `except OSError`: node fs errors carry a `code`.
-    if (!(e as { code?: unknown })?.code) throw e;
+    if (!(e instanceof Error && "code" in e && py_bool(e.code))) throw e;
     return null;
   }
   return [st.mtimeNs, Number(st.size)];
@@ -168,14 +202,21 @@ export function list_config_color_spaces(config_path: Path): string[] {
   if (doc == null) return [];
   const names: string[] = [];
   for (const key of ["colorspaces", "display_colorspaces"] as const) {
-    for (const entry of py_or(doc.get(key), [])) {
+    for (const entry of py_iter(py_or(doc.get(key), []))) {
       if (entry instanceof Map) {
         const name = entry.get("name") ?? null;
         if (typeof name === "string") names.push(name);
       }
     }
   }
-  const inactive = new Set(py_or(doc.get("inactive_colorspaces"), []));
+  // `set(...)`: a list, dict or set member is unhashable.
+  const inactive = new Set<OcioValue>();
+  for (const n of py_iter(py_or(doc.get("inactive_colorspaces"), []))) {
+    if (Array.isArray(n) || n instanceof Map || n instanceof Set) {
+      throw new TypeError_(`unhashable type: '${type_name(n)}'`);
+    }
+    inactive.add(n);
+  }
   // A name may appear in both `colorspaces` and `display_colorspaces`;
   // getColorSpaceNames() returns a unique set, so de-duplicate (order kept).
   const seen = new Set<string>();
@@ -206,7 +247,7 @@ export function resolve_ocio_config(config: string): Path | null {
     const config_dir = root.div(config);
     if (config_dir.is_dir()) {
       const ocio_files = sorted(config_dir.glob("*.ocio"), (p: Path) => p.path);
-      if (ocio_files?.length > 0) return ocio_files[0];
+      if (ocio_files.length > 0) return ocio_files[0];
     }
   }
   return null;
@@ -298,15 +339,17 @@ export function _color_space_guid(profile_name: string, profile_data: string): U
 
 /** A `.ocio` config indexed for output-color-space resolution (`NamedTuple`). */
 export class _ConfigIndex {
+  // A family is whatever the config gives (`cs.get("family") or ""`), and a
+  // role or display is whatever YAML key names it.
   constructor(
-    readonly families: Map<string, string>, // color-space name -> family
-    readonly aliases: Map<string, string>, // alias name -> family of its color space
-    readonly roles: Map<string, string>, // role -> target name
-    readonly displays: Map<string, string[]>, // display -> its view names
+    readonly families: Map<string, OcioValue>, // color-space name -> family
+    readonly aliases: Map<string, OcioValue>, // alias name -> family of its color space
+    readonly roles: Map<OcioValue, string>, // role -> target name
+    readonly displays: Map<OcioValue, string[]>, // display -> its view names
   ) {}
 
   /** Tuple unpacking: `families, aliases, roles, displays = index`. */
-  *[Symbol.iterator](): Generator<Map<string, string> | Map<string, string[]>> {
+  *[Symbol.iterator](): Generator<Map<string, OcioValue> | Map<OcioValue, string> | Map<OcioValue, string[]>> {
     yield this.families;
     yield this.aliases;
     yield this.roles;
@@ -332,33 +375,36 @@ export const _config_index_cached = lru_cache(
   (config_path: string, mtime_ns: bigint, size: number): _ConfigIndex => {
     const doc = _load_config_cached(config_path, mtime_ns, size);
     if (doc == null) return new _ConfigIndex(new Map(), new Map(), new Map(), new Map());
-    const families = new Map<string, string>();
-    const aliases = new Map<string, string>();
+    const families = new Map<string, OcioValue>();
+    const aliases = new Map<string, OcioValue>();
     for (const key of ["colorspaces", "display_colorspaces"] as const) {
-      for (const cs of py_or(doc.get(key), [])) {
-        if (cs instanceof Map && typeof cs.get("name") === "string") {
+      for (const cs of py_iter(py_or(doc.get(key), []))) {
+        if (!(cs instanceof Map)) continue;
+        const name = cs.get("name");
+        if (typeof name === "string") {
           const family = py_or(cs.get("family"), "");
-          families.set(cs.get("name") ?? null, family);
-          for (const alias of py_or(cs.get("aliases"), [])) {
+          families.set(name, family);
+          for (const alias of py_iter(py_or(cs.get("aliases"), []))) {
             if (typeof alias === "string") aliases.set(alias, family);
           }
         }
       }
     }
-    const roles = new Map<string, string>();
-    for (const [r, t] of py_or(doc.get("roles"), new Map())) {
+    const roles = new Map<OcioValue, string>();
+    for (const [r, t] of _items(py_or(doc.get("roles"), new Map<OcioValue, OcioValue>()))) {
       if (typeof t === "string") roles.set(r, t);
     }
-    const displays = new Map<string, string[]>();
-    for (const [display, items] of py_or(doc.get("displays"), new Map())) {
+    const displays = new Map<OcioValue, string[]>();
+    for (const [display, items] of _items(py_or(doc.get("displays"), new Map<OcioValue, OcioValue>()))) {
       const views: string[] = [];
-      for (const item of py_or(items, [])) {
+      for (const item of py_iter(py_or(items, []))) {
         // `!<Views> [name, ..]` (shared views) or `!<View> {name: ..}`; the
         // OCIO loader strips the tags to a list or a dict respectively.
         if (Array.isArray(item)) {
           for (const v of item) if (typeof v === "string") views.push(v);
-        } else if (item instanceof Map && typeof item.get("name") === "string") {
-          views.push(item.get("name") ?? null);
+        } else if (item instanceof Map) {
+          const view = item.get("name");
+          if (typeof view === "string") views.push(view);
         }
       }
       displays.set(display, views);
@@ -366,6 +412,12 @@ export const _config_index_cached = lru_cache(
     return new _ConfigIndex(families, aliases, roles, displays);
   },
 );
+
+/** Python `x.items()` on a config value: `AttributeError` when it is not a dict. */
+export function _items(x: OcioValue): [OcioValue, OcioValue][] {
+  if (x instanceof Map) return [...x];
+  throw new AttributeError(`'${type_name(x)}' object has no attribute 'items'`);
+}
 
 /**
  * Resolve `color_space` to `(colorProfileName, colorProfileData)` - the
@@ -382,18 +434,23 @@ export const _config_index_cached = lru_cache(
  *
  * @throws ValueError If `color_space` is not found in the config.
  */
-export function _output_envelope(index: _ConfigIndex, color_space: string): [string, string] {
-  if (index.families.has(color_space)) {
-    const family = index.families.get(color_space)!;
-    const name = family ? `${family}/${color_space}` : color_space;
+export function _output_envelope(index: _ConfigIndex, color_space: OcioValue): [string, string] {
+  // Only a string can be a color-space or alias name; any YAML key a role.
+  if (typeof color_space === "string" && index.families.has(color_space)) {
+    const family = getitem(index.families, color_space);
+    const name = py_bool(family) ? `${str(family)}/${color_space}` : color_space;
     return [name, _compact({ colorSpace1: color_space })];
   }
   if (index.roles.has(color_space)) {
-    const target = index.roles.get(color_space)!;
+    const target = getitem(index.roles, color_space);
     return [target, _compact({ colorSpace1: target, ocioColorSpaceType: 2 })];
   }
-  if (index.aliases.has(color_space)) {
+  if (typeof color_space === "string" && index.aliases.has(color_space)) {
     return [color_space, _compact({ colorSpace1: color_space, ocioColorSpaceType: 2 })];
+  }
+  if (typeof color_space !== "string") {
+    // `"/" in color_space`: unreachable (a non-string name is a role key), but it is what Python would raise.
+    throw new TypeError_(`argument of type '${type_name(color_space)}' is not iterable`);
   }
   if (color_space.includes("/")) {
     const i = color_space.lastIndexOf("/"); // `rsplit("/", 1)`
@@ -403,7 +460,7 @@ export function _output_envelope(index: _ConfigIndex, color_space: string): [str
     // display after a family (ACES 1.2's only display is `ACES`, which is
     // also the family of `ACES - ACEScg`), and matching on the display
     // alone would claim the `family/name` form the getters return.
-    if ((index.displays.get(display) ?? [] as string[]).includes(view)) {
+    if ((index.displays.get(display) ?? []).includes(view)) {
       return [
         color_space,
         _compact({ colorSpace1: display, colorSpace2: view, ocioColorSpaceType: 1 }),
@@ -417,12 +474,12 @@ export function _output_envelope(index: _ConfigIndex, color_space: string): [str
  * Yield every assignable OCIO output color-space name (color spaces,
  * aliases, roles, and `display/view` pairs).
  */
-export function* _iter_output_color_spaces(index: _ConfigIndex): Generator<string> {
+export function* _iter_output_color_spaces(index: _ConfigIndex): Generator<OcioValue> {
   yield* index.families.keys();
   yield* index.aliases.keys();
   yield* index.roles.keys();
   for (const [display, views] of index.displays) {
-    for (const view of views) yield `${display}/${view}`;
+    for (const view of views) yield `${str(display)}/${view}`;
   }
 }
 
@@ -433,9 +490,9 @@ export function* _iter_output_color_spaces(index: _ConfigIndex): Generator<strin
  * in a `Map`, the same way a Python `bytes` key compares by value.
  */
 export const _guid_table_cached = lru_cache(
-  (config_path: string, mtime_ns: bigint, size: number): Map<string, string> => {
+  (config_path: string, mtime_ns: bigint, size: number): Map<string, OcioValue> => {
     const index = _config_index_cached(config_path, mtime_ns, size);
-    const table = new Map<string, string>();
+    const table = new Map<string, OcioValue>();
     for (const color_space of _iter_output_color_spaces(index)) {
       const [name, data] = _output_envelope(index, color_space);
       // Two names can resolve to the same envelope (e.g. two roles sharing
@@ -463,7 +520,11 @@ export function ocio_color_space_for_profile_id(
 ): string | null {
   const stamp = _config_stamp(config_path);
   if (stamp == null) return null;
-  return _guid_table_cached(config_path.path, stamp[0], stamp[1]).get(tkey(profile_id)) ?? null;
+  const name = _guid_table_cached(config_path.path, stamp[0], stamp[1]).get(tkey(profile_id)) ?? null;
+  // NOTE(port): Python hands back a non-string role key (`roles: {3: x}`) as
+  // is; the `str`-typed `OutputModule.output_color_space` gets its `str()`.
+  if (typeof name === "string") return name;
+  return name == null ? null : str(name);
 }
 
 /**
@@ -641,13 +702,13 @@ export function ocio_input_envelope(config_path: Path, file_path: string): strin
   const index = _config_index(config_path);
   const rules = doc.get("file_rules") ?? null;
   if (py_bool(rules)) {
-    for (const rule of rules) {
+    for (const rule of py_iter(rules)) {
       if (!(rule instanceof Map) || !_rule_matches(rule, file_path)) continue;
       const color_space = rule.get("colorspace") ?? null;
       if (typeof color_space !== "string") return null;
       const target = index.roles.get(color_space) ?? color_space;
-      const family = (index.families.get(target) || (index.aliases.get(target) ?? null)) || "";
-      const name = family ? `${family}/${color_space}` : color_space;
+      const family = py_or(py_or(index.families.get(target) ?? null, index.aliases.get(target) ?? null), "");
+      const name = py_bool(family) ? `${str(family)}/${color_space}` : color_space;
       return build_ocio_envelope(name, _compact({ colorSpace1: color_space }));
     }
     return null;

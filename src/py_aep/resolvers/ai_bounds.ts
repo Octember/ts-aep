@@ -32,9 +32,11 @@
  */
 
 import * as zlib from "../../pyrt/zlib.ts";
-import { IndirectReference } from "../cos/index.ts";
+import { IndirectObject, IndirectReference, Stream } from "../cos/index.ts";
+import type { CosDict, CosNode } from "../cos/cos.ts";
+import { cos_float, cos_get_or, cos_int, cos_num } from "../cos/kinds.ts";
 import { STD14_EXTENT, STD14_FIRST_CODE, STD14_STANDARD_QUOTES, STD14_WIDTHS } from "../data/std14_metrics.ts";
-import { UnsupportedAiLayersError, _find_ai_icc, _object_offsets, _parse_object_at, read_ai_layer_ocgs, type CosValue } from "./ai_layers.ts";
+import { UnsupportedAiLayersError, _find_ai_icc, _object_offsets, _parse_object_at, read_ai_layer_ocgs } from "./ai_layers.ts";
 import {
   Path,
   type PathLike,
@@ -45,7 +47,8 @@ import {
   decode,
   dict_get,
   float,
-  getattr,
+  at,
+  getitem,
   int,
   num_str,
   py_or,
@@ -58,8 +61,6 @@ import {
   is_real,
   hypot,
 } from "../../pyrt/index.ts";
-
-type CosDict = Map<string, CosValue>;
 
 export type Box = [number, number, number, number];
 export type Matrix = number[];
@@ -152,7 +153,7 @@ export const _INLINE_IMAGE_END = /[ \t\n\r\f\v\x00]EI[ \t\n\r\f\v\x00]|[ \t\n\r\
 // geometry
 
 /** `str(x)` for a content-stream operand: every number there is a Python float (`1.0`). */
-export function _operand_str(x: CosValue): string {
+export function _operand_str(x: CosNode): string {
   return is_real(x) ? num_str(x, true) : str(x);
 }
 
@@ -239,9 +240,10 @@ export class _Acc {
 }
 
 /** The dictionary of a plain dict or of a `Stream` object. */
-export function _as_dict(value: CosValue): CosDict | null {
+export function _as_dict(value: CosNode): CosDict | null {
   if (value instanceof Map) return value;
-  const dictionary = getattr(value, "dictionary", null);
+  // `getattr(value, "dictionary", None)`: of the COS kinds only a `Stream` has one.
+  const dictionary = value instanceof Stream ? value.dictionary : null;
   return dictionary instanceof Map ? dictionary : null;
 }
 
@@ -287,7 +289,7 @@ export class _Document {
   _data: Uint8Array;
   _name: string;
   _offsets: Map<number, number>;
-  _cache: Map<number, CosValue>;
+  _cache: Map<number, CosNode>;
   _catalog: CosDict | null;
 
   constructor(data: Uint8Array, name: string) {
@@ -324,11 +326,11 @@ export class _Document {
   }
 
   /** Follow an indirect reference to its object; pass values through. */
-  resolve(value: CosValue): CosValue {
+  resolve(value: CosNode): CosNode {
     while (value instanceof IndirectReference) {
       const number = value.object_number;
       if (this._cache.has(number)) {
-        value = this._cache.get(number);
+        value = getitem(this._cache, number);
         break;
       }
       const offset = this._offsets.get(number) ?? null;
@@ -340,29 +342,30 @@ export class _Document {
     return value;
   }
 
-  number(value: CosValue, default_: number = 0.0): number {
+  number(value: CosNode, default_: number = 0.0): number {
     const resolved = this.resolve(value);
     if (!is_real(resolved)) return default_;
     return float(resolved);
   }
 
-  get(mapping: CosValue, key: string, default_: CosValue = null): CosValue {
+  get(mapping: CosNode, key: string, default_: CosNode = null): CosNode {
     const table = _as_dict(this.resolve(mapping));
     if (table == null || !table.has(key)) return default_;
-    return this.resolve(table.get(key));
+    return this.resolve(getitem(table, key));
   }
 
   /** The decoded body of a stream object. */
-  stream(value: CosValue): Uint8Array {
+  stream(value: CosNode): Uint8Array {
     const reference = value;
     value = this.resolve(value);
     let body: Uint8Array | null = null;
-    let info: CosDict = new Map<string, CosValue>();
+    let info: CosDict = new Map();
     // `Stream` instances carry (dict, raw); a plain dict needs the raw
     // bytes located from the object's own offset.
-    const raw = getattr(value, "data", null);
+    // `getattr(value, "data", None)`: of the COS kinds a `Stream` and an `IndirectObject` have one.
+    const raw = value instanceof Stream || value instanceof IndirectObject ? value.data : null;
     if (raw instanceof Uint8Array) {
-      info = py_or(getattr(value, "dictionary", null), new Map<string, CosValue>());
+      info = py_or(value instanceof Stream ? value.dictionary : null, new Map());
       body = raw;
     } else if (value instanceof Map && reference instanceof IndirectReference) {
       info = value;
@@ -370,7 +373,7 @@ export class _Document {
     }
     if (body == null) throw this._reject("unreadable content stream");
     const filters = this.get(info, "Filter");
-    const names: CosValue[] = !Array.isArray(filters) ? [filters] : filters;
+    const names: CosNode[] = !Array.isArray(filters) ? [filters] : filters;
     if (this.get(info, "DecodeParms") != null) {
       throw this._reject(
         "the content stream uses a decode-parameter filter " +
@@ -453,14 +456,14 @@ export class _Document {
     return pages;
   }
 
-  *_walk_pages(node: CosValue, depth: number): Generator<CosDict> {
-    node = _as_dict(this.resolve(node));
-    if (node == null || depth > 32) return;
-    if (str(dict_get(node, "Type", "")) === "Page") {
-      yield node;
+  *_walk_pages(node: CosNode, depth: number): Generator<CosDict> {
+    const table = _as_dict(this.resolve(node));
+    if (table == null || depth > 32) return;
+    if (str(dict_get(table, "Type", "")) === "Page") {
+      yield table;
       return;
     }
-    const kids = this.get(node, "Kids");
+    const kids = this.get(table, "Kids");
     for (const kid of Array.isArray(kids) ? kids : []) {
       yield* this._walk_pages(kid, depth + 1);
     }
@@ -468,8 +471,8 @@ export class _Document {
 
   /** The page's content stream(s), concatenated and decoded. */
   page_content(page: CosDict): Uint8Array {
-    const contents = this.resolve(dict_get(this.resolve(page), "Contents"));
-    const parts: CosValue[] = Array.isArray(contents) ? contents : [contents];
+    const contents = this.resolve(cos_get_or(this.resolve(page), "Contents", null));
+    const parts: CosNode[] = Array.isArray(contents) ? contents : [contents];
     return join_bytes(
       NEWLINE,
       parts.filter((part) => part != null).map((part) => this.stream(part)),
@@ -488,7 +491,11 @@ export class _Document {
  * unknown barewords and only accepts alphabetic ones, so content-stream
  * operators (`re`, `f*`, `W*`, `'`) would all raise.
  */
-export function* _tokenize(data: Uint8Array): Generator<[string, CosValue]> {
+export function* _tokenize(
+  data: Uint8Array,
+): Generator<
+  ["num", number] | ["name", string] | ["str", Uint8Array] | ["array", CosNode[]] | ["dict", CosDict] | ["op", string]
+> {
   let pos = 0;
   const size = data.length;
   while (pos < size) {
@@ -647,9 +654,9 @@ export function _read_hex_string(data: Uint8Array, pos: number): [Uint8Array, nu
   return [bytes_.fromhex(digits), end + 1];
 }
 
-export function _read_array(data: Uint8Array, pos: number): [CosValue[], number] {
+export function _read_array(data: Uint8Array, pos: number): [CosNode[], number] {
   pos += 1;
-  const out: CosValue[] = [];
+  const out: CosNode[] = [];
   const size = data.length;
   while (pos < size) {
     if (bytes_eq(data.subarray(pos, pos + 1), RBRACKET)) return [out, pos + 1];
@@ -668,7 +675,7 @@ export function _read_array(data: Uint8Array, pos: number): [CosValue[], number]
 
 export function _read_dict(data: Uint8Array, pos: number): [CosDict, number] {
   pos += 2;
-  const out = new Map<string, CosValue>();
+  const out: CosDict = new Map();
   const size = data.length;
   let key: string | null = null;
   while (pos < size) {
@@ -692,7 +699,7 @@ export function _read_dict(data: Uint8Array, pos: number): [CosDict, number] {
 }
 
 /** Read one array/dictionary element starting at `pos`. */
-export function _next_simple(data: Uint8Array, pos: number): [CosValue, number] | null {
+export function _next_simple(data: Uint8Array, pos: number): [CosNode, number] | null {
   const char = data.subarray(pos, pos + 1);
   const size = data.length;
   if (bytes_eq(char, SLASH)) {
@@ -825,15 +832,15 @@ export function _font_metrics(doc: _Document, font: CosDict | null): Metrics {
 
 export function _type0_metrics(doc: _Document, font: CosDict): Metrics {
   const descendants = doc.get(font, "DescendantFonts");
-  const child: CosValue =
+  const child: CosNode =
     Array.isArray(descendants) && descendants.length > 0
       ? doc.resolve(descendants[0])
-      : new Map<string, CosValue>();
+      : new Map<string, CosNode>();
   const dw = doc.number(doc.get(child, "DW"), 1000.0);
   const default_ = dw !== 0 ? dw : 1000.0;
   const widths = new Map<number, number>();
   const table = doc.get(child, "W");
-  const entries: CosValue[] = Array.isArray(table) ? table : [];
+  const entries: CosNode[] = Array.isArray(table) ? table : [];
   let index = 0;
   while (index < entries.length) {
     const start = doc.number(entries[index]);
@@ -859,7 +866,7 @@ export function _type0_metrics(doc: _Document, font: CosDict): Metrics {
 
 export function _vertical_extent(
   doc: _Document,
-  descriptor: CosValue,
+  descriptor: CosNode,
   std: [number, number] | null,
 ): [number, number] {
   const bbox = doc.get(descriptor, "FontBBox");
@@ -878,7 +885,7 @@ export function _vertical_extent(
 
 /** Strip a subset tag and a style suffix from a `/BaseFont` name. */
 export function _base_font(name: string): string {
-  return split(split(name, "+").at(-1)!, ",")[0];
+  return split(at(split(name, "+"), -1), ",")[0];
 }
 
 // --------------------------------------------------------------------------
@@ -905,20 +912,20 @@ export class _Measurer {
     return null;
   }
 
-  _resource(resources: CosValue, category: string, name: CosValue): CosValue {
+  _resource(resources: CosNode, category: string, name: CosNode): CosNode {
     return this._doc.get(this._doc.get(resources, category), _operand_str(name));
   }
 
-  _resource_ref(resources: CosValue, category: string, name: CosValue): CosValue {
+  _resource_ref(resources: CosNode, category: string, name: CosNode): CosNode {
     const table = _as_dict(this._doc.resolve(this._doc.get(resources, category)));
     if (table == null) return null;
     return table.get(_operand_str(name)) ?? null;
   }
 
-  run(content: Uint8Array, resources: CosValue): void {
+  run(content: Uint8Array, resources: CosNode): void {
     let gs = new _GState();
     const saved: _GState[] = [];
-    let operands: CosValue[] = [];
+    let operands: CosNode[] = [];
     let segments: Segment[] = [];
     let current: Pt | null = null;
     let start: Pt | null = null;
@@ -938,35 +945,36 @@ export class _Measurer {
       } else if (op === "Q") {
         if (saved.length > 0) gs = saved.pop()!;
       } else if (op === "cm" && operands.length >= 6) {
-        gs.ctm = _mat_mul(operands.slice(-6), gs.ctm);
+        // Python multiplies the raw operands: a non-number raises TypeError.
+        gs.ctm = _mat_mul(operands.slice(-6).map(cos_num), gs.ctm);
       } else if (op === "w" && operands.length > 0) {
-        gs.line_width = float(operands.at(-1));
+        gs.line_width = cos_float(at(operands, -1));
       } else if (op === "M" && operands.length > 0) {
-        gs.miter = float(operands.at(-1));
+        gs.miter = cos_float(at(operands, -1));
       } else if (op === "gs" && operands.length > 0) {
-        const ext = this._resource(resources, "ExtGState", operands.at(-1));
+        const ext = this._resource(resources, "ExtGState", at(operands, -1));
         if (ext instanceof Map && ext.has("LW")) {
-          gs.line_width = this._doc.number(ext.get("LW"), gs.line_width);
+          gs.line_width = this._doc.number(getitem(ext, "LW"), gs.line_width);
         }
       }
       // ---- path construction
       else if (op === "m" && operands.length >= 2) {
-        const point: Pt = [float(operands.at(-2)), float(operands.at(-1))];
+        const point: Pt = [cos_float(at(operands, -2)), cos_float(at(operands, -1))];
         current = start = point;
       } else if (op === "l" && operands.length >= 2 && current != null) {
-        const point: Pt = [float(operands.at(-2)), float(operands.at(-1))];
+        const point: Pt = [cos_float(at(operands, -2)), cos_float(at(operands, -1))];
         segments.push(["l", current, point]);
         current = point;
       } else if (op === "c" && operands.length >= 6 && current != null) {
-        const a = operands.slice(-6).map((v) => float(v));
+        const a = operands.slice(-6).map(cos_float);
         segments.push(["c", current, [a[0], a[1]], [a[2], a[3]], [a[4], a[5]]]);
         current = [a[4], a[5]];
       } else if (op === "v" && operands.length >= 4 && current != null) {
-        const a = operands.slice(-4).map((v) => float(v));
+        const a = operands.slice(-4).map(cos_float);
         segments.push(["c", current, current, [a[0], a[1]], [a[2], a[3]]]);
         current = [a[2], a[3]];
       } else if (op === "y" && operands.length >= 4 && current != null) {
-        const a = operands.slice(-4).map((v) => float(v));
+        const a = operands.slice(-4).map(cos_float);
         const end: Pt = [a[2], a[3]];
         segments.push(["c", current, [a[0], a[1]], end, end]);
         current = end;
@@ -976,7 +984,7 @@ export class _Measurer {
         }
         current = start;
       } else if (op === "re" && operands.length >= 4) {
-        const [x, y, width, height] = operands.slice(-4).map((v) => float(v));
+        const [x, y, width, height] = operands.slice(-4).map(cos_float);
         const corners: Pt[] = [
           [x, y],
           [x + width, y],
@@ -1007,7 +1015,7 @@ export class _Measurer {
           target.add_box(_clamp(_grow(gs.clip, FILL_PAD, FILL_PAD)));
         }
       } else if (op === "Do" && operands.length > 0) {
-        this._draw_xobject(gs, resources, operands.at(-1));
+        this._draw_xobject(gs, resources, at(operands, -1));
       } else if (op === "BI") {
         // Inferred from the `q_image` probe layer rather than measured
         // on its own: an inline image is the same painting operator as
@@ -1017,8 +1025,8 @@ export class _Measurer {
       // ---- optional content
       else if (op === "BDC" || op === "BMC") {
         let number = -1;
-        if (op === "BDC" && operands.length >= 2 && str(operands.at(-2)) === "OC") {
-          const reference = this._resource_ref(resources, "Properties", operands.at(-1));
+        if (op === "BDC" && operands.length >= 2 && str(at(operands, -2)) === "OC") {
+          const reference = this._resource_ref(resources, "Properties", at(operands, -1));
           if (reference instanceof IndirectReference) number = reference.object_number;
         }
         this._stack.push(number);
@@ -1029,19 +1037,19 @@ export class _Measurer {
       else if (op === "BT") {
         text_matrix = line_matrix = _IDENTITY;
       } else if (op === "Tf" && operands.length >= 2) {
-        const font = this._resource(resources, "Font", operands.at(-2));
+        const font = this._resource(resources, "Font", at(operands, -2));
         gs.font = font instanceof Map ? font : null;
         // The metrics are a property of the font, so they are resolved
         // here rather than rebuilt for every text-showing operator.
         gs.metrics = _font_metrics(this._doc, gs.font);
-        gs.size = float(operands.at(-1));
+        gs.size = cos_float(at(operands, -1));
       } else if (op === "Tm" && operands.length >= 6) {
-        const tm = operands.slice(-6).map((v) => float(v));
+        const tm = operands.slice(-6).map(cos_float);
         text_matrix = line_matrix = tm;
       } else if ((op === "Td" || op === "TD") && operands.length >= 2) {
-        if (op === "TD") gs.leading = -float(operands.at(-1));
+        if (op === "TD") gs.leading = -cos_float(at(operands, -1));
         line_matrix = _mat_mul(
-          [1.0, 0.0, 0.0, 1.0, float(operands.at(-2)), float(operands.at(-1))],
+          [1.0, 0.0, 0.0, 1.0, cos_float(at(operands, -2)), cos_float(at(operands, -1))],
           line_matrix,
         );
         text_matrix = line_matrix;
@@ -1049,24 +1057,24 @@ export class _Measurer {
         line_matrix = _mat_mul([1.0, 0.0, 0.0, 1.0, 0.0, -gs.leading], line_matrix);
         text_matrix = line_matrix;
       } else if (op === "TL" && operands.length > 0) {
-        gs.leading = float(operands.at(-1));
+        gs.leading = cos_float(at(operands, -1));
       } else if (op === "Tc" && operands.length > 0) {
-        gs.char_spacing = float(operands.at(-1));
+        gs.char_spacing = cos_float(at(operands, -1));
       } else if (op === "Tw" && operands.length > 0) {
-        gs.word_spacing = float(operands.at(-1));
+        gs.word_spacing = cos_float(at(operands, -1));
       } else if (op === "Tz" && operands.length > 0) {
-        gs.h_scale = float(operands.at(-1));
+        gs.h_scale = cos_float(at(operands, -1));
       } else if (op === "Ts" && operands.length > 0) {
-        gs.rise = float(operands.at(-1));
+        gs.rise = cos_float(at(operands, -1));
       } else if (op === "Tr" && operands.length > 0) {
-        gs.render_mode = int(operands.at(-1));
+        gs.render_mode = cos_int(at(operands, -1));
       } else if ((op === "Tj" || op === "TJ" || op === "'" || op === '"') && operands.length > 0) {
         if (op === "'" || op === '"') {
           line_matrix = _mat_mul([1.0, 0.0, 0.0, 1.0, 0.0, -gs.leading], line_matrix);
           text_matrix = line_matrix;
         }
-        const shown = operands.at(-1);
-        const items: CosValue[] = Array.isArray(shown) ? shown : [shown];
+        const shown = at(operands, -1);
+        const items: CosNode[] = Array.isArray(shown) ? shown : [shown];
         text_matrix = this._show_text(gs, text_matrix, items);
       }
       operands = [];
@@ -1119,7 +1127,7 @@ export class _Measurer {
   }
 
   /** A form or image XObject contributes its box with no expansion. */
-  _draw_xobject(gs: _GState, resources: CosValue, name: CosValue): void {
+  _draw_xobject(gs: _GState, resources: CosNode, name: CosNode): void {
     const xobject = _as_dict(this._resource(resources, "XObject", name));
     if (xobject == null) return;
     const target = this._target();
@@ -1162,13 +1170,13 @@ export class _Measurer {
   }
 
   /** Measure a text-showing operator and advance the text matrix. */
-  _show_text(gs: _GState, text_matrix: Matrix, items: CosValue[]): Matrix {
+  _show_text(gs: _GState, text_matrix: Matrix, items: CosNode[]): Matrix {
     const [widths, default_, y_min, y_max, two_byte] = gs.metrics;
     const target = this._target();
     const scale = gs.h_scale / 100.0;
     for (const item of items) {
-      if (typeof item === "number") {
-        const shift = -item / 1000.0 * gs.size * scale;
+      if (is_real(item)) {
+        const shift = -float(item) / 1000.0 * gs.size * scale;
         text_matrix = _mat_mul([1.0, 0.0, 0.0, 1.0, shift, 0.0], text_matrix);
         continue;
       }
@@ -1278,7 +1286,7 @@ export function read_ai_layer_bounds(file: PathLike, data: Uint8Array | null = n
   const measurer = new _Measurer(doc);
   measurer.run(doc.page_content(page), doc.get(page, "Resources"));
   return layers.map((layer) =>
-    measurer.boxes.has(layer.object_number) ? measurer.boxes.get(layer.object_number)!.box() : null,
+    measurer.boxes.has(layer.object_number) ? getitem(measurer.boxes, layer.object_number).box() : null,
   );
 }
 
