@@ -2,7 +2,7 @@
 
 import * as host from "../../../pyrt/host.ts";
 
-import { OptiChunk, SspcChunk, TextOptiChunk, build_ai_document_opti_data, build_ai_layer_opti_data, build_craw_opti_data, build_dpx_opti_data, build_exr_opti_data, build_generic_opti_data, build_psd_layer_opti_data, build_psd_opti_data, build_rhdr_opti_data, build_text_opti_data, build_tiff_opti_data, type PsdOptiChunk } from "../../binary/footage_chunks.ts";
+import { OptiChunk, SspcChunk, TextOptiChunk, build_ai_document_opti_data, build_ai_layer_opti_data, build_craw_opti_data, build_dpx_opti_data, build_exr_opti_data, build_generic_opti_data, build_psd_layer_opti_data, build_psd_opti_data, build_rhdr_opti_data, build_text_opti_data, build_tiff_opti_data } from "../../binary/footage_chunks.ts";
 import { EmpdChunk } from "../../binary/misc_chunks.ts";
 import { ColorProfileRecord, build_pin_list } from "../../binary/mutations.ts";
 import { Utf8Chunk, type U1Chunk } from "../../binary/scalar_chunks.ts";
@@ -821,7 +821,7 @@ export class FileSource extends FootageSource {
     }
 
     if (getattr(_opti, "asset_type", "") === "8BPS") {
-      const psd_opti = _opti as unknown as PsdOptiChunk;
+      const psd_opti = _opti;
       this._file_attributes = new Map<string, number | string>([
         ["psd_layer_index", psd_opti.psd_layer_index],
         ["psd_group_name", psd_opti.psd_group_name || ""],

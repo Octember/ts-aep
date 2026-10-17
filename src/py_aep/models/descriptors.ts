@@ -19,6 +19,7 @@ import {
   instance_dict,
 } from "../../pyrt/index.ts";
 import type { EnumHelpers, EnumValue } from "../../pyrt/enum.ts";
+import type { ChunkBodyOf } from "../binary/chunk_types.ts";
 import type { FieldValue } from "../binary/fmt_field.ts";
 import { get_ae_version_major } from "../ae_version.ts";
 import { validate_bool, validate_enum } from "./validators.ts";
@@ -36,6 +37,17 @@ export type HookName<O> = object extends O
 
 /** The name of an attribute of `O` (a chunk body); any name when the owner is not known. */
 export type AttrName<O> = object extends O ? string : string & keyof O;
+
+/** The chunk or item `O[A]` holds, ignoring a missing (`null`) body. Variants of a registered base are included. */
+type ChunkBody<O, A extends string> = A extends keyof O ? ChunkBodyOf<NonNullable<O[A]>> : FieldValue;
+
+/** Field names of that body. A body with no known keys accepts any name. */
+type ChunkFieldKey<O, A extends string> = [keyof ChunkBody<O, A> & string] extends [never]
+  ? string
+  : keyof ChunkBody<O, A> & string;
+
+/** The type of field `F` on that body. */
+type RawField<O, A extends string, F extends string> = F extends keyof ChunkBody<O, A> ? ChunkBody<O, A>[F] : FieldValue;
 
 /**
  * The model object a `ChunkField` reads through: its chunk body is found by
@@ -63,6 +75,13 @@ export type ChunkFieldOptions<T, O> = {
   post_set?: ((obj: NoInfer<O>) => void) | HookName<NoInfer<O>> | null;
   min_version?: number | null;
 };
+
+/**
+ * `ChunkField` options. `transform` reads the chunk field's real type. It is
+ * required when that type is not already what the descriptor returns (`T`).
+ */
+type ChunkFieldKw<T, O, Raw> = Omit<ChunkFieldOptions<T, O>, "transform"> &
+  ([Raw] extends [T] ? { transform?: ((value: Raw) => T) | null } : { transform: (value: Raw) => T });
 
 export const _SENTINEL: unique symbol = Symbol("_SENTINEL");
 
@@ -219,7 +238,12 @@ export function _validate_enum_member(enum_cls: EnumHelpers<unknown>, value: unk
  * @param post_set - Optional method name on the model instance, or a callable receiving the model
  *   instance, invoked after the value has been written.
  */
-export class ChunkField<T, O extends object = object> {
+export class ChunkField<
+  T,
+  O extends object = object,
+  A extends AttrName<O> = AttrName<O>,
+  F extends ChunkFieldKey<O, A> = ChunkFieldKey<O, A>,
+> {
   declare chunk_attr: string;
   declare field: string;
   declare transform: ((value: FieldValue) => T) | null;
@@ -234,10 +258,17 @@ export class ChunkField<T, O extends object = object> {
   declare public_name: string;
 
   /**
-   * `O` is the model class the field is installed on and `T` the type it
-   * reads as; both are inferred from the `descriptor(...)` call.
+   * `O` is the model the descriptor is installed on. `A`/`F` are the chunk
+   * attribute and field name. `T` is what the descriptor reads as
+   * (`descriptor(...)` supplies it): the field's type, or what `transform`
+   * returns when the stored type is wider.
    */
-  constructor(chunk_attr: NoInfer<AttrName<O>>, field: string, kw: ChunkFieldOptions<T, O> = {}) {
+  constructor(
+    chunk_attr: A & NoInfer<AttrName<O>>,
+    field: F,
+    kw?: ChunkFieldKw<T, O, RawField<O, A, F>>,
+  );
+  constructor(chunk_attr: string, field: string, kw: ChunkFieldOptions<T, O> = {}) {
     const {
       transform = null,
       reverse = null,
@@ -354,11 +385,12 @@ export class ChunkField<T, O extends object = object> {
    * first). For a bool backed by a generic integer chunk field (e.g.
    * `U1Chunk.value`) add `transform=bool, reverse=int`.
    */
-  static bool<O extends object = object>(
-    chunk_attr: NoInfer<AttrName<O>>,
-    field: string,
-    kwargs: ChunkFieldOptions<boolean, O> = {},
-  ): ChunkField<boolean, O> {
+  static bool<O extends object = object, A extends AttrName<O> = AttrName<O>, F extends ChunkFieldKey<O, A> = ChunkFieldKey<O, A>>(
+    chunk_attr: A & NoInfer<AttrName<O>>,
+    field: F,
+    kwargs?: ChunkFieldKw<boolean, O, RawField<O, A, F>>,
+  ): ChunkField<boolean, O>;
+  static bool(chunk_attr: string, field: string, kwargs: ChunkFieldOptions<boolean, object> = {}): ChunkField<boolean> {
     kwargs = { ...kwargs };
     if (!("validate" in kwargs)) kwargs.validate = validate_bool;
     return new this(chunk_attr, field, kwargs);
@@ -383,16 +415,27 @@ export class ChunkField<T, O extends object = object> {
    *   The field then reads as `EnumValue<E> | Raw`, `Raw` being the rest of the
    *   declared field type (`declare depth: OutputColorDepth | number`).
    */
-  static enum<E extends EnumHelpers<unknown>, Raw = never, O extends object = object>(
+  static enum<
+    E extends EnumHelpers<unknown>,
+    Raw = never,
+    O extends object = object,
+    A extends AttrName<O> = AttrName<O>,
+    F extends ChunkFieldKey<O, A> = ChunkFieldKey<O, A>,
+  >(
     enum_cls: E,
-    chunk_attr: NoInfer<AttrName<O>>,
-    field: string,
+    chunk_attr: A & NoInfer<AttrName<O>>,
+    field: F,
     kw: ChunkFieldOptions<EnumValue<E> | Raw, O> & { allow_out_of_enum_values: true },
   ): ChunkField<EnumValue<E> | Raw, O>;
-  static enum<E extends EnumHelpers<unknown>, O extends object = object>(
+  static enum<
+    E extends EnumHelpers<unknown>,
+    O extends object = object,
+    A extends AttrName<O> = AttrName<O>,
+    F extends ChunkFieldKey<O, A> = ChunkFieldKey<O, A>,
+  >(
     enum_cls: E,
-    chunk_attr: NoInfer<AttrName<O>>,
-    field: string,
+    chunk_attr: A & NoInfer<AttrName<O>>,
+    field: string & F,
     kw?: ChunkFieldOptions<EnumValue<E>, O> & { allow_out_of_enum_values?: false },
   ): ChunkField<EnumValue<E>, O>;
   static enum(

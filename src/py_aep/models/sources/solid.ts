@@ -109,12 +109,12 @@ export class SolidSource extends FootageSource {
   }
 
   _resolve_name(raw_name: string): string {
-    return str((this._opti as SoliOptiChunk).solid_name);
+    return str(this._opti.solid_name);
   }
 
   _store_name(value: string): void {
     validate_opti_name(value);
-    (this._opti as SoliOptiChunk).solid_name = value;
+    this._opti.solid_name = value;
   }
 }
 
