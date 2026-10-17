@@ -10,7 +10,7 @@ import { _PRDA_VARIANTS, PguiChunk, type PrdaChunk, type PrinChunk } from "../..
 import { build_checkbox_cctl, build_color_cctl, build_media_cctl, build_ovg2, build_slider_cctl, build_source_alternate_extras, build_text_cctl, clone_chunk_tree, collect_layer_ref_tdpi_ids, remap_layer_ref_tdpi, rewrite_owner_tdpi, strip_synthetic } from "../../binary/mutations.ts";
 import { TDSN_SENTINEL, CdatChunk, Tdb4Chunk, TdmnChunk, TdsbChunk, TdsnChunk } from "../../binary/property_chunks.ts";
 import { F8Chunk, S4Chunk, type U1Chunk, type U4Chunk, type U4LeChunk, type Utf8Chunk } from "../../binary/scalar_chunks.ts";
-import { block_slice, filter_by_list_type, filter_by_type, find_by_list_type, find_by_list_type_or_null, find_by_type, find_by_type_or_null, index_by_identity, recursive_find } from "../../binary/utils.ts";
+import { block_slice, filter_by_list_type, filter_by_type, find_by_list_type, find_by_list_type_or_null, find_by_type, find_by_type_or_null, index_by_identity, list_type_of, recursive_find } from "../../binary/utils.ts";
 import { Label, LayerType, LineOrientation, ParametricMeshType, PREFType } from "../../enums/index.ts";
 import { parse_essential_graphics } from "../../parsers/essential_graphics.ts";
 import { CONTROLLER_CHECKBOX, CONTROLLER_COLOR, CONTROLLER_SLIDER, can_add_layer, font_caps_json, media_controller_path, property_controller_plan, type PathNode, type PropertyControllerPlan } from "../../resolvers/motion_graphics.ts";
@@ -32,6 +32,7 @@ import {
   repr,
   round,
   sorted,
+  TypeError_,
   ValueError,
   zip,
   type ClassAttributes,
@@ -316,14 +317,14 @@ export function _drop_essential_overrides(layer: Layer): void {
       ch instanceof TdmnChunk &&
       ch.value === "ADBE Layer Overrides" &&
       i + 1 < chunks.length &&
-      getattr(chunks[i + 1], "list_type", null) === "OvG2"
+      list_type_of(chunks[i + 1]) === "OvG2"
     ) {
       // The group is two chunks: the OvG2 holds one CPrp per override
       // (CprC counts them), the tdgp that follows holds their values.
       chunks[i + 1] = build_ovg2();
       const values = i + 2 < chunks.length ? chunks[i + 2] : null;
-      if (getattr(values, "list_type", null) === "tdgp") {
-        const inner = (values as ListChunk).chunks;
+      if (values instanceof ListChunk && values.list_type === "tdgp") {
+        const inner = values.chunks;
         const keep = inner.filter((c) => ["tdsb", "tdsn"].includes(c.chunk_type));
         inner.splice(0, inner.length, ...keep, new TdmnChunk({ value: "ADBE Group End" }));
       }
@@ -352,7 +353,7 @@ export function _insert_layer_skeleton_extras(layer: Layer): void {
 
   function has_following(chunks: Chunk[], i: number, kind: string): boolean {
     const nxt = i + 1 < chunks.length ? chunks[i + 1] : null;
-    return getattr(nxt, "list_type", nxt?.chunk_type ?? null) === kind;
+    return (nxt instanceof ListChunk ? nxt.list_type : nxt?.chunk_type ?? null) === kind;
   }
 
   const chunks = root.chunks;
@@ -1540,12 +1541,17 @@ export class CompItem extends AVItem {
       // pard-less properties (Transform > Opacity -> 0..100).
       const min_v = prop._slider_min != null ? prop._slider_min : prop.min_value;
       const max_v = prop._slider_max != null ? prop._slider_max : prop.max_value;
+      // Python's `float()` refuses a list bound (a color or multi-dimensional range).
+      const float_bound = (v: number | number[]): number => {
+        if (Array.isArray(v)) throw new TypeError_("float() argument must be a string or a real number, not 'list'");
+        return float(v);
+      };
       return build_slider_cctl(
         name,
         uuid_str,
         prop.value as number,
-        min_v != null ? float(min_v) : 0.0,
-        max_v != null ? float(max_v) : 100.0,
+        min_v != null ? float_bound(min_v) : 0.0,
+        max_v != null ? float_bound(max_v) : 100.0,
         comp_id,
         layer_id,
         plan.path_json,

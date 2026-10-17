@@ -33,7 +33,7 @@ import {
   type IO,
 } from "../../pyrt/index.ts";
 import { _struct_for, read_bytes, read_fmt, read_pad, write_bytes, write_pad } from "./bin_utils.ts";
-import { _decode_fields, _encode_value, _field_encoder, _struct_info, type Coerce, type FieldValue, type FmtItem, type InitKwargs } from "./fmt_field.ts";
+import { _decode_fields, _encode_value, _field_encoder, _struct_info, type Coerce, type FieldKwargs, type FieldValue, type FmtItem, type InitKwargs } from "./fmt_field.ts";
 import { CHUNK_TYPES, register } from "./registry.ts";
 import type { HeadChunk } from "./item_chunks.ts";
 
@@ -65,7 +65,7 @@ function _optional_layout(data_fields: readonly Attribute[], optional_start: num
   return layout;
 }
 
-type SimpleKw = (values: readonly FieldValue[], chunk_type: string) => InitKwargs;
+type SimpleKw = (values: readonly FieldValue[], chunk_type: string) => FieldKwargs;
 const _SIMPLE_KW = new WeakMap<Function, SimpleKw | null>();
 
 /**
@@ -138,7 +138,7 @@ export class Chunk extends AttrsBase {
         make = values.length === init_names.length ? _compile_simple_kw(init_names, coerces) : null;
         _SIMPLE_KW.set(cls, make);
       }
-      let kw: InitKwargs;
+      let kw: FieldKwargs;
       if (make !== null) {
         kw = make(values, chunk_type);
       } else {
@@ -161,7 +161,7 @@ export class Chunk extends AttrsBase {
       return new cls(kw);
     }
 
-    let values: FieldValue[];
+    let values: (struct.PackValue | null)[];
     let items_start: number;
     if (mixed_endian) {
       // Per-field read: each field may have its own endian prefix
@@ -213,7 +213,7 @@ export class Chunk extends AttrsBase {
       items_start = size - remaining;
     }
 
-    const kw2 = _decode_fields(data_fields, values, encodings, coerces, init_names);
+    const kw2: InitKwargs = _decode_fields(data_fields, values, encodings, coerces, init_names);
     kw2.chunk_type = chunk_type;
     let extra_trailing: Uint8Array | null = null;
     if (items_info != null) {
@@ -278,7 +278,7 @@ export class Chunk extends AttrsBase {
       }
     } else {
       const encode_fields = last_idx === data_fields.length ? _field_encoder(info) : null;
-      const values: FieldValue[] = encode_fields !== null ? encode_fields(this) : [];
+      const values: struct.PackValue[] = encode_fields !== null ? encode_fields(this) : [];
       for (let i = values.length; i < last_idx; i++) {
         const f = data_fields[i];
         let value = getattr(this, f.name);
@@ -365,7 +365,7 @@ export class ListChunk extends Chunk {
     }
     const parent_result = kwargs.parent_result ?? null;
     const child_ctx = new ReadContext(list_type, ctx.parent_list_type, parent_result);
-    if (defer_list_types?.size! > 0 && defer_list_types!.has(list_type)) {
+    if (defer_list_types != null && defer_list_types.size > 0 && defer_list_types.has(list_type)) {
       const raw_body = fp.read(size - 4);
       return new DeferredListChunk({
         chunk_type,

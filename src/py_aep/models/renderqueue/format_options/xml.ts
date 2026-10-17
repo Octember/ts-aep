@@ -193,12 +193,7 @@ export function _try_enum_or_int(enum_cls: EnumHelpers<number>, raw_str: string)
     if (!(e instanceof ValueError)) throw e;
     return null;
   }
-  try {
-    return enum_cls.of(raw_value);
-  } catch (e) {
-    if (!(e instanceof ValueError)) throw e;
-    return raw_value;
-  }
+  return enum_cls.of_or_null(raw_value) ?? raw_value;
 }
 
 /**

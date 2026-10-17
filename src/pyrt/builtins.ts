@@ -3,12 +3,20 @@
 import { AttributeError, IndexError, KeyError, TypeError_, ValueError } from "./errors.ts";
 import { float_repr, PyFloat } from "./num.ts";
 
+/** The dunder methods the builtins below probe for. */
+type DunderProbe = { __bool__?: unknown; __len__?: unknown; __contains__?: unknown; __eq__?: unknown; __repr__?: unknown; __str__?: unknown };
+
+/** Objects and functions can carry dunder methods; reading one off a primitive yields nothing. */
+function _probeable(x: unknown): x is DunderProbe {
+  return x !== null && (typeof x === "object" || typeof x === "function");
+}
+
 /**
  * Python truthiness: empty containers (array, string, bytes, Map, Set,
  * object with `__len__`) are false. JS treats `[]` and an empty
  * Uint8Array as true - never use bare `if (x)` on a container.
  */
-export function py_bool(x: any): boolean {
+export function py_bool(x: unknown): boolean {
   if (x == null) return false;
   if (x instanceof PyFloat) return x.value !== 0;
   if (typeof x === "boolean") return x;
@@ -17,8 +25,10 @@ export function py_bool(x: any): boolean {
   if (typeof x === "string") return x.length > 0;
   if (Array.isArray(x) || ArrayBuffer.isView(x)) return (x as ArrayLike<unknown>).length > 0;
   if (x instanceof Map || x instanceof Set) return x.size > 0;
-  if (typeof x.__bool__ === "function") return x.__bool__();
-  if (typeof x.__len__ === "function") return x.__len__() > 0;
+  if (_probeable(x)) {
+    if (typeof x.__bool__ === "function") return x.__bool__();
+    if (typeof x.__len__ === "function") return x.__len__() > 0;
+  }
   return true;
 }
 
@@ -37,10 +47,10 @@ export function py_and<A, B>(a: A, b: B): A | B {
 }
 
 /** `len(x)` */
-export function len(x: any): number {
+export function len(x: unknown): number {
   if (typeof x === "string" || Array.isArray(x) || ArrayBuffer.isView(x)) return (x as ArrayLike<unknown>).length;
   if (x instanceof Map || x instanceof Set) return x.size;
-  if (x && typeof x.__len__ === "function") return x.__len__();
+  if (_probeable(x) && typeof x.__len__ === "function") return x.__len__();
   throw new TypeError(`object of type '${x?.constructor?.name}' has no len()`);
 }
 
@@ -52,11 +62,12 @@ export function* range(a: number, b?: number, step = 1): Generator<number> {
 }
 
 /** `zip(a, b, ...)` (shortest; `strict` raises on length mismatch). */
-export function zip<T extends unknown[][]>(...arrays: T): { [K in keyof T]: T[K][number] }[] {
+export function zip<T extends unknown[][]>(...arrays: T): { [K in keyof T]: T[K][number] }[];
+export function zip(...arrays: unknown[][]): unknown[][] {
   let n = Infinity;
   for (const a of arrays) n = Math.min(n, a.length);
   if (n === Infinity) n = 0;
-  const out: any[] = [];
+  const out: unknown[][] = [];
   for (let i = 0; i < n; i++) {
     const row = [];
     for (const a of arrays) row.push(a[i]);
@@ -72,7 +83,7 @@ export function* enumerate<T>(xs: Iterable<T>, start = 0): Generator<[number, T]
 }
 
 /** Python ordering of numbers, strings, bools, and tuples/lists (lexicographic). */
-export function py_cmp(a: any, b: any): number {
+export function py_cmp(a: unknown, b: unknown): number {
   if (Array.isArray(a) && Array.isArray(b)) {
     const n = Math.min(a.length, b.length);
     for (let i = 0; i < n; i++) {
@@ -143,6 +154,35 @@ export function at<T>(xs: ArrayLike<T>, i: number): T {
   return xs[j];
 }
 
+/** What `for item in x` yields for each kind `py_iter` accepts. */
+type IterItem<X> = X extends string | String
+  ? string
+  : X extends Uint8Array
+    ? number
+    : X extends readonly (infer T)[]
+      ? T
+      : X extends ReadonlyMap<infer K, unknown>
+        ? K
+        : X extends ReadonlySet<infer T>
+          ? T
+          : never;
+
+/**
+ * Python `list(iter(x))` over dynamic data (parsed YAML/JSON): list items,
+ * dict keys, set members (in insertion order; CPython's is hash order), a
+ * string's characters (code points), a bytes object's ints; `TypeError` for
+ * every other kind.
+ */
+export function py_iter<X>(x: X): IterItem<X>[];
+export function py_iter(x: unknown): unknown[] {
+  if (Array.isArray(x)) return x;
+  if (x instanceof Map) return [...x.keys()];
+  if (x instanceof Set) return [...x];
+  if (typeof x === "string" || x instanceof String) return Array.from(String(x));
+  if (x instanceof Uint8Array) return Array.from(x);
+  throw new TypeError_(`'${type_name(x)}' object is not iterable`);
+}
+
 type Sliceable = { slice(s: number, e: number): Sliceable; length: number; readonly [i: number]: unknown };
 
 /** `xs[start:end]` for arrays and strings with Python's clamping. */
@@ -211,9 +251,9 @@ export function tkey(...parts: unknown[]): string {
  */
 export function getattr<O, N extends string & keyof NonNullable<O>>(obj: O, name: N): Required<NonNullable<O>>[N];
 export function getattr<O, N extends string & keyof NonNullable<O>, D>(obj: O, name: N, dflt: D): Required<NonNullable<O>>[N] | D;
-export function getattr(obj: any, name: string, ...dflt: [unknown?]): any;
-export function getattr(obj: any, name: string, ...dflt: [unknown?]): any {
-  if (obj != null && name in Object(obj)) return obj[name];
+export function getattr(obj: unknown, name: string, ...dflt: [unknown?]): any;
+export function getattr(obj: unknown, name: string, ...dflt: [unknown?]): unknown {
+  if (obj != null && name in Object(obj)) return Reflect.get(Object(obj), name, obj);
   if (dflt.length) return dflt[0];
   throw new AttributeError(`'${obj?.constructor?.name}' object has no attribute '${name}'`);
 }
@@ -226,10 +266,10 @@ export function setattr(obj: object, name: string, value: unknown): void {
 }
 
 /** `hasattr(obj, name)` */
-export function hasattr(obj: any, name: string): boolean {
+export function hasattr(obj: unknown, name: string): boolean {
   if (obj == null || !(name in Object(obj))) return false;
   try {
-    void obj[name];
+    void Reflect.get(Object(obj), name, obj);
     return true;
   } catch (e) {
     if (e instanceof AttributeError) return false;
@@ -238,16 +278,16 @@ export function hasattr(obj: any, name: string): boolean {
 }
 
 /** `x in container` for arrays, strings (substring), Maps (keys), Sets. */
-export function contains(container: any, x: any): boolean {
-  if (typeof container === "string") return container.includes(x);
+export function contains(container: unknown, x: unknown): boolean {
+  if (typeof container === "string") return container.includes(String(x));
   if (container instanceof Map || container instanceof Set) return container.has(x);
   if (Array.isArray(container)) return container.some((y) => py_eq(y, x));
-  if (container && typeof container.__contains__ === "function") return container.__contains__(x);
+  if (_probeable(container) && typeof container.__contains__ === "function") return container.__contains__(x);
   throw new TypeError("argument of type is not iterable");
 }
 
 /** `a == b` for values (numbers, strings, arrays/tuples, bytes, Maps, objects with `__eq__`). */
-export function py_eq(a: any, b: any): boolean {
+export function py_eq(a: unknown, b: unknown): boolean {
   if (a === b) return true;
   if (a instanceof PyFloat) a = a.value;
   if (b instanceof PyFloat) b = b.value;
@@ -270,7 +310,7 @@ export function py_eq(a: any, b: any): boolean {
     return true;
   }
   if (a instanceof Set && b instanceof Set) return a.size === b.size && [...a].every((x) => b.has(x));
-  if (typeof a.__eq__ === "function") return a.__eq__(b);
+  if (_probeable(a) && typeof a.__eq__ === "function") return a.__eq__(b);
   return false;
 }
 
@@ -278,7 +318,7 @@ export function py_eq(a: any, b: any): boolean {
 const NON_PRINTABLE = /^[\p{Cc}\p{Cf}\p{Cs}\p{Co}\p{Cn}\p{Zl}\p{Zp}\p{Zs}]$/u;
 
 /** Python `repr(x)` for messages. */
-export function repr(x: any): string {
+export function repr(x: unknown): string {
   if (x == null) return "None";
   if (typeof x === "boolean") return x ? "True" : "False";
   if (typeof x === "number") return Number.isInteger(x) ? String(x) : float_repr(x);
@@ -319,7 +359,7 @@ export function repr(x: any): string {
   if (Array.isArray(x)) return `[${x.map(repr).join(", ")}]`;
   if (x instanceof Map) return `{${[...x].map(([k, v]) => `${repr(k)}: ${repr(v)}`).join(", ")}}`;
   if (x instanceof Set) return x.size ? `{${[...x].map(repr).join(", ")}}` : "set()";
-  if (typeof x.__repr__ === "function") return x.__repr__();
+  if (_probeable(x) && typeof x.__repr__ === "function") return x.__repr__();
   return String(x);
 }
 
@@ -328,7 +368,7 @@ export function repr(x: any): string {
  * int-valued float from an int unless it is a boxed `PyFloat`; class
  * instances report their constructor name, which equals the Python class name.
  */
-export function type_name(x: any): string {
+export function type_name(x: unknown): string {
   if (x == null) return "NoneType";
   if (typeof x === "boolean") return "bool";
   if (x instanceof PyFloat) return "float";
@@ -350,48 +390,55 @@ export function list_mul<T>(xs: readonly T[], n: number): T[] {
   return out;
 }
 
+/** A Python Mapping: a `Map`, an object with `items()`, or one with `keys()` + `__getitem__`. */
+export type Mapping<K, V> = Map<K, V> | { items(): Iterable<[K, V]> } | KeyedMapping<K, V>;
+type KeyedMapping<K, V> = { keys(): Iterable<K>; __getitem__(key: K): V };
+
+function is_keyed_mapping<K, V>(x: KeyedMapping<K, V> | Iterable<[K, V]>): x is KeyedMapping<K, V> {
+  return typeof Reflect.get(x, "keys") === "function" && typeof Reflect.get(x, "__getitem__") === "function";
+}
+
 /**
  * `mapping.items()` over the Mapping protocol: a `Map`'s entries, an
  * object's own `items()`, or `keys()` + `__getitem__`.
  */
-export function mapping_items(m: any): [any, any][] {
+export function mapping_items<K, V>(m: Mapping<K, V>): [K, V][] {
   if (m instanceof Map) return [...m.entries()];
-  if (typeof m.items === "function") return [...m.items()];
-  if (typeof m.keys === "function" && typeof m.__getitem__ === "function") {
-    return [...m.keys()].map((k: unknown): [unknown, unknown] => [k, m.__getitem__(k)]);
+  if ("items" in m && typeof m.items === "function") return [...m.items()];
+  if ("keys" in m && typeof m.keys === "function" && typeof m.__getitem__ === "function") {
+    return [...m.keys()].map((k): [K, V] => [k, m.__getitem__(k)]);
   }
   throw new TypeError_(`'${type_name(m)}' object is not a mapping`);
 }
 
 /**
  * `dict(arg)`: a new `Map` from a mapping (`Map`, an object with `keys()` /
- * `items()`) or an iterable of key/value pairs, in iteration order.
+ * `__getitem__`) or an iterable of key/value pairs, in iteration order.
  */
-export function dict<K = any, V = any>(arg?: any): Map<K, V> {
+export function dict<K, V>(arg?: KeyedMapping<K, V> | Map<K, V> | Iterable<[K, V]> | null): Map<K, V> {
   if (arg == null) return new Map();
   if (arg instanceof Map) return new Map(arg);
   // CPython: anything with `keys()` is a mapping, read through `keys()` + `__getitem__`.
-  if (typeof arg.keys === "function" && typeof arg.__getitem__ === "function") {
-    return new Map([...arg.keys()].map((k: any): [any, any] => [k, arg.__getitem__(k)]));
+  if (is_keyed_mapping(arg)) {
+    return new Map([...arg.keys()].map((k): [K, V] => [k, arg.__getitem__(k)]));
   }
   const out = new Map<K, V>();
   let i = 0;
-  for (const pair of arg as Iterable<any>) {
-    const kv = [...pair];
-    if (kv.length !== 2) {
-      throw new ValueError(`dictionary update sequence element #${i} has length ${kv.length}; 2 is required`);
+  for (const pair of arg) {
+    if (pair.length !== 2) {
+      throw new ValueError(`dictionary update sequence element #${i} has length ${pair.length}; 2 is required`);
     }
-    out.set(kv[0], kv[1]);
+    out.set(pair[0], pair[1]);
     i++;
   }
   return out;
 }
 
 /** Python `str(x)` for messages. */
-export function str(x: any): string {
+export function str(x: unknown): string {
   if (typeof x === "string") return x;
   if (x instanceof String) return String(x);
-  if (x != null && typeof x.__str__ === "function") return x.__str__();
+  if (_probeable(x) && typeof x.__str__ === "function") return x.__str__();
   return repr(x);
 }
 
@@ -506,8 +553,9 @@ export function copy<T>(x: T): T {
 
 /** `functools.lru_cache(maxsize=None)` for functions of primitive / object-identity arguments. */
 export function lru_cache<A extends unknown[], R>(fn: (...args: A) => R): ((...args: A) => R) & { cache_clear(): void } {
-  const roots = new Map<unknown, unknown>();
-  const RESULT = Symbol("result");
+  /** One argument position of the cache trie; `result` is set once a call ends here. */
+  type Node = { next: Map<unknown, Node>; result?: { value: R } };
+  const root: Node = { next: new Map() };
   const single = new Map<A[0], R>();
   const wrapped = (...args: A): R => {
     if (args.length === 1) {
@@ -515,18 +563,19 @@ export function lru_cache<A extends unknown[], R>(fn: (...args: A) => R): ((...a
       if (r === undefined && !single.has(args[0])) single.set(args[0], (r = fn(...args)));
       return r!;
     }
-    let node: Map<any, any> = roots;
+    let node = root;
     for (const a of args) {
-      let next = node.get(a);
-      if (!next) node.set(a, (next = new Map()));
+      let next = node.next.get(a);
+      if (!next) node.next.set(a, (next = { next: new Map() }));
       node = next;
     }
-    if (!node.has(RESULT)) node.set(RESULT, fn(...args));
-    return node.get(RESULT);
+    node.result ??= { value: fn(...args) };
+    return node.result.value;
   };
   return Object.assign(wrapped, {
     cache_clear: () => {
-      roots.clear();
+      root.next.clear();
+      root.result = undefined;
       single.clear();
     },
   });

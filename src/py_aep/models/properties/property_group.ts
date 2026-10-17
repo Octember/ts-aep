@@ -44,7 +44,6 @@ import { Property, _values_equal, _vf_tag_from_str } from "./property.ts";
 import { _INDEXED_GROUP_MATCH_NAMES, PropertyBase } from "./property_base.ts";
 import type { MaskPropertyGroup } from "./mask_property_group.ts";
 import type { MatchNameTypes } from "./match_name_types.ts";
-import type { Dynamic } from "../descriptors.ts";
 
 
 const _mask_property_group = deferred<typeof import("./mask_property_group.ts")>("py_aep/models/properties/mask_property_group");
@@ -133,7 +132,7 @@ export function _insert_before_group_end(tdgp: ListChunk, chunk: Chunk): void {
    */
   for (let i = tdgp.chunks.length - 1; i >= 0; i--) {
     const c = tdgp.chunks[i];
-    if (c.chunk_type === "tdmn" && getattr(c, "value", null) === "ADBE Group End") {
+    if (c.chunk_type === "tdmn" && "value" in c && c.value === "ADBE Group End") {
       tdgp.chunks.splice(i, 0, chunk);
       return;
     }
@@ -411,9 +410,6 @@ export function _derive_layer_styles_enabled(
  * @see https://ae-scripting.docsforadobe.dev/property/propertygroup/
  */
 export class PropertyGroup extends PropertyBase {
-  /** Child properties by attribute name, resolved through `__getattr__` (Python's dynamic `group.child_name`). */
-  [key: string]: Dynamic;
-
   /**
    * The child list as stored, WITHOUT running deferred child synthesis.
    *
@@ -598,7 +594,7 @@ export class PropertyGroup extends PropertyBase {
     }
     // Also flip the group end marker.
     for (const c of tdgp.chunks) {
-      if (c.chunk_type === "tdmn" && getattr(c, "value", null) === "ADBE Group End") {
+      if (c.chunk_type === "tdmn" && "value" in c && c.value === "ADBE Group End") {
         c.synthetic = false;
         break;
       }
@@ -716,8 +712,8 @@ export class PropertyGroup extends PropertyBase {
      * ```ts
      * import { parse } from "@bevyl-ai/ts-aep";
      * const layer = parse("project.aep").project.compositions[0].layers[0];
-     * layer.transform.position.value;
-     * layer.transform.anchor_point.value;
+     * layer.transform.__getattr__("position");
+     * layer.transform.__getattr__("anchor_point");
      * ```
      *
      * **Note:** Only invoked when normal attribute lookup has already
@@ -748,7 +744,7 @@ export class PropertyGroup extends PropertyBase {
     }
   }
 
-  __setattr__(name: string, value: Dynamic): void {
+  __setattr__(name: string, value: unknown): void {
     // A name the class does not define would only become a Python
     // attribute: nothing reaches the file, and it would shadow the child
     // that attribute access resolves (`transform.position = [...]` leaves
@@ -797,18 +793,23 @@ export class PropertyGroup extends PropertyBase {
       return at(this.properties, key);
     }
     if (typeof key === "string") {
-      for (const prop of this.properties) {
-        if (
-          prop.name === key ||
-          prop.match_name === key ||
-          prop.name.toLowerCase().replaceAll(" ", "_") === key
-        ) {
-          return prop;
-        }
-      }
-      throw new KeyError(repr(key));
+      const prop = this._child_or_null(key);
+      if (prop === null) throw new KeyError(repr(key));
+      return prop;
     }
     throw new TypeError_(`Property key must be int or str, not ${type_name(key)}`);
+  }
+
+  /** The child whose display name, match name or snake_case name is `name`, or `null`. */
+  _child_or_null<K extends keyof MatchNameTypes>(name: K): MatchNameTypes[K] | null;
+  _child_or_null(name: string): Property | PropertyGroup | null;
+  _child_or_null(name: string): Property | PropertyGroup | null {
+    for (const prop of this.properties) {
+      if (prop.name === name || prop.match_name === name || prop.name.toLowerCase().replaceAll(" ", "_") === name) {
+        return prop;
+      }
+    }
+    return null;
   }
 
   /**
@@ -922,14 +923,14 @@ export class PropertyGroup extends PropertyBase {
           "'ADBE Text Animator Properties' group of a text animator.",
       );
     }
-    // Typed Any: `.text.source_text` only resolves on a text layer.
-    const layer: Dynamic = this._containing_layer;
-
     let font_number = 0;
     if (font_file == null) {
       // The .aep stores only the PostScript name; its prefix is the
       // variable font's family (FontObject.familyPrefix semantics).
-      const text_doc = layer.text.source_text.value;
+      // Python `layer.text.source_text.value`: only a text layer has the group.
+      const text = this._containing_layer.text;
+      if (text == null) throw new AttributeError("'NoneType' object has no attribute 'source_text'");
+      const text_doc = text.__getitem__("ADBE Text Document").value;
       const ps_name: string = py_or(text_doc.font, "");
       const family = split(ps_name, "-", 1)[0];
       const resolved = family ? resolve_font_exact(family) : null;

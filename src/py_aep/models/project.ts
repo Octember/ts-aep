@@ -34,7 +34,7 @@ import { has_enabled_styles, parse_layer_styles, read_global_light } from "../re
 import type { PsdLayerStyles } from "../resolvers/psd_styles.ts";
 import { LayerGroupSpec, LayerSpec } from "../synthesis/layer.ts";
 import { _ADV_BLEND_SPECS, _BLEND_OPTIONS_SPECS, _LAYER_STYLE_CHILD_SPECS, _STYLE_ANGLE_SUFFIXES, _STYLE_ENUM_SUFFIXES, _STYLE_HINT_BOUNDS, _STYLE_HINT_BOUNDS_EXCEPTIONS, PropSpec } from "../synthesis/property.ts";
-import { ChunkField, type EffectParamDefs, type Dynamic } from "./descriptors.ts";
+import { ChunkField, type EffectParamDefs } from "./descriptors.ts";
 import { ImportOptions } from "./import_options.ts";
 import { CompItem } from "./items/composition.ts";
 import { FolderItem } from "./items/folder.ts";
@@ -115,6 +115,7 @@ import { parse_output_templates, parse_render_templates } from "../parsers/templ
 import { PlaceholderSource } from "./sources/placeholder.ts";
 import { UnsupportedSVGError, read_svg } from "../svg/index.ts";
 import { build_shape_layer_contents } from "../svg/build.ts";
+import type { AVLayer } from "./layers/av_layer.ts";
 
 /** `itertools.count(start)` (the clip-run counter). */
 // NOTE(port): matches `itertools.count(start)`: an unbounded counter yielding start, start+1, ...
@@ -132,7 +133,7 @@ export function ET_tostring(el: Element): string {
 
 
 /** `isinstance(x, (list, tuple))` as used by the port. */
-export function is_list_or_tuple(x: Dynamic): boolean {
+export function is_list_or_tuple(x: unknown): x is unknown[] {
   return Array.isArray(x);
 }
 
@@ -1125,12 +1126,8 @@ export class Project {
   /** Get a layer by its unique ID. */
   layer_by_id(layer_id: number): Layer {
     for (const comp of this.compositions) {
-      try {
-        return getitem(comp.layers_by_id, layer_id);
-      } catch (e) {
-        if (!(e instanceof KeyError)) throw e;
-        continue;
-      }
+      const layer = comp.layers_by_id.get(layer_id);
+      if (layer !== undefined) return layer;
     }
     throw new KeyError(`Layer with ID ${layer_id} not found`);
   }
@@ -2047,8 +2044,9 @@ export class Project {
     }
     let removed = 0;
     for (const item_id of [...this.items.keys()]) {
-      if (keep_ids.has(item_id) || !this.items.has(item_id)) continue;
-      this.items.get(item_id)!.remove();
+      const item = keep_ids.has(item_id) ? undefined : this.items.get(item_id);
+      if (item === undefined) continue;
+      item.remove();
       removed += 1;
     }
     return removed;
@@ -2608,7 +2606,7 @@ export function _style_leaf_map(group: PropertyGroup): Map<string, Property> {
  * 0x01, enabled style 0x01, absent style 0x02; plain skeleton: 0x03 and
  * 0x02 - functional bits, fixture-pinned).
  */
-export function _serialize_import_layer_styles(layer: Layer, styles: PsdLayerStyles | null, source_name: string): void {
+export function _serialize_import_layer_styles(layer: AVLayer, styles: PsdLayerStyles | null, source_name: string): void {
   const container = layer.__getitem__("ADBE Layer Styles");
   // AE enables the container + Blend Options chain when any style is
   // enabled OR the layer carries blend-options data (a Photoshop Fill
@@ -2668,6 +2666,8 @@ export function _serialize_import_layer_styles(layer: Layer, styles: PsdLayerSty
   if (!styles.values?.size) return;
   const timebase = layer.containing_comp._cdta.internal_timebase;
   const source = layer.source;
+  // Python `cast("AVItem", layer.source)`: an imported layer always has one.
+  if (source == null) throw new AttributeError("'NoneType' object has no attribute 'width'");
   const point_aspect = (source.width * source.pixel_aspect) / source.height;
   const leaves = _style_leaf_map(container);
   for (const [match_name, value] of styles.values) {

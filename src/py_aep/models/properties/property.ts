@@ -16,7 +16,7 @@ import { VF_AXIS_PREFIX } from "../../data/match_names.ts";
 import { UNITS_TEXT_MAP } from "../../data/units.ts";
 import { can_add_property } from "../../resolvers/motion_graphics.ts";
 import { _USE_VALUE, PropSpec } from "../../synthesis/property.ts";
-import { ChunkField, type Dynamic } from "../descriptors.ts";
+import { ChunkField } from "../descriptors.ts";
 import { TextDocument } from "../text/text_document.ts";
 import { _validate_number, validate_bool, validate_enum, validate_f8, validate_name, validate_number, validate_sequence, validate_text } from "../validators.ts";
 import type { FolderItem } from "../items/folder.ts";
@@ -35,7 +35,7 @@ import { PropertyBase } from "./property_base.ts";
 import { Shape } from "./shape.ts";
 import type { PropertyGroup } from "./property_group.ts";
 import { type MaskPropertyGroup } from "./mask_property_group.ts";
-import { deferred, deepcopy, getitem, isclose, py_eq, sorted, warn, int, round, floordiv, TypeError_, ValueError, KeyError, IndexError, AttributeError, NotImplementedError, py_assert, repr, hasattr, getattr, min, max, range, zip, float, lshift, rshift, and, or, b, descriptor, list_mul, type_name, type ClassAttributes } from "../../../pyrt/index.ts";
+import { deferred, deepcopy, getitem, isclose, py_eq, sorted, warn, int, round, floordiv, TypeError_, ValueError, IndexError, AttributeError, NotImplementedError, py_assert, repr, hasattr, getattr, min, max, range, zip, float, lshift, rshift, and, or, b, descriptor, list_mul, type_name, type ClassAttributes, py_or } from "../../../pyrt/index.ts";
 
 const _property_group = deferred<typeof import("./property_group.ts")>("py_aep/models/properties/property_group");
 import { AVItem } from "../items/av_item.ts";
@@ -74,7 +74,7 @@ export const _SYNTHESIZED_KINDS: Map<string, ParallelKind> = new Map<string, Par
   ["gradientFill/gradient", GRADIENT_KIND],
 ]);
 
-export const _UNSET: object = {}; // sentinel for unset min/max fallback
+export const _UNSET: unique symbol = Symbol("_UNSET"); // sentinel for unset min/max fallback
 
 // Match names whose binary values are stored as 0-1 fractions but
 // ExtendScript reports as 0-100 percentages.
@@ -134,7 +134,7 @@ export function _same_path(a: Shape, b: unknown): boolean {
   );
 }
 
-export function _validate_value(prop: Property, value: Dynamic): void {
+export function _validate_value(prop: Property, value: unknown): void {
   // Validate type, length and bounds of a property value.
   // A mask or shape-layer path only holds a Shape: AE 2026 refuses any other
   // value ("Array is not of the correct type"), and the numeric write path
@@ -160,7 +160,7 @@ export function _validate_value(prop: Property, value: Dynamic): void {
   else _validate_scalar(value, prop);
 }
 
-export function _validate_key_value(prop: Property, value: Dynamic): void {
+export function _validate_key_value(prop: Property, value: unknown): void {
   // Validate a keyframe value: `_validate_value`, after refusing `None` for
   // a numeric keyframe, which always holds a number (storing `None` only in
   // the model left the file at whatever the slot held, 0).
@@ -201,7 +201,7 @@ export function _vf_tag_from_str(tag: string): number {
   return n;
 }
 
-export function _values_equal(a: Dynamic, b: Dynamic): boolean {
+export function _values_equal(a: unknown, b: unknown): boolean {
   // Compare two property values with float tolerance.
   //
   // Handles scalars, arrays, booleans, and null.
@@ -349,7 +349,7 @@ export class Property<V extends PropertyValue = any> extends PropertyBase {
   }
 
   set name(value: string) {
-    Object.getOwnPropertyDescriptor(PropertyBase.prototype, "name")!.set!.call(this, value);
+    Reflect.set(PropertyBase.prototype, "name", value, this);
   }
 
   /**
@@ -544,8 +544,8 @@ export class Property<V extends PropertyValue = any> extends PropertyBase {
   declare _keyframe_positions: Map<Keyframe, number> | null;
   declare _types_memo: [unknown[], [PropertyControlType, PropertyValueType]] | null;
   declare _effect_scale_dict: { value: number[] | null } | null;
-  declare _min_value_fallback: unknown;
-  declare _max_value_fallback: unknown;
+  declare _min_value_fallback: number | null | typeof _UNSET;
+  declare _max_value_fallback: number | null | typeof _UNSET;
   declare _slider_min: number | null;
   declare _slider_max: number | null;
   declare _scale_z_override: number | null;
@@ -1632,10 +1632,10 @@ export class Property<V extends PropertyValue = any> extends PropertyBase {
    * ```
    */
   get value(): V {
-    return this._mask_inert_z(this._stored_static_value());
+    return this._declared(this._mask_inert_z(this._stored_static_value()));
   }
 
-  set value(value: Dynamic) {
+  set value(value: V) {
     this._reject_curves_write();
     if (this._separation_followers() != null) {
       throw new ValueError(
@@ -1868,7 +1868,7 @@ export class Property<V extends PropertyValue = any> extends PropertyBase {
    * The minimum permitted value of the named property. Only valid if
    * `has_min` is `true`. Read-only.
    */
-  get min_value(): Dynamic {
+  get min_value(): number | number[] | null {
     if (_UNBOUNDED_MATCH_NAMES.has(this.match_name)) return null;
     if (this._min_value_fallback !== _UNSET) return this._min_value_fallback;
     if (this._tdum != null) {
@@ -1882,7 +1882,7 @@ export class Property<V extends PropertyValue = any> extends PropertyBase {
    * The maximum permitted value of the named property. Only valid if
    * `has_max` is `true`. Read-only.
    */
-  get max_value(): Dynamic {
+  get max_value(): number | number[] | null {
     if (_UNBOUNDED_MATCH_NAMES.has(this.match_name)) return null;
     if (this._max_value_fallback !== _UNSET) return this._max_value_fallback;
     if (this._tduM != null) {
@@ -2199,7 +2199,7 @@ export class Property<V extends PropertyValue = any> extends PropertyBase {
   _recombine_static(followers: Property<number>[]): void {
     const composed = followers.map((follower) => follower.value);
     this._set_separated_flags(false);
-    this.value = composed;
+    this._set_own_value(composed);
     for (const follower of followers) _deactivate_follower(follower);
   }
 
@@ -2229,8 +2229,8 @@ export class Property<V extends PropertyValue = any> extends PropertyBase {
     const keyframes = [...this.keyframes];
     const times = keyframes.map((keyframe) => keyframe.time);
     const values = keyframes.map((keyframe) => keyframe.value as number[]);
-    const in_tangents = keyframes.map((keyframe) => keyframe.in_spatial_tangent?.length! > 0 ? keyframe.in_spatial_tangent! : []);
-    const out_tangents = keyframes.map((keyframe) => keyframe.out_spatial_tangent?.length! > 0 ? keyframe.out_spatial_tangent! : []);
+    const in_tangents = keyframes.map((keyframe) => py_or(keyframe.in_spatial_tangent, []));
+    const out_tangents = keyframes.map((keyframe) => py_or(keyframe.out_spatial_tangent, []));
     const interpolation = keyframes.map(
       (keyframe) => [keyframe.in_interpolation_type, keyframe.out_interpolation_type] as const,
     );
@@ -2637,15 +2637,8 @@ export class Property<V extends PropertyValue = any> extends PropertyBase {
       throw new ValueError(`dim must be in range [0, ${_SEPARATION_FOLLOWERS.length - 1}], got ${dim}`);
     }
     const match_name = _SEPARATION_FOLLOWERS[dim];
-    try {
-      return parent.property(match_name) as Property<number> | null;
-    } catch (e) {
-      // `property()` reaches `PropertyGroup.__getitem__`, which
-      // raises rather than returning None. A separated leader on a
-      // 2D layer genuinely has no Z follower.
-      if (!(e instanceof KeyError)) throw e;
-      return null;
-    }
+    // A separated leader on a 2D layer genuinely has no Z follower.
+    return parent._child_or_null(match_name) as Property<number> | null;
   }
 
   /**
@@ -2911,7 +2904,7 @@ export class Property<V extends PropertyValue = any> extends PropertyBase {
       // last keyframe's value), so only NaN is rejected here.
       throw new ValueError("time must be a number, got NaN");
     }
-    return this._mask_inert_z(this._stored_value_at(time));
+    return this._declared(this._mask_inert_z(this._stored_value_at(time)));
   }
 
   /**
@@ -2919,7 +2912,7 @@ export class Property<V extends PropertyValue = any> extends PropertyBase {
    * AE stores in a key added at `time` (measured on AE 2026: `addKey`
    * between keys at Z 40 and -30 stores Z 5.0005).
    */
-  _stored_value_at(time: number): Dynamic {
+  _stored_value_at(time: number): PropertyValue {
     if (!this.keyframes?.length) {
       const separated = this._separated_value(time);
       if (separated != null) return separated;
@@ -2942,6 +2935,16 @@ export class Property<V extends PropertyValue = any> extends PropertyBase {
   }
 
   /**
+   * A stored value as this property's declared value type. `V` comes from
+   * the match name a group lookup was typed by (`"ADBE Position"` is
+   * `Property<number[]>`), which the parser guarantees but the compiler
+   * cannot see, so this is the one place the value type is asserted.
+   */
+  _declared(value: PropertyValue): V {
+    return value as V;
+  }
+
+  /**
    * Report a 2-D layer's Position / Anchor Point Z as 0.
    *
    * A 2-D layer ignores Z, and AE reports it as 0 in `value`,
@@ -2950,7 +2953,7 @@ export class Property<V extends PropertyValue = any> extends PropertyBase {
    * speeds (measured on AE 2026: a static [100, 120, 40] and keys at Z
    * 40 / -30 on a 2-D layer read Z = 0 and keep the 40 in the file).
    */
-  _mask_inert_z(value: Dynamic): Dynamic {
+  _mask_inert_z(value: PropertyValue): PropertyValue {
     if (
       Array.isArray(value) &&
       value.length === 3 &&
@@ -2987,20 +2990,21 @@ export class Property<V extends PropertyValue = any> extends PropertyBase {
    * Mask Expansion, Stroke Width and a Slider all read their bound,
    * never past it).
    */
-  _clamp_to_range(value: Dynamic): Dynamic {
+  _clamp_to_range(value: PropertyValue): PropertyValue {
     const lo = _get_min(this);
     const hi = _get_max(this);
     if (lo == null && hi == null) return value;
 
-    const clamp = (component: Dynamic): Dynamic => {
-      if (typeof component !== "number") return component;
+    const clamp = (component: number): number => {
       if (lo != null && component < lo) return lo;
       if (hi != null && component > hi) return hi;
       return component;
     };
 
-    if (Array.isArray(value)) return value.map((component) => clamp(component));
-    return clamp(value);
+    if (Array.isArray(value)) {
+      return value.map((component) => (typeof component === "number" ? clamp(component) : component));
+    }
+    return typeof value === "number" ? clamp(value) : value;
   }
 
   /**
@@ -3306,13 +3310,13 @@ export class Property<V extends PropertyValue = any> extends PropertyBase {
    * When `value` is omitted, the keyframe takes the property's value at
    * `time` (interpolated when animated, the static value otherwise).
    */
-  _add_key(time: number, value: _ValueType | string | typeof _USE_VALUE = _USE_VALUE): number {
+  _add_key(time: number, value: _ValueType | typeof _USE_VALUE = _USE_VALUE): number {
     validate_number(time);
     if (!this.can_vary_over_time) {
       throw new ValueError(`property ${repr(this.match_name)} cannot vary over time`);
     }
     const kind = this._parallel_kind();
-    if (kind != null) return this._add_parallel_key(time, kind, value as _ValueType | typeof _USE_VALUE);
+    if (kind != null) return this._add_parallel_key(time, kind, value);
     // A no-value numeric property has no value slot to keyframe; building
     // a numeric keyframe item for it produces a wrong-size ldat item.
     // (Complex kinds above store their value in a sibling container and
@@ -3535,8 +3539,8 @@ export class Property<V extends PropertyValue = any> extends PropertyBase {
     const v1 = next_kf._stored_value;
     if (!Array.isArray(v0) || !Array.isArray(v1)) return 0.0;
     const ndim = v0.length;
-    const out_tangent = prev_kf.out_spatial_tangent?.length! > 0 ? prev_kf.out_spatial_tangent! : list_mul([0.0], ndim);
-    const in_tangent = next_kf.in_spatial_tangent?.length! > 0 ? next_kf.in_spatial_tangent! : list_mul([0.0], ndim);
+    const out_tangent = py_or(prev_kf.out_spatial_tangent, list_mul([0.0], ndim));
+    const in_tangent = py_or(next_kf.in_spatial_tangent, list_mul([0.0], ndim));
     return motion_path_length(v0, v1, out_tangent, in_tangent, this._arc_metric);
   }
 
@@ -3571,8 +3575,8 @@ export class Property<V extends PropertyValue = any> extends PropertyBase {
     const v1 = next_kf._stored_value;
     if (!Array.isArray(v0) || !Array.isArray(v1)) return;
     const ndim = v0.length;
-    const out_tangent = prev_kf.out_spatial_tangent?.length! > 0 ? prev_kf.out_spatial_tangent! : list_mul([0.0], ndim);
-    const in_tangent = next_kf.in_spatial_tangent?.length! > 0 ? next_kf.in_spatial_tangent! : list_mul([0.0], ndim);
+    const out_tangent = py_or(prev_kf.out_spatial_tangent, list_mul([0.0], ndim));
+    const in_tangent = py_or(next_kf.in_spatial_tangent, list_mul([0.0], ndim));
     if (_tangents_are_zero(out_tangent) && _tangents_are_zero(in_tangent)) return;
     const [left_out, new_in, _split, new_out, right_in] = split_spatial_path(v0, v1, out_tangent, in_tangent, u);
     prev_kf.out_spatial_tangent = left_out;
@@ -3742,7 +3746,7 @@ export class Property<V extends PropertyValue = any> extends PropertyBase {
    * not). A mask path keeps the value's feather points.
    */
   _build_shap_chunk(shape: Shape): Chunk {
-    const points = (shape._points?.length! > 0 ? shape._points! : []).map((p: ShapePoint) => new ShapePoint({ x: p.x, y: p.y }));
+    const points = py_or(shape._points, []).map((p: ShapePoint) => new ShapePoint({ x: p.x, y: p.y }));
     const src = shape._shph;
     let bbox: number[];
     if (src != null) {
@@ -4542,16 +4546,16 @@ export class _EssentialOverrideProperty extends Property {
   }
 
   set name(value: string) {
-    Object.getOwnPropertyDescriptor(PropertyBase.prototype, "name")!.set!.call(this, value);
+    Reflect.set(PropertyBase.prototype, "name", value, this);
   }
 
 
-  get min_value(): Dynamic {
+  get min_value(): number | number[] | null {
     const src = this._override_source();
     return src != null ? src.min_value : super.min_value;
   }
 
-  get max_value(): Dynamic {
+  get max_value(): number | number[] | null {
     const src = this._override_source();
     return src != null ? src.max_value : super.max_value;
   }
@@ -4619,10 +4623,10 @@ Object.defineProperty(_EssentialOverrideProperty.prototype, "enabled", {
   enumerable: false,
   get(this: _EssentialOverrideProperty): boolean {
     const src = this._override_source();
-    return src != null ? src.enabled : Object.getOwnPropertyDescriptor(PropertyBase.prototype, "enabled")!.get!.call(this);
+    return src != null ? src.enabled : Reflect.get(PropertyBase.prototype, "enabled", this);
   },
   set(this: _EssentialOverrideProperty, value: boolean) {
-    Object.getOwnPropertyDescriptor(PropertyBase.prototype, "enabled")!.set!.call(this, value);
+    Reflect.set(PropertyBase.prototype, "enabled", value, this);
   },
 });
 

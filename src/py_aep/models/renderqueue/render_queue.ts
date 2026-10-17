@@ -3,7 +3,7 @@ import { LHD3_BLOCK_SINGLE, set_lhd3_count, type LdatChunk, type Lhd3Chunk } fro
 import { build_rq_settings_list } from "../../binary/mutations.ts";
 import { RhedChunk } from "../../binary/project_chunks.ts";
 import { ArsiChunk, RoutChunk } from "../../binary/render_chunks.ts";
-import { getattr, TypeError_ } from "../../../pyrt/index.ts";
+import { TypeError_ } from "../../../pyrt/index.ts";
 import type { Project } from "../project.ts";
 import { CompItem } from "../items/composition.ts";
 import { RenderQueueItem } from "./render_queue_item.ts";
@@ -20,9 +20,8 @@ import { RenderQueueItem } from "./render_queue_item.ts";
  */
 export function _ensure_materialized(chunk: Chunk): void {
   chunk.synthetic = false;
-  const children = getattr(chunk, "chunks", null);
-  if (children != null) {
-    for (const child of children) {
+  if (chunk instanceof ListChunk) {
+    for (const child of chunk.chunks) {
       _ensure_materialized(child);
     }
   }

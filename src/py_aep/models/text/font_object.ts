@@ -27,7 +27,7 @@ const is_number_list = (v: InstanceValue): v is number[] | null =>
  *
  * const app = parse("project.aep");
  * const comp = app.project.compositions[0];
- * const font = comp.text_layers[0].text.source_text.value.font_object;
+ * const font = comp.text_layers[0].text.property("ADBE Text Document").value.font_object;
  * console.log(font.post_script_name);
  * ```
  *

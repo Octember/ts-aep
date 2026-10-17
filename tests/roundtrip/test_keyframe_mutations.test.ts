@@ -28,13 +28,13 @@ import { write_aep } from "../../src/py_aep/binary/chunk.ts";
 import "../../src/py_aep/binary/_register.ts";
 import { KeyframeInterpolationType } from "../../src/py_aep/enums/index.ts";
 import { KeyframeEase } from "../../src/py_aep/models/properties/keyframe_ease.ts";
-import type { Property } from "../../src/py_aep/models/properties/property.ts";
+import { Property } from "../../src/py_aep/models/properties/property.ts";
 import { Shape } from "../../src/py_aep/models/properties/shape.ts";
 import { MarkerValue } from "../../src/py_aep/models/properties/marker.ts";
 import { Gradient } from "../../src/py_aep/models/properties/gradient.ts";
 import { TextDocument } from "../../src/py_aep/models/text/text_document.ts";
-import { get_comp, parse_project_fresh } from "../helpers.ts";
-import type { KfPosition } from "../../src/py_aep/binary/ldat_chunks.ts";
+import { as_instance, get_comp, parse_project_fresh } from "../helpers.ts";
+import { KfMultiDimensional, type KfPosition } from "../../src/py_aep/binary/ldat_chunks.ts";
 
 const SAMPLES = new Path(import.meta.path).parent.parent.parent.div("samples", "models", "property");
 const SAMPLES_ROOT = new Path(import.meta.path).parent.parent.parent.div("samples");
@@ -68,7 +68,9 @@ function _find_static(app: Application, match_name: string): [Property | null, n
   for (const [ci, comp] of app.project.compositions.entries()) {
     for (const [li, lay] of comp.layers.entries()) {
       for (const p of lay.transform) {
-        if (p.match_name === match_name && !py_bool(p.keyframes)) return [p as Property, ci, li];
+        if (p.match_name !== match_name) continue;
+        const prop = as_instance(p, Property);
+        if (!py_bool(prop.keyframes)) return [prop, ci, li];
       }
     }
   }
@@ -210,7 +212,7 @@ describe("TestAddKey", () => {
     expect(prop._animated).toBe(true);
     expect(prop.keyframes.length).toBe(2);
     const app2 = _roundtrip(app, tmp_path);
-    const prop2 = [...app2.project.compositions[0].layers[li].transform].find((p) => p.match_name === "ADBE Rotate Z")!;
+    const prop2 = as_instance([...app2.project.compositions[0].layers[li].transform].find((p) => p.match_name === "ADBE Rotate Z"), Property);
     expect(prop2.keyframes.length).toBe(2);
     expect(approx(prop2.keyframes[1].value, 25.0)).toBe(true);
   });
@@ -234,7 +236,7 @@ describe("TestAddKey", () => {
     const kinds = scale._tdbs.chunks.map((c: any) => getattr(c, "chunk_type", null));
     expect(kinds.includes("tdum") && kinds.includes("tduM")).toBe(true);
     const app2 = _roundtrip(app, tmp_path);
-    const scale2 = [...app2.project.compositions[0].layers[li].transform].find((p) => p.match_name === "ADBE Scale")!;
+    const scale2 = as_instance([...app2.project.compositions[0].layers[li].transform].find((p) => p.match_name === "ADBE Scale"), Property);
     expect(scale2.keyframes.length).toBe(2);
   });
 
@@ -1547,9 +1549,12 @@ describe("TestRoundtripAutoBezierWrites", () => {
    */
   test("test_temporal_continuous_ties_the_out_speed_to_the_in_speed", () => {
     const project = parse_project_fresh(SAMPLES.div("keyframe_bezier_nonzero_speed.aep"));
-    const prop = project.compositions[0].layers
-      .flatMap((layer) => layer.transform.properties)
-      .find((g) => py_bool(g.keyframes) && g.match_name === "ADBE Opacity")!;
+    const prop = as_instance(
+      project.compositions[0].layers
+        .flatMap((layer) => layer.transform.properties)
+        .find((g) => py_bool(as_instance(g, Property).keyframes) && g.match_name === "ADBE Opacity"),
+      Property,
+    );
     const keyframe = prop.keyframes[0];
     const in_speed = keyframe.in_temporal_ease[0].speed;
     const out_influence = keyframe.out_temporal_ease[0].influence;
@@ -1604,11 +1609,14 @@ describe("TestRoundtripAutoBezierWrites", () => {
     (interpolation) => {
       const tmp_path = make_tmp_path();
       const project = parse_project_fresh(SAMPLES.div("keyframe_bezier_asymmetric_ease_1D.aep"));
-      const prop = project.compositions[0].layers
-        .flatMap((layer) => layer.transform.properties)
-        .find((g) => py_bool(g.keyframes))!;
+      const prop = as_instance(
+        project.compositions[0].layers
+          .flatMap((layer) => layer.transform.properties)
+          .find((g) => py_bool(as_instance(g, Property).keyframes)),
+        Property,
+      );
       const keyframe = prop.keyframes[0];
-      const stored = keyframe._ldat_item.kf_data;
+      const stored = as_instance(keyframe._ldat_item.kf_data, KfMultiDimensional);
       const before: any[] = [[...stored.in_influence], [...stored.out_influence]];
       expect(approx(before[1], [0.9])).toBe(true);
 
@@ -1624,10 +1632,13 @@ describe("TestRoundtripAutoBezierWrites", () => {
 
       const out = tmp_path.div("modified.aep");
       project.save(out);
-      const prop2 = parse_aep(out).project.compositions[0].layers
-        .flatMap((layer) => layer.transform.properties)
-        .find((g) => py_bool(g.keyframes))!;
-      const reloaded = prop2.keyframes[0]._ldat_item.kf_data;
+      const prop2 = as_instance(
+        parse_aep(out).project.compositions[0].layers
+          .flatMap((layer) => layer.transform.properties)
+          .find((g) => py_bool(as_instance(g, Property).keyframes)),
+        Property,
+      );
+      const reloaded = as_instance(prop2.keyframes[0]._ldat_item.kf_data, KfMultiDimensional);
       expect(approx([...reloaded.out_influence], before[1])).toBe(true);
     },
   );

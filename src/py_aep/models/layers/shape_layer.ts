@@ -5,9 +5,16 @@ import { LayerType } from "../../enums/index.ts";
 import { label_index } from "../preferences.ts";
 import { AVLayer } from "./av_layer.ts";
 import type { CompItem } from "../items/composition.ts";
-import type { PropertyGroup } from "../properties/property_group.ts";
-import type { EffectParamDefs, Dynamic } from "../descriptors.ts";
+import type { EffectParamDefs } from "../descriptors.ts";
 
+/** Keyword arguments of `ShapeLayer._new`. */
+type ShapeLayerNewKw = {
+  name: string;
+  layer_id: number;
+  duration: number;
+  containing_comp: CompItem;
+  effect_param_defs?: EffectParamDefs | null;
+};
 
 /**
  * The `ShapeLayer` object represents a shape layer within a composition.
@@ -24,28 +31,16 @@ import type { EffectParamDefs, Dynamic } from "../descriptors.ts";
  * const app = parse("project.aep");
  * const comp = app.project.compositions[0];
  * const shape_layer = comp.shape_layers[0];
- * console.log(shape_layer.content);
+ * console.log(shape_layer.property("ADBE Root Vectors Group"));
  * ```
  * @see https://ae-scripting.docsforadobe.dev/layer/shapelayer/
  */
 export class ShapeLayer extends AVLayer {
   static _auto_name: string = "Shape Layer";
 
-  static _new(
-    match_name: string,
-    auto_name: string,
-    property_depth: number,
-    kw?: Dynamic,
-  ): PropertyGroup;
-  static _new(kw: {
-    name: string;
-    layer_id: number;
-    duration: number;
-    containing_comp: CompItem;
-    effect_param_defs?: EffectParamDefs | null;
-  }): ShapeLayer;
-  static _new(kw: Record<string, unknown>): ShapeLayer;
-  static _new(kw: Dynamic): Dynamic {
+  static _new(kw: ShapeLayerNewKw): ShapeLayer;
+  static _new(...args: never[]): never;
+  static _new(kw: ShapeLayerNewKw): ShapeLayer {
     const {
       name,
       layer_id,

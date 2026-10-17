@@ -4,7 +4,7 @@ import { deferred, descriptor } from "../../../pyrt/index.ts";
 import { BlendingMode, FrameBlendingType, LayerQuality, LayerSamplingQuality, LayerType, TrackMatteType } from "../../enums/index.ts";
 import {
   AttributeError,
-  KeyError,
+  type_name,
   NotImplementedError,
   ValueError,
   float_repr,
@@ -25,11 +25,10 @@ import { can_add_layer } from "../../resolvers/motion_graphics.ts";
 import { shape_layer_rect } from "../../resolvers/shape_bounds.ts";
 import { text_ink_rect } from "../../resolvers/text_ink.ts";
 import { type Mat4, build_world_matrix, camera_ray, intersect_layer_plane, project_to_comp, transform_from_points } from "../../resolvers/transform.ts";
-import { ChunkField, type EffectParamDefs, type Dynamic } from "../descriptors.ts";
+import { ChunkField, type EffectParamDefs } from "../descriptors.ts";
 import type { Chunk } from "../../binary/chunk.ts";
 import type { CompItem } from "../items/composition.ts";
 import { Property } from "../properties/property.ts";
-import type { PropertyGroup } from "../properties/property_group.ts";
 import { validate_bool, validate_enum, validate_name, validate_number, validate_vector2, validate_vector3 } from "../validators.ts";
 import { Layer } from "./layer.ts";
 import { AVItem } from "../items/av_item.ts";
@@ -101,6 +100,20 @@ export function _validate_collapse_transformation(value: boolean, obj: AVLayer):
     );
   }
 }
+
+/** Keyword arguments of `AVLayer._new`. */
+type AVLayerNewKw = {
+  name: string;
+  layer_id: number;
+  duration: number;
+  containing_comp: CompItem;
+  source_id?: number;
+  null_layer?: boolean;
+  three_d_layer?: boolean;
+  label?: number;
+  root_tdgp_extra?: Chunk[] | null;
+  effect_param_defs?: EffectParamDefs | null;
+};
 
 /**
  * The `AVLayer` object provides an interface to those layers that contain
@@ -236,26 +249,9 @@ export class AVLayer extends Layer {
   /** The resolved source item; unset until first read (see `source`). */
   declare _source?: AVItem | null;
 
-  static _new(
-    match_name: string,
-    auto_name: string,
-    property_depth: number,
-    kw?: Dynamic,
-  ): PropertyGroup;
-  static _new(kw: {
-    name: string;
-    layer_id: number;
-    duration: number;
-    containing_comp: CompItem;
-    source_id?: number;
-    null_layer?: boolean;
-    three_d_layer?: boolean;
-    label?: number;
-    root_tdgp_extra?: Chunk[] | null;
-    effect_param_defs?: EffectParamDefs | null;
-  }): AVLayer;
-  static _new(kw: Dynamic): AVLayer;
-  static _new(kw: Dynamic): Dynamic {
+  static _new(kw: AVLayerNewKw): AVLayer;
+  static _new(...args: never[]): never;
+  static _new(kw: AVLayerNewKw): AVLayer {
     const {
       name,
       layer_id,
@@ -437,7 +433,7 @@ export class AVLayer extends Layer {
       return raw;
     }
     py_assert(this.source != null); // _should_clamp_times guards
-    const source_duration = this.source!.duration;
+    const source_duration = this.source.duration;
     const max_out = this.start_time + source_duration * this._stretch_factor;
     return min([raw, max_out]);
   }
@@ -819,7 +815,11 @@ export class AVLayer extends Layer {
       throw new NotImplementedError("source_rect_at_time does not model text animators");
     }
     const path_options = text.__getitem__("ADBE Text Path Options");
-    if (py_bool(path_options.__getitem__("ADBE Text Path").value)) {
+    const text_path = path_options.__getitem__("ADBE Text Path");
+    if (!(text_path instanceof Property)) {
+      throw new AttributeError(`'${type_name(text_path)}' object has no attribute 'value'`);
+    }
+    if (py_bool(text_path.value)) {
       throw new NotImplementedError("source_rect_at_time does not model text on a path");
     }
     if (this._ldta.three_d_per_char) {
@@ -869,13 +869,8 @@ export class AVLayer extends Layer {
 
   /** `true` if time remapping is enabled for this layer. Read / Write. */
   get time_remap_enabled(): boolean {
-    let prop: Property | PropertyGroup;
-    try {
-      prop = this.__getitem__("ADBE Time Remapping");
-    } catch (e) {
-      if (!(e instanceof KeyError)) throw e;
-      return false;
-    }
+    const prop = this._child_or_null("ADBE Time Remapping");
+    if (prop === null) return false;
     if (!(prop instanceof Property)) {
       return false;
     }
@@ -908,7 +903,7 @@ export class AVLayer extends Layer {
       // layer offset in time; a single keyframe leaves the remap frozen.
       const source = this.source;
       py_assert(source != null); // can_set_time_remap_enabled guarantees it
-      const duration = source!.duration;
+      const duration = source.duration;
       prop._add_key(this.start_time, 0.0);
       prop._add_key(this.start_time + duration, duration);
     } else if (!value && currently_enabled) {

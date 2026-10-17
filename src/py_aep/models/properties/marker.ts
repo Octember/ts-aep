@@ -1,4 +1,4 @@
-import { ValueError, descriptor, enumerate, round } from "../../../pyrt/index.ts";
+import { ValueError, descriptor, enumerate, round, py_or } from "../../../pyrt/index.ts";
 import { Label } from "../../enums/index.ts";
 
 import { NmhdChunk } from "../../binary/misc_chunks.ts";
@@ -81,12 +81,12 @@ export class MarkerValue {
     this._nmrd = null;
     this._frame_time = 0;
     this._param_utf8s = [];
-    if (params?.size! > 0) {
-      for (const [key, val] of params!) {
+    if (params != null && params.size > 0) {
+      for (const [key, val] of params) {
         this._param_utf8s.push(new Utf8Chunk({ value: key }));
         this._param_utf8s.push(new Utf8Chunk({ value: val }));
       }
-      this._nmhd.num_params = params!.size;
+      this._nmhd.num_params = params.size;
     }
   }
 
@@ -126,7 +126,7 @@ export class MarkerValue {
     obj._keyframe = _keyframe;
     obj._nmrd = _nmrd;
     obj._frame_time = frame_time;
-    obj._param_utf8s = _param_utf8s?.length! > 0 ? _param_utf8s! : [];
+    obj._param_utf8s = py_or(_param_utf8s, []);
     return obj;
   }
 

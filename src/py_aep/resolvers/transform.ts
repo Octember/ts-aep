@@ -21,10 +21,11 @@ import { AutoOrientType, LayerType, LightType } from "../enums/index.ts";
 import type { CompItem } from "../models/items/composition.ts";
 import type { AVLayer } from "../models/layers/av_layer.ts";
 import type { Layer } from "../models/layers/layer.ts";
+import type { LightLayer } from "../models/layers/light_layer.ts";
 import type { MatchNameTypes } from "../models/properties/match_name_types.ts";
 import type { Property } from "../models/properties/property.ts";
 import type { PropertyGroup } from "../models/properties/property_group.ts";
-import { NotImplementedError, ValueError, degrees, float_repr, hasattr, max, min, mod, repr, sum, hypot } from "../../pyrt/index.ts";
+import { AttributeError, NotImplementedError, ValueError, degrees, type_name, float_repr, hasattr, max, min, mod, repr, sum, hypot } from "../../pyrt/index.ts";
 
 type _PropertyName = {
   [K in keyof MatchNameTypes]: MatchNameTypes[K] extends Property<infer _V> ? K : never;
@@ -402,8 +403,8 @@ export function build_world_matrix(
 /** Pixel aspect of a layer's own pixels: its source's, else square. */
 export function layer_source_aspect(layer: Layer): number {
   const source = hasattr(layer, "source") ? (layer as AVLayer).source : null;
-  const aspect = source != null && "pixel_aspect" in source ? source!.pixel_aspect : null;
-  return aspect != null && aspect !== 0 ? aspect! : 1.0;
+  const aspect = source != null && "pixel_aspect" in source ? source.pixel_aspect : null;
+  return aspect != null && aspect !== 0 ? aspect : 1.0;
 }
 
 /**
@@ -510,11 +511,21 @@ export const _AIMED_LIGHTS: ReadonlySet<number> = new Set<number>([LightType.SPO
  * point of interest: a camera, spot or parallel light orienting towards it
  * (a point light keeps the flag but AE applies no look-at).
  */
+/** A light layer: the only layer kind with a `light_type`. */
+function _is_light(layer: Layer): layer is LightLayer {
+  return "light_type" in layer;
+}
+
+/** An AV layer: the only layer kind that resolves its comp's active camera. */
+function _is_av_layer(layer: Layer): layer is AVLayer {
+  return "_active_camera_at" in layer;
+}
+
 export function rig_aims_at_poi(layer: Layer): boolean {
   const layer_type = layer._ldta.layer_type;
   if (!_RIG_TYPES.has(layer_type)) return false;
   const aims =
-    layer_type === LayerType.CAMERA || _AIMED_LIGHTS.has(layer.light_type);
+    layer_type === LayerType.CAMERA || (_is_light(layer) && _AIMED_LIGHTS.has(layer.light_type));
   return aims && layer.auto_orient === AutoOrientType.CAMERA_OR_POINT_OF_INTEREST;
 }
 
@@ -618,6 +629,10 @@ export function _auto_rotation(layer: Layer, time: number, position: number[]): 
  */
 export function _camera_position(layer: Layer, time: number): number[] {
   const comp = layer.containing_comp;
+  // Python `cast("AVLayer", layer)._active_camera_at(time)`.
+  if (!_is_av_layer(layer)) {
+    throw new AttributeError(`'${type_name(layer)}' object has no attribute '_active_camera_at'`);
+  }
   const camera = layer._active_camera_at(time);
   if (camera != null) {
     const world = build_world_matrix(camera, time, undefined, { as_parent: true });

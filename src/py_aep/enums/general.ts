@@ -4,7 +4,7 @@
  * These enums match the values used in After Effects ExtendScript.
  */
 
-import { KeyError, TypeError_, ValueError, getitem, int, int_enum, repr, type EnumValue } from "../../pyrt/index.ts";
+import { TypeError_, ValueError, getitem, int, int_enum, repr, type EnumValue } from "../../pyrt/index.ts";
 import type { EnumHelpers } from "../../pyrt/enum.ts";
 
 /**
@@ -307,12 +307,7 @@ export const ChannelType = int_enum("ChannelType", {
 }, {
   /** Convert binary value to ChannelType. */
   from_binary(value: number): number {
-    try {
-      return this.of(value + 7812);
-    } catch (e) {
-      if (!(e instanceof ValueError)) throw e;
-      return this.CHANNEL_RGB;
-    }
+    return this.of_or_null(value + 7812) ?? this.CHANNEL_RGB;
   },
   /** Convert ChannelType to binary value. */
   to_binary(self: number): number {
@@ -487,12 +482,7 @@ export const FramesCountType = int_enum("FramesCountType", {
 }, {
   /** Convert binary value to FramesCountType. */
   from_binary(value: number): number {
-    try {
-      return this.of(value + 2612);
-    } catch (e) {
-      if (!(e instanceof ValueError)) throw e;
-      return this.FC_START_0;
-    }
+    return this.of_or_null(value + 2612) ?? this.FC_START_0;
   },
   /** Convert FramesCountType to binary value. */
   to_binary(self: number): number {
@@ -647,12 +637,7 @@ export const LayerQuality = int_enum("LayerQuality", {
 }, {
   /** Convert binary value to LayerQuality. */
   from_binary(value: number): number {
-    try {
-      return this.of(value + 4612);
-    } catch (e) {
-      if (!(e instanceof ValueError)) throw e;
-      return this.BEST;
-    }
+    return this.of_or_null(value + 4612) ?? this.BEST;
   },
   /** Convert LayerQuality to binary value. */
   to_binary(self: number): number {
@@ -672,12 +657,7 @@ export const LayerSamplingQuality = int_enum("LayerSamplingQuality", {
 }, {
   /** Convert binary value to LayerSamplingQuality. */
   from_binary(value: number): number {
-    try {
-      return this.of(value + 4812);
-    } catch (e) {
-      if (!(e instanceof ValueError)) throw e;
-      return this.BILINEAR;
-    }
+    return this.of_or_null(value + 4812) ?? this.BILINEAR;
   },
   /** Convert LayerSamplingQuality to binary value. */
   to_binary(self: number): number {
@@ -700,12 +680,7 @@ export const LightType = int_enum("LightType", {
 }, {
   /** Convert binary value to LightType. */
   from_binary(value: number): number {
-    try {
-      return this.of(value + 4412);
-    } catch (e) {
-      if (!(e instanceof ValueError)) throw e;
-      return this.PARALLEL;
-    }
+    return this.of_or_null(value + 4412) ?? this.PARALLEL;
   },
   /** Convert LightType to binary value. */
   to_binary(self: number): number {
@@ -729,12 +704,7 @@ export const LinearLightMode = int_enum("LinearLightMode", {
 }, {
   /** Convert binary value to LinearLightMode. */
   from_binary(value: number): number {
-    try {
-      return this.of(value);
-    } catch (e) {
-      if (!(e instanceof ValueError)) throw e;
-      return this.OFF;
-    }
+    return this.of_or_null(value) ?? this.OFF;
   },
   /** Convert LinearLightMode to binary value. */
   to_binary(self: number): number {
@@ -762,12 +732,7 @@ export const MaskFeatherFalloff = int_enum("MaskFeatherFalloff", {
 }, {
   /** Convert binary value to MaskFeatherFalloff. */
   from_binary(value: number): number {
-    try {
-      return this.of(value + 7212);
-    } catch (e) {
-      if (!(e instanceof ValueError)) throw e;
-      return this.FFO_SMOOTH;
-    }
+    return this.of_or_null(value + 7212) ?? this.FFO_SMOOTH;
   },
   /** Convert MaskFeatherFalloff to binary value. */
   to_binary(self: number): number {
@@ -792,12 +757,7 @@ export const MaskMode = int_enum("MaskMode", {
 }, {
   /** Convert binary mask mode value to MaskMode. */
   from_binary(value: number): number {
-    try {
-      return this.of(value + 6812);
-    } catch (e) {
-      if (!(e instanceof ValueError)) throw e;
-      return this.NONE;
-    }
+    return this.of_or_null(value + 6812) ?? this.NONE;
   },
   /** Convert MaskMode to binary value. */
   to_binary(self: number): number {
@@ -973,12 +933,7 @@ export const TimeDisplayType = int_enum("TimeDisplayType", {
 }, {
   /** Convert binary value to TimeDisplayType. */
   from_binary(value: number): number {
-    try {
-      return this.of(value + 2012);
-    } catch (e) {
-      if (!(e instanceof ValueError)) throw e;
-      return this.TIMECODE;
-    }
+    return this.of_or_null(value + 2012) ?? this.TIMECODE;
   },
   /** Convert TimeDisplayType to binary value. */
   to_binary(self: number): number {
@@ -1049,12 +1004,7 @@ export const TrackMatteType = int_enum("TrackMatteType", {
 }, {
   /** Convert binary value to TrackMatteType. */
   from_binary(value: number): number {
-    try {
-      return this.of(value + 5012);
-    } catch (e) {
-      if (!(e instanceof ValueError)) throw e;
-      return this.NO_TRACK_MATTE;
-    }
+    return this.of_or_null(value + 5012) ?? this.NO_TRACK_MATTE;
   },
   /** Convert TrackMatteType to binary value. */
   to_binary(self: number): number {
@@ -1085,12 +1035,9 @@ export const ViewerType = int_enum("ViewerType", {
    */
   from_string(label: string | null): ViewerType {
     if (!label) label = "";
-    try {
-      return getitem(_VIEWER_STRING_MAP, label);
-    } catch (e) {
-      if (!(e instanceof KeyError)) throw e;
-      throw new ValueError(`Unknown viewer type label: ${repr(label)}`);
-    }
+    const viewer_type = _VIEWER_STRING_MAP.get(label);
+    if (viewer_type === undefined) throw new ValueError(`Unknown viewer type label: ${repr(label)}`);
+    return viewer_type;
   },
 });
 export type ViewerType = EnumValue<typeof ViewerType>;

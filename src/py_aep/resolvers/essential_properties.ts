@@ -7,7 +7,7 @@
  * each equal to an `EssentialGraphicsController.uuid` on the source composition.
  */
 
-import { KeyError, deferred } from "../../pyrt/index.ts";
+import { deferred } from "../../pyrt/index.ts";
 import { PropertyType } from "../enums/general.ts";
 import type { CompItem } from "../models/items/composition.ts";
 import type { AVLayer } from "../models/layers/av_layer.ts";
@@ -74,16 +74,11 @@ export function _resolve_indexed_child(group: PropertyGroup, ref: SourceProperty
   if (ref.prop_index == null) return null;
   if (group.is_effect) {
     const defs = project._effect_param_defs.get(group.match_name);
-    if (defs?.size! > 0) {
-      const keys = [...defs!.keys()];
+    if (defs != null && defs.size > 0) {
+      const keys = [...defs.keys()];
       const pos = ref.prop_index - 1;
       if (0 <= pos && pos < keys.length && keys[pos] === ref.match_name) {
-        try {
-          return group.property(ref.match_name);
-        } catch (e) {
-          if (!(e instanceof KeyError)) throw e;
-          return null;
-        }
+        return group._child_or_null(ref.match_name);
       }
     }
     return null;
@@ -118,12 +113,8 @@ export function _walk_source_property(source_layer: AVLayer, path: SourcePropert
     let child: Property | PropertyGroup | null = null;
     if (ref.prop_index != null) child = _resolve_indexed_child(cur, ref, project);
     if (child == null) {
-      try {
-        child = cur.property(ref.match_name);
-      } catch (e) {
-        if (!(e instanceof KeyError)) throw e;
-        return null;
-      }
+      child = cur._child_or_null(ref.match_name);
+      if (child === null) return null;
     }
     cur = child;
   }

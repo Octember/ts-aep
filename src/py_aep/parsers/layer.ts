@@ -1,4 +1,4 @@
-import { getitem, KeyError, warn } from "../../pyrt/index.ts";
+import { warn } from "../../pyrt/index.ts";
 import type { Chunk, ListChunk } from "../binary/chunk.ts";
 import { filter_by_list_type, filter_by_type, find_by_list_type, find_by_type, find_by_type_or_null } from "../binary/utils.ts";
 import { LayerType } from "../enums/index.ts";
@@ -77,11 +77,8 @@ export const parse_layer = _suppress_materialization().decorate(function parse_l
 
   const layer_type = ldta.layer_type;
 
-  let layer_cls: typeof Layer;
-  try {
-    layer_cls = getitem(_LAYER_CLASSES, layer_type);
-  } catch (e) {
-    if (!(e instanceof KeyError)) throw e;
+  let layer_cls = _LAYER_CLASSES.get(layer_type);
+  if (layer_cls === undefined) {
     // NOTE(port): Python passes stacklevel=2; pyrt warn() only records the message, which is all that is observable.
     warn(`Failed to create layer type ${layer_type}, falling back to AVLayer`);
     layer_cls = AVLayer;

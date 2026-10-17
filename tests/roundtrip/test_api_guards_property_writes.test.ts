@@ -15,6 +15,8 @@ import {
   range,
 } from "../../src/pyrt/index.ts";
 import { approx, make_tmp_path, raises } from "../../src/pyrt/pytest.ts";
+import { as_instance } from "../helpers.ts";
+import { Property } from "../../src/py_aep/models/properties/property.ts";
 
 // `Path(__file__)` → `import.meta.dir` (Bun); three `.parent` hops → `tests/roundtrip/../../`.
 const SAMPLES_DIR = new Path(import.meta.dir, "..", "..", "samples", "models");
@@ -192,14 +194,14 @@ describe("TestExpressionEnabledGuard", () => {
     const app = parse_aep(SAMPLES_DIR.div("property", "all_animated.aep"));
     const comp = app.project.compositions[0];
     // NOTE(port): next(gen) → Array.find; on a miss Python raises StopIteration, TS fails at the next line - the test errors either way
-    const rot = Array.from(comp.av_layers[0].transform).find((p: any) => p.match_name === "ADBE Rotate Z");
+    const rot = as_instance(Array.from(comp.av_layers[0].transform).find((p) => p.match_name === "ADBE Rotate Z"), Property);
     expect(rot.can_set_expression).toBe(true);
     rot.expression = "time * 2";
     rot.expression_enabled = true;
     const out = tmp_path.div("expr_enabled.aep");
     app.project.save(out);
     const comp2 = parse_aep(out).project.compositions[0];
-    const rot2 = Array.from(comp2.av_layers[0].transform).find((p: any) => p.match_name === "ADBE Rotate Z");
+    const rot2 = as_instance(Array.from(comp2.av_layers[0].transform).find((p) => p.match_name === "ADBE Rotate Z"), Property);
     expect(rot2.expression_enabled).toBe(true);
   });
 
@@ -209,7 +211,7 @@ describe("TestExpressionEnabledGuard", () => {
     for (const comp of app.project.compositions) {
       for (const layer of comp.layers) {
         for (const prop of layer.transform) {
-          prop.expression_enabled = false;
+          as_instance(prop, Property).expression_enabled = false;
         }
       }
     }

@@ -8,6 +8,7 @@
 import { OutputChannels, OutputColorDepth, TimeSpanSource } from "../enums/index.ts";
 import { IndexError, PyException, floordiv, format, int, mod, num_str, py_or, round } from "../../pyrt/index.ts";
 import type { CompItem } from "../models/items/composition.ts";
+import type { RenderSettingValues } from "../models/renderqueue/render_queue_item.ts";
 import type { SettingsView } from "../models/renderqueue/settings.ts";
 
 // Roou format_id (4-char) to file extension.
@@ -399,7 +400,7 @@ export function resolve_output_filename(
  */
 export function resolve_time_span(
   comp: CompItem,
-  rq_settings: Pick<SettingsView, "__getitem__">,
+  rq_settings: Pick<SettingsView<RenderSettingValues>, "__getitem__">,
   effective_frame_rate: number,
 ): {
   start_frame: number;

@@ -1,7 +1,7 @@
 import { KeyframeInterpolationType, Label } from "../../enums/index.ts";
 import { frame_grid } from "../../binary/composition_chunks.ts";
 import { _DEFAULT_INFLUENCE, auto_path_speed, auto_spatial_tangents, auto_temporal_speeds, color_auto_speed, color_distance, linear_path_speed } from "../../resolvers/interpolation.ts";
-import { ChunkField, type Dynamic } from "../descriptors.ts";
+import { ChunkField } from "../descriptors.ts";
 import { TextDocument } from "../text/text_document.ts";
 import { validate_bool, validate_int, validate_number, validate_sequence } from "../validators.ts";
 import { Gradient } from "./gradient.ts";
@@ -195,7 +195,7 @@ export class Keyframe<V extends PropertyValue = PropertyValue> {
   declare _next: Keyframe | null;
   declare _in_temporal_ease: KeyframeEase[] | null;
   declare _out_temporal_ease: KeyframeEase[] | null;
-  declare _value: Dynamic;
+  declare _value: PropertyValue | typeof _VALUE_FROM_CHUNK;
 
   constructor(kw: { _ldat_item: LdatItem; _frame_rate: number }) {
     const { _ldat_item, _frame_rate } = kw;
@@ -616,11 +616,16 @@ export class Keyframe<V extends PropertyValue = PropertyValue> {
    * that carry no value, this is `null`.
    */
   get value(): V {
-    if (this._property == null) return this._stored_value as V;
+    if (this._property == null) return this._declared(this._stored_value);
     if (this._property._arbs != null) {
-      return this._property._keyframe_curves(this) as V;
+      return this._declared(this._property._keyframe_curves(this));
     }
-    return this._property._mask_inert_z(this._stored_value);
+    return this._declared(this._property._mask_inert_z(this._stored_value));
+  }
+
+  /** A stored value as the keyframe's declared value type (see `Property._declared`). */
+  _declared(value: PropertyValue): V {
+    return value as V;
   }
 
   set value(value: PropertyValue) {

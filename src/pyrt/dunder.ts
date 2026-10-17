@@ -120,9 +120,15 @@ export function py_object<T extends object>(self: T): T {
 
 const in_setattr = new WeakSet<object>();
 
+/** The object a `py_object` proxy wraps (`self` itself when it is not one). */
+function target_of(self: object): object {
+  const target: unknown = Reflect.get(self, TARGET);
+  return typeof target === "object" && target !== null ? target : self;
+}
+
 /** `object.__setattr__(self, name, value)` - bypasses `__setattr__`, still runs descriptors. */
-export function object_setattr(self: any, name: string, value: unknown): void {
-  const target = self?.[TARGET] ?? self;
+export function object_setattr(self: object, name: string, value: unknown): void {
+  const target = target_of(self);
   in_setattr.add(target);
   try {
     Reflect.set(target, name, value, self);
@@ -132,8 +138,8 @@ export function object_setattr(self: any, name: string, value: unknown): void {
 }
 
 /** `object.__getattribute__(self, name)` - no `__getattr__` fallback. */
-export function object_getattr(self: any, name: string): any {
-  const target = self?.[TARGET] ?? self;
+export function object_getattr(self: object, name: string): any {
+  const target = target_of(self);
   if (!(name in target)) {
     throw new AttributeError(`'${target.constructor?.name}' object has no attribute '${name}'`);
   }
@@ -147,14 +153,14 @@ export function object_getattr(self: any, name: string): any {
  * `deepcopy` copies it with the instance and `Object.assign` / spreads skip
  * it; writable and configurable so a class field named `__dict__` may alias it.
  */
-export function instance_dict(obj: any): Map<string, any> {
+export function instance_dict(obj: object): Map<string, any> {
   if (!Object.prototype.hasOwnProperty.call(obj, "__dict__")) {
     Object.defineProperty(obj, "__dict__", {
-      value: new Map<string, any>(),
+      value: new Map<string, unknown>(),
       enumerable: false,
       writable: true,
       configurable: true,
     });
   }
-  return obj.__dict__;
+  return Reflect.get(obj, "__dict__");
 }

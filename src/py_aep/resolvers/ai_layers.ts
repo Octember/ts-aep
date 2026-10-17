@@ -16,25 +16,17 @@ import {
   BytesIO,
   Path,
   ValueError,
+  getitem,
   b,
   bytes_,
   bytes_eq,
-  getitem,
   int,
   type PathLike,
 } from "../../pyrt/index.ts";
 import { CosParser, IndirectObject, IndirectReference, decode_pdf_text_string } from "../cos/index.ts";
 // NOTE(port): `SyntaxError_` is the pyrt class the COS parser raises (re-exported by cos.ts), i.e. Python's `SyntaxError`.
-import { SyntaxError_ } from "../cos/cos.ts";
-
-/**
- * A value whose kind is chosen by a tag read at runtime: PDF COS objects,
- * EXR header attributes, and host errors with ad-hoc fields.
- */
-export type Dynamic = any;
-
-/** PDF objects are walked dynamically (outside the typed text-document tree). */
-export type CosValue = Dynamic;
+import { SyntaxError_, type CosDict, type CosNode, type CosString } from "../cos/cos.ts";
+import { is, py_str } from "../cos/kinds.ts";
 
 /** Raised when a `.ai`/`.pdf` file's layers cannot be enumerated. */
 export class UnsupportedAiLayersError extends ValueError {}
@@ -111,7 +103,7 @@ export function _object_offsets(data: Uint8Array): Map<number, number> {
  *
  * @throws {@link UnsupportedAiLayersError} If the object is malformed or truncated.
  */
-export function _parse_object_at(data: Uint8Array, offset: number): CosValue {
+export function _parse_object_at(data: Uint8Array, offset: number): CosNode {
   const parser = new CosParser(new BytesIO(bytes_.slice(data, offset)));
   try {
     parser.lex();
@@ -127,7 +119,7 @@ export function _parse_object_at(data: Uint8Array, offset: number): CosValue {
 }
 
 /** Follow an indirect reference to its object; pass other values through. */
-export function _resolve(value: CosValue, data: Uint8Array, offsets: Map<number, number>): CosValue {
+export function _resolve(value: CosNode, data: Uint8Array, offsets: Map<number, number>): CosNode {
   if (value instanceof IndirectReference) {
     const offset = offsets.get(value.object_number) ?? null;
     return offset == null ? null : _parse_object_at(data, offset);
@@ -138,7 +130,7 @@ export function _resolve(value: CosValue, data: Uint8Array, offsets: Map<number,
 /** Collect the OCG object numbers a `/D` `/Order` (or `/OFF`) tree
  * references, depth first, each once.
  */
-export function _order_object_numbers(value: CosValue, out: number[]): number[] {
+export function _order_object_numbers(value: CosNode, out: number[]): number[] {
   if (Array.isArray(value)) {
     for (const entry of value) {
       _order_object_numbers(entry, out);
@@ -203,7 +195,7 @@ export function read_ai_layer_ocgs(
       throw new UnsupportedAiLayersError(`${name}: unreadable /OCProperties.`);
     }
     const config_ref = _resolve(oc_properties.get("D") ?? null, data, offsets);
-    const config = config_ref instanceof Map ? config_ref : new Map<string, CosValue>();
+    const config: CosDict = config_ref instanceof Map ? config_ref : new Map();
     const order = _order_object_numbers(
       _resolve(config.get("Order") ?? null, data, offsets),
       [],
@@ -216,19 +208,21 @@ export function read_ai_layer_ocgs(
     for (const ref of Array.isArray(ocgs) ? ocgs : []) {
       if (ref instanceof IndirectReference) listed.set(ref.object_number, ref);
     }
-    const refs: IndirectReference[] = order?.length > 0
+    const refs: IndirectReference[] = order.length > 0
       ? [...order]
           .reverse()
           .filter((n) => listed.has(n))
-          .map((n) => listed.get(n)!)
+          .map((n) => getitem(listed, n))
       : [...listed.values()];
     for (const ref of refs) {
       const ocg = _resolve(ref, data, offsets);
-      if (ocg instanceof Map && is_str_or_bytes(ocg.get("Name") ?? null)) {
+      if (!(ocg instanceof Map)) continue;
+      const layer_name = ocg.get("Name");
+      if (is_str_or_bytes(layer_name)) {
         layers.push(
           new AiLayer(
             ref.object_number,
-            decode_pdf_text_string(getitem(ocg, "Name")),
+            decode_pdf_text_string(layer_name),
             !hidden.has(ref.object_number),
           ),
         );
@@ -250,8 +244,8 @@ export function read_ai_layer_ocgs(
 /** `isinstance(x, (str, bytes))`. A `CosString` is a `str` subclass in Python,
  * so it is a `String` object here, not a primitive.
  */
-export function is_str_or_bytes(x: unknown): boolean {
-  return typeof x === "string" || x instanceof String || x instanceof Uint8Array;
+export function is_str_or_bytes(x: CosNode | undefined): x is string | CosString | Uint8Array {
+  return is(py_str, x) || x instanceof Uint8Array;
 }
 
 /**

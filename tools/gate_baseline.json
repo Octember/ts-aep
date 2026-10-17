@@ -5,9 +5,9 @@
   "fault_cases": 2640,
   "loose_types": {
     "0 pyrt": {
-      "any": 50,
-      "unknown": 76,
-      "casts": 37
+      "any": 5,
+      "unknown": 109,
+      "casts": 36
     },
     "1 binary+enums+data": {
       "any": 8,
@@ -16,26 +16,26 @@
     },
     "2 cos+color": {
       "any": 0,
-      "unknown": 6,
-      "casts": 4
+      "unknown": 4,
+      "casts": 1
     },
     "3 parsers+synthesis": {
-      "any": 1,
+      "any": 0,
       "unknown": 0,
       "casts": 11
     },
     "4 models": {
-      "any": 2,
-      "unknown": 57,
-      "casts": 137
+      "any": 1,
+      "unknown": 96,
+      "casts": 134
     },
     "5 resolvers+svg": {
-      "any": 1,
+      "any": 0,
       "unknown": 9,
       "casts": 30
     },
     "6 cli+entry": {
-      "any": 4,
+      "any": 3,
       "unknown": 0,
       "casts": 1
     }

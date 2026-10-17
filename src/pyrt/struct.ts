@@ -40,8 +40,18 @@ type ParseCodes<S extends string> = S extends ""
             ? D extends ""
               ? [CodeValue[C], ...ParseCodes<R>]
               : [...Fill<CountOf<D>, CodeValue[C]>, ...ParseCodes<R>]
-            : any[]
-      : any[];
+            : ParseRun<S>
+      : ParseRun<S>;
+/** A code whose count is a `number` placeholder (`>${n}d`): that many values of its type. */
+type ParseRun<S extends string> = S extends `${number}${infer C}${infer R}`
+  ? C extends "x"
+    ? ParseCodes<R>
+    : C extends "s" | "p"
+      ? [Uint8Array, ...ParseCodes<R>]
+      : C extends keyof CodeValue
+        ? [...CodeValue[C][], ...ParseCodes<R>]
+        : PackValue[]
+  : PackValue[];
 /** The values `struct.unpack(F, data)` yields: a tuple for a literal format, `any[]` otherwise. */
 export type Unpacked<F extends string> = string extends F
   ? any[]
@@ -113,7 +123,7 @@ export class Struct<F extends string = string> {
   private packer: Packer | null | undefined;
 
   unpack(data: Uint8Array): Unpacked<F>;
-  unpack(data: Uint8Array): any[] {
+  unpack(data: Uint8Array): PackValue[] {
     if (data.length !== this.size) {
       throw new StructError(`unpack requires a buffer of ${this.size} bytes`);
     }
@@ -121,7 +131,7 @@ export class Struct<F extends string = string> {
   }
 
   unpack_from(data: Uint8Array, offset?: number): Unpacked<F>;
-  unpack_from(data: Uint8Array, offset = 0): any[] {
+  unpack_from(data: Uint8Array, offset = 0): PackValue[] {
     if (data.length - offset < this.size) {
       throw new StructError(`unpack_from requires a buffer of at least ${this.size + offset} bytes`);
     }
@@ -131,7 +141,7 @@ export class Struct<F extends string = string> {
     // `data.buffer` would make JSC materialize a backing store per call.
     const d = data;
     const le = this.le;
-    const out: any[] = [];
+    const out: PackValue[] = [];
     let p = offset;
     for (const { ch, count } of this.codes) {
       if (ch === "x") {
@@ -474,13 +484,13 @@ export function pack(format: string, ...values: PackValue[]): Uint8Array {
 
 /** `struct.unpack(fmt, data)` */
 export function unpack<F extends string>(format: F, data: Uint8Array): Unpacked<F>;
-export function unpack(format: string, data: Uint8Array): any[] {
+export function unpack(format: string, data: Uint8Array): PackValue[] {
   return get(format).unpack(data);
 }
 
 /** `struct.unpack_from(fmt, data, offset)` */
 export function unpack_from<F extends string>(format: F, data: Uint8Array, offset?: number): Unpacked<F>;
-export function unpack_from(format: string, data: Uint8Array, offset = 0): any[] {
+export function unpack_from(format: string, data: Uint8Array, offset = 0): PackValue[] {
   return get(format).unpack_from(data, offset);
 }
 
@@ -506,7 +516,7 @@ export function calcsize(format: string): number {
 }
 
 /** `struct.iter_unpack(fmt, data)` */
-export function* iter_unpack(format: string, data: Uint8Array): Generator<any[]> {
+export function* iter_unpack(format: string, data: Uint8Array): Generator<PackValue[]> {
   const s = get(format);
   if (data.length % s.size) throw new StructError(`iterative unpacking requires a buffer of a multiple of ${s.size} bytes`);
   for (let p = 0; p < data.length; p += s.size) yield s.unpack_from(data, p);

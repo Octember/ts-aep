@@ -13,6 +13,7 @@ import { describe, expect, test } from "bun:test";
 import { getitem, Path, py_assert, len } from "../../src/pyrt/index.ts";
 import "../../src/py_aep/binary/_register.ts";
 import { parse_project } from "../conftest.ts";
+import { as_instance } from "../helpers.ts";
 import { validate_aep } from "../../src/py_aep/cli/validate.ts";
 import { ParametricMeshType } from "../../src/py_aep/enums/index.ts";
 import { CubeMeshOptions, CylinderMeshOptions, ParametricMeshLayer } from "../../src/py_aep/models/layers/parametric_mesh_layer.ts";
@@ -55,7 +56,7 @@ describe("TestParametricMeshModel", () => {
   test("test_cannot_set_collapse_transformation", () => {
     const project = parse_project(MESH_AEP);
     const cube = project.compositions[0].layers.at(-1)!;
-    expect(cube.can_set_collapse_transformation).toBe(false);
+    expect(as_instance(cube, ParametricMeshLayer).can_set_collapse_transformation).toBe(false);
   });
 
   test("test_mesh_type_enum_binary_roundtrip", () => {

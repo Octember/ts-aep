@@ -35,6 +35,7 @@ import {
   json_loads,
   truediv,
   PureWindowsPath,
+  type PyFloat,
 } from "../../pyrt/index.ts";
 
 /** A Python `dict`. Both the JSON side and the to_dict side are Maps (rulebook §3).
@@ -125,7 +126,7 @@ export function _property_accessors(cls: Function): string[] {
  *
  * Results are cached per type since field names are class-level metadata.
  */
-export function _get_field_names(obj: ToDictValue): readonly string[] | null {
+export function _get_field_names(obj: object): readonly string[] | null {
   const cls = obj.constructor;
   if (_field_names_cache.has(cls)) return _field_names_cache.get(cls)!;
 
@@ -189,14 +190,49 @@ export function _get_property_names(cls: Function): readonly string[] {
 export const _PRIMITIVE_TYPES: readonly string[] = ["number", "bigint", "string", "boolean"];
 
 /**
- * Any value `to_dict` serializes: a primitive, a `PyFloat`, a model instance,
- * a chunk, a Map/list tree — the serializer dynamically shapes its output
- * after the object graph it walks (genuinely dynamic: pass 4, `any` only
- * behind a named alias).
+ * A value `to_dict` walks or returns, or the ExtendScript JSON value it is
+ * compared with: a primitive, a list or Map of such values (a model object
+ * becomes a `Dict` of its fields), or another object, which `to_dict`
+ * returns unchanged (bytes, sets, callables, `PyFloat`, `String` objects).
  */
-export type ToDictValue = any;
+export type ToDictValue =
+  | null
+  | undefined
+  | boolean
+  | number
+  | bigint
+  | string
+  | symbol
+  | ToDictValue[]
+  | Dict
+  | object;
+
+/**
+ * What `to_dict` makes of a `T`: primitives, bytes, sets, callables, `PyFloat`
+ * and `String` objects unchanged, a list element-wise, and any other object (a
+ * model object, a Map) a `Dict`. Which objects have fields is only known at
+ * runtime; one without any comes back unchanged.
+ */
+export type ToDict<T> = T extends
+  | null
+  | undefined
+  | boolean
+  | number
+  | bigint
+  | string
+  | symbol
+  | String
+  | PyFloat
+  | ArrayBufferView
+  | ReadonlySet<ToDictValue>
+  | Function
+  ? T
+  : T extends readonly (infer U)[]
+    ? ToDict<U>[]
+    : Dict;
 
 /** Convert dataclass/enum to dict recursively, skipping circular reference fields. */
+export function to_dict<T extends ToDictValue>(obj: T): ToDict<T>;
 export function to_dict(obj: ToDictValue): ToDictValue {
   return _to_dict(obj, new Map());
 }
@@ -216,7 +252,7 @@ export function to_dict(obj: ToDictValue): ToDictValue {
  * `result` before recursing also means a reference cycle yields the shared dict
  * instead of recursing forever.
  */
-export function _to_dict(obj: ToDictValue, memo: Map<object, [object, ToDictValue]>): ToDictValue {
+export function _to_dict(obj: any, memo: Map<object, [object, ToDictValue]>): ToDictValue {
   // Fast path for primitive types (majority of recursive calls).
   // Enum members are plain values in the TS port (pyrt enum.ts), so the
   // `isinstance(obj, Enum)` branch returns `obj.value` through this path.
@@ -491,10 +527,10 @@ export function _compare_children_by_match_name(
     const idx = (match_name_idx.get(exp_match_name) ?? 0);
     let parsed_prop: Dict;
     if (idx < candidates.length) {
-      parsed_prop = candidates![idx];
+      parsed_prop = candidates[idx];
       match_name_idx.set(exp_match_name, idx + 1);
     } else {
-      parsed_prop = candidates!.at(-1)!;
+      parsed_prop = candidates[candidates.length - 1];
     }
 
     const has_child_properties = exp_prop.has("properties");
@@ -877,7 +913,7 @@ export function compare_property(
           "properties",
         );
       }
-      const exp_idx = dict_get(exp_eps, "index");
+      const exp_idx = dict_get<string, ToDictValue>(exp_eps, "index");
       const parsed_idx = parsed_eps.get("index") ?? null;
       if (exp_idx != null && parsed_idx != null && exp_idx !== parsed_idx + 1) {
         result.add_diff(`${path}.essentialPropertySource.index`, exp_idx, parsed_idx + 1, "properties");
@@ -1348,12 +1384,12 @@ export function compare_footage_item(
 
     // AE returns native_frame_rate when conformFrameRate is 0
     result.track_field("FootageSource", "conform_frame_rate", exp_source.has("conformFrameRate"));
-    const exp_cfr = dict_get(exp_source, "conformFrameRate");
-    const parsed_cfr = dict_get(parsed_source, "conform_frame_rate", 0);
+    const exp_cfr = dict_get<string, ToDictValue>(exp_source, "conformFrameRate");
+    const parsed_cfr = dict_get<string, ToDictValue, number>(parsed_source, "conform_frame_rate", 0);
     if (exp_cfr != null) {
       if (!compare_values(exp_cfr, parsed_cfr)) {
         // When parsed conform is 0, AE may report native_frame_rate
-        const native = dict_get(parsed_source, "native_frame_rate", 0);
+        const native = dict_get<string, ToDictValue, number>(parsed_source, "native_frame_rate", 0);
         if (parsed_cfr === 0 && compare_values(exp_cfr, native)) {
           // AE reported native rate as conform rate
         } else {
@@ -1367,8 +1403,8 @@ export function compare_footage_item(
     result.track_field("FootageSource", "missing_footage_path", exp_source.has("missingFootagePath"));
     // FileSource-specific fields
     if (exp_source.has("filePath")) {
-      const exp_file: ToDictValue = getitem(exp_source, "filePath");
-      const parsed_file: ToDictValue = dict_get(parsed_source, "file", "");
+      const exp_file = getitem<string, string | null>(exp_source, "filePath");
+      const parsed_file = dict_get<string, string | null, string>(parsed_source, "file", "");
       // Compare only the filename portion. PureWindowsPath splits on
       // both / and \ on every host OS (AE stores Windows-style paths,
       // and a parsed sequence frame path mixes the two); plain Path
@@ -1383,8 +1419,8 @@ export function compare_footage_item(
     }
 
     if (exp_source.has("missingFootagePath")) {
-      const exp_missing = getitem(exp_source, "missingFootagePath");
-      const parsed_missing = dict_get(parsed_source, "missing_footage_path", "");
+      const exp_missing = getitem<string, ToDictValue>(exp_source, "missingFootagePath");
+      const parsed_missing = dict_get<string, ToDictValue, string>(parsed_source, "missing_footage_path", "");
       if (py_bool(exp_missing) && !py_eq(exp_missing, parsed_missing)) {
         result.add_diff(`${source_path}.missingFootagePath`, exp_missing, parsed_missing, "footage");
       }
@@ -1672,7 +1708,7 @@ export function validate_aep(
 
   // Compare compositions
   if (verbose) console.log("\n=== Comparing Compositions ===");
-  const parsed_by_id = new Map<number, ToDictValue>(project.compositions.map((comp) => [comp.id, to_dict(comp)]));
+  const parsed_by_id = new Map<number, Dict>(project.compositions.map((comp) => [comp.id, to_dict(comp)]));
 
   for (const exp_item of comps) {
     const item_id = getitem(exp_item, "id");
@@ -1684,7 +1720,7 @@ export function validate_aep(
       continue;
     }
 
-    const parsed_comp = parsed_by_id.get(item_id);
+    const parsed_comp = getitem(parsed_by_id, item_id);
     const before_count = len(result);
     compare_comp_item(exp_item, parsed_comp, `Comp[${item_name}]`, result);
 

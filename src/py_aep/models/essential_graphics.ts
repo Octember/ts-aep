@@ -7,9 +7,19 @@
  */
 
 import { descriptor, repr } from "../../pyrt/index.ts";
-import { ChunkField, type Dynamic } from "./descriptors.ts";
+import { ChunkField } from "./descriptors.ts";
 import { validate_name } from "./validators.ts";
 import type { U4Chunk, Utf8Chunk } from "../binary/scalar_chunks.ts";
+
+/** Whether `x` has a callable `[Symbol.iterator]`, the check spreading `x` makes. */
+function _is_iterable(x: unknown): x is Iterable<unknown> {
+  return (
+    (typeof x === "object" || typeof x === "function") &&
+    x !== null &&
+    Symbol.iterator in x &&
+    typeof x[Symbol.iterator] === "function"
+  );
+}
 
 /**
  * One node in a controller's source-property path, from root to leaf.
@@ -39,8 +49,8 @@ export class SourcePropertyRef {
   }
 
   /** NamedTuple equality: elementwise over the fields (also against a plain tuple). */
-  __eq__(other: Dynamic): boolean {
-    if (other == null || typeof other === "string" || typeof other[Symbol.iterator] !== "function") return false;
+  __eq__(other: unknown): boolean {
+    if (other == null || typeof other === "string" || !_is_iterable(other)) return false;
     const o = [...other];
     return o.length === 2 && o[0] === this.match_name && o[1] === this.prop_index;
   }

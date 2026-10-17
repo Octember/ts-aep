@@ -25,7 +25,7 @@ import {
   zip,
 } from "../../src/pyrt/index.ts";
 import { approx, make_tmp_path, raises } from "../../src/pyrt/pytest.ts";
-import { get_comp as get_comp_, get_first_layer as get_first_layer_, get_layer as get_layer_, parse_project_fresh as parse_project_fresh_ } from "../helpers.ts";
+import { as_instance, get_comp as get_comp_, get_first_layer as get_first_layer_, get_layer as get_layer_, parse_project_fresh as parse_project_fresh_ } from "../helpers.ts";
 
 import { parse as parse_aep_, new as py_aep_new, Project } from "../../src/py_aep/index.ts";
 import { KeyframeInterpolationType, Label, MaskFeatherFalloff, MaskMode, MaskMotionBlur, PropertyControlType, PropertyType } from "../../src/py_aep/enums/index.ts";
@@ -2828,12 +2828,12 @@ describe("TestAddAnimatorProperty", () => {
     const pg = _props(parse_aep(AEP));
     const opacity = pg.add_property("ADBE Text Opacity");
     expect(opacity instanceof Property).toBe(true);
-    expect(opacity.units_text).toBe("percent");
-    expect(opacity.can_set_expression).toBe(true);
+    expect(as_instance(opacity, Property).units_text).toBe("percent");
+    expect(as_instance(opacity, Property).can_set_expression).toBe(true);
     const fill = pg.add_property("ADBE Text Fill Color");
     expect(fill instanceof Property).toBe(true);
-    expect(fill.is_spatial).toBe(true);
-    expect(fill.can_set_expression).toBe(true);
+    expect(as_instance(fill, Property).is_spatial).toBe(true);
+    expect(as_instance(fill, Property).can_set_expression).toBe(true);
   });
 
   test("test_add_by_display_name", () => {
@@ -2848,10 +2848,10 @@ describe("TestAddAnimatorProperty", () => {
     const pg = _props(app);
     const op = pg.add_property("ADBE Text Opacity");
     expect(op instanceof Property).toBe(true);
-    op.value = 40.0;
+    as_instance(op, Property).value = 40.0;
     const fill = pg.add_property("ADBE Text Fill Color");
     expect(fill instanceof Property).toBe(true);
-    fill.value = [0.0, 1.0, 0.0, 1.0];
+    as_instance(fill, Property).value = [0.0, 1.0, 0.0, 1.0];
     const out = tmp_path.div("out.aep");
     app.project.save(out);
     const layer2 = parse_aep(out).project.compositions[0].layers.find(
@@ -4023,7 +4023,7 @@ describe("TestEffectParamDefaults", () => {
 
   test("test_stored_popup_back_to_default", () => {
     const project = parse_project_fresh(SAMPLE);
-    const dims = _effect(project, "blur_changed").__getitem__("ADBE Gaussian Blur 2-0002");
+    const dims = as_instance(_effect(project, "blur_changed").__getitem__("ADBE Gaussian Blur 2-0002"), Property);
     expect(dims.value).toBe(3);
     expect(dims.default_value).toBe(1);
     expect(dims.is_modified).toBe(true);
@@ -4033,7 +4033,7 @@ describe("TestEffectParamDefaults", () => {
 
   test("test_stored_point_back_to_default", () => {
     const project = parse_project_fresh(SAMPLE);
-    const start = _effect(project, "ramp_changed").__getitem__("ADBE Ramp-0001");
+    const start = as_instance(_effect(project, "ramp_changed").__getitem__("ADBE Ramp-0001"), Property);
     expect(py_eq(start.value, [100.0, 200.0])).toBe(true);
     expect(py_eq(start.default_value, [960.0, 0.0])).toBe(true);
     expect(start.is_modified).toBe(true);

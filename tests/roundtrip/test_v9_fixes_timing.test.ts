@@ -418,13 +418,13 @@ function _stretched_layer(comp: CompItem, stretch: number, start: number, times:
   layer.stretch = stretch;
   layer.start_time = start;
   for (const [i, t] of times.entries()) {
-    layer.transform.opacity.set_value_at_time(t, 10.0 * (i + 1));
+    layer.transform.__getitem__("ADBE Opacity").set_value_at_time(t, 10.0 * (i + 1));
   }
   return layer;
 }
 
 function _ticks(layer: any): number[] {
-  return sorted(layer.transform.opacity.keyframes.map((kf) => kf.time_units));
+  return sorted(layer.transform.__getitem__("ADBE Opacity").keyframes.map((kf) => kf.time_units));
 }
 
 function _start_ratio(layer: any): [number, number] {
@@ -532,7 +532,7 @@ describe("TestLayerStartTime", () => {
     const [_project, comp] = _new_comp(32.0);
     const layer = comp.add_solid([0.5, 0.5, 0.5], "L", 10, 10, 1.0, 10.0);
     layer.stretch = stretch;
-    const base = layer.transform.opacity._layer_timebase;
+    const base = layer.transform.__getitem__("ADBE Opacity")._layer_timebase;
     layer.start_time = ticks / base;
     expect(layer._ldta.start_time_dividend).toBe(expected);
   });
@@ -627,7 +627,7 @@ describe("TestStretchStorage", () => {
     const layer = _stretched_layer(comp, 133.33, 1.3);
     expect(py_eq(_start_ratio(layer), [134809, 103699])).toBe(true);
     expect(py_eq(_ticks(layer), [-62221, 0, 54443, 209996, 462768])).toBe(true);
-    const got = sorted(layer.transform.opacity.keyframes.map((kf) => kf.time));
+    const got = sorted(layer.transform.__getitem__("ADBE Opacity").keyframes.map((kf) => kf.time));
     expect(
       approx(
         got,
@@ -756,11 +756,11 @@ describe("TestFrameGridPastTheCap", () => {
     comp.display_start_time = 0.1234;
     got.set("dsf", comp.display_start_frame);
     const layer = comp.add_solid([0.5, 0.5, 0.5], "k", 10, 10, 1.0, 1.0);
-    layer.transform.opacity.set_value_at_time(0.5041, 10.0);
-    layer.transform.opacity.set_value_at_time(0.25, 20.0);
+    layer.transform.__getitem__("ADBE Opacity").set_value_at_time(0.5041, 10.0);
+    layer.transform.__getitem__("ADBE Opacity").set_value_at_time(0.25, 20.0);
     got.set(
       "keys",
-      layer.transform.opacity.keyframes.map((kf) => kf.time),
+      layer.transform.__getitem__("ADBE Opacity").keyframes.map((kf) => kf.time),
     );
     for (const [key, value] of expected.entries()) {
       // The Python assertion message names the key; bun's expect takes no message.

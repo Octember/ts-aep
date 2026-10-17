@@ -36,6 +36,8 @@ export type EnumHelpers<V> = {
   readonly __name__: string;
   /** `Enum(value)` */
   of(value: unknown): V;
+  /** `Enum(value)`, or `null` where it would raise ValueError. */
+  of_or_null(value: unknown): V | null;
   /** `member.name` */
   name_of(value: V): string;
   /** `isinstance(value, Enum)` */
@@ -73,12 +75,14 @@ export function py_enum<const M extends Record<string, unknown>, X extends Recor
   const helpers: EnumHelpers<V> = {
     __name__: name,
     of(value: unknown): V {
-      if (by_value.has(value)) return value as V;
-      if (typeof self._missing_ === "function") {
-        const found = self._missing_(value);
-        if (found != null) return found;
-      }
+      const found = helpers.of_or_null(value);
+      if (found !== null) return found;
       throw new ValueError(`${typeof value === "string" ? `'${value}'` : String(value)} is not a valid ${name}`);
+    },
+    of_or_null(value: unknown): V | null {
+      if (by_value.has(value)) return value as V;
+      if (typeof self._missing_ === "function") return self._missing_(value) ?? null;
+      return null;
     },
     name_of(value: V): string {
       const n = by_value.get(value);
