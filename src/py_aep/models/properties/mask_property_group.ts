@@ -6,7 +6,7 @@ import { TdmnChunk, TdsbChunk, TdsnChunk } from "../../binary/property_chunks.ts
 import { find_by_list_type, find_by_type } from "../../binary/utils.ts";
 import { MaskFeatherFalloff, MaskMode, MaskMotionBlur } from "../../enums/index.ts";
 import { keyframe_tensions } from "../../resolvers/roto_bezier.ts";
-import { ChunkField, type Dynamic } from "../descriptors.ts";
+import { ChunkField } from "../descriptors.ts";
 import { validate_bool, validate_rgb_color } from "../validators.ts";
 // NOTE(port): property_group.ts reaches this module only through `deferred(...)` (the
 // port of Python's in-method import), so `extends PropertyGroup` evaluates after it.
@@ -162,8 +162,8 @@ export class MaskPropertyGroup extends PropertyGroup {
     }
   }
 
-  // NOTE(port): Python `_new` has `# type: ignore[override]`; the loose param types here
-  // are the TS equivalent (the keyword-only signature differs from PropertyGroup._new).
+  // NOTE(port): Python `_new` has `# type: ignore[override]`; the `never` overload is
+  // the TS equivalent (the keyword-only signature differs from PropertyGroup._new).
   /**
    * Create a new mask atom with backing chunks, as AE writes it.
    *
@@ -172,7 +172,7 @@ export class MaskPropertyGroup extends PropertyGroup {
    * and the child properties (Mask Path, Feather, Opacity,
    * Expansion) are synthesized on first access, like a fresh parse.
    *
-   * @param parent_property_ - The Masks parade group to add the atom to.
+   * @param parent_property - The Masks parade group to add the atom to.
    * @param property_depth - The depth of the mask atom in the tree.
    * @param kw - Options:
    * - `name`: The display name, stored in the `tdsn` (AE bakes the positional `Mask N` name at
@@ -181,12 +181,17 @@ export class MaskPropertyGroup extends PropertyGroup {
    *     the cycle palette.
    */
   static _new(
-    parent_property_: Dynamic,
-    property_depth: Dynamic,
-    kw: Dynamic,
+    parent_property: PropertyGroup,
+    property_depth: number,
+    kw: { name: string; mask_id: number },
+  ): MaskPropertyGroup;
+  static _new(...args: never[]): never;
+  static _new(
+    parent_property: PropertyGroup,
+    property_depth: number,
+    kw: { name: string; mask_id: number },
   ): MaskPropertyGroup {
-    const parent_property: PropertyGroup = parent_property_;
-    const { name, mask_id }: { name: string; mask_id: number } = kw;
+    const { name, mask_id } = kw;
     const color = _MASK_COLOR_CYCLE.at((mask_id - 1) % _MASK_COLOR_CYCLE.length)!;
     const _tdmn = new TdmnChunk({ value: "ADBE Mask Atom" });
     const _mkif = new MkifChunk({

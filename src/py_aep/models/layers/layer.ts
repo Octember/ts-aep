@@ -15,7 +15,7 @@ import { find_by_type, index_by_identity, list_type_of } from "../../binary/util
 import { parse_properties } from "../../parsers/property.ts";
 import { get_match_name_runs } from "../../parsers/utils.ts";
 import { Mat4, aspect_scale, build_world_matrix, compose_orientation, decompose_transform, layer_source_aspect, position_space_aspect, rig_aims_at_poi, rotation_part, square_pixels, strip_orientation } from "../../resolvers/transform.ts";
-import { ChunkField, type EffectParamDefs, type Dynamic } from "../descriptors.ts";
+import { ChunkField, type EffectParamDefs } from "../descriptors.ts";
 import { auto_name } from "../naming.ts";
 import { Property } from "../properties/property.ts";
 import { PropertyBase } from "../properties/property_base.ts";
@@ -111,6 +111,15 @@ export function _list_remove<T>(xs: T[], x: T): void {
 export type LiveDefaultGroup = "ADBE Transform Group" | "ADBE Camera Options Group";
 /** A property whose left-out default follows other state (see `Layer._LIVE_DEFAULTS`). */
 export type LiveDefaultProperty = "ADBE Position" | "ADBE Camera Zoom" | "ADBE Camera Focus Distance";
+
+/** Keyword arguments of `Layer._new`. */
+type LayerNewKw = {
+  ldta: LdtaChunk;
+  name: string;
+  containing_comp: CompItem;
+  root_tdgp_extra?: Chunk[] | null;
+  effect_param_defs?: EffectParamDefs | null;
+};
 
 /**
  * The `Layer` object provides access to layers within compositions.
@@ -304,11 +313,11 @@ export class Layer extends PropertyGroup {
   // which could produce unexpected results or hit circular references.
   // `__hash__ = object.__hash__` is not carried over: instances are hashed by
   // identity already, which is what a Map/Set keyed by a Layer uses.
-  __eq__(other: Dynamic): boolean {
+  __eq__(other: unknown): boolean {
     return this === other;
   }
 
-  __setattr__(name: string, value: Dynamic): void {
+  __setattr__(name: string, value: unknown): void {
     // Layers set public instance attributes of their own, which
     // `PropertyGroup.__setattr__` would refuse.
     object_setattr(this, name, value);
@@ -364,21 +373,11 @@ export class Layer extends PropertyGroup {
   }
 
   /** Build a layer from a fresh ldta chunk (`Layer._new`). */
-  // Python marks this override `# type: ignore[override]`; the first overload mirrors the base signature.
-  static _new(
-    match_name: string,
-    auto_name: string,
-    property_depth: number,
-    kw?: Dynamic,
-  ): PropertyGroup;
-  static _new(kw: {
-    ldta: LdtaChunk;
-    name: string;
-    containing_comp: CompItem;
-    root_tdgp_extra?: Chunk[] | null;
-    effect_param_defs?: EffectParamDefs | null;
-  }): Layer;
-  static _new(kw: Dynamic): Dynamic {
+  // Python marks this override `# type: ignore[override]`; the `never`
+  // overload keeps the incompatible base signatures uncallable.
+  static _new(kw: LayerNewKw): Layer;
+  static _new(...args: never[]): never;
+  static _new(kw: LayerNewKw): Layer {
     const { ldta, name, containing_comp } = kw;
     const root_tdgp_extra = kw.root_tdgp_extra ?? null;
     const effect_param_defs = kw.effect_param_defs ?? null;
@@ -387,7 +386,7 @@ export class Layer extends PropertyGroup {
 
     const name_utf8 = new Utf8Chunk({ value: name });
     const tdgp_chunks: Chunk[] = [new TdsbChunk({}), TdsnChunk.new_()];
-    if (py_bool(root_tdgp_extra)) tdgp_chunks.push(...root_tdgp_extra);
+    if (root_tdgp_extra != null && root_tdgp_extra.length > 0) tdgp_chunks.push(...root_tdgp_extra);
     // AE terminates every tdgp match-name stream with ADBE Group End
     // and rejects layers whose root tdgp lacks it ("missing data in
     // file"). Synthesized children are inserted before this marker.

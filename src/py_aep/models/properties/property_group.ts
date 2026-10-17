@@ -748,7 +748,7 @@ export class PropertyGroup extends PropertyBase {
     }
   }
 
-  __setattr__(name: string, value: Dynamic): void {
+  __setattr__(name: string, value: unknown): void {
     // A name the class does not define would only become a Python
     // attribute: nothing reaches the file, and it would shadow the child
     // that attribute access resolves (`transform.position = [...]` leaves

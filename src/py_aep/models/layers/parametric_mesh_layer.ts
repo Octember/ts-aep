@@ -11,7 +11,7 @@ import {
   str,
   type ClassAttributes,
 } from "../../../pyrt/index.ts";
-import { ChunkField, type EffectParamDefs, type Dynamic } from "../descriptors.ts";
+import { ChunkField, type EffectParamDefs } from "../descriptors.ts";
 import { label_index } from "../preferences.ts";
 import { AVLayer } from "./av_layer.ts";
 import type { CompItem } from "../items/composition.ts";
@@ -28,6 +28,16 @@ export const NoneType = Symbol("NoneType");
 export function _type_of(x: { constructor: Function } | null | undefined): Function | symbol {
   return x == null ? NoneType : x.constructor;
 }
+
+/** Keyword arguments of `ParametricMeshLayer._new`. */
+type ParametricMeshLayerNewKw = {
+  name: string;
+  layer_id: number;
+  duration: number;
+  containing_comp: CompItem;
+  mesh_type: ParametricMeshType;
+  effect_param_defs?: EffectParamDefs | null;
+};
 
 /**
  * The ParametricMeshLayer object represents a parametric mesh layer within a composition.
@@ -69,17 +79,9 @@ export class ParametricMeshLayer extends AVLayer {
   }
 
   // Python `# type: ignore[override]`: keyword shape differs from AVLayer._new's; overloads keep the base static side assignable.
-  static _new(match_name: string, auto_name: string, property_depth: number, kw?: Dynamic): PropertyGroup;
-  static _new(kw: {
-    name: string;
-    layer_id: number;
-    duration: number;
-    containing_comp: CompItem;
-    mesh_type: ParametricMeshType;
-    effect_param_defs?: EffectParamDefs | null;
-  }): ParametricMeshLayer;
-  static _new(kw: Dynamic): ParametricMeshLayer;
-  static _new(kw: Dynamic): Dynamic {
+  static _new(kw: ParametricMeshLayerNewKw): ParametricMeshLayer;
+  static _new(...args: never[]): never;
+  static _new(kw: ParametricMeshLayerNewKw): ParametricMeshLayer {
     const { name, layer_id, duration, containing_comp, mesh_type, effect_param_defs = null } = kw;
     const layer = super._new({
       name,

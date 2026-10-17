@@ -2,13 +2,12 @@ import { LayerType, LightType } from "../../enums/index.ts";
 
 import { LdtaChunk } from "../../binary/layer_chunks.ts";
 import { default_camera_zoom } from "../../resolvers/transform.ts";
-import {ChunkField, type EffectParamDefs, type Dynamic} from "../descriptors.ts";
+import {ChunkField, type EffectParamDefs} from "../descriptors.ts";
 import { label_index } from "../preferences.ts";
 import { AVLayer } from "./av_layer.ts";
 import { _UNDEFINED_ID, Layer, _no_source_id } from "./layer.ts";
 import { AttributeError, ValueError, descriptor, py_cmp } from "../../../pyrt/index.ts";
 import type { CompItem } from "../items/composition.ts";
-import type { PropertyGroup } from "../properties/property_group.ts";
 
 export function _require_environment_lights(comp: CompItem, what: string): void {
   /** Environment lights and their light source arrived in AE 24.3. */
@@ -89,7 +88,7 @@ export class LightLayer extends Layer {
     light_type?: number;
     effect_param_defs?: EffectParamDefs | null;
   }): LightLayer;
-  static _new(...args: Dynamic[]): Dynamic;
+  static _new(...args: never[]): never;
   static _new(kw: {
     name: string;
     layer_id: number;
@@ -98,7 +97,7 @@ export class LightLayer extends Layer {
     light_type?: number;
     effect_param_defs?: EffectParamDefs | null;
   }): LightLayer {
-    // NOTE(port): Python `# type: ignore[override]` is type-only; overloads above mirror Layer._new's signature set.
+    // NOTE(port): Python `# type: ignore[override]` is type-only; the `never` overload above keeps Layer._new's signatures uncallable.
     const {
       name,
       layer_id,

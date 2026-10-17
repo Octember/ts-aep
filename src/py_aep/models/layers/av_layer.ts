@@ -24,11 +24,10 @@ import { can_add_layer } from "../../resolvers/motion_graphics.ts";
 import { shape_layer_rect } from "../../resolvers/shape_bounds.ts";
 import { text_ink_rect } from "../../resolvers/text_ink.ts";
 import { type Mat4, build_world_matrix, camera_ray, intersect_layer_plane, project_to_comp, transform_from_points } from "../../resolvers/transform.ts";
-import { ChunkField, type EffectParamDefs, type Dynamic } from "../descriptors.ts";
+import { ChunkField, type EffectParamDefs } from "../descriptors.ts";
 import type { Chunk } from "../../binary/chunk.ts";
 import type { CompItem } from "../items/composition.ts";
 import { Property } from "../properties/property.ts";
-import type { PropertyGroup } from "../properties/property_group.ts";
 import { validate_bool, validate_enum, validate_name, validate_number, validate_vector2, validate_vector3 } from "../validators.ts";
 import { Layer } from "./layer.ts";
 import { AVItem } from "../items/av_item.ts";
@@ -100,6 +99,20 @@ export function _validate_collapse_transformation(value: boolean, obj: AVLayer):
     );
   }
 }
+
+/** Keyword arguments of `AVLayer._new`. */
+type AVLayerNewKw = {
+  name: string;
+  layer_id: number;
+  duration: number;
+  containing_comp: CompItem;
+  source_id?: number;
+  null_layer?: boolean;
+  three_d_layer?: boolean;
+  label?: number;
+  root_tdgp_extra?: Chunk[] | null;
+  effect_param_defs?: EffectParamDefs | null;
+};
 
 /**
  * The `AVLayer` object provides an interface to those layers that contain
@@ -235,26 +248,9 @@ export class AVLayer extends Layer {
   /** The resolved source item; unset until first read (see `source`). */
   declare _source?: AVItem | null;
 
-  static _new(
-    match_name: string,
-    auto_name: string,
-    property_depth: number,
-    kw?: Dynamic,
-  ): PropertyGroup;
-  static _new(kw: {
-    name: string;
-    layer_id: number;
-    duration: number;
-    containing_comp: CompItem;
-    source_id?: number;
-    null_layer?: boolean;
-    three_d_layer?: boolean;
-    label?: number;
-    root_tdgp_extra?: Chunk[] | null;
-    effect_param_defs?: EffectParamDefs | null;
-  }): AVLayer;
-  static _new(kw: Dynamic): AVLayer;
-  static _new(kw: Dynamic): Dynamic {
+  static _new(kw: AVLayerNewKw): AVLayer;
+  static _new(...args: never[]): never;
+  static _new(kw: AVLayerNewKw): AVLayer {
     const {
       name,
       layer_id,
