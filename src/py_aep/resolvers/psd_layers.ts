@@ -1001,7 +1001,7 @@ export function translate(data: Uint8Array, table: Uint8Array): Uint8Array {
 
 // NOTE(port): bytes[start::step] via py_slice (which returns a plain array for bytes), re-wrapped as Uint8Array.
 export function strided(row: Uint8Array, start: number, step: number): Uint8Array {
-  return Uint8Array.from(py_slice(row, start, null, step) as ArrayLike<number>);
+  return Uint8Array.from(py_slice(row, start, null, step));
 }
 
 // NOTE(port): int.from_bytes(data, "big") as an exact bigint; pyrt's int_from_bytes returns a Number and loses bits past 2^53.

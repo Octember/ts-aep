@@ -246,7 +246,7 @@ export class ChunkField<T> {
     if (overrides.has(this.public_name)) return overrides.get(this.public_name) as T;
     const body = getattr(obj, this.chunk_attr);
     if (body == null) {
-      if (this.default !== _SENTINEL) return this.default as T;
+      if (this.default !== _SENTINEL) return this.default;
       throw new AttributeError(`chunk body ${repr(this.chunk_attr)} is None`);
     }
     const value = getattr(body, this.field);

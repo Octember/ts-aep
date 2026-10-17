@@ -332,7 +332,7 @@ export class Layer extends PropertyGroup {
     try {
       layer_type_raw = _ldta.layer_type;
       const layer_type = LayerType.of(layer_type_raw);
-      match_name = getitem((new.target as typeof Layer)._LAYER_MATCH_NAMES, layer_type);
+      match_name = getitem(new.target._LAYER_MATCH_NAMES, layer_type);
     } catch (e) {
       if (!(e instanceof ValueError || e instanceof KeyError)) throw e;
       logger.warning(
@@ -745,7 +745,7 @@ export class Layer extends PropertyGroup {
   get transform(): PropertyGroup {
     const group = this.__getitem__("ADBE Transform Group");
     py_assert(group instanceof PropertyGroup);
-    return group as PropertyGroup;
+    return group;
   }
 
   /**

@@ -775,7 +775,7 @@ export class FileSource extends FootageSource {
     try {
       const stvc_chunk = find_by_list_type(pin_chunks, "StVc");
       const utf8_chunks = filter_by_type(stvc_chunk.chunks, "Utf8");
-      this._file_names = utf8_chunks.map((chunk) => (chunk as Utf8Chunk).value);
+      this._file_names = utf8_chunks.map((chunk) => chunk.value);
     } catch (e) {
       if (!(e instanceof ChunkNotFoundError)) throw e;
       this._file_names = [];

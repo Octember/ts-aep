@@ -29,12 +29,15 @@ const emit = (f: string, text: string) =>
     fileName: f,
     compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext, removeComments: true, verbatimModuleSyntax: false },
   }).outputText;
-const errors_by_file = (options: ts.CompilerOptions) => {
+// Diagnostics per file, keyed "line:code:message" (cast edits keep line numbers).
+const diagnostics = (options: ts.CompilerOptions) => {
   const p = ts.createProgram(cfg.fileNames, options);
-  const out = new Map<string, number>();
+  const out = new Map<string, Set<string>>();
   for (const d of ts.getPreEmitDiagnostics(p)) {
     const f = d.file?.fileName ?? "";
-    out.set(f, (out.get(f) ?? 0) + 1);
+    const line = d.file && d.start != null ? d.file.getLineAndCharacterOfPosition(d.start).line : -1;
+    if (!out.has(f)) out.set(f, new Set());
+    out.get(f)!.add(`${line}:${d.code}:${ts.flattenDiagnosticMessageText(d.messageText, " ")}`);
   }
   return out;
 };
@@ -102,35 +105,46 @@ for (const sf of program.getSourceFiles()) {
 }
 
 if (!dry && planned.size) {
-  // Restore files until tsc is clean and no file gains a strict-mode error.
-  const base_strict = new Map<string, number>();
-  for (const [f, n] of errors_by_file(STRICT)) base_strict.set(f, n);
-  for (const f of original.keys()) fs.writeFileSync(f, original.get(f)!);
-  const before_strict = errors_by_file(STRICT);
-  for (const f of original.keys()) {
+  // Drop edits until tsc is clean and no file gains a strict-mode error: an
+  // edit on the line of a new error goes; a file whose new errors match no
+  // edit's line is restored whole.
+  const line_of = (f: string, pos: number) => original.get(f)!.slice(0, pos).split("\n").length - 1;
+  const write = (f: string) => {
     let t = original.get(f)!;
-    for (const [s, e, r] of [...planned.get(f)!].sort((a, b) => b[0] - a[0])) t = t.slice(0, s) + r + t.slice(e);
+    for (const [s, e, r] of [...(planned.get(f) ?? [])].sort((a, b) => b[0] - a[0])) t = t.slice(0, s) + r + t.slice(e);
     fs.writeFileSync(f, t);
-  }
-  for (let round = 0; round < 10; round++) {
-    const loose = errors_by_file(cfg.options);
-    const strict = round === 0 ? base_strict : errors_by_file(STRICT);
-    const bad = new Set<string>();
-    for (const f of loose.keys()) if (planned.has(f)) bad.add(f);
-    for (const [f, n] of strict) if (n > (before_strict.get(f) ?? 0)) bad.add(planned.has(f) ? f : "*");
-    if (bad.has("*") || (bad.size === 0 && [...loose.keys()].length)) {
-      // An error outside the rewritten files: find its cause by restoring them all.
-      console.error("errors outside rewritten files; restoring everything");
-      for (const f of original.keys()) fs.writeFileSync(f, original.get(f)!);
-      planned.clear();
-      break;
+  };
+  for (const f of original.keys()) fs.writeFileSync(f, original.get(f)!);
+  const before = [diagnostics(cfg.options), diagnostics(STRICT)];
+  for (const f of original.keys()) write(f);
+  for (let round = 0; round < 20; round++) {
+    const now = [diagnostics(cfg.options), diagnostics(STRICT)];
+    const fresh = new Map<string, number[]>();
+    for (const [i, by_file] of now.entries()) {
+      for (const [f, ds] of by_file) {
+        for (const d of ds) {
+          if (before[i].get(f)?.has(d)) continue;
+          if (!fresh.has(f)) fresh.set(f, []);
+          fresh.get(f)!.push(Number(d.split(":")[0]));
+        }
+      }
     }
-    if (!bad.size) break;
-    for (const f of bad) {
-      console.log(`restored ${path.relative(ROOT, f)} (type errors)`);
-      fs.writeFileSync(f, original.get(f)!);
-      planned.delete(f);
+    if (!fresh.size) break;
+    for (const [f, lines] of fresh) {
+      if (!planned.has(f)) {
+        // A new error outside the rewritten files: restore them all.
+        console.error(`new error in ${path.relative(ROOT, f)}, outside the rewritten files; restoring everything`);
+        for (const g of original.keys()) fs.writeFileSync(g, original.get(g)!);
+        planned.clear();
+        break;
+      }
+      const es = planned.get(f)!;
+      const keep = es.filter(([s, e]) => !lines.some((l) => line_of(f, s) <= l && l <= line_of(f, e)));
+      planned.set(f, keep.length < es.length ? keep : []);
+      if (!planned.get(f)!.length) planned.delete(f);
+      write(f);
     }
+    if (!planned.size) break;
   }
 }
 

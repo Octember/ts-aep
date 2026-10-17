@@ -3,8 +3,8 @@
 import { ListChunk } from "../binary/chunk.ts";
 import type { Chunk } from "../binary/chunk.ts";
 import type { MkifChunk } from "../binary/misc_chunks.ts";
-import type { TdmnChunk, TdsbChunk, VfdnChunk } from "../binary/property_chunks.ts";
-import type { U4Chunk, Utf8Chunk } from "../binary/scalar_chunks.ts";
+import type { TdmnChunk, TdsbChunk } from "../binary/property_chunks.ts";
+import type { Utf8Chunk } from "../binary/scalar_chunks.ts";
 import { ChunkNotFoundError, filter_by_list_type, filter_by_type, find_by_list_type, find_by_type } from "../binary/utils.ts";
 import { VF_AXIS_PREFIX } from "../data/match_names.ts";
 import { _suppress_materialization } from "../models/descriptors.ts";

@@ -459,10 +459,10 @@ export function deepcopy<T>(x: T, memo = new Map<unknown, unknown>()): T {
   if (typeof (x as unknown as { __deepcopy__(memo: Map<unknown, unknown>): T }).__deepcopy__ === "function") return (x as unknown as { __deepcopy__(memo: Map<unknown, unknown>): T }).__deepcopy__(memo);
   const out =
     x instanceof String
-      ? Reflect.construct(String, [x.valueOf()], (x as { constructor: Function }).constructor)
+      ? Reflect.construct(String, [x.valueOf()], x.constructor)
       : Object.create(Object.getPrototypeOf(x));
   memo.set(x, out);
-  for (const k of Reflect.ownKeys(x as object)) {
+  for (const k of Reflect.ownKeys(x)) {
     if (x instanceof String && (k === "length" || (typeof k === "string" && /^\d+$/.test(k)))) continue;
     const d = Object.getOwnPropertyDescriptor(x, k)!;
     if ("value" in d) d.value = deepcopy(d.value, memo);
@@ -479,7 +479,7 @@ export function copy<T>(x: T): T {
   if (x instanceof Map) return new Map(x) as unknown as T;
   if (x instanceof Set) return new Set(x) as unknown as T;
   if (x instanceof String) {
-    const out = Reflect.construct(String, [x.valueOf()], (x as { constructor: Function }).constructor);
+    const out = Reflect.construct(String, [x.valueOf()], x.constructor);
     for (const k of Object.keys(x)) if (!/^\d+$/.test(k)) out[k] = (x as unknown as Record<string, unknown>)[k];
     return out as unknown as T;
   }

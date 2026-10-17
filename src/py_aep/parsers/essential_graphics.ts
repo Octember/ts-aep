@@ -1,7 +1,7 @@
 /** Parser for Essential Graphics panel data (LIST:CIF3 chunks). */
 
 import { ChunkNotFoundError, filter_by_type, filter_by_list_type, find_by_type, find_by_list_type } from "../binary/utils.ts";
-import type { U4Chunk, Utf8Chunk } from "../binary/scalar_chunks.ts";
+import type { Utf8Chunk } from "../binary/scalar_chunks.ts";
 import type { Chunk, ListChunk } from "../binary/chunk.ts";
 import { _suppress_materialization } from "../models/descriptors.ts";
 import { EssentialGraphicsController, SourcePropertyRef } from "../models/essential_graphics.ts";

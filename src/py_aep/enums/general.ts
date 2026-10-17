@@ -551,13 +551,13 @@ export const GpuAccelType = int_enum("GpuAccelType", {
       throw new TypeError_("expected string or bytes-like object, got '" + (value == null ? "NoneType" : typeof value) + "'");
     }
     // Python's `$` also matches before one trailing "\n"
-    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\n?$/i.test(value as string)) {
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\n?$/i.test(value)) {
       throw new ValueError(
         `expected a valid UUID string ` +
           `(xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx), got ${repr(value)}`,
       );
     }
-    return value as string;
+    return value;
   },
 });
 export type GpuAccelType = EnumValue<typeof GpuAccelType>;
