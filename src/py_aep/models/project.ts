@@ -40,7 +40,7 @@ import { CompItem } from "./items/composition.ts";
 import { FolderItem } from "./items/folder.ts";
 import { FootageItem } from "./items/footage.ts";
 import { Item } from "./items/item.ts";
-import type { AVItem } from "./items/av_item.ts";
+import { AVItem } from "./items/av_item.ts";
 
 import { Preferences, default_sequence_fps, psd_comp_layer_styles, psd_footage_dimensions, psd_footage_layer_styles } from "./preferences.ts";
 import { Gradient } from "./properties/gradient.ts";
@@ -71,7 +71,6 @@ import {
   getattr,
   setattr,
   getitem,
-  hasattr,
   int,
   max,
   py_assert,
@@ -718,8 +717,8 @@ export class Project {
     for (const composition of this.compositions) {
       for (const source_id of composition._source_ids_for_linking()) {
         const source = this.items.get(source_id) ?? null;
-        if (source != null && hasattr(source, "_used_in")) {
-          (source as AVItem)._used_in.add(composition);
+        if (source instanceof AVItem) {
+          source._used_in.add(composition);
         }
       }
     }
@@ -948,9 +947,8 @@ export class Project {
         );
       }
       for (const p of value) validate_path_exists(p);
-      value = value.map((p: PathLike) => new Path(p));
     }
-    this._icc_profile_dirs = value as Path[] | null;
+    this._icc_profile_dirs = value != null ? value.map((p: PathLike) => new Path(p)) : null;
     this._icc_library = null; // rebuild on next use
   }
 
@@ -1032,8 +1030,8 @@ export class Project {
     const root = this._root_chunks;
     for (const [i, chunk] of root.entries()) {
       if (chunk.chunk_type === marker) {
-        if (i + 1 < root.length && root[i + 1].chunk_type === "Utf8") {
-          const utf8 = root[i + 1] as Utf8Chunk;
+        const utf8 = find_by_type_or_null(root.slice(i + 1, i + 2), "Utf8");
+        if (utf8 !== null) {
           utf8.value = envelope;
           return utf8;
         }
@@ -1749,8 +1747,10 @@ export class Project {
         // preserve-transparency on the clipped members
         // (psd_clipping_mask fixture).
         const run = [node];
-        while (index < nodes.length && nodes[index] instanceof PsdLayer && (nodes[index] as PsdLayer).clipped) {
-          run.push(nodes[index] as PsdLayer);
+        while (index < nodes.length) {
+          const next = nodes[index];
+          if (!(next instanceof PsdLayer && next.clipped)) break;
+          run.push(next);
           index += 1;
         }
         if (run.length > 1) {
@@ -2026,8 +2026,7 @@ export class Project {
     }
     const keep_ids = new Set<number>([0]);
     const queue = [...items_to_keep];
-    while (queue.length) {
-      const item = queue.pop()!;
+    for (let item = queue.pop(); item !== undefined; item = queue.pop()) {
       if (keep_ids.has(item.id)) continue;
       keep_ids.add(item.id);
       let parent = item.parent_folder;
