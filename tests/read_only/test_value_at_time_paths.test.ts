@@ -229,7 +229,9 @@ describe("TestValueSpaces", () => {
     expect(prop._value != null).toBe(true);
     expect((prop._value as { _layer: unknown })._layer).toBe(layer);
     for (const keyframe of prop.keyframes) {
-      expect(keyframe._value._layer).toBe(layer);
+      const value = keyframe._value;
+      expect(value).toBeInstanceOf(Shape);
+      if (value instanceof Shape) expect(value._layer).toBe(layer);
     }
   });
 
