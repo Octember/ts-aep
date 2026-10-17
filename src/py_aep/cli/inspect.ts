@@ -40,7 +40,7 @@ import {
 // NOTE(port): print(text) / print(text, file=sys.stderr) only ever receive a
 // single str here; console.log/console.error append the same "\n" print does.
 export const sys = { stderr: process.stderr };
-export function print(text: string, kw: { file?: unknown } = {}): void {
+export function print(text: string, kw: { file?: typeof sys.stderr } = {}): void {
   if (kw.file === sys.stderr) console.error(text);
   else console.log(text);
 }

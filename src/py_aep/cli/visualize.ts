@@ -181,7 +181,7 @@ export function build_layer_node(layer: Layer, project: Project, include_propert
   ]);
   if (!layer.enabled) attrs.set("enabled", false);
   if (layer.null_layer) attrs.set("null", true);
-  if (py_bool(layer.parent)) attrs.set("parent", layer.parent.name);
+  if (py_bool(layer.parent)) attrs.set("parent", layer.parent!.name);
   if (layer.markers?.length > 0) attrs.set("markers", layer.markers.length);
 
   const children: Node[] = [];
@@ -190,7 +190,7 @@ export function build_layer_node(layer: Layer, project: Project, include_propert
     if (py_bool(layer.transform)) children.push(build_property_group_node(layer.transform));
 
     // Effects
-    if (py_bool(layer.effects)) children.push(build_property_group_node(layer.effects));
+    if (py_bool(layer.effects)) children.push(build_property_group_node(layer.effects!));
 
     // Text properties
     if (layer.text instanceof PropertyGroup) children.push(build_property_group_node(layer.text));
@@ -491,22 +491,25 @@ export function format_mermaid(node: Node, output: TextIO, max_depth: number | n
   output.write("```\n");
 }
 
+/** A {@link Node} as {@link format_json} emits it: children past `max_depth` collapse to a summary string. */
+type JsonNode = Omit<Node, "children"> & { children: JsonNode[] | string };
+
 /** Output as JSON. */
 export function format_json(node: Node, output: TextIO, max_depth: number | null = null): void {
-  function filter_depth(n: Node, depth: number = 0): Node {
+  function filter_depth(n: JsonNode, depth: number = 0): JsonNode {
     if (max_depth != null && depth >= max_depth) {
-      const result = { ...n } as unknown as { children: Node[] | string };
+      const result: JsonNode = { ...n };
       if (py_bool(result.children)) {
         result.children = `[${len(result.children)} children omitted]`;
       }
-      return result as unknown as Node;
+      return result;
     }
 
-    const result = { ...n } as unknown as { children: Node[] | string };
+    const result: JsonNode = { ...n };
     if (py_bool(result.children)) {
-      result.children = (result.children as Node[]).map((c: Node) => filter_depth(c, depth + 1));
+      result.children = (result.children as JsonNode[]).map((c) => filter_depth(c, depth + 1));
     }
-    return result as unknown as Node;
+    return result;
   }
 
   const filtered = filter_depth(node);
