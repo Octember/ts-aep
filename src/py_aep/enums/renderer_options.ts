@@ -6,7 +6,7 @@
  * its Render Options dialog shows.
  */
 
-import { getitem, int_enum, type EnumValue } from "../../pyrt/index.ts";
+import { int_enum, type EnumValue } from "../../pyrt/index.ts";
 
 /**
  * Classic 3D shadow map resolution.
@@ -31,24 +31,24 @@ export const ShadowMapResolution = int_enum(
   {
     // NOTE(port): Python `@property label` is `ShadowMapResolution.label(member)` per RULEBOOK enum mapping (members are plain numbers); same labels-table lookup.
     /** The entry as the Options dialog spells it. */
-    label(value: number): string {
-      return getitem(_SHADOW_MAP_RESOLUTION_LABELS, value);
+    label(value: ShadowMapResolution): string {
+      return _SHADOW_MAP_RESOLUTION_LABELS[value];
     },
   },
 );
 export type ShadowMapResolution = EnumValue<typeof ShadowMapResolution>;
 
-export const _SHADOW_MAP_RESOLUTION_LABELS: Map<number, string> = new Map<number, string>([
-  [0, "Comp Size"],
-  [1, "250"],
-  [2, "500"],
-  [3, "750"],
-  [4, "1000"],
-  [5, "1500"],
-  [6, "2000"],
-  [7, "3000"],
-  [8, "4000"],
-]);
+export const _SHADOW_MAP_RESOLUTION_LABELS: Readonly<Record<ShadowMapResolution, string>> = {
+  0: "Comp Size",
+  1: "250",
+  2: "500",
+  3: "750",
+  4: "1000",
+  5: "1500",
+  6: "2000",
+  7: "3000",
+  8: "4000",
+};
 
 /**
  * Advanced 3D environment light shadow resolution.
@@ -67,15 +67,15 @@ export const EnvironmentLightShadowResolution = int_enum(
   {
     // NOTE(port): Python `@property label` is `EnvironmentLightShadowResolution.label(member)` per RULEBOOK enum mapping (members are plain numbers); same labels-table lookup.
     /** The entry as the Options dialog spells it. */
-    label(value: number): string {
-      return getitem(_ENV_LIGHT_SHADOW_RESOLUTION_LABELS, value);
+    label(value: EnvironmentLightShadowResolution): string {
+      return _ENV_LIGHT_SHADOW_RESOLUTION_LABELS[value];
     },
   },
 );
 export type EnvironmentLightShadowResolution = EnumValue<typeof EnvironmentLightShadowResolution>;
 
-export const _ENV_LIGHT_SHADOW_RESOLUTION_LABELS: Map<number, string> = new Map<number, string>([
-  [0, "Half (2MB)"],
-  [1, "Full (16MB)"],
-  [2, "Double (128MB)"],
-]);
+export const _ENV_LIGHT_SHADOW_RESOLUTION_LABELS: Readonly<Record<EnvironmentLightShadowResolution, string>> = {
+  0: "Half (2MB)",
+  1: "Full (16MB)",
+  2: "Double (128MB)",
+};

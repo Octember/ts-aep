@@ -25,17 +25,17 @@ export const OutputChannels = int_enum("OutputChannels", {
   ALPHA: 2,
 }, {
   /** ExtendScript STRING format label. */
-  label(self: number): string {
-    return getitem(_OUTPUT_CHANNELS_LABELS, self);
+  label(self: OutputChannels): string {
+    return _OUTPUT_CHANNELS_LABELS[self];
   },
 });
 export type OutputChannels = EnumValue<typeof OutputChannels>;
 
-export const _OUTPUT_CHANNELS_LABELS: Map<number, string> = new Map<number, string>([
-  [0, "RGB"],
-  [1, "RGB + Alpha"],
-  [2, "Alpha"],
-]);
+export const _OUTPUT_CHANNELS_LABELS: Readonly<Record<OutputChannels, string>> = {
+  0: "RGB",
+  1: "RGB + Alpha",
+  2: "Alpha",
+};
 
 /**
  * Output color depth in total bits per pixel.
@@ -60,23 +60,23 @@ export const OutputColorDepth = int_enum("OutputColorDepth", {
   FLOATING_POINT_PLUS: 128, // 32 bpc RGBA (128 bpp)
 }, {
   /** ExtendScript STRING format label. */
-  label(self: number): string {
-    return getitem(_OUTPUT_COLOR_DEPTH_LABELS, self);
+  label(self: OutputColorDepth): string {
+    return _OUTPUT_COLOR_DEPTH_LABELS[self];
   },
 });
 export type OutputColorDepth = EnumValue<typeof OutputColorDepth>;
 
-export const _OUTPUT_COLOR_DEPTH_LABELS: Map<number, string> = new Map<number, string>([
-  [-32, "Floating Point Gray"],
-  [8, "256 Colors"],
-  [24, "Millions of Colors"],
-  [32, "Millions of Colors+"],
-  [40, "256 Grays"],
-  [48, "Trillions of Colors"],
-  [64, "Trillions of Colors+"],
-  [96, "Floating Point"],
-  [128, "Floating Point+"],
-]);
+export const _OUTPUT_COLOR_DEPTH_LABELS: Readonly<Record<OutputColorDepth, string>> = {
+  "-32": "Floating Point Gray",
+  8: "256 Colors",
+  24: "Millions of Colors",
+  32: "Millions of Colors+",
+  40: "256 Grays",
+  48: "Trillions of Colors",
+  64: "Trillions of Colors+",
+  96: "Floating Point",
+  128: "Floating Point+",
+};
 
 /**
  * Output color mode (premultiplied vs straight).
@@ -90,16 +90,16 @@ export const OutputColorMode = int_enum("OutputColorMode", {
   PREMULTIPLIED: 1,
 }, {
   /** ExtendScript STRING format label. */
-  label(self: number): string {
-    return getitem(_OUTPUT_COLOR_MODE_LABELS, self);
+  label(self: OutputColorMode): string {
+    return _OUTPUT_COLOR_MODE_LABELS[self];
   },
 });
 export type OutputColorMode = EnumValue<typeof OutputColorMode>;
 
-export const _OUTPUT_COLOR_MODE_LABELS: Map<number, string> = new Map<number, string>([
-  [0, "Straight (Unmatted)"],
-  [1, "Premultiplied (Matted)"],
-]);
+export const _OUTPUT_COLOR_MODE_LABELS: Readonly<Record<OutputColorMode, string>> = {
+  0: "Straight (Unmatted)",
+  1: "Premultiplied (Matted)",
+};
 
 /**
  * Audio output mode.
@@ -114,17 +114,17 @@ export const OutputAudio = int_enum("OutputAudio", {
   AUTO: 3,
 }, {
   /** ExtendScript STRING format label. */
-  label(self: number): string {
-    return getitem(_OUTPUT_AUDIO_LABELS, self);
+  label(self: OutputAudio): string {
+    return _OUTPUT_AUDIO_LABELS[self];
   },
 });
 export type OutputAudio = EnumValue<typeof OutputAudio>;
 
-export const _OUTPUT_AUDIO_LABELS: Map<number, string> = new Map<number, string>([
-  [1, "Off"],
-  [2, "On"],
-  [3, "Auto"],
-]);
+export const _OUTPUT_AUDIO_LABELS: Readonly<Record<OutputAudio, string>> = {
+  1: "Off",
+  2: "On",
+  3: "Auto",
+};
 
 /**
  * Output plugin capability class.
@@ -173,8 +173,8 @@ export const OutputFormat = int_enum("OutputFormat", {
   WAV: 15,
 }, {
   /** ExtendScript STRING format label. */
-  label(self: number): string {
-    return getitem(_OUTPUT_FORMAT_LABELS, self);
+  label(self: keyof typeof _OUTPUT_FORMAT_LABELS): string {
+    return _OUTPUT_FORMAT_LABELS[self];
   },
 
   /**
@@ -208,24 +208,24 @@ export const OutputFormat = int_enum("OutputFormat", {
 });
 export type OutputFormat = EnumValue<typeof OutputFormat>;
 
-export const _OUTPUT_FORMAT_LABELS: Map<number, string> = new Map<number, string>([
-  [0, "AIFF"],
-  [1, "AVI"],
-  [2, "DPX/Cineon Sequence"],
-  [3, "H.264"],
-  [4, "IFF Sequence"],
-  [5, "JPEG Sequence"],
-  [6, "MP3"],
-  [7, "OpenEXR Sequence"],
-  [8, "PNG Sequence"],
-  [9, "Photoshop Sequence"],
-  [10, "QuickTime"],
-  [11, "Radiance Sequence"],
-  [12, "SGI Sequence"],
-  [13, "TIFF Sequence"],
-  [14, "Targa Sequence"],
-  [15, "WAV"],
-]);
+export const _OUTPUT_FORMAT_LABELS = {
+  0: "AIFF",
+  1: "AVI",
+  2: "DPX/Cineon Sequence",
+  3: "H.264",
+  4: "IFF Sequence",
+  5: "JPEG Sequence",
+  6: "MP3",
+  7: "OpenEXR Sequence",
+  8: "PNG Sequence",
+  9: "Photoshop Sequence",
+  10: "QuickTime",
+  11: "Radiance Sequence",
+  12: "SGI Sequence",
+  13: "TIFF Sequence",
+  14: "Targa Sequence",
+  15: "WAV",
+} as const;
 
 // Explicit classification (see FormatKind): never derive this from names -
 // OM/template names are user-defined and the binary has no category flag.
@@ -289,8 +289,8 @@ export const AudioBitDepth = int_enum("AudioBitDepth", {
   THIRTY_TWO_BIT: 4,
 }, {
   /** ExtendScript STRING format label. */
-  label(self: number): string {
-    return getitem(_AUDIO_BIT_DEPTH_LABELS, self);
+  label(self: AudioBitDepth): string {
+    return _AUDIO_BIT_DEPTH_LABELS[self];
   },
 
   /** Convert binary value to AudioBitDepth. */
@@ -303,12 +303,12 @@ export const AudioBitDepth = int_enum("AudioBitDepth", {
 });
 export type AudioBitDepth = EnumValue<typeof AudioBitDepth>;
 
-export const _AUDIO_BIT_DEPTH_LABELS: Map<number, string> = new Map<number, string>([
-  [1, "8 Bit"],
-  [2, "16 Bit"],
-  [3, "24 Bit"],
-  [4, "32 Bit"],
-]);
+export const _AUDIO_BIT_DEPTH_LABELS: Readonly<Record<AudioBitDepth, string>> = {
+  1: "8 Bit",
+  2: "16 Bit",
+  3: "24 Bit",
+  4: "32 Bit",
+};
 
 /**
  * Audio channels.
@@ -322,8 +322,8 @@ export const AudioChannels = int_enum("AudioChannels", {
   STEREO: 2,
 }, {
   /** ExtendScript STRING format label. */
-  label(self: number): string {
-    return getitem(_AUDIO_CHANNELS_LABELS, self);
+  label(self: AudioChannels): string {
+    return _AUDIO_CHANNELS_LABELS[self];
   },
 
   /** Convert binary value to AudioChannels (0 or unknown defaults to STEREO). */
@@ -336,10 +336,10 @@ export const AudioChannels = int_enum("AudioChannels", {
 });
 export type AudioChannels = EnumValue<typeof AudioChannels>;
 
-export const _AUDIO_CHANNELS_LABELS: Map<number, string> = new Map<number, string>([
-  [1, "Mono"],
-  [2, "Stereo"],
-]);
+export const _AUDIO_CHANNELS_LABELS: Readonly<Record<AudioChannels, string>> = {
+  1: "Mono",
+  2: "Stereo",
+};
 
 /**
  * Resize quality setting.
@@ -353,16 +353,16 @@ export const ResizeQuality = int_enum("ResizeQuality", {
   HIGH: 1,
 }, {
   /** ExtendScript STRING format label. */
-  label(self: number): string {
-    return getitem(_RESIZE_QUALITY_LABELS, self);
+  label(self: ResizeQuality): string {
+    return _RESIZE_QUALITY_LABELS[self];
   },
 });
 export type ResizeQuality = EnumValue<typeof ResizeQuality>;
 
-export const _RESIZE_QUALITY_LABELS: Map<number, string> = new Map<number, string>([
-  [0, "Low"],
-  [1, "High"],
-]);
+export const _RESIZE_QUALITY_LABELS: Readonly<Record<ResizeQuality, string>> = {
+  0: "Low",
+  1: "High",
+};
 
 /**
  * Audio sample rate in Hz.
@@ -440,17 +440,17 @@ export const ConvertToLinearLight = int_enum("ConvertToLinearLight", {
   ON_FOR_32_BPC: 2,
 }, {
   /** ExtendScript STRING format label. */
-  label(self: number): string {
-    return getitem(_CONVERT_TO_LINEAR_LIGHT_LABELS, self);
+  label(self: ConvertToLinearLight): string {
+    return _CONVERT_TO_LINEAR_LIGHT_LABELS[self];
   },
 });
 export type ConvertToLinearLight = EnumValue<typeof ConvertToLinearLight>;
 
-export const _CONVERT_TO_LINEAR_LIGHT_LABELS: Map<number, string> = new Map<number, string>([
-  [0, "Off"],
-  [1, "On"],
-  [2, "On for 32 bpc"],
-]);
+export const _CONVERT_TO_LINEAR_LIGHT_LABELS: Readonly<Record<ConvertToLinearLight, string>> = {
+  0: "Off",
+  1: "On",
+  2: "On for 32 bpc",
+};
 
 /** Action after rendering completes. */
 export const PostRenderAction = int_enum("PostRenderAction", {
