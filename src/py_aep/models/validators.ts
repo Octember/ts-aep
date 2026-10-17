@@ -28,8 +28,10 @@ import {
   type_name,
 } from "../../pyrt/index.ts";
 
-export type Validator = (value: unknown, instance?: unknown) => void;
-export type NumBound = number | ((instance: unknown) => number | null) | null;
+/** `validator(value, instance=None)`: raises on an invalid `value` for the model `instance`. */
+export type Validator<O = unknown> = (value: unknown, instance?: O) => void;
+/** A bound: a number, or computed from the model instance being validated. */
+export type NumBound<O = unknown> = number | ((instance: O) => number | null) | null;
 
 /**
  * Return a validator that checks a numeric value.
@@ -44,13 +46,13 @@ export type NumBound = number | ((instance: unknown) => number | null) | null;
  *     positive-but-non-zero size).
  */
 // NOTE(port): int/float — integral values are plain numbers by design (RULEBOOK §4); error messages print whole-number bounds without Python's trailing ".0".
-export function _validate_number(
-  kw: { min?: NumBound; max?: NumBound; integer?: boolean; exclusive_min?: boolean } = {},
-): Validator {
+export function _validate_number<O = unknown>(
+  kw: { min?: NumBound<O>; max?: NumBound<O>; integer?: boolean; exclusive_min?: boolean } = {},
+): Validator<O> {
   const { min: min_ = null, max: max_ = null, integer = false, exclusive_min = false } = kw;
   const type_label = integer ? "an integer" : "a number";
 
-  return function _validator(value: unknown, instance: unknown = null): void {
+  return function _validator(value: unknown, instance: O = null as O): void {
     if (Array.isArray(value)) {
       throw new TypeError_(`expected ${type_label}, got ${type_name(value)}`);
     }
@@ -104,20 +106,20 @@ export function _validate_number(
  * - `exclusive_min`: When `true`, each element must be strictly greater than `min` (e.g. a
  *     non-zero-area box size).
  */
-export function validate_sequence(
+export function validate_sequence<O = unknown>(
   kw: {
-    length?: number | ((instance: unknown) => number | null) | null;
-    min?: NumBound;
-    max?: NumBound;
+    length?: NumBound<O>;
+    min?: NumBound<O>;
+    max?: NumBound<O>;
     integer?: boolean;
     exclusive_min?: boolean;
   } = {},
-): Validator {
+): Validator<O> {
   const { length = null, min: min_ = null, max: max_ = null, integer = false, exclusive_min = false } = kw;
   const type_label = integer ? "an integer" : "a number";
   const _element_validator = _validate_number({ min: min_, max: max_, integer, exclusive_min });
 
-  return function _validator(value: unknown, instance: unknown = null): void {
+  return function _validator(value: unknown, instance: O = null as O): void {
     const n = typeof length === "function" ? length(instance) : length;
     if (!Array.isArray(value)) {
       throw new TypeError_(`expected a sequence${n != null ? ` of ${n} elements` : ""}`);
