@@ -1,15 +1,15 @@
 {
-  "name": "@bevyl-ai/aep-toolkit",
+  "name": "@bevyl-ai/ts-aep",
   "version": "0.1.0",
   "description": "1:1 TypeScript port of py-aep: read and write Adobe After Effects .aep projects (Node, Bun, browsers, Workers)",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/bevyl-ai/aep-toolkit.git"
+    "url": "git+https://github.com/bevyl-ai/ts-aep.git"
   },
-  "homepage": "https://github.com/bevyl-ai/aep-toolkit#readme",
+  "homepage": "https://github.com/bevyl-ai/ts-aep#readme",
   "bugs": {
-    "url": "https://github.com/bevyl-ai/aep-toolkit/issues"
+    "url": "https://github.com/bevyl-ai/ts-aep/issues"
   },
   "keywords": [
     "after-effects",

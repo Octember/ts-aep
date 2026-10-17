@@ -13,7 +13,7 @@ cat > package.json <<'JSON'
 { "name": "consumer", "private": true, "type": "module" }
 JSON
 cat > smoke.mjs <<'JS'
-import { parse } from "@bevyl-ai/aep-toolkit";
+import { parse } from "@bevyl-ai/ts-aep";
 import { readFileSync, mkdtempSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
@@ -28,7 +28,7 @@ for (const src of process.argv.slice(2)) {
 console.log(`${process.versions.bun ? "bun" : "node"}: ${process.argv.length - 2} samples byte-identical`);
 JS
 cat > types.ts <<'TS'
-import { parse, memfs, type CompItem } from "@bevyl-ai/aep-toolkit";
+import { parse, memfs, type CompItem } from "@bevyl-ai/ts-aep";
 memfs.write("/x.aep", new Uint8Array());
 export const comps: CompItem[] = parse("/x.aep").project.compositions;
 TS
