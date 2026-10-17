@@ -26,7 +26,8 @@ import {
   UnicodeDecodeError,
   ValueError,
 } from "../../pyrt/index.ts";
-import type { EnumValue, IO } from "../../pyrt/index.ts";
+import type { EnumValue, IO, PyFloat } from "../../pyrt/index.ts";
+import type { CharStyle, KernPayload, ParaStyle, DocCos } from "./schema.ts";
 
 export { SyntaxError_ };
 
@@ -104,12 +105,15 @@ export function enum_repr(E: any, v: any): string {
  * Each key is tried as a Map string key first and then as an array
  * index. Returns `null` when any step along the path is missing.
  *
+ * The result is typed by the path through `data`'s schema type (see
+ * `schema.ts`); untyped (`any`) data yields `any`.
+ *
  * @example
  * :
  *
  * cos_get(data, "1", "1", 0, "0", "0")  // -\> text string
  */
-export function cos_get(data: unknown, ...keys: (string | number)[]): CosValue {
+export function cos_get<T, const P extends (string | number)[]>(data: T, ...keys: P): CosAt<T, P> | null {
   let cur: unknown = data;
   for (const key of keys) {
     if (cur == null) return null;
@@ -126,8 +130,11 @@ export function cos_get(data: unknown, ...keys: (string | number)[]): CosValue {
       return null;
     }
   }
-  return cur;
+  return cur as CosAt<T, P> | null;
 }
+
+/** Run payload type by `run_spans` arguments: paragraph and character styles, or the kern payload. */
+export type RunPayload<K extends string | null> = K extends "5" ? ParaStyle : K extends "6" ? CharStyle : KernPayload;
 
 /**
  * Decode a text document's COS run array into `(start, end, payload)`.
@@ -139,29 +146,25 @@ export function cos_get(data: unknown, ...keys: (string | number)[]): CosValue {
  * range models (models/text/ranges.py) and the composed-line resolver
  * (resolvers/text_composition.py).
  */
-export function run_spans(
-  doc: CosDict,
-  doc_key: string,
-  style_key: string | null,
-): [number, number, CosDict][] {
-  const runs = cos_get(doc, "0", doc_key, "0");
-  const spans: [number, number, CosDict][] = [];
+export function run_spans<K extends "5" | "6" | null>(
+  doc: DocCos,
+  doc_key: "5" | "6" | "8",
+  style_key: K,
+): [number, number, RunPayload<K>][] {
+  const runs: CosNode[] | null = cos_get(doc, "0", doc_key, "0");
+  const spans: [number, number, RunPayload<K>][] = [];
   if (!Array.isArray(runs)) return spans;
   let pos = 0;
   for (const run of runs) {
-    const length: unknown = run instanceof Map ? run.get("1") ?? null : null;
+    const length = run instanceof Map ? run.get("1") ?? null : null;
     // Python `isinstance(True, int)` is True, so booleans count as lengths 1/0 (`int()` below).
     const is_int = typeof length === "boolean" || (typeof length === "number" && Number.isInteger(length));
     if (!is_int) continue;
     const n = int(length);
     if (n < 0) continue;
-    let payload: CosValue;
-    if (style_key == null) {
-      payload = cos_get(run, "0");
-    } else {
-      payload = cos_get(run, "0", "0", style_key);
-    }
-    spans.push([pos, pos + n, payload instanceof Map ? payload : new Map<string, CosValue>()]);
+    const payload = style_key == null ? cos_get(run, "0") : cos_get(run, "0", "0", style_key);
+    // Each run array holds one payload layout (paragraph, character or kern runs).
+    spans.push([pos, pos + n, (payload instanceof Map ? payload : new Map()) as RunPayload<K>]);
     pos += n;
   }
   return spans;
@@ -186,9 +189,77 @@ export const TokenType = py_enum("TokenType", {
 });
 export type TokenType = EnumValue<typeof TokenType>;
 
-/** A parsed COS tree node: number, string, bytes, bool, null, CosDict, CosValue[] or an indirect-object wrapper. Dynamic by nature. */
+/**
+ * Any parsed COS value: a number (`PyFloat` when the literal had a
+ * decimal point), boolean, null, string (`CosString` as parsed, a plain
+ * `string` once written by py_aep; `Uint8Array` when undecodable), name,
+ * array, dictionary, or an indirect-object wrapper.
+ */
+export type CosNode =
+  | null
+  | boolean
+  | number
+  | PyFloat
+  | string
+  | CosString
+  | Uint8Array
+  | CosName
+  | IndirectObject
+  | IndirectReference
+  | Stream
+  | CosNode[]
+  | CosMap;
+
+declare const cos_shape: unique symbol;
+
+/**
+ * A COS dictionary whose known keys carry the value types `S` (derived
+ * from the zod schemas in `schema.ts`); other keys read and write as
+ * `CosNode`. Still a plain `Map` at runtime, so key order and unknown
+ * keys survive untouched.
+ */
+export interface CosMap<S = {}> extends Map<string, CosNode> {
+  /** Type-only: lets `cos_get` follow a path through `S`. */
+  readonly [cos_shape]?: S;
+  get<K extends string>(key: K): CosKey<S, K> | undefined;
+  set<K extends string>(key: K, value: CosKey<S, K>): this;
+}
+
+/** The type of key `K` in shape `S`: its declared type, or any `CosNode` for an undeclared key. */
+export type CosKey<S, K extends string> = string extends K
+  ? CosNode
+  : S extends { readonly [P in K]: infer V extends CosNode }
+    ? V
+    : CosNode;
+
+/** One `cos_get` step: a known key's type, an array's element, or nothing for a leaf. */
+type CosStep<T, K> =
+  T extends CosMap<infer S> ? (K extends string ? CosKey<S, K> : never) : T extends readonly (infer E)[] ? E : never;
+
+/**
+ * The value type at path `P` below `T`. Untyped trees (`any`, or a
+ * `Map<string, any | unknown>` from code outside the schema'd text tree)
+ * stay `any`; an `unknown` root yields `CosNode`.
+ */
+export type CosAt<T, P extends readonly unknown[]> = 0 extends 1 & T
+  ? any
+  : unknown extends T
+    ? CosNode
+    : T extends Map<string, infer V>
+      ? unknown extends V
+        ? any
+        : CosAtTyped<T, P>
+      : CosAtTyped<T, P>;
+type CosAtTyped<T, P extends readonly unknown[]> = P extends readonly [infer K, ...infer R]
+  ? CosAt<CosStep<NonNullable<T>, K>, R>
+  : T;
+
+/**
+ * Loosely typed COS values for consumers outside the text-document tree
+ * (PDF/AI parsing): parsed trees there are walked dynamically.
+ */
 export type CosValue = any;
-/** A parsed COS dictionary. */
+/** A loosely typed COS dictionary (see `CosValue`). */
 export type CosDict = Map<string, CosValue>;
 
 /** `@dataclass class Token` */

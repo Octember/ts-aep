@@ -9,11 +9,12 @@ import { b64decode } from "../../pyrt/base64.ts";
 import { gzip_decompress } from "../../pyrt/zlib.ts";
 import { BytesIO, bytes_, py_assert } from "../../pyrt/index.ts";
 import { CosParser } from "./cos.ts";
+import type { BtdkCos } from "./schema.ts";
 
-export let _COS_TEMPLATE_CACHE: Map<string, any> | null = null;
+export let _COS_TEMPLATE_CACHE: BtdkCos | null = null;
 
 /** Parse and cache the COS template from the gzip blob. */
-export function get_cos_template(): Map<string, any> {
+export function get_cos_template(): BtdkCos {
   if (_COS_TEMPLATE_CACHE != null) {
     return _COS_TEMPLATE_CACHE;
   }

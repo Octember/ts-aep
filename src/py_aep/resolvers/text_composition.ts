@@ -39,7 +39,6 @@ import type { Path } from "../../pyrt/index.ts";
 import {
   at,
   contains,
-  dict_get,
   float,
   int,
   islower,
@@ -58,7 +57,7 @@ import {
   zip,
 } from "../../pyrt/index.ts";
 import { cos_get, run_spans } from "../cos/index.ts";
-import type { CosDict } from "../cos/cos.ts";
+import { cos_value, type CharStyle } from "../cos/schema.ts";
 import { BoxAutoFitPolicy, BoxFirstBaselineAlignment, BoxVerticalAlignment } from "../enums/index.ts";
 import { resolve_postscript } from "../svg/fonts.ts";
 import type { TextDocument } from "../models/text/text_document.ts";
@@ -344,17 +343,17 @@ export class _CharStyle {
   declare caps: number;
   declare leading: number;
 
-  constructor(ps_name: string, style: CosDict) {
+  constructor(ps_name: string, style: CharStyle) {
     this.font = ps_name;
-    this.size = float(dict_get(style, "1", 36.0));
-    this.tracking = float(dict_get(style, "8", 0.0));
-    this.hscale = float(dict_get(style, "6", 1.0));
-    this.fauxbold = py_bool(dict_get(style, "2", false));
-    this.caps = int(dict_get(style, "12", 0)); // 0 normal, 1 small, 2 all
-    if (py_bool(dict_get(style, "4", true))) {
+    this.size = float(cos_value(style, "1", 36.0));
+    this.tracking = float(cos_value(style, "8", 0.0));
+    this.hscale = float(cos_value(style, "6", 1.0));
+    this.fauxbold = py_bool(cos_value(style, "2", false));
+    this.caps = int(cos_value(style, "12", 0)); // 0 normal, 1 small, 2 all
+    if (py_bool(cos_value(style, "4", true))) {
       this.leading = _AUTO_LEADING_FACTOR * this.size;
     } else {
-      this.leading = float(dict_get(style, "5", _AUTO_LEADING_FACTOR * this.size));
+      this.leading = float(cos_value(style, "5", _AUTO_LEADING_FACTOR * this.size));
     }
   }
 
@@ -414,10 +413,10 @@ export function _check_envelope(doc: TextDocument, raw: string): void {
     if (py_bool(style.get("18"))) {
       throw new CompositionUnsupported("ligatures enabled");
     }
-    if (float(dict_get(style, "36", 0.0)) !== 0.0) {
+    if (float(cos_value(style, "36", 0.0)) !== 0.0) {
       throw new CompositionUnsupported("tsume");
     }
-    const kern_type = int(dict_get(style, "11", 1));
+    const kern_type = int(cos_value(style, "11", 1));
     if (kern_type === 2) {
       throw new CompositionUnsupported("optical kerning");
     }
@@ -430,10 +429,10 @@ export function _check_envelope(doc: TextDocument, raw: string): void {
     if (py_bool(style.get("52"))) {
       throw new CompositionUnsupported("no-break attribute");
     }
-    if (float(dict_get(style, "9", 0.0)) !== 0.0) {
+    if (float(cos_value(style, "9", 0.0)) !== 0.0) {
       throw new CompositionUnsupported("baseline shift");
     }
-    if (int(dict_get(style, "13", 0)) !== 0) {
+    if (int(cos_value(style, "13", 0)) !== 0) {
       throw new CompositionUnsupported("super/subscript");
     }
   }
@@ -445,13 +444,13 @@ export function _check_envelope(doc: TextDocument, raw: string): void {
     // for the single-line composer: the explicit M_HYPHENATE matrix
     // layer still breaks greedily (long words char-wrap rather than
     // hyphenate), so it is deliberately NOT refused.
-    if (int(dict_get(style, "33", 0)) !== 0) {
+    if (int(cos_value(style, "33", 0)) !== 0) {
       throw new CompositionUnsupported("right-to-left paragraphs");
     }
-    if (int(dict_get(style, "8", 0)) !== 0) {
+    if (int(cos_value(style, "8", 0)) !== 0) {
       throw new CompositionUnsupported("non-Roman leading type");
     }
-    if (float(dict_get(style, "4", 0.0)) !== 0.0 || float(dict_get(style, "5", 0.0)) !== 0.0) {
+    if (float(cos_value(style, "4", 0.0)) !== 0.0 || float(cos_value(style, "5", 0.0)) !== 0.0) {
       // space_before/space_after shift baselines; the matrix never
       // swept them, so the composer does not model them.
       throw new CompositionUnsupported("paragraph spacing");
@@ -641,8 +640,8 @@ export function compose_lines(doc: TextDocument): ComposedLines {
 
   const para_geo: [number, number][] = [];
   for (const [_start, _end, style] of run_spans(doc._doc, "5", "5")) {
-    const base = width - 2 * inset - float(dict_get(style, "2", 0.0)) - float(dict_get(style, "3", 0.0));
-    para_geo.push([base, base - float(dict_get(style, "1", 0.0))]);
+    const base = width - 2 * inset - float(cos_value(style, "2", 0.0)) - float(cos_value(style, "3", 0.0));
+    para_geo.push([base, base - float(cos_value(style, "1", 0.0))]);
   }
 
   const body = raw.endsWith("\r") ? raw.slice(0, -1) : raw;

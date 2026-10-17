@@ -227,6 +227,16 @@ checks single files.
 - Rule: fix a type at its declaration; a cast is the last resort; `unknown`
   only for opaque values; `any` only behind a named alias for genuinely
   dynamic data (parsed COS/JSON trees, ExtendScript-style duck typing).
+- The text-document COS tree (`btdk`) is typed from zod schemas
+  (`src/py_aep/cos/schema.ts`): `CosMap<S>` is a plain `Map` typed per key,
+  `cos_get` follows a path through it, and `cos_value` / `cos_item` /
+  `cos_setdefault` / `cos_map` replace `dict_get` / `getitem` / `setdefault`
+  / `new Map` on it. The library never runs the schemas (py-aep does not
+  validate COS, so nothing may throw or change earlier than it does);
+  `tests/unit/test_cos_schema.test.ts` checks every sample tree and the
+  trees py_aep writes against them. Readers keep their runtime guards for
+  files that do not conform. A sample that fails the test means the schema
+  is too narrow: widen it.
 
 ## Later passes
 

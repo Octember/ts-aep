@@ -1,5 +1,6 @@
 import { KeyframeInterpolationType, LayerType, PropertyControlType, PropertyType, PropertyValueType } from "../../enums/index.ts";
 import { cos_get } from "../../cos/index.ts";
+import type { DocCos } from "../../cos/schema.ts";
 import { resolve_can_set_expression } from "../../resolvers/can_set_expression.ts";
 import { _DEFAULT_INFLUENCE, NORMALIZED_ARC_ACCURACY, ArcMetric, _tangents_are_zero, color_distance, interpolate_keyframes, motion_path_direction, motion_path_length, roving_keyframe_times, segment_value_slope, spatial_location, split_segment_influences, split_spatial_path } from "../../resolvers/interpolation.ts";
 import { Chunk, ContainerChunk, ListChunk } from "../../binary/chunk.ts";
@@ -903,7 +904,7 @@ export class Property<V extends PropertyValue = any> extends PropertyBase {
     if (this._parallel_kind() === TEXT_KIND) {
       const td = kf.value;
       if (td instanceof TextDocument) {
-        const doc_array = cos_get(td._cos_data, "1", "1");
+        const doc_array = cos_get(td._cos_data, "1", "1")!;
         if (old < len(doc_array)) {
           doc_array.splice(new_, 0, ...doc_array.splice(old, 1));
         }
@@ -3808,7 +3809,7 @@ export class Property<V extends PropertyValue = any> extends PropertyBase {
    * Wrap a COS doc Map as a {@link TextDocument} sharing `template`'s
    * COS data / btdk chunk.
    */
-  _build_text_view(doc: Map<string, unknown>, template: TextDocument): TextDocument {
+  _build_text_view(doc: DocCos, template: TextDocument): TextDocument {
     const char = cos_get(doc, "0", "6", "0", 0, "0", "0", "6");
     const para = cos_get(doc, "0", "5", "0", 0, "0", "0", "5");
     const view = TextDocument._from_binary({
@@ -3886,7 +3887,7 @@ export class Property<V extends PropertyValue = any> extends PropertyBase {
     if (!(template instanceof TextDocument)) {
       throw new NotImplementedError("text keyframe value is not a TextDocument");
     }
-    const doc_array = cos_get(template._cos_data, "1", "1");
+    const doc_array = cos_get(template._cos_data, "1", "1")!;
     const new_doc = deepcopy(doc_array[nearest]);
 
     const ldat_item = build_parallel_ldat_item(this._keyframe_item_type());
@@ -3927,7 +3928,7 @@ export class Property<V extends PropertyValue = any> extends PropertyBase {
     if (!(removed instanceof TextDocument)) {
       throw new NotImplementedError("text keyframe value is not a TextDocument");
     }
-    const doc_array = cos_get(removed._cos_data, "1", "1");
+    const doc_array = cos_get(removed._cos_data, "1", "1")!;
     this._ensure_materialized();
     ldat.items.splice(key_index, 1);
     if (key_index < len(doc_array)) doc_array.splice(key_index, 1);

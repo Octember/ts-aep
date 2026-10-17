@@ -6,15 +6,12 @@ import {
   at,
   deepcopy,
   descriptor,
-  dict_get,
   float,
-  getitem,
   int,
   py_assert,
   py_bool,
   py_eq,
   rstrip,
-  setdefault,
   sorted,
   str,
   ValueError,
@@ -28,6 +25,8 @@ import {
 import { ListChunk } from "../../binary/chunk.ts";
 import type { HeadChunk } from "../../binary/item_chunks.ts";
 import { get_cos_template, cos_get, serialize } from "../../cos/index.ts";
+import type { CosMap } from "../../cos/cos.ts";
+import { cos_item, cos_map, cos_setdefault, cos_value, type BtdkCos, type CharStyle, type CosReal, type DocCos, type DocText, type Frame, type FrameMeta, type LineCountRun, type ParaRun, type ParaStyle } from "../../cos/schema.ts";
 import { AutoKernType, BaselineDirection, BoxAutoFitPolicy, BoxFirstBaselineAlignment, BoxVerticalAlignment, ComposerEngine, DigitSet, FontBaselineOption, FontCapsOption, LeadingType, LineJoinType, LineOrientation, ParagraphDirection, ParagraphJustification } from "../../enums/index.ts";
 import { calibrate as calibrate_composition } from "../../resolvers/text_composition.ts";
 import { requires_version } from "../../ae_version.ts";
@@ -35,9 +34,6 @@ import { Preferences, default_character_style, default_paragraph_style } from ".
 import { validate_bool, validate_box_size, validate_enum, validate_font_name, validate_int, validate_normalized_float, validate_number, validate_positive_int, validate_positive_nonzero_number, validate_positive_number, validate_rgb_color, validate_s4, validate_text, validate_vector2 } from "../validators.ts";
 import { FontObject } from "./font_object.ts";
 import { CHARACTER_RANGE_OOB, NOT_ASSOCIATED, CharacterRange, ComposedLineRange, DocumentWideCosField, ParagraphRange, _apply_char_key, _build_color_paint, _cached_line_data, _cached_line_nodes, _char_run_spans, _composed_line_spans, _fresh_composed_spans, _line_advances, _line_data_from_nodes, _line_origin, _para_run_spans, _parse_color, _raw_text, _rebuild_kern_runs, _register_font_at, _visible_length, u16_len, u16_slice } from "./ranges.ts";
-
-/** A COS dict (`Map<string, any>`): a `Map` so numeric-looking keys keep their order. */
-export type Dict = Map<string, any>;
 
 /** `Pick<T, K>` with `null` removed from each value (style defaults are never null). */
 type Defined<T, K extends keyof T> = { [P in K]: NonNullable<T[P]> };
@@ -87,7 +83,7 @@ export function _box_coords(left: number, top: number, width: number, height: nu
  * AE stores the box-frame metadata keys in ascending numeric order;
  * matching that order keeps serialized output byte-identical.
  */
-export function _numeric_sort(d: Dict): void {
+export function _numeric_sort(d: CosMap): void {
   const items = sorted([...d.entries()], (kv) => int(kv[0]));
   d.clear();
   for (const [k, v] of items) d.set(k, v);
@@ -99,10 +95,10 @@ export function _numeric_sort(d: Dict): void {
  * AE flips these metadata values when a point text layer becomes a box
  * (paragraph) text layer; other keys in the sub-dict are preserved.
  */
-export function _apply_box_conversion(meta: Dict): void {
+export function _apply_box_conversion(meta: FrameMeta): void {
   meta.set("0", 1);
   meta.set("6", [pyfloat(-2.0), pyfloat(-2.0)]);
-  const eleven = setdefault(meta, "11", new Map());
+  const eleven = cos_setdefault(meta, "11", new Map());
   eleven.set("4", -2);
   eleven.set("18", pyfloat(-2.0));
   _numeric_sort(meta);
@@ -166,11 +162,11 @@ export class TextDocument {
   __dict__: Map<string, any> = instance_dict(this);
 
   // COS backing, assigned by `__init__` / `_from_binary`.
-  declare _char_style: Dict | null;
-  declare _para_style: Dict | null;
-  declare _doc: Dict;
+  declare _char_style: CharStyle | null;
+  declare _para_style: ParaStyle | null;
+  declare _doc: DocCos;
   declare _fonts: FontObject[];
-  declare _cos_data: Dict;
+  declare _cos_data: BtdkCos;
   declare _btdk_body: ListChunk;
 
   _mark_frame_layout_dirty(): void {
@@ -256,7 +252,7 @@ export class TextDocument {
     if (this._char_style == null) return AutoKernType.NO_AUTO_KERN;
     const raw = this._char_style.get("11");
     if (raw == null) return AutoKernType.NO_AUTO_KERN;
-    return AutoKernType.from_binary(raw as number) as AutoKernType;
+    return AutoKernType.from_binary(raw) as AutoKernType;
   }
 
   set auto_kern_type(value: AutoKernType) {
@@ -335,7 +331,7 @@ export class TextDocument {
     const override: boolean | null = this._override("auto_leading");
     if (override != null) return override;
     if (this._char_style == null) return true;
-    return py_bool(dict_get(this._char_style, "4", true));
+    return py_bool(cos_value(this._char_style, "4", true));
   }
 
   set auto_leading(value: boolean) {
@@ -411,21 +407,21 @@ export class TextDocument {
     validate_text(text);
     if (box_size != null) validate_box_size(box_size);
     if (line_orientation != null) validate_enum(LineOrientation)(line_orientation);
-    const cos: Dict = deepcopy(get_cos_template());
+    const cos = deepcopy(get_cos_template());
     const btdk = new ListChunk({ list_type: "btdk", data: serialize(cos) });
-    const doc: Dict = at(getitem(getitem(cos, "1"), "1"), 0);
-    const doc_0: Dict = getitem(doc, "0");
-    const doc_0_6_0: Dict[] = getitem(getitem(doc_0, "6") as Dict, "0");
-    const run_0: Dict = at(doc_0_6_0, 0);
-    const char_style: Dict = getitem(getitem(getitem(run_0, "0") as Dict, "0") as Dict, "6");
-    const doc_0_5_0: Dict[] = getitem(getitem(doc_0, "5") as Dict, "0");
-    const para_run_0: Dict = at(doc_0_5_0, 0);
-    const para_style: Dict = getitem(getitem(getitem(para_run_0, "0") as Dict, "0") as Dict, "5");
-    const fonts = (getitem(getitem(getitem(cos, "0") as Dict, "1") as Dict, "0") as Dict[]).map(
-      (entry: Dict) =>
+    const doc = at(cos_item(cos_item(cos, "1"), "1"), 0);
+    const doc_0 = cos_item(doc, "0");
+    const doc_0_6_0 = cos_item(cos_item(doc_0, "6"), "0");
+    const run_0 = at(doc_0_6_0, 0);
+    const char_style = cos_item(cos_item(cos_item(run_0, "0"), "0"), "6");
+    const doc_0_5_0 = cos_item(cos_item(doc_0, "5"), "0");
+    const para_run_0 = at(doc_0_5_0, 0);
+    const para_style = cos_item(cos_item(cos_item(para_run_0, "0"), "0"), "5");
+    const fonts = cos_item(cos_item(cos_item(cos, "0"), "1"), "0").map(
+      (entry) =>
         new FontObject({
-          _font_data: getitem(getitem(entry, "0"), "0"),
-          _font_entry: getitem(entry, "0"),
+          _font_data: cos_item(cos_item(entry, "0"), "0"),
+          _font_entry: cos_item(entry, "0"),
         }),
     );
     this._char_style = char_style;
@@ -440,11 +436,11 @@ export class TextDocument {
   }
 
   static _from_binary(kw: {
-    _char_style?: Dict | null;
-    _para_style?: Dict | null;
-    _doc: Dict;
+    _char_style?: CharStyle | null;
+    _para_style?: ParaStyle | null;
+    _doc: DocCos;
     _fonts: FontObject[];
-    _cos_data: Dict;
+    _cos_data: BtdkCos;
     _btdk_body: ListChunk;
     // Fallback kwargs for fields without COS backing
     text?: string | null;
@@ -541,7 +537,7 @@ export class TextDocument {
     validate_text(value);
     this.__dict__.delete("text");
     this._mark_layout_dirty();
-    const inner = setdefault(this._doc, "0", new Map());
+    const inner = cos_setdefault(this._doc, "0", new Map());
     // AE stores every line break and the run terminator as CR (\r);
     // without a trailing CR terminator AE fails to read the layer.
     const normalized = value.replaceAll("\r\n", "\r").replaceAll("\n", "\r");
@@ -563,7 +559,7 @@ export class TextDocument {
      *
      * @param raw - The new stored text, including the terminator `\r`.
      */
-    const inner = dict_get(this._doc, "0", new Map());
+    const inner = cos_value(this._doc, "0", cos_map<DocText>());
     const char_runs = cos_get(inner, "6", "0");
     if (Array.isArray(char_runs) && char_runs.length > 0) {
       char_runs[0].set("1", u16_len(raw));
@@ -577,8 +573,8 @@ export class TextDocument {
       if (parts.at(-1) === "") parts = parts.slice(0, -1);
       // Keep the first run object itself: `_para_style` (and the
       // parser's back-references) alias its style dict.
-      const template: Dict = para_runs[0];
-      const rebuilt: Dict[] = [template, ...parts.slice(1).map(() => deepcopy(template))];
+      const template = para_runs[0];
+      const rebuilt: ParaRun[] = [template, ...parts.slice(1).map(() => deepcopy(template))];
       for (const [run, part] of zip(rebuilt, parts)) {
         run.set("1", u16_len(part) + 1);
       }
@@ -606,11 +602,11 @@ export class TextDocument {
       state.delete("1");
       return;
     }
-    const runs: Dict[] = parts.map(
-      (part) => new Map<string, any>([["0", new Map([["1", 1]])], ["1", u16_len(part) + 1]]),
+    const runs = parts.map((part) =>
+      cos_map<LineCountRun>([["0", cos_map([["1", 1]])], ["1", u16_len(part) + 1]]),
     );
     if (state.has("1")) {
-      state.set("1", new Map([["0", runs]]));
+      state.set("1", cos_map([["0", runs]]));
       return;
     }
     // Fresh key: AE orders it between "0" and the /PC cache "2";
@@ -621,12 +617,12 @@ export class TextDocument {
     let inserted = false;
     for (const [key, value] of items) {
       if (key === "2" && !inserted) {
-        state.set("1", new Map([["0", runs]]));
+        state.set("1", cos_map([["0", runs]]));
         inserted = true;
       }
       state.set(key, value);
     }
-    if (!inserted) state.set("1", new Map([["0", runs]]));
+    if (!inserted) state.set("1", cos_map([["0", runs]]));
   }
 
   // `fontFamily`, `fontStyle`, and `fontLocation` (deprecated ExtendScript
@@ -775,7 +771,7 @@ export class TextDocument {
         // When auto-leading is on, AE stores a sentinel in key "5"
         // and displays font_size * auto_leading_factor (para "7").
         if (this.auto_leading && this._para_style != null) {
-          const factor = dict_get(this._para_style, "7", 1.2);
+          const factor = cos_value(this._para_style, "7", 1.2);
           const fs = this.font_size;
           if (fs != null) return fs * float(factor);
         }
@@ -880,13 +876,13 @@ export class TextDocument {
     this._propagate_cos();
   }
 
-  _box_frame(): Dict | null {
+  _box_frame(): Frame | null {
     /** Return the COS box-frame dict, or `null` if absent. */
     const frame = cos_get(this._cos_data, "0", "8", "0", 0, "0");
     return frame instanceof Map ? frame : null;
   }
 
-  _ensure_frame(): Dict {
+  _ensure_frame(): Frame {
     /**
      * Return the box-frame dict, creating the COS path if needed.
      *
@@ -896,14 +892,13 @@ export class TextDocument {
      * its calibration) must run before the mutation lands.
      */
     this._mark_frame_layout_dirty();
-    const eight = setdefault(setdefault(this._cos_data, "0", new Map()), "8", new Map());
-    const slot: Dict[] = setdefault(eight, "0", [new Map()]);
+    const eight = cos_setdefault(cos_setdefault(this._cos_data, "0", new Map()), "8", new Map());
+    const slot = cos_setdefault(eight, "0", [new Map()]);
     if (slot.length === 0) slot.push(new Map());
-    const frame: Dict = setdefault(slot[0], "0", new Map());
-    return frame;
+    return cos_setdefault(slot[0], "0", new Map());
   }
 
-  _box_outline(): number[] | null {
+  _box_outline(): CosReal[] | null {
     /** Return the box's 16-vertex outline coordinates, or `null`. */
     const frame = this._box_frame();
     const coords = frame != null ? cos_get(frame, "1", "0") : null;
@@ -937,7 +932,7 @@ export class TextDocument {
   get box_text_size(): number[] | null {
     const coords = this._box_outline();
     if (coords == null) return null;
-    return [Math.abs(coords[12] - coords[0]), Math.abs(coords[13] - coords[1])];
+    return [Math.abs(unbox(coords[12]) - unbox(coords[0])), Math.abs(unbox(coords[13]) - unbox(coords[1]))];
   }
 
   set box_text_size(value: number[]) {
@@ -949,15 +944,15 @@ export class TextDocument {
     let left: number;
     let top: number;
     if (coords != null) {
-      left = coords[0];
-      top = coords[1];
+      left = unbox(coords[0]);
+      top = unbox(coords[1]);
     } else {
       // Point -> box conversion: AE centers the new box on the origin.
       left = -width / 2.0;
       top = -height / 2.0;
-      _apply_box_conversion(setdefault(frame, "2", new Map()));
+      _apply_box_conversion(cos_setdefault(frame, "2", new Map()));
     }
-    setdefault(frame, "1", new Map()).set("0", _box_coords(left, top, width, height));
+    cos_setdefault(frame, "1", new Map()).set("0", _box_coords(left, top, width, height));
     this._propagate_cos();
   }
 
@@ -979,11 +974,11 @@ export class TextDocument {
     if (coords == null) {
       throw new ValueError("box_text_pos requires box text; set box_text_size first");
     }
-    const width = Math.abs(coords[12] - coords[0]);
-    const height = Math.abs(coords[13] - coords[1]);
+    const width = Math.abs(unbox(coords[12]) - unbox(coords[0]));
+    const height = Math.abs(unbox(coords[13]) - unbox(coords[1]));
     const frame = this._box_frame();
     py_assert(frame != null);
-    getitem(frame, "1").set("0", _box_coords(float(value[0]), float(value[1]), width, height));
+    cos_item(frame, "1").set("0", _box_coords(float(value[0]), float(value[1]), width, height));
     this._propagate_cos();
   }
 
@@ -1022,8 +1017,9 @@ export class TextDocument {
   /** The box's first-baseline alignment. Read / Write. */
   get box_first_baseline_alignment(): BoxFirstBaselineAlignment {
     const sub = cos_get(this._box_frame(), "2", "10");
-    if (sub instanceof Map && typeof sub.get("0") === "number" && Number.isInteger(sub.get("0"))) {
-      return BoxFirstBaselineAlignment.from_binary(sub.get("0") as number) as BoxFirstBaselineAlignment;
+    const raw = sub instanceof Map ? sub.get("0") : undefined;
+    if (typeof raw === "number" && Number.isInteger(raw)) {
+      return BoxFirstBaselineAlignment.from_binary(raw) as BoxFirstBaselineAlignment;
     }
     return BoxFirstBaselineAlignment.ASCENT;
   }
@@ -1035,8 +1031,8 @@ export class TextDocument {
   /** The minimum for `MINIMUM_VALUE_*` first-baseline alignment. R/W. */
   get box_first_baseline_alignment_minimum(): number {
     const sub = cos_get(this._box_frame(), "2", "10");
-    if (sub instanceof Map && is_real(sub.get("1"))) return float(sub.get("1"));
-    return 0.0;
+    const minimum = sub instanceof Map ? sub.get("1") : undefined;
+    return is_real(minimum) ? float(minimum) : 0.0;
   }
 
   set box_first_baseline_alignment_minimum(value: number) {
@@ -1479,7 +1475,7 @@ descriptor(TextDocument, "direction", DocumentWideCosField.enum(ParagraphDirecti
 export const _box_inset_spacing_set = requires_version(24)(function box_inset_spacing(this: TextDocument, value: number): void {
   /** Setter body for `box_inset_spacing`. */
   validate_positive_number(value);
-  const meta = setdefault(this._ensure_frame(), "2", new Map());
+  const meta = cos_setdefault(this._ensure_frame(), "2", new Map());
   meta.set("9", pyfloat(float(value)));
   _numeric_sort(meta);
   this._propagate_cos();
@@ -1487,7 +1483,7 @@ export const _box_inset_spacing_set = requires_version(24)(function box_inset_sp
 
 export const _box_vertical_alignment_set = requires_version(24)(function box_vertical_alignment(this: TextDocument, value: BoxVerticalAlignment): void {
   /** Setter body for `box_vertical_alignment`. */
-  const meta = setdefault(this._ensure_frame(), "2", new Map());
+  const meta = cos_setdefault(this._ensure_frame(), "2", new Map());
   meta.set("13", BoxVerticalAlignment.to_binary(value));
   _numeric_sort(meta);
   this._propagate_cos();
@@ -1495,7 +1491,7 @@ export const _box_vertical_alignment_set = requires_version(24)(function box_ver
 
 export const _box_auto_fit_policy_set = requires_version(24)(function box_auto_fit_policy(this: TextDocument, value: BoxAutoFitPolicy): void {
   /** Setter body for `box_auto_fit_policy`. */
-  const meta = setdefault(this._ensure_frame(), "2", new Map());
+  const meta = cos_setdefault(this._ensure_frame(), "2", new Map());
   meta.set("14", BoxAutoFitPolicy.to_binary(value));
   _numeric_sort(meta);
   this._propagate_cos();
@@ -1506,20 +1502,20 @@ export const _box_first_baseline_alignment_set = requires_version(24)(function b
   value: BoxFirstBaselineAlignment,
 ): void {
   /** Setter body for `box_first_baseline_alignment`. */
-  const meta = setdefault(this._ensure_frame(), "2", new Map());
-  const sub = setdefault(meta, "10", new Map());
+  const meta = cos_setdefault(this._ensure_frame(), "2", new Map());
+  const sub = cos_setdefault(meta, "10", new Map());
   sub.set("0", BoxFirstBaselineAlignment.to_binary(value));
   // AE always stores the minimum alongside the alignment.
-  setdefault(sub, "1", pyfloat(0.0));
+  cos_setdefault(sub, "1", pyfloat(0.0));
   _numeric_sort(meta);
   this._propagate_cos();
 });
 
 export const _box_first_baseline_alignment_minimum_set = requires_version(24)(function box_first_baseline_alignment_minimum(this: TextDocument, value: number): void {
   /** Setter body for `box_first_baseline_alignment_minimum`. */
-  const meta = setdefault(this._ensure_frame(), "2", new Map());
-  const sub = setdefault(meta, "10", new Map());
-  setdefault(sub, "0", BoxFirstBaselineAlignment.to_binary(BoxFirstBaselineAlignment.ASCENT));
+  const meta = cos_setdefault(this._ensure_frame(), "2", new Map());
+  const sub = cos_setdefault(meta, "10", new Map());
+  cos_setdefault(sub, "0", BoxFirstBaselineAlignment.to_binary(BoxFirstBaselineAlignment.ASCENT));
   sub.set("1", pyfloat(float(value)));
   _numeric_sort(meta);
   this._propagate_cos();

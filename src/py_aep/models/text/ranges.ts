@@ -33,7 +33,6 @@ import {
   TypeError_,
   ValueError,
   deepcopy,
-  dict_get,
   float,
   getattr,
   getitem,
@@ -44,7 +43,6 @@ import {
   py_or,
   repr,
   round,
-  setdefault,
   sorted,
   split,
   str,
@@ -54,6 +52,8 @@ import {
 
 } from "../../../pyrt/index.ts";
 import { CosField, CosName, cos_get, run_spans } from "../../cos/index.ts";
+import type { CosMap, CosNode } from "../../cos/cos.ts";
+import { cos_item, cos_map, cos_setdefault, cos_value, type CacheNode, type CharRun, type CharStyle, type CosInt, type FontTableEntry, type KernPayload, type KernRun, type Paint, type ParaRun, type ParaStyle, type UsedFontRecord, type BtdkState } from "../../cos/schema.ts";
 import { _extract } from "../../cos/descriptors.ts";
 import { AutoKernType, BaselineDirection, DigitSet, FontBaselineOption, FontCapsOption, LeadingType, LineJoinType, ParagraphDirection, ParagraphJustification } from "../../enums/index.ts";
 import type { ComposerEngine } from "../../enums/index.ts";
@@ -66,8 +66,11 @@ import type { TextDocument } from "./text_document.ts";
 // NOTE(port): thin alias of pyrt py_bool (Python truthiness), exported under the builtin name.
 export const bool = (x: unknown): boolean => py_bool(x);
 
-/** A COS dict (string keys to any value): a `Map` so numeric-looking keys keep their order. */
-export type Dict = Map<string, any>;
+/** Any `{"0": payload, "1": count}` run entry (character, paragraph or kern). */
+type Run = CosMap<{ "1": CosInt }>;
+
+/** A per-character manual-kern value (`null` where none is stored). */
+type KernValue = CosInt | null;
 
 // AE's exact error strings (AE 26.3, English locale); py_aep raises these
 // from ValueError so behavior parity does not depend on hosting AE.
@@ -125,17 +128,17 @@ export function _visible_length(doc: TextDocument): number {
 }
 
 /** Character style-run spans. */
-export function _char_run_spans(doc: TextDocument): [number, number, Dict][] {
+export function _char_run_spans(doc: TextDocument): [number, number, CharStyle][] {
   return run_spans(doc._doc, "6", "6");
 }
 
 /** Paragraph style-run spans (one run per paragraph). */
-export function _para_run_spans(doc: TextDocument): [number, number, Dict][] {
+export function _para_run_spans(doc: TextDocument): [number, number, ParaStyle][] {
   return run_spans(doc._doc, "5", "5");
 }
 
 /** Manual-kerning run spans; payload key `"0"` holds the value. */
-export function _kern_run_spans(doc: TextDocument): [number, number, Dict][] {
+export function _kern_run_spans(doc: TextDocument): [number, number, KernPayload][] {
   return run_spans(doc._doc, "8", null);
 }
 
@@ -146,12 +149,12 @@ export function _kern_run_spans(doc: TextDocument): [number, number, Dict][] {
  * collected depth-first through the nested `"6"` arrays. Empty when the
  * document has no cache.
  */
-export function _cached_line_nodes(doc: TextDocument): Dict[] {
+export function _cached_line_nodes(doc: TextDocument): CacheNode[] {
   const entries = cos_get(doc._doc, "1", "2");
   if (!Array.isArray(entries)) return [];
-  const lines: Dict[] = [];
+  const lines: CacheNode[] = [];
 
-  const collect = (node: unknown): void => {
+  const collect = (node: CacheNode): void => {
     if (!(node instanceof Map)) return;
     if (str(node.get("99") ?? null) === "L") {
       lines.push(node);
@@ -185,7 +188,7 @@ export function _cached_line_data(doc: TextDocument): [[number, number][], (numb
  * (`seg["15"]["0"]`) and its baseline is the `/L` `"10"` value. Returns
  * `null` for an empty node list (no cache).
  */
-export function _line_data_from_nodes(nodes: Dict[]): [[number, number][], (number | null)[]] | null {
+export function _line_data_from_nodes(nodes: CacheNode[]): [[number, number][], (number | null)[]] | null {
   const lengths: number[] = [];
   const baselines: (number | null)[] = [];
   for (const node of nodes) {
@@ -217,7 +220,7 @@ export function _line_data_from_nodes(nodes: Dict[]): [[number, number][], (numb
  * Stored at `/L "0" "0"`; AE omits it on the first line (origin `(0, 0)`),
  * where the baseline key `"10"` is absent too.
  */
-export function _line_origin(node: Dict): [number, number] {
+export function _line_origin(node: CacheNode): [number, number] {
   const origin = cos_get(node, "0", "0");
   if (Array.isArray(origin) && origin.length >= 2) return [float(origin[0]), float(origin[1])];
   const baseline = node.get("10") ?? null;
@@ -234,7 +237,7 @@ export function _line_origin(node: Dict): [number, number] {
  * advances are cumulative from the line start. Multiple segments are
  * chained by carrying the running total forward.
  */
-export function _line_advances(node: Dict): number[] {
+export function _line_advances(node: CacheNode): number[] {
   const out: number[] = [];
   let base = 0.0;
   const children = node.get("6") ?? null;
@@ -302,7 +305,7 @@ export function _composed_line_spans(doc: TextDocument): [number, number][] | nu
 }
 
 /** Extract `[R, G, B]` from a COS SimplePaint structure. */
-export function _parse_color(paint: unknown): number[] | null {
+export function _parse_color(paint: Paint | null | undefined): number[] | null {
   const argb = cos_get(paint, "0", "1");
   if (Array.isArray(argb) && argb.length >= 4) {
     return [float(argb[1]), float(argb[2]), float(argb[3])];
@@ -316,12 +319,12 @@ export function _parse_color(paint: unknown): number[] | null {
  * The 4-float array is `[alpha, R, G, B]`; AE stores a fully opaque
  * alpha of `1.0`.
  */
-export function _build_color_paint(rgb: number[]): Dict {
-  return new Map<string, any>([
+export function _build_color_paint(rgb: number[]): Paint {
+  return cos_map([
     ["99", new CosName("SimplePaint")],
     [
       "0",
-      new Map<string, any>([
+      cos_map([
         ["0", 1],
         ["1", [pyfloat(1.0), pyfloat(float(rgb[0])), pyfloat(float(rgb[1])), pyfloat(float(rgb[2]))]],
       ]),
@@ -330,13 +333,13 @@ export function _build_color_paint(rgb: number[]): Dict {
 }
 
 /** Build a COS CoolTypeFont entry for a font PostScript name. */
-export function _build_font_entry(post_script_name: string): Dict {
-  return new Map<string, any>([
+export function _build_font_entry(post_script_name: string): FontTableEntry {
+  return cos_map([
     [
       "0",
-      new Map<string, any>([
+      cos_map([
         ["99", new CosName("CoolTypeFont")],
-        ["0", new Map<string, any>([["0", post_script_name], ["2", 1]])],
+        ["0", cos_map([["0", post_script_name], ["2", 1]])],
       ]),
     ],
   ]);
@@ -367,21 +370,21 @@ export function _register_font_at(
   kw: { used_record?: boolean } = {},
 ): number {
   const { used_record = true } = kw;
-  const cos: Dict = doc._cos_data;
-  const font_array: unknown[] = setdefault(setdefault(setdefault(cos, "0", new Map()), "1", new Map()), "0", []);
+  const cos = doc._cos_data;
+  const font_array = cos_setdefault(cos_setdefault(cos_setdefault(cos, "0", new Map()), "1", new Map()), "0", []);
   const entry = _build_font_entry(post_script_name);
   const version = font_version_string(post_script_name);
-  if (version != null) (getitem(getitem(entry, "0"), "0") as Dict).set("5", version);
+  if (version != null) cos_item(cos_item(entry, "0"), "0").set("5", version);
   font_array.splice(index, 0, entry);
 
-  const bump = (holder: Dict): void => {
+  const bump = (holder: CosMap<{ "0": CosInt }>): void => {
     const current = holder.get("0") ?? null;
     if (typeof current === "number" && Number.isInteger(current) && current >= index) {
       holder.set("0", current + 1);
     }
   };
 
-  for (const entry_doc of py_or(dict_get(dict_get(cos, "1", new Map()), "1", []), []) as Dict[]) {
+  for (const entry_doc of py_or(cos_value(cos_value(cos, "1", cos_map<BtdkState>()), "1", []), [])) {
     const runs = cos_get(entry_doc, "0", "6", "0");
     if (!Array.isArray(runs)) continue;
     for (const run of runs) {
@@ -401,7 +404,7 @@ export function _register_font_at(
     }
   }
   const sessions = cos_get(cos, "1", "5");
-  const new_record: Dict = new Map<string, any>([["0", index]]);
+  const new_record = cos_map<UsedFontRecord>([["0", index]]);
   if (version != null) new_record.set("1", version);
   if (Array.isArray(sessions)) {
     let appended = false;
@@ -420,7 +423,7 @@ export function _register_font_at(
   doc._fonts.splice(
     index,
     0,
-    new FontObject({ _font_data: getitem(getitem(entry, "0"), "0"), _font_entry: getitem(entry, "0") }),
+    new FontObject({ _font_data: cos_item(cos_item(entry, "0"), "0"), _font_entry: cos_item(entry, "0") }),
   );
   return index;
 }
@@ -448,7 +451,7 @@ export function _replace_layer_font(docs: TextDocument[], from_name: string, to_
   }
   if (!from_indices.size) return false;
   const referenced = docs.some((doc) =>
-    _char_run_spans(doc).some(([, , style]) => from_indices.has(style.get("0") ?? null)),
+    _char_run_spans(doc).some(([, , style]) => _holds_index(from_indices, style)),
   );
   if (!referenced) return false;
 
@@ -468,12 +471,18 @@ export function _replace_layer_font(docs: TextDocument[], from_name: string, to_
 
   for (const doc of docs) {
     for (const [, , style] of _char_run_spans(doc)) {
-      if (from_indices.has(style.get("0") ?? null)) style.set("0", to_index);
+      if (_holds_index(from_indices, style)) style.set("0", to_index);
     }
   }
   _repoint_used_font_record(first, from_indices, to_index, to_name);
   first._propagate_cos();
   return true;
+}
+
+/** Whether a style or used-font record's font index (`"0"`) is one of `indices`. */
+function _holds_index(indices: ReadonlySet<number>, holder: CosMap<{ "0": CosInt }>): boolean {
+  const index = holder.get("0");
+  return index != null && indices.has(index);
 }
 
 /**
@@ -496,7 +505,7 @@ export function _repoint_used_font_record(
     const records = session instanceof Map ? session.get("4") ?? null : null;
     if (!Array.isArray(records)) continue;
     for (const record of records) {
-      if (!(record instanceof Map) || !from_indices.has(record.get("0") ?? null)) continue;
+      if (!(record instanceof Map) || !_holds_index(from_indices, record)) continue;
       record.set("0", to_index);
       if (version == null) record.delete("1");
       else record.set("1", version);
@@ -539,7 +548,7 @@ export function _mark_layout_dirty(doc: TextDocument): void {
  * structural op must end here.
  */
 export function _refresh_style_aliases(doc: TextDocument): void {
-  const cos_doc: Dict = doc._doc;
+  const cos_doc = doc._doc;
   const char = cos_get(cos_doc, "0", "6", "0", 0, "0", "0", "6");
   if (char instanceof Map) doc._char_style = char;
   const para = cos_get(cos_doc, "0", "5", "0", 0, "0", "0", "5");
@@ -582,12 +591,12 @@ export function _snap_to_pairs(raw: string, start: number, end: number): [number
  * 0's payload object only ever narrows (never detaches) and the
  * `_char_style` alias stays inside the serialized tree.
  */
-export function _split_run_array(runs: Dict[], offsets: Set<number>): void {
+export function _split_run_array<R extends Run>(runs: R[], offsets: Set<number>): void {
   const cuts = sorted(offsets);
   let pos = 0;
   let i = 0;
   while (i < runs.length) {
-    const length = dict_get(runs[i], "1", 0);
+    const length = cos_value(runs[i], "1", 0);
     const run_end = pos + length;
     let cut: number | null = null;
     for (const offset of cuts) {
@@ -617,11 +626,11 @@ export function _split_run_array(runs: Dict[], offsets: Set<number>): void {
  * no-op set leaves a uniform document at one run (`W_NOOP`). The first
  * run of each merged group keeps its object (aliasing, key order).
  */
-export function _merge_adjacent_runs(runs: Dict[]): void {
+export function _merge_adjacent_runs<R extends Run>(runs: R[]): void {
   let i = 0;
   while (i + 1 < runs.length) {
     if (py_eq(runs[i].get("0") ?? null, runs[i + 1].get("0") ?? null)) {
-      runs[i].set("1", dict_get(runs[i], "1", 0) + dict_get(runs[i + 1], "1", 0));
+      runs[i].set("1", cos_value(runs[i], "1", 0) + cos_value(runs[i + 1], "1", 0));
       runs.splice(i + 1, 1);
     } else {
       i += 1;
@@ -636,7 +645,7 @@ export function _merge_adjacent_runs(runs: Dict[]): void {
  * at the visible length extends through the raw terminator
  * (`W_MERGE_SAME`); `value=None` clears the key.
  */
-export function _apply_char_key(doc: TextDocument, start: number, end: number, key: string, value: unknown): void {
+export function _apply_char_key(doc: TextDocument, start: number, end: number, key: string, value: CosNode): void {
   const raw = _raw_text(doc);
   [start, end] = _snap_to_pairs(raw, start, end);
   if (start === end) return;
@@ -647,7 +656,7 @@ export function _apply_char_key(doc: TextDocument, start: number, end: number, k
   _split_run_array(runs, new Set([start, end]));
   let pos = 0;
   for (const run of runs) {
-    const run_end = pos + (dict_get(run, "1", 0) as number);
+    const run_end = pos + cos_value(run, "1", 0);
     if (pos >= start && run_end <= end) {
       const style = cos_get(run, "0", "0", "6");
       if (style instanceof Map) {
@@ -662,9 +671,9 @@ export function _apply_char_key(doc: TextDocument, start: number, end: number, k
 }
 
 /** Per-character manual-kern values decoded from the kern runs. */
-export function _kern_values(doc: TextDocument): unknown[] {
+export function _kern_values(doc: TextDocument): KernValue[] {
   const total = u16_len(_raw_text(doc));
-  const values: unknown[] = new Array(total).fill(null);
+  const values: KernValue[] = new Array(total).fill(null);
   for (const [start, end, payload] of _kern_run_spans(doc)) {
     const value = payload.get("0") ?? null;
     if (value != null) {
@@ -683,8 +692,8 @@ export function _kern_values(doc: TextDocument): unknown[] {
  * dict is kept in place when it exists so `doc["0"]`'s key order is
  * preserved; a fresh key is appended, like AE's creation order.
  */
-export function _rebuild_kern_runs(doc: TextDocument, values: unknown[]): void {
-  const inner: Dict = setdefault(doc._doc, "0", new Map());
+export function _rebuild_kern_runs(doc: TextDocument, values: KernValue[]): void {
+  const inner = cos_setdefault(doc._doc, "0", new Map());
   const has_value = values.some((v) => v != null);
   if (!has_value) {
     // AE drops the array entirely once no manual values remain
@@ -694,17 +703,17 @@ export function _rebuild_kern_runs(doc: TextDocument, values: unknown[]): void {
     inner.delete("7");
     return;
   }
-  const runs: Dict[] = [];
+  const runs: KernRun[] = [];
   let i = 0;
   const total = values.length;
   while (i < total) {
     if (values[i] == null) {
       let j = i;
       while (j < total && values[j] == null) j += 1;
-      runs.push(new Map<string, any>([["0", new Map()], ["1", j - i]]));
+      runs.push(cos_map([["0", new Map()], ["1", j - i]]));
       i = j;
     } else {
-      runs.push(new Map<string, any>([["0", new Map<string, any>([["0", values[i]]])], ["1", 1]]));
+      runs.push(cos_map([["0", cos_map([["0", values[i]]])], ["1", 1]]));
       i += 1;
     }
   }
@@ -712,7 +721,7 @@ export function _rebuild_kern_runs(doc: TextDocument, values: unknown[]): void {
   if (holder instanceof Map) {
     holder.set("0", runs);
   } else {
-    inner.set("8", new Map<string, any>([["0", runs]]));
+    inner.set("8", cos_map([["0", runs]]));
   }
 }
 
@@ -732,8 +741,8 @@ export function _splice_text(
   start: number,
   end: number,
   new_text: string,
-  insert_runs: Dict[] | null = null,
-  insert_kern: unknown[] | null = null,
+  insert_runs: CharRun[] | null = null,
+  insert_kern: KernValue[] | null = null,
 ): void {
   const raw = _raw_text(doc);
   const total = u16_len(raw);
@@ -744,34 +753,34 @@ export function _splice_text(
   const new_raw = u16_slice(raw, 0, start) + new_text + u16_slice(raw, end, total);
   let parts = split(new_raw, "\r");
   if (parts[parts.length - 1] === "") parts = parts.slice(0, -1);
-  const inner: Dict = setdefault(doc._doc, "0", new Map());
+  const inner = cos_setdefault(doc._doc, "0", new Map());
 
   const runs = cos_get(inner, "6", "0");
   if (Array.isArray(runs) && runs.length) {
-    let insert_entries: Dict[];
+    let insert_entries: CharRun[];
     if (insert_runs == null) {
-      let donor: Dict | null = null;
+      let donor: CharRun | null = null;
       let pos = 0;
       for (const run of runs) {
-        const run_end = pos + (dict_get(run, "1", 0) as number);
+        const run_end = pos + cos_value(run, "1", 0);
         if (pos <= start && start < run_end) {
-          donor = deepcopy<Dict>(run);
+          donor = deepcopy(run);
           break;
         }
         pos = run_end;
       }
-      if (donor == null) donor = deepcopy<Dict>(runs[runs.length - 1]);
+      if (donor == null) donor = deepcopy(runs[runs.length - 1]);
       donor.set("1", insert_len);
       insert_entries = insert_len ? [donor] : [];
     } else {
       insert_entries = insert_runs;
     }
     _split_run_array(runs, new Set([start, end]));
-    const rebuilt: Dict[] = [];
+    const rebuilt: CharRun[] = [];
     let pos = 0;
     let inserted = false;
     for (const run of runs) {
-      const run_end = pos + (dict_get(run, "1", 0) as number);
+      const run_end = pos + cos_value(run, "1", 0);
       if (run_end <= start) {
         rebuilt.push(run);
       } else if (pos >= end) {
@@ -790,15 +799,15 @@ export function _splice_text(
 
   const para_runs = cos_get(inner, "5", "0");
   if (Array.isArray(para_runs) && para_runs.length) {
-    const old_spans: [number, number, Dict][] = [];
+    const old_spans: [number, number, ParaRun][] = [];
     let pos = 0;
     for (const entry of para_runs) {
-      const length = dict_get(entry, "1", 0) as number;
+      const length = cos_value(entry, "1", 0);
       old_spans.push([pos, pos + length, entry]);
       pos += length;
     }
 
-    const donor_entry = (new_pos: number): Dict => {
+    const donor_entry = (new_pos: number): ParaRun => {
       let old_pos: number;
       if (new_pos < start) old_pos = new_pos;
       else if (new_pos >= start + insert_len) old_pos = new_pos - insert_len + (end - start);
@@ -810,7 +819,7 @@ export function _splice_text(
       return old_spans[old_spans.length - 1][2];
     };
 
-    const new_para_runs: Dict[] = [];
+    const new_para_runs: ParaRun[] = [];
     let pos2 = 0;
     for (const [i, part] of parts.entries()) {
       const entry = donor_entry(pos2);
@@ -844,14 +853,14 @@ export function _splice_text(
  * range (paragraph runs are structural: never split, never merged -
  * `W_PARA_PARTIAL` styles the whole containing paragraph).
  */
-export function _apply_para_key(doc: TextDocument, start: number, end: number, key: string, value: unknown): void {
+export function _apply_para_key(doc: TextDocument, start: number, end: number, key: string, value: CosNode): void {
   if (start === end) return;
   _mark_layout_dirty(doc);
   const runs = cos_get(doc._doc, "0", "5", "0");
   if (!Array.isArray(runs)) return;
   let pos = 0;
   for (const run of runs) {
-    const run_end = pos + (dict_get(run, "1", 0) as number);
+    const run_end = pos + cos_value(run, "1", 0);
     if (pos < end && run_end > start) {
       const style = cos_get(run, "0", "0", "5");
       if (style instanceof Map) {
@@ -1223,7 +1232,7 @@ export class CharacterRange extends _TextRange {
    * caret index (the raw runs cover the terminator, so an EOF caret
    * still lands inside the final run).
    */
-  _overlapping(spans: [number, number, Dict][]): Dict[] {
+  _overlapping<P>(spans: [number, number, P][]): P[] {
     const [start, end] = this._bounds();
     if (start === end) {
       for (const [run_start, run_end, payload] of spans) {
@@ -1231,14 +1240,14 @@ export class CharacterRange extends _TextRange {
       }
       return spans.length ? [spans[spans.length - 1][2]] : [];
     }
-    const out: Dict[] = [];
+    const out: P[] = [];
     for (const [run_start, run_end, payload] of spans) {
       if (run_start < end && run_end > start) out.push(payload);
     }
     return out;
   }
 
-  _spans_for(kind: string): [number, number, Dict][] {
+  _spans_for(kind: string): [number, number, CharStyle | ParaStyle | KernPayload][] {
     if (kind === "char") return _char_run_spans(this._doc_ref);
     if (kind === "para") return _para_run_spans(this._doc_ref);
     return _kern_run_spans(this._doc_ref);
@@ -1326,10 +1335,11 @@ export class CharacterRange extends _TextRange {
     [src_start, src_end] = _snap_to_pairs(src_raw, src_start, src_end);
     const text_slice = u16_slice(src_raw, src_start, src_end);
 
-    const entries: Dict[] = [];
+    const entries: CharRun[] = [];
     let pos = 0;
-    for (const run of py_or(cos_get(src_doc._doc, "0", "6", "0"), [])) {
-      const run_end = pos + (dict_get(run, "1", 0) as number);
+    const src_runs = py_or(cos_get(src_doc._doc, "0", "6", "0"), new Array<CharRun>());
+    for (const run of src_runs) {
+      const run_end = pos + cos_value(run, "1", 0);
       const overlap_start = Math.max(pos, src_start);
       const overlap_end = Math.min(run_end, src_end);
       if (overlap_end > overlap_start) {
@@ -1387,7 +1397,7 @@ export class CharacterRange extends _TextRange {
       // 0, otherwise it becomes the pair value between the preceding
       // character and the pasted text (probed Y_PASTE_EDGE0/_MID).
       if (start === 0) {
-        setdefault(doc._doc, "0", new Map()).set("7", src_edge);
+        cos_setdefault(doc._doc, "0", new Map()).set("7", src_edge);
       } else {
         const values = _kern_values(doc);
         if (start - 1 < values.length) {
@@ -1448,7 +1458,7 @@ export class CharacterRange extends _TextRange {
       for (let i = start; i < Math.min(end, values.length); i++) values[i] = null;
       _rebuild_kern_runs(doc, values);
       if (start === 0) {
-        const holder = dict_get(doc._doc, "0") as Dict | null;
+        const holder = cos_value(doc._doc, "0");
         if (holder != null) holder.delete("7");
       }
     }
@@ -1570,7 +1580,7 @@ export class CharacterRange extends _TextRange {
     if (start === 0) {
       // Pair position 0 (before the first character): AE stores the
       // leading-edge value at doc["0"]["7"], created after key "8".
-      setdefault(doc._doc, "0", new Map()).set("7", value);
+      cos_setdefault(doc._doc, "0", new Map()).set("7", value);
     }
     _apply_char_key(doc, kern_start, end, "11", AutoKernType.to_binary(AutoKernType.NO_AUTO_KERN));
     this._propagate();

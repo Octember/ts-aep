@@ -36,7 +36,6 @@ import * as host from "../../pyrt/host.ts";
 import {
   NotImplementedError,
   at,
-  dict_get,
   float,
   int,
   max,
@@ -51,6 +50,7 @@ import {
 } from "../../pyrt/index.ts";
 import type { TextDocument } from "../models/text/text_document.ts";
 import { cos_get, run_spans } from "../cos/index.ts";
+import { cos_value, type CharStyle, type ParaStyle } from "../cos/schema.ts";
 import { ParagraphJustification } from "../enums/index.ts";
 import * as tc from "./text_composition.ts";
 import { BoxAccumulator } from "./shape_bounds.ts";
@@ -120,8 +120,8 @@ export function _check_styles(doc: TextDocument): void {
   for (const [_start, _end, style] of run_spans(doc._doc, "6", "6")) {
     if (py_bool(style.get("2"))) throw _refuse("faux bold");
     if (py_bool(style.get("3"))) throw _refuse("faux italic");
-    if (int(dict_get(style, "12", 0)) !== 0) throw _refuse("small or all caps");
-    if (float(dict_get(style, "6", 1.0)) !== 1.0 || float(dict_get(style, "7", 1.0)) !== 1.0) {
+    if (int(cos_value(style, "12", 0)) !== 0) throw _refuse("small or all caps");
+    if (float(cos_value(style, "6", 1.0)) !== 1.0 || float(cos_value(style, "7", 1.0)) !== 1.0) {
       throw _refuse("horizontal or vertical scale");
     }
   }
@@ -131,9 +131,9 @@ export function _check_styles(doc: TextDocument): void {
  * The stroke a character's run draws, 0 when it has none (the width
  * defaults to 1, as `TextDocument.stroke_width` reads it).
  */
-export function _stroke_width(style: Map<string, any>): number {
-  if (!py_bool(dict_get(style, "57", false))) return 0.0;
-  return float(dict_get(style, "63", 1.0));
+export function _stroke_width(style: CharStyle): number {
+  if (!py_bool(cos_value(style, "57", false))) return 0.0;
+  return float(cos_value(style, "63", 1.0));
 }
 
 /**
@@ -247,9 +247,9 @@ export function text_ink_rect(doc: TextDocument): Record<string, number> {
   return box.rect();
 }
 
-export function _justification(paragraph_style: Map<string, any>): ParagraphJustification {
+export function _justification(paragraph_style: ParaStyle): ParagraphJustification {
   return ParagraphJustification.from_binary(
-    int(dict_get(paragraph_style, "0", 0)),
+    int(cos_value(paragraph_style, "0", 0)),
   ) as ParagraphJustification;
 }
 
@@ -257,7 +257,7 @@ export function _point_text_ink(
   raw: string,
   styles: _CharStyle[],
   strokes: number[],
-  paragraph_styles: Map<string, any>[],
+  paragraph_styles: ParaStyle[],
   box: BoxAccumulator,
 ): void {
   const body = raw.endsWith("\r") ? raw.slice(0, -1) : raw;
@@ -292,11 +292,11 @@ export function _point_text_ink(
       // by the first-line indent whatever the justification, plus the
       // start indent when left-justified or minus the end indent when
       // right-justified (a centered line ignores both).
-      origin += float(dict_get(style, "1", 0.0));
+      origin += float(cos_value(style, "1", 0.0));
       if (justification === ParagraphJustification.LEFT_JUSTIFY) {
-        origin += float(dict_get(style, "2", 0.0));
+        origin += float(cos_value(style, "2", 0.0));
       } else if (justification === ParagraphJustification.RIGHT_JUSTIFY) {
-        origin -= float(dict_get(style, "3", 0.0));
+        origin -= float(cos_value(style, "3", 0.0));
       }
       _line_ink(paragraph, styles, strokes, offset, origin, baseline, box);
     }
@@ -309,7 +309,7 @@ export function _box_text_ink(
   raw: string,
   styles: _CharStyle[],
   strokes: number[],
-  paragraph_styles: Map<string, any>[],
+  paragraph_styles: ParaStyle[],
   box: BoxAccumulator,
 ): void {
   const composed = tc.compose_lines(doc);
@@ -333,9 +333,9 @@ export function _box_text_ink(
       throw _refuse("non-left-justified box text");
     }
     const first_line = start === 0 || raw[start - 1] === "\r";
-    let origin = left + inset + float(dict_get(style, "2", 0.0));
+    let origin = left + inset + float(cos_value(style, "2", 0.0));
     if (first_line) {
-      origin += float(dict_get(style, "1", 0.0));
+      origin += float(cos_value(style, "1", 0.0));
     }
     // The inset pads the box on every side, the top included (AE 2026:
     // an inset of 8 or 20 lowers the ink by exactly that much).

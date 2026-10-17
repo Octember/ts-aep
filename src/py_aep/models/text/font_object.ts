@@ -1,7 +1,7 @@
 /** Font object model for After Effects text layers. */
 
 import { TypeError_, descriptor, is_real, split, str, instance_dict } from "../../../pyrt/index.ts";
-import type { CosDict } from "../../cos/cos.ts";
+import type { FontData, FontEntry } from "../../cos/schema.ts";
 import { CosField } from "../../cos/descriptors.ts";
 
 /** Decode the COS design vector (16.16 fixed-point ints) to floats. */
@@ -57,8 +57,8 @@ export class FontObject {
    */
   declare design_vector: number[] | null;
 
-  declare _font_data: CosDict;
-  declare _font_entry: CosDict | null;
+  declare _font_data: FontData;
+  declare _font_entry: FontEntry | null;
 
   /** Returns `true` if the font is a variable font. Read-only. */
   get has_design_axes(): boolean {
@@ -76,8 +76,8 @@ export class FontObject {
   }
 
   constructor(kw: {
-    _font_data: CosDict;
-    _font_entry?: CosDict | null;
+    _font_data: FontData;
+    _font_entry?: FontEntry | null;
     post_script_name?: string | null;
     version?: string | null;
   }) {
