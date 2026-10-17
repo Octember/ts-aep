@@ -1,4 +1,4 @@
-# ts-aep
+# aep-toolkit
 
 A 1:1 TypeScript port of [py-aep](https://github.com/forticheprod/py-aep), the
 After Effects `.aep` reader/writer, pinned to upstream commit
@@ -31,11 +31,11 @@ Against upstream at the pinned commit (CI runs all of this on every push):
 ## Install
 
 ```bash
-bun add ts-aep
+bun add @bevyl-ai/aep-toolkit
 ```
 
 ```ts
-import { parse } from "ts-aep";
+import { parse } from "@bevyl-ai/aep-toolkit";
 
 const app = parse("project.aep");
 for (const comp of app.project.compositions) console.log(comp.name, comp.duration);
@@ -125,8 +125,8 @@ MIT. Derived from py-aep, Copyright (c) 2023 Fortiche production; see `LICENSE`.
 Releases publish from GitHub Actions with npm trusted publishing (OIDC), so no
 npm token is stored anywhere:
 
-1. One-time, on npmjs.com: package `ts-aep` → Settings → Trusted publishing →
-   GitHub Actions, owner `Octember`, repository `ts-aep`, workflow `release.yml`.
+1. One-time, on npmjs.com: package `@bevyl-ai/aep-toolkit` → Settings → Trusted publishing →
+   GitHub Actions, owner `bevyl-ai`, repository `aep-toolkit`, workflow `release.yml`.
    If npm requires the package to exist first, do the very first publish by hand
    (`npm login`, then `bun publish --access public`) and add the trusted
    publisher afterwards.
