@@ -1,17 +1,16 @@
 // `from __future__ import annotations` and the `typing` imports are dropped:
 // annotations are TypeScript types only.
 import {
-  TypeError_,
   ValueError,
   descriptor,
   dict_get,
-  float,
   int,
-  is_real,
   json_dumps,
   json_loads,
-  type_name,
   py_bool,
+  json_float,
+  json_int,
+  type JsonValue,
 } from "../../../../pyrt/index.ts";
 import { Hdr10ColorPrimaries, PngCompression } from "../../../enums/index.ts";
 import { ChunkField, enum_or_raw } from "../../descriptors.ts";
@@ -20,8 +19,11 @@ import { FormatOptionsBase } from "./base.ts";
 import type { PngRoptChunk } from "../../../binary/render_chunks.ts";
 import type { Utf8Chunk } from "../../../binary/scalar_chunks.ts";
 
-/** HDR10 metadata JSON as AE stores it (parsed, not validated): the binary is trusted, so values are read as scalars. */
-type Hdr10Meta = Map<string, any>;
+/**
+ * HDR10 metadata JSON as AE stores it. It is re-dumped without sorting, so
+ * the Map keeps the file's key order and any keys py_aep does not read.
+ */
+type Hdr10Meta = Map<string, JsonValue>;
 
 /**
  * PNG format-specific render options.
@@ -118,13 +120,7 @@ export class PngFormatOptions extends FormatOptionsBase {
   get color_primaries(): Hdr10ColorPrimaries | number {
     const raw = this._hdr10_meta.get("displayPrimaries") ?? null;
     if (raw == null) return Hdr10ColorPrimaries.P3_D65;
-    return enum_or_raw((v: unknown) => {
-      // Python `int(v)` raises TypeError for a list / dict; pyrt `int` would not.
-      if (!is_real(v) && typeof v !== "string" && typeof v !== "boolean") {
-        throw new TypeError_(`int() argument must be a string, a bytes-like object or a real number, not '${type_name(v)}'`);
-      }
-      return Hdr10ColorPrimaries.of(int(v));
-    })(raw);
+    return enum_or_raw((v: JsonValue) => Hdr10ColorPrimaries.of(json_int(v)))(raw);
   }
 
   set color_primaries(value: Hdr10ColorPrimaries) {
@@ -140,7 +136,7 @@ export class PngFormatOptions extends FormatOptionsBase {
    */
   get luminance_min(): number | null {
     const raw = this._hdr10_meta.get("minLuminance") ?? null;
-    return raw != null ? float(raw) : null;
+    return raw != null ? json_float(raw) : null;
   }
 
   set luminance_min(value: number | null) {
@@ -160,7 +156,7 @@ export class PngFormatOptions extends FormatOptionsBase {
    */
   get luminance_max(): number | null {
     const raw = this._hdr10_meta.get("maxLuminance") ?? null;
-    return raw != null ? float(raw) : null;
+    return raw != null ? json_float(raw) : null;
   }
 
   set luminance_max(value: number | null) {
@@ -180,7 +176,7 @@ export class PngFormatOptions extends FormatOptionsBase {
    */
   get content_light_max(): number | null {
     const raw = this._hdr10_meta.get("maxContentLightLevel") ?? null;
-    return raw != null ? float(raw) : null;
+    return raw != null ? json_float(raw) : null;
   }
 
   set content_light_max(value: number | null) {
@@ -200,7 +196,7 @@ export class PngFormatOptions extends FormatOptionsBase {
    */
   get content_light_average(): number | null {
     const raw = this._hdr10_meta.get("maxFrameAverageLightLevel") ?? null;
-    return raw != null ? float(raw) : null;
+    return raw != null ? json_float(raw) : null;
   }
 
   set content_light_average(value: number | null) {

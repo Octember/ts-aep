@@ -25,7 +25,6 @@ import {
   bytes_eq,
   concat,
   decode,
-  dict_get,
   float,
   floordiv,
   getitem,
@@ -44,7 +43,9 @@ import {
   struct,
   tkey,
   type FileReader,
+  json_get,
   json_loads,
+  type JsonValue,
   open_rb,
   type_name,
 } from "../../pyrt/index.ts";
@@ -1834,14 +1835,6 @@ export function _parse_mgjson_time(t: JsonValue): number | null {
   return null;
 }
 
-/** A parsed JSON value: Map for objects, arrays, strings, numbers, booleans, null. */
-export type JsonValue = null | boolean | number | string | JsonValue[] | Map<string, JsonValue>;
-
-export function _json_get(d: JsonValue, key: string, default_: JsonValue = null): JsonValue {
-  if (!(d instanceof Map)) throw new AttributeError(`'${type_name(d)}' object has no attribute 'get'`);
-  return dict_get(d, key, default_);
-}
-
 /** `iter(x)` on a parsed JSON value: list items, str characters, dict keys. */
 export function _json_iter(x: JsonValue): JsonValue[] {
   if (Array.isArray(x)) return x;
@@ -1853,9 +1846,9 @@ export function _json_iter(x: JsonValue): JsonValue[] {
 export function _probe_mgjson(fp: ProbeStream): MediaInfo {
   const doc = json_loads(fp.read());
   const times: number[] = [];
-  for (const stream of _json_iter(_json_get(doc, "dataDynamicSamples", []))) {
-    for (const sample of _json_iter(_json_get(stream, "samples", []))) {
-      const t = _json_get(sample, "time");
+  for (const stream of _json_iter(json_get(doc, "dataDynamicSamples", []))) {
+    for (const sample of _json_iter(json_get(stream, "samples", []))) {
+      const t = json_get(sample, "time", null);
       if (py_bool(t)) {
         const parsed = _parse_mgjson_time(t);
         if (parsed !== null) times.push(parsed);

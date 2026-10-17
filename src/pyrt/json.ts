@@ -6,9 +6,9 @@
 // float), an integer beyond 2**53 is a `bigint`. NaN / Infinity / -Infinity
 // are accepted, as Python does.
 
-import { ValueError, TypeError_ } from "./errors.ts";
-import { float_repr, PyFloat, pyfloat } from "./num.ts";
-import { py_cmp, type_name } from "./builtins.ts";
+import { AttributeError, KeyError, ValueError, TypeError_ } from "./errors.ts";
+import { float, float_repr, int, PyFloat, pyfloat } from "./num.ts";
+import { py_cmp, repr, type_name } from "./builtins.ts";
 import { decode } from "./codecs.ts";
 
 /** `json.JSONDecodeError` (a `ValueError`) with CPython's message and position fields. */
@@ -79,6 +79,51 @@ const ESC: Record<string, string> = { '"': '"', "\\": "\\", "/": "/", b: "\b", f
  * `json.loads(s)`; `s` may be `str` or `bytes` (encoding sniffed like CPython).
  * NOTE: bytes decode strictly; CPython's `surrogatepass` (encoded surrogates) is not modelled.
  */
+/**
+ * A value `json_loads` produces with its default hooks: objects are `Map`s
+ * (insertion-ordered, like a Python dict), fractional and exponent numbers
+ * are boxed `PyFloat`s, integers past 2**53 are `bigint`s.
+ */
+export type JsonValue = null | boolean | number | bigint | PyFloat | string | JsonValue[] | Map<string, JsonValue>;
+
+/** Python `x[key]` on a decoded JSON value: `KeyError` when absent, `TypeError` when `x` is no object. */
+export function json_getitem(x: JsonValue, key: string): JsonValue {
+  if (x instanceof Map) {
+    const value = x.get(key);
+    if (value === undefined) throw new KeyError(repr(key));
+    return value;
+  }
+  if (Array.isArray(x)) throw new TypeError_("list indices must be integers or slices, not str");
+  if (typeof x === "string") throw new TypeError_("string indices must be integers, not 'str'");
+  throw new TypeError_(`'${type_name(x)}' object is not subscriptable`);
+}
+
+/** Python `x.get(key, default)` on a decoded JSON value: `AttributeError` when `x` is no object. */
+export function json_get<D>(x: JsonValue, key: string, default_: D): JsonValue | D {
+  if (!(x instanceof Map)) throw new AttributeError(`'${type_name(x)}' object has no attribute 'get'`);
+  const value = x.get(key);
+  return value === undefined ? default_ : value;
+}
+
+/** Python `int(x)` on a decoded JSON value: `TypeError` for null, lists and objects. */
+export function json_int(x: JsonValue): number {
+  if (x === null || Array.isArray(x) || x instanceof Map) {
+    throw new TypeError_(`int() argument must be a string, a bytes-like object or a real number, not '${type_name(x)}'`);
+  }
+  return int(x);
+}
+
+/** Python `float(x)` on a decoded JSON value: `TypeError` for null, lists and objects. */
+export function json_float(x: JsonValue): number {
+  if (x === null || Array.isArray(x) || x instanceof Map) {
+    throw new TypeError_(`float() argument must be a string or a real number, not '${type_name(x)}'`);
+  }
+  return float(typeof x === "bigint" ? Number(x) : x);
+}
+
+/** `json.loads(s)`; the hooks in `opts` decide what custom options produce. */
+export function json_loads(s: string | Uint8Array): JsonValue;
+export function json_loads(s: string | Uint8Array, opts: LoadsOptions): unknown;
 export function json_loads(s: string | Uint8Array, opts: LoadsOptions = {}): any {
   let text: string;
   if (s instanceof Uint8Array) {

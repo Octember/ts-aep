@@ -20,7 +20,7 @@ import { LHD3_BLOCK_SINGLE, set_lhd3_count, type LdatChunk, type Lhd3Chunk } fro
 import { HdrmChunk } from "../../binary/misc_chunks.ts";
 import { OutputModuleSettingsItem, RoptChunk, RouuChunk, TiffRoptChunk, type RenderSettingsItem } from "../../binary/render_chunks.ts";
 import { Utf8Chunk } from "../../binary/scalar_chunks.ts";
-import { PENDING_ASCENDCOUNT, alas_platform, build_als2_list, dump_alas, find_by_type, index_by_identity } from "../../binary/utils.ts";
+import { PENDING_ASCENDCOUNT, alas_platform, type AlasData, build_als2_list, dump_alas, find_by_type, index_by_identity } from "../../binary/utils.ts";
 import type { Chunk } from "../../binary/chunk.ts";
 import type { EnumHelpers } from "../../../pyrt/enum.ts";
 import type { OutputModuleTemplate } from "../../parsers/templates.ts";
@@ -1285,7 +1285,7 @@ export class OutputModule {
   }
 
   /** Parsed JSON from the alas chunk. */
-  get _alas_data(): Map<string, any> {
+  get _alas_data(): AlasData {
     if (this._alas_utf8 == null) {
       return new Map();
     }

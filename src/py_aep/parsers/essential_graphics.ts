@@ -5,12 +5,10 @@ import type { Utf8Chunk } from "../binary/scalar_chunks.ts";
 import type { Chunk, ListChunk } from "../binary/chunk.ts";
 import { _suppress_materialization } from "../models/descriptors.ts";
 import { EssentialGraphicsController, SourcePropertyRef } from "../models/essential_graphics.ts";
-import { at, dict_get, getitem, int, json_loads, sorted } from "../../pyrt/index.ts";
+import { at, int, json_get, json_getitem, json_loads, sorted, type_name, TypeError_ } from "../../pyrt/index.ts";
 
 // AE stores 0xFFFFFFFF in a CPrp path node's `index` to mean "match by name".
 export const _BY_NAME_INDEX = 0xffffffff;
-
-type PathNode = Map<"index", number | undefined> & Map<"matchName", string>;
 
 /**
  * Parse a controller's `CPrp` path JSON into root-to-leaf refs.
@@ -20,17 +18,17 @@ type PathNode = Map<"index", number | undefined> & Map<"matchName", string>;
  * the source property the controller exposes.
  */
 export function _parse_source_property_path(raw: string): SourcePropertyRef[] {
-  const nodes: Map<string, PathNode> = json_loads(raw);
+  const nodes = json_loads(raw);
+  if (!(nodes instanceof Map)) throw new TypeError_(`'${type_name(nodes)}' object is not a path node map`);
   const path: SourcePropertyRef[] = [];
-  for (const key of sorted(nodes.keys(), int)) {
-    const node = getitem(nodes, key);
-    const index = node.get("index") ?? null;
-    path.push(
-      new SourcePropertyRef(
-        dict_get(node, "matchName", ""),
-        index === _BY_NAME_INDEX ? null : index,
-      ),
-    );
+  for (const key of sorted(nodes.keys(), (k) => int(k))) {
+    const node = json_getitem(nodes, key);
+    const index = json_get(node, "index", null);
+    const match_name = json_get(node, "matchName", "");
+    if (typeof match_name !== "string" || (index !== null && typeof index !== "number")) {
+      throw new TypeError_(`malformed CPrp path node ${key}`);
+    }
+    path.push(new SourcePropertyRef(match_name, index === _BY_NAME_INDEX ? null : index));
   }
   return path;
 }
