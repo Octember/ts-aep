@@ -1,5 +1,12 @@
 # ts-aep
 
+An [AI rewrite](https://bun.com/blog/bun-in-rust) of the amazing
+[py-aep](https://github.com/forticheprod/py-aep) package. We were crossing
+language boundaries just to use py-aep, so this is a faithful in-place rewrite
+with identical APIs, for JS users.
+
+**This is a proof-of-concept project — use with caution.**
+
 A 1:1 TypeScript port of [py-aep](https://github.com/forticheprod/py-aep), the
 After Effects `.aep` reader/writer, pinned to upstream commit
 `edcae7a` (see `UPSTREAM_COMMIT`).
