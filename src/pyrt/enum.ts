@@ -103,7 +103,7 @@ export function py_enum<const M extends Record<string, unknown>, X extends Recor
       Object.defineProperty(self, k, { ...v, enumerable: false });
     }
   }
-  return Object.freeze(self) as unknown as Resolved<M> & EnumHelpers<Resolved<M>[keyof M]> & X;
+  return Object.freeze(self) as Resolved<M> & EnumHelpers<Resolved<M>[keyof M]> & X;
 }
 
 /** `class X(IntEnum)` */

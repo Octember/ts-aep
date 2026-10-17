@@ -52,7 +52,7 @@ export function* range(a: number, b?: number, step = 1): Generator<number> {
 }
 
 /** `zip(a, b, ...)` (shortest; `strict` raises on length mismatch). */
-export function zip<T extends unknown[][]>(...arrays: T): { [K in keyof T]: T[K] extends (infer U)[] ? U : never }[] {
+export function zip<T extends unknown[][]>(...arrays: T): { [K in keyof T]: T[K][number] }[] {
   const n = Math.min(...arrays.map((a) => a.length));
   const out: any[] = [];
   for (let i = 0; i < n; i++) out.push(arrays.map((a) => a[i]));

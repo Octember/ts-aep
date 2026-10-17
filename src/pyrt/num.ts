@@ -50,8 +50,10 @@ export function is_real(x: unknown): x is number | PyFloat {
 }
 
 /** The plain JS number behind a possibly boxed `PyFloat`; other values pass through. */
-export function unbox<T>(x: T): T extends PyFloat ? number : T {
-  return (x instanceof PyFloat ? x.value : x) as T extends PyFloat ? number : T;
+export function unbox(x: number | PyFloat): number;
+export function unbox<T>(x: T): T extends PyFloat ? number : T;
+export function unbox(x: unknown): unknown {
+  return (x instanceof PyFloat ? x.value : x);
 }
 
 /**

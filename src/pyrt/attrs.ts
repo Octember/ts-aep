@@ -60,7 +60,7 @@ export function init_name(name: string): string {
  * orders them.
  */
 export function define<C extends Function>(cls: C, own: Record<string, FieldSpec> = {}): C {
-  const base = Object.getPrototypeOf(cls);
+  const base: Function | null = Object.getPrototypeOf(cls);
   const inherited = (base && FIELDS.get(base)) || [];
   const own_attrs: Attribute[] = Object.entries(own).map(([name, spec]) => ({
     name,

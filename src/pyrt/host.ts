@@ -18,6 +18,14 @@ export interface HostStats {
   mtimeMs: number;
 }
 
+export interface HostBigStats {
+  isFile(): boolean;
+  isDirectory(): boolean;
+  size: bigint;
+  mtimeMs: bigint;
+  mtimeNs: bigint;
+}
+
 export interface HostDirent {
   name: string;
   isFile(): boolean;
@@ -27,9 +35,11 @@ export interface HostDirent {
 /** The sync `node:fs` subset py_aep uses. */
 export interface HostFs {
   existsSync(path: string): boolean;
-  statSync(path: string, opts?: { bigint?: boolean }): any;
+  statSync(path: string, opts?: { bigint?: false }): HostStats;
+  statSync(path: string, opts: { bigint: true }): HostBigStats;
+  statSync(path: string, opts?: { bigint?: boolean }): HostStats | HostBigStats;
   readFileSync(path: string): Uint8Array;
-  writeFileSync(path: string, data: Uint8Array | string, encoding?: string): void;
+  writeFileSync(path: string, data: Uint8Array | string, encoding?: BufferEncoding): void;
   mkdirSync(path: string, opts?: { recursive?: boolean }): void;
   readdirSync(path: string): string[];
   readdirSync(path: string, opts: { withFileTypes: true }): HostDirent[];
@@ -56,7 +66,10 @@ export interface HostPath {
 
 const _process = globalThis.process;
 
-function _builtin(name: string): any {
+function _builtin(name: "node:os"): typeof import("node:os") | null;
+function _builtin(name: "node:path"): typeof import("node:path") | null;
+function _builtin(name: "node:fs"): typeof import("node:fs") | null;
+function _builtin(name: string): object | null {
   try {
     return _process?.getBuiltinModule?.(name) ?? null;
   } catch {
@@ -222,7 +235,10 @@ export class MemoryFs implements HostFs {
     return this.files.has(k) || this._is_dir(k);
   }
 
-  statSync(p: string, opts: { bigint?: boolean } = {}): any {
+  statSync(p: string, opts?: { bigint?: false }): HostStats;
+  statSync(p: string, opts: { bigint: true }): HostBigStats;
+  statSync(p: string, opts?: { bigint?: boolean }): HostStats | HostBigStats;
+  statSync(p: string, opts: { bigint?: boolean } = {}): HostStats | HostBigStats {
     const st = this._stats(this.key(p));
     if (!opts.bigint) return st;
     return {
@@ -233,7 +249,9 @@ export class MemoryFs implements HostFs {
     };
   }
 
-  readFileSync(p: string, encoding?: string): any {
+  readFileSync(p: string): Uint8Array;
+  readFileSync(p: string, encoding: string): string;
+  readFileSync(p: string, encoding?: string): Uint8Array | string {
     const k = this.key(p);
     const f = this.files.get(k);
     if (!f) throw _fs_error(this._is_dir(k) ? "EISDIR" : "ENOENT", "open", k);
@@ -261,7 +279,9 @@ export class MemoryFs implements HostFs {
     this.dirs.add(k);
   }
 
-  readdirSync(p: string, opts?: { withFileTypes?: boolean }): any {
+  readdirSync(p: string): string[];
+  readdirSync(p: string, opts: { withFileTypes: true }): HostDirent[];
+  readdirSync(p: string, opts?: { withFileTypes?: boolean }): string[] | HostDirent[] {
     const k = this.key(p);
     if (this.files.has(k)) throw _fs_error("ENOTDIR", "scandir", k);
     if (!this._is_dir(k)) throw _fs_error("ENOENT", "scandir", k);

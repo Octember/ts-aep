@@ -18,7 +18,6 @@
 import * as host from "../../pyrt/host.ts";
 import { parse, YAMLError, isMap, isSeq, isScalar } from "yaml";
 import type { Document, DocumentOptions, ParseOptions, SchemaOptions, ToJSOptions } from "yaml";
-import type { BigIntStats } from "node:fs";
 import {
   Path,
   lru_cache,
@@ -108,7 +107,7 @@ export const _load_config_cached = lru_cache(
 
 /** `(mtime_ns, size)` cache key for `config_path`, or `null` if unreadable. */
 export function _config_stamp(config_path: Path): [bigint, number] | null {
-  let st: BigIntStats;
+  let st: host.HostBigStats;
   try {
     st = host.fs.statSync(config_path.path, { bigint: true });
   } catch (e: unknown) {

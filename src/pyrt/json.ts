@@ -262,7 +262,7 @@ export function encode_basestring(s: string): string {
   return out + '"';
 }
 
-function is_plain_object(o: unknown): boolean {
+function is_plain_object(o: unknown): o is Record<string, unknown> {
   if (o === null || typeof o !== "object") return false;
   const p = Object.getPrototypeOf(o);
   return p === Object.prototype || p === null;
@@ -333,7 +333,7 @@ export function json_dumps(obj: unknown, opts: DumpsOptions = {}): string {
       return r;
     }
     if (markers.has(o)) throw new ValueError("Circular reference detected");
-    let items: [unknown, unknown][] | unknown[];
+    let items: [unknown, unknown][];
     if (is_list) {
       if (o.length === 0) return "[]";
       items = o;
@@ -355,7 +355,7 @@ export function json_dumps(obj: unknown, opts: DumpsOptions = {}): string {
     if (is_list) {
       for (const v of items) parts.push(encode(v, inner));
     } else {
-      for (const [k, v] of items as [unknown, unknown][]) {
+      for (const [k, v] of items) {
         const ks = key_str(k);
         if (ks === null) continue;
         parts.push(enc(ks) + key_sep + encode(v, inner));

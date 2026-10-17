@@ -281,7 +281,7 @@ export class PurePath {
 
   /** A new path of the same flavour from the given segments (`with_segments`). */
   protected _with(...args: (string | PurePath)[]): this {
-    return new (this.constructor as unknown as new (...a: (string | PurePath)[]) => this)(...args);
+    return new (this.constructor as new (...a: (string | PurePath)[]) => this)(...args);
   }
 
   get anchor(): string {
