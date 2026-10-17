@@ -20,7 +20,6 @@ import {
   Path,
   TypeError_,
   ValueError,
-  hasattr,
   py_assert,
   repr,
   sorted,
@@ -254,8 +253,8 @@ export class FootageItem extends AVItem {
 
   /** The footage file path if its source is a {@link FileSource}, else `null`. */
   get file(): string | null {
-    if (hasattr(this._main_source, "file")) {
-      return (this._main_source as FileSource).file;
+    if (this._main_source instanceof FileSource) {
+      return this._main_source.file;
     }
     return null;
   }

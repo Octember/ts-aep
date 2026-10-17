@@ -109,11 +109,11 @@ export class CameraLayer extends Layer {
     });
     ldta.out_point = duration;
     ldta.three_d_layer = true;
-    return super._new({
+    return super._new<CameraLayer>({
       ldta,
       name,
       containing_comp,
       effect_param_defs,
-    }) as CameraLayer;
+    });
   }
 }

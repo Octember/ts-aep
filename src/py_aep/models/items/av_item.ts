@@ -126,7 +126,7 @@ export class _IdHashSet<T extends { id: number }> {
     for (let n = 0; n < oldKeys.length; n++) {
       const key = oldKeys[n];
       if (key == null) continue;
-      const hash = oldHashes[n]!;
+      const hash = oldHashes[n];
       let i = hash & this._mask;
       let perturb = hash;
       placed: for (;;) {
