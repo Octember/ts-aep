@@ -28,6 +28,7 @@ import {
   type Attribute,
   type FieldSpec,
 } from "../../pyrt/index.ts";
+import { _struct_for } from "./bin_utils.ts";
 
 const _chunk = deferred<typeof import("./chunk.ts")>("py_aep/binary/chunk");
 
@@ -405,6 +406,42 @@ function _compile_decoder(
   }
 }
 
+type EncodeFields = (self: object) => FieldValue[];
+const _ENCODERS = new Map<_StructInfo, EncodeFields | null>();
+
+/**
+ * Every data field of `self` through `getattr` and `_encode_value`, as
+ * straight-line code per class (big-endian fields only). Null where
+ * `new Function` is refused (Workers, strict CSP).
+ */
+export function _field_encoder(info: _StructInfo): EncodeFields | null {
+  let encode_fields = _ENCODERS.get(info);
+  if (encode_fields === undefined) {
+    const [, data_fields, encodings, , , , coerces] = info;
+    const fmts: string[] = [];
+    const exprs = data_fields.map((f, i) => {
+      const name = JSON.stringify(f.name);
+      const value = `(${name} in self ? self[${name}] : G(self, ${name}))`;
+      if (!encodings.has(i) && !coerces.has(i)) return value;
+      return `X(${value}, ${i}, E, C, ">", F[${fmts.push(f.metadata["fmt"]) - 1}])`;
+    });
+    let compiled: EncodeFields | null;
+    try {
+      compiled = new Function("G", "X", "E", "C", "F", `return (self) => [${exprs.join(", ")}];`)(
+        getattr,
+        _encode_value,
+        encodings,
+        coerces,
+        fmts,
+      );
+    } catch {
+      compiled = null;
+    }
+    _ENCODERS.set(info, (encode_fields = compiled));
+  }
+  return encode_fields;
+}
+
 /**
  * Decode raw struct values into init options.
  *
@@ -459,7 +496,7 @@ export function _encode_value(
 ): FieldValue {
   const enc = encodings.get(idx) ?? null;
   if (enc != null) {
-    const field_size = struct.calcsize(endian + fmt_str);
+    const field_size = _struct_for(fmt_str, endian).size;
     if (value instanceof _NulTailStr && value.raw.length === field_size) return value.raw;
     // `String(value)` unwraps a `_NulTailStr` (a String object) to its text.
     const encoded = encode(String(value), enc, "surrogateescape").slice(0, field_size);
@@ -545,6 +582,8 @@ export class FmtItem extends AttrsBase {
       }
       return bytes_.join(parts);
     }
+    const encode_fields = _field_encoder(info);
+    if (encode_fields !== null) return struct.pack(">" + fmt, ...encode_fields(this));
     const values: FieldValue[] = [];
     for (const [i, f] of data_fields.entries()) {
       let value = getattr(this, f.name);

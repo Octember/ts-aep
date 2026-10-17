@@ -33,8 +33,8 @@ import {
   type Attribute,
   type IO,
 } from "../../pyrt/index.ts";
-import { _struct_for, read_bytes, read_fmt, read_pad, write_bytes, write_fmt, write_pad } from "./bin_utils.ts";
-import { _decode_fields, _encode_value, _struct_info, type Coerce, type FieldValue, type FmtItem, type InitKwargs } from "./fmt_field.ts";
+import { _struct_for, read_bytes, read_fmt, read_pad, write_bytes, write_pad } from "./bin_utils.ts";
+import { _decode_fields, _encode_value, _field_encoder, _struct_info, type Coerce, type FieldValue, type FmtItem, type InitKwargs } from "./fmt_field.ts";
 import { CHUNK_TYPES, register } from "./registry.ts";
 import type { HeadChunk } from "./item_chunks.ts";
 
@@ -278,8 +278,9 @@ export class Chunk extends AttrsBase {
         written += write_bytes(fp, struct.pack(fe + f.metadata["fmt"], value));
       }
     } else {
-      const values: FieldValue[] = [];
-      for (let i = 0; i < last_idx; i++) {
+      const encode_fields = last_idx === data_fields.length ? _field_encoder(info) : null;
+      const values: FieldValue[] = encode_fields !== null ? encode_fields(this) : [];
+      for (let i = values.length; i < last_idx; i++) {
         const f = data_fields[i];
         let value = getattr(this, f.name);
         value = _encode_value(value, i, encodings, coerces, ">", f.metadata["fmt"]);
@@ -785,6 +786,10 @@ const _HEADER_CODES = new struct.Struct(">II");
 /** Decoded chunk types by code; only codes that decode as ASCII get in. */
 const _TYPE_NAMES = new Map<number, string>();
 
+/** Encoded chunk types; `write_bytes` copies them out, never in. */
+const _TYPE_BYTES = new Map<string, Uint8Array>();
+const _LEN_BODY = new struct.Struct(">I");
+
 /** Read the 8-byte chunk header: (chunk_type, len_body). */
 export function read_header(fp: IO): [string, number] {
   const header = fp.unpack(_HEADER_CODES);
@@ -812,7 +817,9 @@ function _type_name(code: number): string {
  * Backpatches len_body after the body is written.
  */
 export function write_chunk(fp: IO, chunk: Chunk): number {
-  let written = write_bytes(fp, encode(chunk.chunk_type, "ASCII"));
+  let type_bytes = _TYPE_BYTES.get(chunk.chunk_type);
+  if (type_bytes === undefined) _TYPE_BYTES.set(chunk.chunk_type, (type_bytes = encode(chunk.chunk_type, "ASCII")));
+  let written = write_bytes(fp, type_bytes);
   const len_pos = fp.tell();
   fp.seek(4, 1); // skip 4 bytes for len_body placeholder
   written += 4;
@@ -823,7 +830,7 @@ export function write_chunk(fp: IO, chunk: Chunk): number {
   // Backpatch len_body
   const current = fp.tell();
   fp.seek(len_pos);
-  write_fmt(fp, "I", body_size);
+  fp.pack(_LEN_BODY, [body_size]);
   fp.seek(current);
 
   // Pad to even boundary
