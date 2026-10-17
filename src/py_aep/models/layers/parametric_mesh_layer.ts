@@ -77,7 +77,7 @@ export class ParametricMeshLayer extends AVLayer {
     duration: number;
     containing_comp: CompItem;
     mesh_type: ParametricMeshType;
-    effect_param_defs?: Map<string, unknown> | null;
+    effect_param_defs?: Map<string, Map<string, Map<string, unknown>>> | null;
   }): ParametricMeshLayer;
   static _new(kw: any): ParametricMeshLayer;
   static _new(kw: any): any {

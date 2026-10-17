@@ -239,7 +239,7 @@ export class _Acc {
 }
 
 /** The dictionary of a plain dict or of a `Stream` object. */
-export function _as_dict(value: unknown): CosDict | null {
+export function _as_dict(value: CosValue): CosDict | null {
   if (value instanceof Map) return value;
   const dictionary = getattr(value, "dictionary", null);
   return dictionary instanceof Map ? dictionary : null;
@@ -324,7 +324,7 @@ export class _Document {
   }
 
   /** Follow an indirect reference to its object; pass values through. */
-  resolve(value: unknown): CosValue {
+  resolve(value: CosValue): CosValue {
     while (value instanceof IndirectReference) {
       const number = value.object_number;
       if (this._cache.has(number)) {
@@ -340,20 +340,20 @@ export class _Document {
     return value;
   }
 
-  number(value: unknown, default_: number = 0.0): number {
+  number(value: CosValue, default_: number = 0.0): number {
     const resolved = this.resolve(value);
     if (!is_real(resolved)) return default_;
     return float(resolved);
   }
 
-  get(mapping: unknown, key: string, default_: unknown = null): CosValue {
+  get(mapping: CosValue, key: string, default_: CosValue = null): CosValue {
     const table = _as_dict(this.resolve(mapping));
     if (table == null || !table.has(key)) return default_;
     return this.resolve(table.get(key));
   }
 
   /** The decoded body of a stream object. */
-  stream(value: unknown): Uint8Array {
+  stream(value: CosValue): Uint8Array {
     const reference = value;
     value = this.resolve(value);
     let body: Uint8Array | null = null;
@@ -396,7 +396,7 @@ export class _Document {
     return body;
   }
 
-  _raw_stream(number: number, info: unknown): Uint8Array | null {
+  _raw_stream(number: number, info: CosDict): Uint8Array | null {
     const offset = this._offsets.get(number) ?? null;
     if (offset == null) return null;
     let start = bytes_.find(this._data, b("stream"), offset);
@@ -859,7 +859,7 @@ export function _type0_metrics(doc: _Document, font: CosDict): Metrics {
 
 export function _vertical_extent(
   doc: _Document,
-  descriptor: unknown,
+  descriptor: CosValue,
   std: [number, number] | null,
 ): [number, number] {
   const bbox = doc.get(descriptor, "FontBBox");
@@ -905,17 +905,17 @@ export class _Measurer {
     return null;
   }
 
-  _resource(resources: unknown, category: string, name: unknown): CosValue {
+  _resource(resources: CosValue, category: string, name: CosValue): CosValue {
     return this._doc.get(this._doc.get(resources, category), _operand_str(name));
   }
 
-  _resource_ref(resources: unknown, category: string, name: unknown): CosValue {
+  _resource_ref(resources: CosValue, category: string, name: CosValue): CosValue {
     const table = _as_dict(this._doc.resolve(this._doc.get(resources, category)));
     if (table == null) return null;
     return table.get(_operand_str(name)) ?? null;
   }
 
-  run(content: Uint8Array, resources: unknown): void {
+  run(content: Uint8Array, resources: CosValue): void {
     let gs = new _GState();
     const saved: _GState[] = [];
     let operands: CosValue[] = [];
@@ -1119,7 +1119,7 @@ export class _Measurer {
   }
 
   /** A form or image XObject contributes its box with no expansion. */
-  _draw_xobject(gs: _GState, resources: unknown, name: unknown): void {
+  _draw_xobject(gs: _GState, resources: CosValue, name: CosValue): void {
     const xobject = _as_dict(this._resource(resources, "XObject", name));
     if (xobject == null) return;
     const target = this._target();
@@ -1162,7 +1162,7 @@ export class _Measurer {
   }
 
   /** Measure a text-showing operator and advance the text matrix. */
-  _show_text(gs: _GState, text_matrix: Matrix, items: unknown[]): Matrix {
+  _show_text(gs: _GState, text_matrix: Matrix, items: CosValue[]): Matrix {
     const [widths, default_, y_min, y_max, two_byte] = gs.metrics;
     const target = this._target();
     const scale = gs.h_scale / 100.0;

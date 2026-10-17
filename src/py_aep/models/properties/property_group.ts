@@ -235,7 +235,7 @@ export function _reorder_and_fill(
   child_depth: number,
   kw: {
     skip?: ReadonlySet<string>;
-    value_overrides?: Map<string, [unknown, unknown]> | null;
+    value_overrides?: Map<string, [number | number[], number | number[]]> | null;
     tail_mode?: "none" | "groups" | "all";
     ae_major: number;
   },
@@ -313,7 +313,7 @@ export function _reorder_and_fill(
       });
       ordered.push(group);
     } else {
-      const [v, d] = dict_get(value_overrides ?? new Map(), mn, [_USE_VALUE, _USE_VALUE]);
+      const [v, d] = dict_get(value_overrides ?? new Map<string, [unknown, unknown]>(), mn, [_USE_VALUE, _USE_VALUE]);
       const prop = Property._new(spec, child_depth, {
         parent_property: container,
         value: v,
@@ -652,7 +652,7 @@ export class PropertyGroup extends PropertyBase {
     }
   }
 
-  _synthesis_value_overrides(): Map<string, [unknown, unknown]> | null {
+  _synthesis_value_overrides(): Map<string, [number | number[], number | number[]]> | null {
     /**
      * Comp-dependent default values for synthesized children.
      *
@@ -671,7 +671,7 @@ export class PropertyGroup extends PropertyBase {
       if (e instanceof ValueError || e instanceof AttributeError) return null;
       throw e;
     }
-    return new Map<string, [unknown, unknown]>([
+    return new Map<string, [number | number[], number | number[]]>([
       ["ADBE Camera Zoom", [zoom, zoom]],
       ["ADBE Camera Focus Distance", [zoom, zoom]],
     ]);
