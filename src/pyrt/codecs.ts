@@ -3,10 +3,19 @@
 // Python str is code points, a JS string UTF-16 units. A lone surrogate is
 // representable in both, which is what lets `surrogateescape` round-trip.
 
-import { UnicodeDecodeError, UnicodeEncodeError, LookupError } from "./errors.ts";
+import { UnicodeDecodeError, UnicodeEncodeError, LookupError, TypeError_ } from "./errors.ts";
 import { CP1252, MAC_ROMAN } from "./codepages.ts";
 
 export type Errors = "strict" | "surrogateescape" | "ignore" | "replace";
+
+/** `ord(c)`: the code point of a one-character string (one element of `for (const c of s)`). */
+export function ord(c: string): number {
+  const cp = c.codePointAt(0);
+  if (cp === undefined || c.length !== (cp > 0xffff ? 2 : 1)) {
+    throw new TypeError_(`ord() expected a character, but string of length ${[...c].length} found`);
+  }
+  return cp;
+}
 
 const NORM = new Map<string, string>();
 
@@ -147,10 +156,12 @@ function decode_utf8_slow(data: Uint8Array, errors: Errors): string {
 }
 
 const UTF8_ENCODER = new TextEncoder();
+/** `String.prototype.isWellFormed` (ES2024, newer than the lib this builds against); absent on older hosts. */
+const IS_WELL_FORMED: unknown = Reflect.get(String.prototype, "isWellFormed");
 
 function encode_utf8(text: string, errors: Errors): Uint8Array {
   // TextEncoder would turn a lone surrogate into U+FFFD; those go byte-wise.
-  if ((text as { isWellFormed?(): boolean }).isWellFormed?.()) return UTF8_ENCODER.encode(text);
+  if (typeof IS_WELL_FORMED === "function" && IS_WELL_FORMED.call(text)) return UTF8_ENCODER.encode(text);
   return encode_utf8_slow(text, errors);
 }
 
@@ -306,7 +317,7 @@ function encode_utf32(text: string, errors: Errors, le: boolean, name: string): 
   const cps: number[] = [];
   let pos = 0;
   for (const ch of text) {
-    const cp = ch.codePointAt(0)!;
+    const cp = ord(ch);
     if (cp >= 0xd800 && cp < 0xe000) {
       if (errors === "ignore") {
         pos++;

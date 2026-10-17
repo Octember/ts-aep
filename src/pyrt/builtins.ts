@@ -2,6 +2,7 @@
 
 import { AttributeError, IndexError, KeyError, TypeError_, ValueError } from "./errors.ts";
 import { float_repr, PyFloat } from "./num.ts";
+import { ord } from "./codecs.ts";
 
 /** The dunder methods the builtins below probe for. */
 type DunderProbe = { __bool__?: unknown; __len__?: unknown; __contains__?: unknown; __eq__?: unknown; __repr__?: unknown; __str__?: unknown };
@@ -23,7 +24,8 @@ export function py_bool(x: unknown): boolean {
   if (typeof x === "number") return x !== 0;
   if (typeof x === "bigint") return x !== 0n;
   if (typeof x === "string") return x.length > 0;
-  if (Array.isArray(x) || ArrayBuffer.isView(x)) return (x as ArrayLike<unknown>).length > 0;
+  if (Array.isArray(x)) return x.length > 0;
+  if (ArrayBuffer.isView(x)) return "length" in x && typeof x.length === "number" && x.length > 0;
   if (x instanceof Map || x instanceof Set) return x.size > 0;
   if (_probeable(x)) {
     if (typeof x.__bool__ === "function") return x.__bool__();
@@ -48,7 +50,8 @@ export function py_and<A, B>(a: A, b: B): A | B {
 
 /** `len(x)` */
 export function len(x: unknown): number {
-  if (typeof x === "string" || Array.isArray(x) || ArrayBuffer.isView(x)) return (x as ArrayLike<unknown>).length;
+  if (typeof x === "string" || Array.isArray(x)) return x.length;
+  if (ArrayBuffer.isView(x) && "length" in x && typeof x.length === "number") return x.length;
   if (x instanceof Map || x instanceof Set) return x.size;
   if (_probeable(x) && typeof x.__len__ === "function") return x.__len__();
   throw new TypeError(`object of type '${x?.constructor?.name}' has no len()`);
@@ -94,8 +97,8 @@ export function py_cmp(a: unknown, b: unknown): number {
   }
   if (typeof a === "string" && typeof b === "string") {
     // Python compares code points; JS `<` compares UTF-16 units.
-    const ca = Array.from(a, (c) => c.codePointAt(0)!);
-    const cb = Array.from(b, (c) => c.codePointAt(0)!);
+    const ca = Array.from(a, ord);
+    const cb = Array.from(b, ord);
     return py_cmp(ca, cb);
   }
   if (a instanceof Uint8Array && b instanceof Uint8Array) return py_cmp(Array.from(a), Array.from(b));
@@ -116,35 +119,31 @@ export function sorted<T>(xs: Iterable<T>, key?: ((x: T) => unknown) | null, rev
 }
 
 /** `min(xs, key=..., default=...)` - first minimal element, like Python. */
-export function min<T>(xs: Iterable<T>, key?: ((x: T) => unknown) | null, ...dflt: [T?]): T {
-  let best: T | undefined;
-  let best_k: unknown;
-  let any = false;
+export function min<T>(xs: Iterable<T>, key?: ((x: T) => unknown) | null, ...dflt: [] | [T]): T {
+  let best: { x: T; k: unknown } | null = null;
   for (const x of xs) {
     const k = key ? key(x) : x;
-    if (!any || py_cmp(k, best_k) < 0) [best, best_k, any] = [x, k, true];
+    if (best === null || py_cmp(k, best.k) < 0) best = { x, k };
   }
-  if (!any) {
-    if (dflt.length) return dflt[0] as T;
+  if (best === null) {
+    if (dflt.length) return dflt[0];
     throw new ValueError("min() iterable argument is empty");
   }
-  return best as T;
+  return best.x;
 }
 
 /** `max(xs, key=..., default=...)` - first maximal element, like Python. */
-export function max<T>(xs: Iterable<T>, key?: ((x: T) => unknown) | null, ...dflt: [T?]): T {
-  let best: T | undefined;
-  let best_k: unknown;
-  let any = false;
+export function max<T>(xs: Iterable<T>, key?: ((x: T) => unknown) | null, ...dflt: [] | [T]): T {
+  let best: { x: T; k: unknown } | null = null;
   for (const x of xs) {
     const k = key ? key(x) : x;
-    if (!any || py_cmp(k, best_k) > 0) [best, best_k, any] = [x, k, true];
+    if (best === null || py_cmp(k, best.k) > 0) best = { x, k };
   }
-  if (!any) {
-    if (dflt.length) return dflt[0] as T;
+  if (best === null) {
+    if (dflt.length) return dflt[0];
     throw new ValueError("max() iterable argument is empty");
   }
-  return best as T;
+  return best.x;
 }
 
 /** `xs[i]` with Python's negative indexes and IndexError. */
@@ -208,31 +207,36 @@ export function py_slice(xs: Sliceable, start?: number | null, end?: number | nu
 }
 
 /** `d[k]` on a Map with KeyError. */
-export function getitem<K, V>(d: Pick<ReadonlyMap<K, V>, "has" | "get">, k: K): V {
-  if (!d.has(k)) throw new KeyError(repr(k));
-  return d.get(k)!;
+export function getitem<K, V>(d: Pick<ReadonlyMap<K, V>, "get">, k: K): V {
+  const v = d.get(k);
+  if (v === undefined) throw new KeyError(repr(k));
+  return v;
 }
 
 /** `d.get(k, default)` on a Map (None, not undefined, when absent). */
-export function dict_get<K, V, D = null>(d: Map<K, V>, k: K, dflt: D = null as D): V | D {
+export function dict_get<K, V>(d: Map<K, V>, k: K): V | null;
+export function dict_get<K, V, D>(d: Map<K, V>, k: K, dflt: D): V | D;
+export function dict_get<K, V, D>(d: Map<K, V>, k: K, dflt: D | null = null): V | D | null {
   const v = d.get(k);
-  return v !== undefined || d.has(k) ? v! : dflt;
+  return v !== undefined ? v : dflt;
 }
 
 /** `d.setdefault(k, v)` */
 export function setdefault<K, V>(d: Map<K, V>, k: K, v: V): V {
-  if (!d.has(k)) d.set(k, v);
-  return d.get(k)!;
+  const cur = d.get(k);
+  if (cur !== undefined) return cur;
+  d.set(k, v);
+  return v;
 }
 
 /** `d.pop(k, default)` */
-export function dict_pop<K, V>(d: Map<K, V>, k: K, ...dflt: [V?]): V {
-  if (d.has(k)) {
-    const v = d.get(k)!;
+export function dict_pop<K, V>(d: Map<K, V>, k: K, ...dflt: [] | [V]): V {
+  const v = d.get(k);
+  if (v !== undefined) {
     d.delete(k);
     return v;
   }
-  if (dflt.length) return dflt[0] as V;
+  if (dflt.length) return dflt[0];
   throw new KeyError(repr(k));
 }
 
@@ -329,7 +333,7 @@ export function repr(x: unknown): string {
     const q = s.includes("'") && !s.includes('"') ? '"' : "'";
     let body = "";
     for (const ch of s) {
-      const cp = ch.codePointAt(0)!;
+      const cp = ord(ch);
       if (ch === "\\") body += "\\\\";
       else if (ch === q) body += "\\" + q;
       else if (ch === "\n") body += "\\n";
@@ -498,27 +502,28 @@ export function split(s: string, sep?: string | null, maxsplit = -1): string[] {
 }
 
 /** `copy.deepcopy`: clones arrays, Maps, Sets, bytes, plain objects and class instances (prototype kept). */
-export function deepcopy<T>(x: T, memo = new Map<unknown, unknown>()): T {
+export function deepcopy<T>(x: T, memo?: Map<unknown, unknown>): T;
+export function deepcopy(x: unknown, memo = new Map<unknown, unknown>()): unknown {
   if (x === null || typeof x !== "object") return x;
-  if (memo.has(x)) return memo.get(x) as T;
-  if (x instanceof Uint8Array) return x.slice() as T;
+  if (memo.has(x)) return memo.get(x);
+  if (x instanceof Uint8Array) return x.slice();
   if (Array.isArray(x)) {
     const out: unknown[] = [];
     memo.set(x, out);
     for (const v of x) out.push(deepcopy(v, memo));
-    return out as T;
+    return out;
   }
   if (x instanceof Map) {
     const out = new Map();
     memo.set(x, out);
     for (const [k, v] of x) out.set(deepcopy(k, memo), deepcopy(v, memo));
-    return out as T;
+    return out;
   }
   if (x instanceof Set) {
     const out = new Set();
     memo.set(x, out);
     for (const v of x) out.add(deepcopy(v, memo));
-    return out as T;
+    return out;
   }
   if ("__deepcopy__" in x && typeof x.__deepcopy__ === "function") return x.__deepcopy__(memo);
   const out =
@@ -528,7 +533,8 @@ export function deepcopy<T>(x: T, memo = new Map<unknown, unknown>()): T {
   memo.set(x, out);
   for (const k of Reflect.ownKeys(x)) {
     if (x instanceof String && (k === "length" || (typeof k === "string" && /^\d+$/.test(k)))) continue;
-    const d = Object.getOwnPropertyDescriptor(x, k)!;
+    const d = Object.getOwnPropertyDescriptor(x, k);
+    if (d === undefined) continue;
     if ("value" in d) d.value = deepcopy(d.value, memo);
     Object.defineProperty(out, k, d);
   }
@@ -536,12 +542,13 @@ export function deepcopy<T>(x: T, memo = new Map<unknown, unknown>()): T {
 }
 
 /** `copy.copy`: shallow clone keeping the prototype. */
-export function copy<T>(x: T): T {
+export function copy<T>(x: T): T;
+export function copy(x: unknown): unknown {
   if (x === null || typeof x !== "object") return x;
-  if (Array.isArray(x)) return [...x] as T;
-  if (x instanceof Uint8Array) return x.slice() as T;
-  if (x instanceof Map) return new Map(x) as T;
-  if (x instanceof Set) return new Set(x) as T;
+  if (Array.isArray(x)) return [...x];
+  if (x instanceof Uint8Array) return x.slice();
+  if (x instanceof Map) return new Map(x);
+  if (x instanceof Set) return new Set(x);
   if (x instanceof String) {
     const out = Reflect.construct(String, [x.valueOf()], x.constructor);
     for (const k of Object.keys(x)) if (!/^\d+$/.test(k)) out[k] = Reflect.get(x, k);
@@ -556,12 +563,12 @@ export function lru_cache<A extends unknown[], R>(fn: (...args: A) => R): ((...a
   /** One argument position of the cache trie; `result` is set once a call ends here. */
   type Node = { next: Map<unknown, Node>; result?: { value: R } };
   const root: Node = { next: new Map() };
-  const single = new Map<A[0], R>();
+  const single = new Map<A[0], { value: R }>();
   const wrapped = (...args: A): R => {
     if (args.length === 1) {
       let r = single.get(args[0]);
-      if (r === undefined && !single.has(args[0])) single.set(args[0], (r = fn(...args)));
-      return r!;
+      if (r === undefined) single.set(args[0], (r = { value: fn(...args) }));
+      return r.value;
     }
     let node = root;
     for (const a of args) {

@@ -136,7 +136,7 @@ export function json_loads(s: string | Uint8Array, opts: LoadsOptions = {}): Jso
   const parse_constant = opts.parse_constant ?? ((c: string) => CONSTANTS[c]);
   const pairs_hook = opts.object_pairs_hook ?? ((pairs: [string, JsonValue][]) => new Map(pairs));
   const n = text.length;
-  const fail = (msg: string, pos: number): never => {
+  const fail: (msg: string, pos: number) => never = (msg, pos) => {
     throw new JSONDecodeError(msg, text, pos);
   };
   const skip = (i: number): number => {
@@ -224,8 +224,8 @@ export function json_loads(s: string | Uint8Array, opts: LoadsOptions = {}): Jso
       i = skip(i + 1);
       const r = scan_once(i);
       if (r === null) fail("Expecting value", i);
-      pairs.push([key, r![0]]);
-      i = skip(r![1]);
+      pairs.push([key, r[0]]);
+      i = skip(r[1]);
       if (text[i] === "}") return [pairs_hook(pairs), i + 1];
       if (text[i] !== ",") fail("Expecting ',' delimiter", i);
       i = skip(i + 1);
@@ -239,8 +239,8 @@ export function json_loads(s: string | Uint8Array, opts: LoadsOptions = {}): Jso
     for (;;) {
       const r = scan_once(i);
       if (r === null) fail("Expecting value", i);
-      out.push(r![0]);
-      i = skip(r![1]);
+      out.push(r[0]);
+      i = skip(r[1]);
       if (text[i] === "]") return [out, i + 1];
       if (text[i] !== ",") fail("Expecting ',' delimiter", i);
       i = skip(i + 1);
@@ -250,9 +250,9 @@ export function json_loads(s: string | Uint8Array, opts: LoadsOptions = {}): Jso
   const start = skip(0);
   const r = scan_once(start);
   if (r === null) fail("Expecting value", start);
-  const end = skip(r![1]);
+  const end = skip(r[1]);
   if (end !== n) fail("Extra data", end);
-  return r![0];
+  return r[0];
 }
 
 export type DumpsOptions = {

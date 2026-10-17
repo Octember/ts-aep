@@ -98,7 +98,7 @@ function translate(p: string, flags: number): [string, number] {
   const out: string[] = [];
   const n = p.length;
 
-  const err = (msg: string): never => {
+  const err: (msg: string) => never = (msg) => {
     throw new PyReError(`${msg} at position ${i}`);
   };
 
@@ -156,19 +156,19 @@ function translate(p: string, flags: number): [string, number] {
         const h = /^[0-9a-fA-F]{2}/.exec(p.slice(i + 2));
         if (!h) err("incomplete escape \\x");
         i += 4;
-        return "\\x" + h![0];
+        return "\\x" + h[0];
       }
       case "u": {
         const h = /^[0-9a-fA-F]{4}/.exec(p.slice(i + 2));
         if (!h) err("incomplete escape \\u");
         i += 6;
-        return "\\u" + h![0];
+        return "\\u" + h[0];
       }
       case "U": {
         const h = /^[0-9a-fA-F]{8}/.exec(p.slice(i + 2));
         if (!h) err("incomplete escape \\U");
         i += 10;
-        const cp = parseInt(h![0], 16);
+        const cp = parseInt(h[0], 16);
         if (cp > 0x10ffff) err("bad escape \\U");
         return "\\u{" + cp.toString(16) + "}";
       }
@@ -181,19 +181,19 @@ function translate(p: string, flags: number): [string, number] {
         // Octal escape: \0, \0oo, \ooo (in a class every digit escape is octal).
         const m = /^[0-7]{1,3}/.exec(p.slice(i + 1));
         if (!m) err(`bad escape \\${c}`);
-        const v = parseInt(m![0], 8);
+        const v = parseInt(m[0], 8);
         if (v > 0o377) err("octal escape value outside of range 0-0o377");
-        i += 1 + m![0].length;
+        i += 1 + m[0].length;
         return "\\u{" + v.toString(16) + "}";
       }
-      const m = /^[1-9][0-9]?/.exec(p.slice(i + 1))!;
+      const m = /^[1-9][0-9]?/.exec(p.slice(i + 1));
+      if (!m) err(`bad escape \\${c}`);
       i += 1 + m[0].length;
       return "\\" + m[0];
     }
     if (/[A-Za-z0-9]/.test(c)) err(`bad escape \\${c}`);
     // Escaped punctuation / non-ASCII: the literal character.
-    const cp = p.codePointAt(i + 1)!;
-    const ch = String.fromCodePoint(cp);
+    const [ch] = p.slice(i + 1, i + 3);
     i += 1 + ch.length;
     return literal(ch, in_class);
   };
@@ -243,8 +243,7 @@ function translate(p: string, flags: number): [string, number] {
           i++;
           continue;
         }
-        const cp = p.codePointAt(i)!;
-        const ch = String.fromCodePoint(cp);
+        const [ch] = p.slice(i, i + 2);
         cls += ch;
         i += ch.length;
       }
@@ -318,8 +317,7 @@ function translate(p: string, flags: number): [string, number] {
       continue;
     }
     if ((c === "*" || c === "+" || c === "?") && p[i + 1] === "+") err_ni("possessive quantifiers");
-    const cp = p.codePointAt(i)!;
-    const ch = String.fromCodePoint(cp);
+    const [ch] = p.slice(i, i + 2);
     out.push(ch === "/" ? "\\/" : ch);
     i += ch.length;
   }

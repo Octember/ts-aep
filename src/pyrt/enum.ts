@@ -80,7 +80,7 @@ export function py_enum<const M extends Record<string, unknown>, X extends Recor
       throw new ValueError(`${typeof value === "string" ? `'${value}'` : String(value)} is not a valid ${name}`);
     },
     of_or_null(value: unknown): V | null {
-      if (by_value.has(value)) return value as V;
+      if (helpers.has(value)) return value;
       if (typeof self._missing_ === "function") return self._missing_(value) ?? null;
       return null;
     },
@@ -96,8 +96,9 @@ export function py_enum<const M extends Record<string, unknown>, X extends Recor
       return [...canonical];
     },
     by_name(n: string): V {
-      if (!by_name.has(n)) throw new KeyError(`'${n}'`);
-      return by_name.get(n)!;
+      const v = by_name.get(n);
+      if (v === undefined) throw new KeyError(`'${n}'`);
+      return v;
     },
     __members__: by_name,
   };
