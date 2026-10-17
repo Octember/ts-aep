@@ -31,7 +31,7 @@ type ShapeLayerNewKw = {
  * const app = parse("project.aep");
  * const comp = app.project.compositions[0];
  * const shape_layer = comp.shape_layers[0];
- * console.log(shape_layer.content);
+ * console.log(shape_layer.property("ADBE Root Vectors Group"));
  * ```
  * @see https://ae-scripting.docsforadobe.dev/layer/shapelayer/
  */

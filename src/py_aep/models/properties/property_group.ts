@@ -712,8 +712,8 @@ export class PropertyGroup extends PropertyBase {
      * ```ts
      * import { parse } from "@bevyl-ai/ts-aep";
      * const layer = parse("project.aep").project.compositions[0].layers[0];
-     * layer.transform.position.value;
-     * layer.transform.anchor_point.value;
+     * layer.transform.__getattr__("position");
+     * layer.transform.__getattr__("anchor_point");
      * ```
      *
      * **Note:** Only invoked when normal attribute lookup has already

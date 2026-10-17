@@ -152,7 +152,7 @@ descriptor(FeatherPoint, "rel_corner_angle", new ChunkField("_fp", "corner_angle
  * const app = parse("project.aep");
  * const comp = app.project.compositions[0];
  * const shape_layer = comp.shape_layers[0];
- * const shape_prop = shape_layer.content.property("ADBE Vector Shape - Group").property("ADBE Vector Shape");
+ * const shape_prop = shape_layer.property("ADBE Root Vectors Group").property("ADBE Vector Shape - Group").property("ADBE Vector Shape");
  * console.log(shape_prop.value.vertices);
  * ```
  * @see https://ae-scripting.docsforadobe.dev/other/shape/
