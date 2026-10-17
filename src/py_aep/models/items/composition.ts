@@ -2946,7 +2946,7 @@ descriptor(
   CompItem,
   "drop_frame",
   ChunkField.bool("_cdrp", "value", {
-    transform: (v: unknown) => py_bool(v),
+    transform: (v: number) => py_bool(v),
     reverse: (v: boolean) => int(v),
     default: false,
   }),

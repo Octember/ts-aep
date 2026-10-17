@@ -25,7 +25,7 @@ export class PropSpec {
     readonly integer: boolean = false,
     readonly min_value: number | null = null,
     readonly max_value: number | null = null,
-    readonly default_value: unknown = _USE_VALUE,
+    readonly default_value: number | number[] | null | typeof _USE_VALUE = _USE_VALUE,
     readonly can_vary_over_time: boolean | null = null,
     readonly has_time_base: boolean = false,
     readonly min_major: number | null = null,

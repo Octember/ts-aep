@@ -34,7 +34,7 @@ const DESCRIPTORS = new WeakMap<Function, Map<string, Descriptor>>();
 
 /** A descriptor whose instance reads produce a `T` (class reads produce the descriptor). */
 export interface TypedDescriptor<T> extends Descriptor {
-  __get__(obj: unknown, owner: Function): T | Descriptor;
+  __get__(obj: object | null, owner: Function): T | Descriptor;
 }
 
 /**

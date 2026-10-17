@@ -272,7 +272,7 @@ export class ArgumentParser {
   private readonly epilog: string;
   private readonly specs: ArgSpec[] = [];
 
-  constructor(kwargs: { prog?: string; description?: string; epilog?: string; formatter_class?: unknown } = {}) {
+  constructor(kwargs: { prog?: string; description?: string; epilog?: string; formatter_class?: string } = {}) {
     this.prog = kwargs.prog ?? "";
     this.description = kwargs.description ?? "";
     this.epilog = kwargs.epilog ?? "";

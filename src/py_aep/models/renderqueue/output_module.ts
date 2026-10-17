@@ -92,7 +92,7 @@ export function _is_enum_member(key: string, value: unknown): boolean {
  * taking the member, `name` is `name_of`). Values that are not members of the key's enum
  * (ints, strings, bools) fall through to `str(v)`.
  */
-export function _label_or_name(key: string | null, v: unknown): string {
+export function _label_or_name(key: string | null, v: RuleValue): string {
   const E = key == null ? null : _KEY_ENUM.get(key);
   if (E != null && E.has(v)) {
     const label = typeof E.label === "function" ? E.label(v) : null;
@@ -111,7 +111,7 @@ export function _name_or_str(key: string | null, v: unknown): string {
 
 // NOTE(port): `{value!r}` of an IntEnum member is `<Cls.NAME: n>` in Python but a raw int stays
 // `n`; both are the same number here, so a member of the key's enum always reprs as a member.
-export function _value_repr(key: string, v: unknown): string {
+export function _value_repr(key: string, v: RuleValue): string {
   const E = _KEY_ENUM.get(key);
   if (E != null && E.has(v)) return `<${E.__name__}.${E.name_of(v)}: ${v}>`;
   return repr(v);
@@ -160,7 +160,7 @@ export const _AUDIO_ENCODINGS = new Map<number, number>([
  * After Effects has no 24-bit audio output: AE 2026 crashes when a
  * script sets it and reads a stored 24-bit format back as 16 Bit.
  */
-export function _reject_24_bit_audio(value: unknown, obj: OutputModule): void {
+export function _reject_24_bit_audio(value: RuleValue, obj: OutputModule): void {
   if (value === AudioBitDepth.TWENTY_FOUR_BIT) {
     throw new ValueError(
       "Audio Bit Depth 24 Bit is not available: After Effects has no " +
@@ -338,7 +338,7 @@ export class OutputModule {
       [
         (om) => om._audio_sample_rate,
         (om, v) => {
-          om._roou.audio_sample_rate = (AudioSampleRate as unknown as { to_binary(v: unknown): number }).to_binary(v);
+          om._roou.audio_sample_rate = (AudioSampleRate as unknown as { to_binary(v: RuleValue): number }).to_binary(v);
         },
       ],
     ],

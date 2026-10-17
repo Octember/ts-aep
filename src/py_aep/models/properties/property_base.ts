@@ -33,13 +33,13 @@ const _property_value = deferred<typeof import("../../parsers/property_value.ts"
 const _effect = deferred<typeof import("../../parsers/effect.ts")>("py_aep/parsers/effect");
 
 // NOTE(port): local twin of CPython `list.index` / `list.remove` (py_eq compare, ValueError "x is not in list"); no pyrt shim exists.
-export function list_index<T>(xs: T[], x: unknown): number {
+export function list_index<T>(xs: T[], x: T): number {
   const i = xs.findIndex((y) => py_eq(y, x));
   if (i < 0) throw new ValueError(`${repr(x)} is not in list`);
   return i;
 }
 
-export function list_remove<T>(xs: T[], x: unknown): void {
+export function list_remove<T>(xs: T[], x: T): void {
   xs.splice(list_index(xs, x), 1);
 }
 
