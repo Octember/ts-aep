@@ -28,6 +28,7 @@ import {
   ValueError,
   descriptor,
   getattr,
+  setattr,
   getitem,
   mod,
   object_setattr,
@@ -1086,9 +1087,7 @@ export class Layer extends PropertyGroup {
         for (const tangent_attr of ["in_spatial_tangent", "out_spatial_tangent"]) {
           const tangent = getattr(kf, tangent_attr);
           if (py_bool(tangent)) {
-            (kf as unknown as Record<string, unknown>)[tangent_attr] = remap
-              .transform_vector(tangent)
-              .slice(0, tangent.length);
+            setattr(kf, tangent_attr, remap.transform_vector(tangent).slice(0, tangent.length));
           }
         }
       }
@@ -1278,7 +1277,7 @@ export class Layer extends PropertyGroup {
     comp._project._ensure_used_in_linked();
     const source = getattr(this, "source", null);
     if (source != null && "_used_in" in source) {
-      _av_layer()._unregister_source_usage(source, comp, { exclude: this as unknown as AVLayer });
+      _av_layer()._unregister_source_usage(source, comp, { exclude: this });
     }
 
     // Remove chunk block from comp's chunk list

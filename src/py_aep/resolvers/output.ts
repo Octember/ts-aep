@@ -398,7 +398,7 @@ export function resolve_output_filename(
  */
 export function resolve_time_span(
   comp: CompItem,
-  rq_settings: Map<string, number | string>,
+  rq_settings: Pick<ReadonlyMap<string, number | string>, "has" | "get">,
   effective_frame_rate: number,
 ): {
   start_frame: number;

@@ -9,11 +9,8 @@
 
 import { Inflate, gunzipSync, type FlateError } from "fflate";
 
-/** fflate's `Inflate` with the decoder state this module reads (not in its typings). */
-type InflateState = Pick<Inflate, "push"> & {
-  s: { f: number; l: number; p: number };
-  p: Uint8Array;
-};
+/** fflate's private `Inflate.s` decoder state (untyped in its typings). */
+type InflateState = { f: number; l: number; p: number };
 
 /** Python's `zlib.error`. */
 export class error extends Error {
@@ -105,7 +102,7 @@ function _inflate(body: Uint8Array, limit: number, step: number): _Inflated {
       chunks.push(chunk);
       total += chunk.length;
     }
-  }) as unknown as InflateState;
+  });
   let pushed = 0;
   for (let off = 0; ; off += step) {
     const piece = body.subarray(off, off + step);
@@ -116,7 +113,8 @@ function _inflate(body: Uint8Array, limit: number, step: number): _Inflated {
     }
     pushed = off + piece.length;
     // fflate state: `s.f` = last block seen, `s.l` = inside a block's codes.
-    if (inf.s.f && !inf.s.l) {
+    const st: InflateState = inf["s"];
+    if (st.f && !st.l) {
       ended = true;
       break;
     }
@@ -125,8 +123,9 @@ function _inflate(body: Uint8Array, limit: number, step: number): _Inflated {
   const out = _concat(chunks, total);
   if (!ended) return { out, rest: null };
   // `inf.p` holds the unconsumed input from the byte holding bit `s.p`.
-  const tail: Uint8Array = inf.p;
-  const consumed = pushed - tail.length + ((inf.s.p + 7) >> 3);
+  const tail: Uint8Array = inf["p"];
+  const st: InflateState = inf["s"];
+  const consumed = pushed - tail.length + ((st.p + 7) >> 3);
   return { out, rest: body.subarray(consumed) };
 }
 

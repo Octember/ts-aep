@@ -6,7 +6,7 @@
  * RoutChunk uses `items_field()` for repeating render-flag entries.
  */
 
-import { b, bytes_, decode, define, descriptor, fields, getattr, len, py_bool, strip } from "../../pyrt/index.ts";
+import { b, bytes_, decode, define, descriptor, fields, getattr, len, py_bool, setattr, strip } from "../../pyrt/index.ts";
 import type { IO } from "../../pyrt/index.ts";
 import { read_bytes, to_dividend_divisor, to_fixed_16_16 } from "./bin_utils.ts";
 import { BitField } from "./bitfield.ts";
@@ -543,7 +543,7 @@ export class RenderSettingsItem extends FmtItem {
    */
   copy_settings_from(source: RenderSettingsItem): void {
     for (const field of (this.constructor as typeof RenderSettingsItem)._TEMPLATE_FIELDS) {
-      (this as unknown as Record<string, unknown>)[field] = getattr(source, field);
+      setattr(this, field, getattr(source, field));
     }
   }
 
@@ -764,7 +764,7 @@ export class OutputModuleSettingsItem extends FmtItem {
    */
   copy_settings_from(source: OutputModuleSettingsItem): void {
     for (const field of (this.constructor as typeof OutputModuleSettingsItem)._TEMPLATE_FIELDS) {
-      (this as unknown as Record<string, unknown>)[field] = getattr(source, field);
+      setattr(this, field, getattr(source, field));
     }
   }
 
@@ -777,7 +777,7 @@ export class OutputModuleSettingsItem extends FmtItem {
    */
   restore_from(source: OutputModuleSettingsItem): void {
     for (const field of fields(OutputModuleSettingsItem)) {
-      (this as unknown as Record<string, unknown>)[field.name] = getattr(source, field.name);
+      setattr(this, field.name, getattr(source, field.name));
     }
   }
 }

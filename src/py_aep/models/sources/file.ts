@@ -41,6 +41,7 @@ import {
   floordiv,
   format,
   getattr,
+  setattr,
   getitem,
   int,
   py_bool,
@@ -1649,7 +1650,7 @@ export class FileSource extends FootageSource {
     const sspc = this._sspc;
     const fresh_sspc = fresh._sspc;
     for (const name of ["width", "height", "depth", "alpha_mode_raw", ...fields]) {
-      (sspc as unknown as Record<string, unknown>)[name] = getattr(fresh_sspc, name);
+      setattr(sspc, name, getattr(fresh_sspc, name));
     }
     sspc.data_size = fresh_sspc.data_size;
     sspc._source_stamp = fresh_sspc._source_stamp;

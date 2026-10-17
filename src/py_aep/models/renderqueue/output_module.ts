@@ -338,7 +338,7 @@ export class OutputModule {
       [
         (om) => om._audio_sample_rate,
         (om, v) => {
-          om._roou.audio_sample_rate = (AudioSampleRate as unknown as { to_binary(v: RuleValue): number }).to_binary(v);
+          om._roou.audio_sample_rate = AudioSampleRate.to_binary(v as number);
         },
       ],
     ],
@@ -1428,12 +1428,12 @@ export class OutputModule {
 
     const [effective_width, effective_height] = this._effective_dimensions;
     const effective_frame_rate = this._effective_frame_rate;
-    // NOTE(port): resolve_time_span is typed `Map<string, any>` but Python passes the live SettingsView
-    // (read lazily by key); this adapter gives it the Map methods `getitem` uses.
+    // NOTE(port): Python passes the live SettingsView (read lazily by key); this adapter gives
+    // resolve_time_span the `has`/`get` pair `getitem` uses.
     const rq_settings_map = {
       has: (k: string) => rq_settings.__contains__(k),
-      get: (k: string) => rq_settings.__getitem__(k),
-    } as unknown as Map<string, any>;
+      get: (k: string): number | string => rq_settings.__getitem__(k),
+    };
     const time_span = resolve_time_span(comp, rq_settings_map, effective_frame_rate);
 
     const project = this._project;

@@ -63,7 +63,7 @@ export function _would_create_cycle(target_comp: CompItem, new_source: AVItem): 
   const stack: CompItem[] = [target_comp];
   while (stack.length) {
     const comp = stack.pop()!;
-    if (comp === (new_source as unknown as CompItem)) return true;
+    if (comp === new_source) return true;
     if (visited.has(comp)) continue;
     visited.add(comp);
     for (const ancestor of comp.used_in) {
@@ -76,7 +76,7 @@ export function _would_create_cycle(target_comp: CompItem, new_source: AVItem): 
 export function _unregister_source_usage(
   source: AVItem,
   comp: CompItem,
-  kw: { exclude?: AVLayer | null } = {},
+  kw: { exclude?: Layer | null } = {},
 ): void {
   /**
    * Remove `comp` from `source._used_in` if no other layer still references it.

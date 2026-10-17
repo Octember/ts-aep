@@ -416,7 +416,7 @@ export function fs_backend(): "node" | "memory" {
 export const fs: HostFs = new Proxy({} as HostFs, {
   get(_t, name: string) {
     const target: HostFs = _active ?? _node_fs ?? _memory;
-    const v = (target as unknown as Record<string, unknown>)[name];
+    const v: unknown = Reflect.get(target, name);
     return typeof v === "function" ? v.bind(target) : v;
   },
 });

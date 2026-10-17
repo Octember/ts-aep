@@ -69,6 +69,7 @@ import {
   dict_get,
   fspath,
   getattr,
+  setattr,
   getitem,
   hasattr,
   int,
@@ -774,7 +775,7 @@ export class Project {
   }
 
   _sync_nhed_field(field_name: string): void {
-    (this._nhed as unknown as Record<string, unknown>)[field_name] = getattr(this._nnhd, field_name);
+    setattr(this._nhed, field_name, getattr(this._nnhd, field_name));
   }
 
   _sync_nhed_timecode_default_base(): void {
