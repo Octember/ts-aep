@@ -7,7 +7,7 @@ import { approx, make_tmp_path } from "../../src/pyrt/pytest.ts";
 import { parse as parse_aep } from "../../src/py_aep/index.ts";
 import { LayerType, ParametricMeshType } from "../../src/py_aep/enums/index.ts";
 import { ParametricMeshLayer } from "../../src/py_aep/models/layers/parametric_mesh_layer.ts";
-import { parse_project_fresh } from "../helpers.ts";
+import { as_instance, parse_project_fresh } from "../helpers.ts";
 
 const SAMPLES_DIR = new Path(import.meta.dir, "..", "..", "samples", "models");
 // comp_misc.aep has an empty Advanced-3D comp named "comment" (100x100, 1s).
@@ -49,9 +49,10 @@ describe("TestAddParametricMesh", () => {
     layer.parametric_mesh_options[field] = 321.0;
 
     const fresh = _save_reparse(project, tmp_path);
-    const fresh_layer = fresh.compositions[0].layers.find(
-      (lyr) => lyr.name === `M ${ParametricMeshType.name_of(mesh_type)}`,
-    )!;
+    const fresh_layer = as_instance(
+      fresh.compositions[0].layers.find((lyr) => lyr.name === `M ${ParametricMeshType.name_of(mesh_type)}`),
+      ParametricMeshLayer,
+    );
     expect(fresh_layer.parametric_mesh_type).toBe(mesh_type);
     expect(approx(getattr(fresh_layer.parametric_mesh_options, field), 321.0)).toBe(true);
   });

@@ -14,7 +14,8 @@ import { expect, test } from "bun:test";
 import { approx } from "../../src/pyrt/pytest.ts";
 import { AssertionError_, Path, getitem, py_assert, py_or, range } from "../../src/pyrt/index.ts";
 import "../../src/py_aep/binary/_register.ts";
-import { get_layer_from_json, load_expected, parse_project } from "../helpers.ts";
+import { as_instance, get_layer_from_json, load_expected, parse_project } from "../helpers.ts";
+import { Property } from "../../src/py_aep/models/properties/property.ts";
 
 const SAMPLES_DIR = new Path(import.meta.dir).parent.parent.div("samples", "models", "property");
 
@@ -36,7 +37,7 @@ test.each(["transform_unseparated", "transform_separated", "keyframe_separated_d
     const layer = parse_project(SAMPLES_DIR.div(`${sample}.aep`)).compositions[0].layers[0];
 
     for (const match_name of ["ADBE Position", "ADBE Position_0", "ADBE Position_1", "ADBE Position_2"]) {
-      const prop = layer.transform.__getitem__(match_name);
+      const prop = as_instance(layer.transform.__getitem__(match_name), Property);
       const wanted = getitem(expected, match_name);
       py_assert(approx(prop.value, wanted.value), match_name);
       py_assert(prop.can_set_expression === wanted.canSetExpression, match_name);
@@ -74,7 +75,7 @@ test("test_unseparated_keeps_expressibility_on_the_leader", () => {
   const layer = parse_project(SAMPLES_DIR.div("transform_unseparated.aep")).compositions[0].layers[0];
   expect(layer.transform.__getitem__("ADBE Position").can_set_expression).toBe(true);
   for (const dimension of range(3)) {
-    const follower = layer.transform.__getitem__(`ADBE Position_${dimension}`);
+    const follower = as_instance(layer.transform.__getitem__(`ADBE Position_${dimension}`), Property);
     expect(follower.can_set_expression).toBe(false);
   }
 });

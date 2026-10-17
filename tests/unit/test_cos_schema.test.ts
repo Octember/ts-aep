@@ -120,7 +120,7 @@ describe("btdk schema", () => {
 
   test("trees py_aep writes conform", () => {
     const app = parse("samples/models/text/text_writes.aep");
-    const docs = app.project.compositions[0].text_layers.map((layer) => layer.text.source_text.value);
+    const docs = app.project.compositions[0].text_layers.map((layer) => layer.text.__getitem__("ADBE Text Document").value);
     expect(docs.length).toBeGreaterThan(0);
     for (const doc of docs) {
       if (!(doc instanceof TextDocument)) continue;

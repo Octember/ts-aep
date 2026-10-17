@@ -3,13 +3,13 @@
 import { describe, expect, test } from "bun:test";
 import { isclose, Path, py_assert, py_eq, ValueError } from "../../src/pyrt/index.ts";
 import { make_tmp_path, raises } from "../../src/pyrt/pytest.ts";
-import { AlphaMode, FieldSeparationType, LinearLightMode, PulldownPhase, SolidSource, parse as parse_aep } from "../../src/py_aep/index.ts";
-import type { FootageItem, Project } from "../../src/py_aep/index.ts";
+import { AlphaMode, AVLayer, FieldSeparationType, FootageItem, LinearLightMode, PulldownPhase, SolidSource, parse as parse_aep } from "../../src/py_aep/index.ts";
+import type { Project } from "../../src/py_aep/index.ts";
 import "../../src/py_aep/binary/_register.ts";
 import { default_icc_directories } from "../../src/py_aep/color/icc.ts";
 import { resolve_ocio_config } from "../../src/py_aep/color/ocio.ts";
 import { profile_id_for_name } from "../../src/py_aep/enums/mappings.ts";
-import { get_comp, get_first_footage, get_footage, parse_project_fresh } from "../helpers.ts";
+import { as_instance, get_comp, get_first_footage, get_footage, parse_project_fresh } from "../helpers.ts";
 
 const SAMPLES_DIR = new Path(import.meta.dir, "..", "..", "samples", "models", "footage");
 // Adobe-CMS ICC embedding needs the installed Adobe Color profiles on disk.
@@ -507,7 +507,7 @@ describe("TestRoundtripSolidColor", () => {
     const tmp_path = make_tmp_path();
     const project = parse_aep(SAMPLES_DIR.div("solid_colors.aep")).project;
     const comp = get_comp(project, "solid_color_red");
-    const source = comp.layers[0].source.main_source;
+    const source = as_instance(as_instance(as_instance(comp.layers[0], AVLayer).source, FootageItem).main_source, SolidSource);
 
     // Modify
     source.color = [0.1, 0.2, 0.3];
@@ -516,7 +516,10 @@ describe("TestRoundtripSolidColor", () => {
     const out = tmp_path.div("modified_solid.aep");
     project.save(out);
     const re_project = parse_aep(out).project;
-    const source2 = get_comp(re_project, "solid_color_red").layers[0].source.main_source;
+    const source2 = as_instance(
+      as_instance(as_instance(get_comp(re_project, "solid_color_red").layers[0], AVLayer).source, FootageItem).main_source,
+      SolidSource,
+    );
 
     expect(isclose(source2.color[0], 0.1, 1e-9, 0.005)).toBe(true);
     expect(isclose(source2.color[1], 0.2, 1e-9, 0.005)).toBe(true);
@@ -525,7 +528,10 @@ describe("TestRoundtripSolidColor", () => {
 
   test("test_validation_rejects_bad_length", () => {
     const project = parse_project_fresh(SAMPLES_DIR.div("solid_colors.aep"));
-    const source = get_comp(project, "solid_color_red").layers[0].source.main_source;
+    const source = as_instance(
+      as_instance(as_instance(get_comp(project, "solid_color_red").layers[0], AVLayer).source, FootageItem).main_source,
+      SolidSource,
+    );
     raises(ValueError, () => {
       source.color = [0.1, 0.2];
     }, "expected 3 elements");
@@ -533,7 +539,10 @@ describe("TestRoundtripSolidColor", () => {
 
   test("test_validation_rejects_out_of_range", () => {
     const project = parse_project_fresh(SAMPLES_DIR.div("solid_colors.aep"));
-    const source = get_comp(project, "solid_color_red").layers[0].source.main_source;
+    const source = as_instance(
+      as_instance(as_instance(get_comp(project, "solid_color_red").layers[0], AVLayer).source, FootageItem).main_source,
+      SolidSource,
+    );
     raises(ValueError, () => {
       source.color = [1.5, 0.0, 0.0];
     }, "must be <= 1(\\.0)?");

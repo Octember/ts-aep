@@ -45,7 +45,8 @@ import { parse as parse_aep } from "../../src/py_aep/index.ts";
 import "../../src/py_aep/binary/_register.ts";
 import { LightType } from "../../src/py_aep/enums/index.ts";
 import { Mat4, intersect_layer_plane } from "../../src/py_aep/resolvers/transform.ts";
-import { parse_project_fresh } from "../helpers.ts";
+import { as_instance, parse_project_fresh } from "../helpers.ts";
+import { AVLayer, ThreeDModelLayer } from "../../src/py_aep/models/layers/index.ts";
 
 // Python `Path(__file__).parent.parent.parent / "samples"`.
 const SAMPLES = new Path(import.meta.path).parent.parent.parent.div("samples");
@@ -584,7 +585,7 @@ describe("TestPointConversions", () => {
     expect(
       _close(camera.transform.__getitem__("ADBE Position").value, [960.0, 53.5, -2424.24242418], 1e-5),
     ).toBe(true);
-    const layer = comp.layers.find((ly: any) => ly.name === "Dark Gray Solid 1");
+    const layer = as_instance(comp.layers.find((ly) => ly.name === "Dark Gray Solid 1"), AVLayer);
     // The camera sits on the default comp camera: c2s is the identity.
     expect(_close(layer.comp_point_to_source([100.0, 100.0], 0.0), [100.0, 100.0], 1e-6)).toBe(true);
   });
@@ -648,7 +649,7 @@ describe("TestSourceRect", () => {
 
   test("test_three_d_model_layer", () => {
     const project = parse_project_fresh(LAYER_DIR.div("three_d_model_layer.aep"));
-    const layer = project.compositions[0].layers[0];
+    const layer = as_instance(project.compositions[0].layers[0], ThreeDModelLayer);
     // AE 2026 (the sample's ExtendScript export): anchor [0, 0, 0].
     expect(py_eq(layer.transform.__getitem__("ADBE Anchor Point").value, [0.0, 0.0, 0.0])).toBe(true);
     expect(_close(layer.source_point_to_comp([0.0, 0.0], 0.0), [960.0, 540.0], 1e-6)).toBe(true);

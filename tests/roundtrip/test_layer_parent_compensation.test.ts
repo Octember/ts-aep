@@ -12,7 +12,9 @@ import { float, max, Path, py_eq, range, round, zip, AssertionError_ } from "../
 import { approx, make_tmp_path } from "../../src/pyrt/pytest.ts";
 import { parse as parse_aep } from "../../src/py_aep/index.ts";
 import { build_world_matrix } from "../../src/py_aep/resolvers/transform.ts";
-import { get_comp, parse_project_fresh } from "../helpers.ts";
+import { as_instance, get_comp, parse_project_fresh } from "../helpers.ts";
+import { AVLayer } from "../../src/py_aep/models/layers/index.ts";
+import { Property } from "../../src/py_aep/models/properties/property.ts";
 
 const LAYER_DIR = new Path(import.meta.path).parent.parent.parent.div("samples", "models", "layer");
 const PROPERTY_DIR = new Path(import.meta.path).parent.parent.parent.div("samples", "models", "property");
@@ -162,7 +164,7 @@ describe("TestParentCameraIsAlwaysThreeD", () => {
     const camera = comp.layers[0];
     const target = comp.layers[1];
     const rotations_before = ["ADBE Rotate X", "ADBE Rotate Y", "ADBE Rotate Z"].map(
-      (name) => camera.transform.__getitem__(name).value,
+      (name) => as_instance(camera.transform.__getitem__(name), Property).value,
     );
     const orientation_before = [...camera.transform.__getitem__("ADBE Orientation").value];
     target.transform.__getitem__("ADBE Rotate X").value = 20.0;
@@ -171,7 +173,7 @@ describe("TestParentCameraIsAlwaysThreeD", () => {
 
     expect(
       py_eq(
-        ["ADBE Rotate X", "ADBE Rotate Y", "ADBE Rotate Z"].map((name) => camera.transform.__getitem__(name).value),
+        ["ADBE Rotate X", "ADBE Rotate Y", "ADBE Rotate Z"].map((name) => as_instance(camera.transform.__getitem__(name), Property).value),
         rotations_before,
       ),
     ).toBe(true);
@@ -190,12 +192,12 @@ describe("TestParentCompensationConvention", () => {
   function _setup(orientation: number[], rotations: number[]): any {
     const project = parse_project_fresh(LAYER_DIR.div("orientation_0_279_0.aep"));
     const comp = project.compositions[0];
-    const child = comp.layers[0];
+    const child = as_instance(comp.layers[0], AVLayer);
     child.three_d_layer = true;
     child.transform.__getitem__("ADBE Position").value = [150.0, 160.0, 0.0];
     child.transform.__getitem__("ADBE Orientation").value = [...orientation];
     for (const [name, value] of zip(["ADBE Rotate X", "ADBE Rotate Y", "ADBE Rotate Z"], rotations)) {
-      child.transform.__getitem__(name).value = float(value);
+      as_instance(child.transform.__getitem__(name), Property).value = float(value);
     }
     const parent = comp.add_null();
     parent.three_d_layer = true;
@@ -274,7 +276,7 @@ describe("TestParentCompensationConvention", () => {
     /** A 2D layer has no Orientation to use, so AE puts it in Rotate Z. */
     const project = parse_project_fresh(LAYER_DIR.div("orientation_0_279_0.aep"));
     const comp = project.compositions[0];
-    const child = comp.layers[0];
+    const child = as_instance(comp.layers[0], AVLayer);
     child.three_d_layer = false;
     child.transform.__getitem__("ADBE Orientation").value = [0.0, 0.0, 0.0];
     child.transform.__getitem__("ADBE Position").value = [150.0, 160.0, 0.0];
@@ -302,7 +304,7 @@ describe("TestParentNonUniformParentScaleJumps", () => {
   test("test_jump_is_expected_and_matches_ae_in_kind", () => {
     const project = parse_project_fresh(LAYER_DIR.div("orientation_0_279_0.aep"));
     const comp = project.compositions[0];
-    const child = comp.layers[0];
+    const child = as_instance(comp.layers[0], AVLayer);
     child.three_d_layer = true;
     child.transform.__getitem__("ADBE Position").value = [150.0, 160.0, 0.0];
     child.transform.__getitem__("ADBE Orientation").value = [0.0, 0.0, 0.0];
@@ -335,7 +337,7 @@ describe("TestParentScaledParentEdgeCases", () => {
   function _pair(child_rotation = 0.0): any {
     const project = parse_project_fresh(LAYER_DIR.div("orientation_0_279_0.aep"));
     const comp = project.compositions[0];
-    const child = comp.layers[0];
+    const child = as_instance(comp.layers[0], AVLayer);
     child.three_d_layer = true;
     child.transform.__getitem__("ADBE Orientation").value = [0.0, 0.0, 0.0];
     child.transform.__getitem__("ADBE Position").value = [150.0, 160.0, 0.0];
@@ -436,7 +438,7 @@ describe("TestParentKeyframedChild", () => {
      */
     const project = parse_project_fresh(LAYER_DIR.div("orientation_0_279_0.aep"));
     const comp = project.compositions[0];
-    const child = comp.layers[0];
+    const child = as_instance(comp.layers[0], AVLayer);
     child.three_d_layer = false;
     child.transform.__getitem__("ADBE Orientation").value = [0.0, 0.0, 0.0];
     child.transform.__getitem__("ADBE Position").value = [150.0, 160.0, 0.0];
@@ -464,7 +466,7 @@ describe("TestParentKeyframedChild", () => {
      */
     const project = parse_project_fresh(LAYER_DIR.div("orientation_0_279_0.aep"));
     const comp = project.compositions[0];
-    const child = comp.layers[0];
+    const child = as_instance(comp.layers[0], AVLayer);
     child.three_d_layer = true;
     child.transform.__getitem__("ADBE Orientation").value = [0.0, 0.0, 0.0];
     child.transform.__getitem__("ADBE Position").value = [150.0, 160.0, 0.0];
@@ -498,7 +500,7 @@ describe("TestParentKeyframedChild", () => {
      */
     const project = parse_project_fresh(LAYER_DIR.div("orientation_0_279_0.aep"));
     const comp = project.compositions[0];
-    const child = comp.layers[0];
+    const child = as_instance(comp.layers[0], AVLayer);
     child.three_d_layer = true;
     child.transform.__getitem__("ADBE Orientation").value = [0.0, 0.0, 0.0];
     child.transform.__getitem__("ADBE Position").value = [150.0, 160.0, 0.0];
@@ -533,7 +535,7 @@ describe("TestParentScaledParentKeyframes", () => {
   function _setup(parent_scale: number[]): any {
     const project = parse_project_fresh(LAYER_DIR.div("orientation_0_279_0.aep"));
     const comp = project.compositions[0];
-    const child = comp.layers[0];
+    const child = as_instance(comp.layers[0], AVLayer);
     child.three_d_layer = true;
     child.transform.__getitem__("ADBE Orientation").value = [0.0, 0.0, 0.0];
     child.transform.__getitem__("ADBE Position").value = [150.0, 160.0, 0.0];
@@ -575,7 +577,7 @@ describe("TestParentScaledParentKeyframes", () => {
   test("test_keyframed_position_remap_includes_the_parent_scale", () => {
     const project = parse_project_fresh(LAYER_DIR.div("orientation_0_279_0.aep"));
     const comp = project.compositions[0];
-    const child = comp.layers[0];
+    const child = as_instance(comp.layers[0], AVLayer);
     child.three_d_layer = true;
     child.transform.__getitem__("ADBE Orientation").value = [0.0, 0.0, 0.0];
     child.transform.__getitem__("ADBE Anchor Point").value = [50.0, 50.0, 0.0];
@@ -609,7 +611,7 @@ describe("TestParentAcrossTheTwoDThreeDBoundary", () => {
      */
     const project = parse_project_fresh(LAYER_DIR.div("orientation_0_279_0.aep"));
     const comp = project.compositions[0];
-    const child = comp.layers[0];
+    const child = as_instance(comp.layers[0], AVLayer);
     child.three_d_layer = false;
     child.transform.__getitem__("ADBE Orientation").value = [0.0, 0.0, 0.0];
     child.transform.__getitem__("ADBE Position").value = [150.0, 160.0, 0.0];
@@ -630,7 +632,7 @@ describe("TestParentAcrossTheTwoDThreeDBoundary", () => {
   test("test_three_d_child_under_a_two_d_parent", () => {
     const project = parse_project_fresh(LAYER_DIR.div("orientation_0_279_0.aep"));
     const comp = project.compositions[0];
-    const child = comp.layers[0];
+    const child = as_instance(comp.layers[0], AVLayer);
     child.three_d_layer = true;
     child.transform.__getitem__("ADBE Orientation").value = [0.0, 279.0, 0.0];
     child.transform.__getitem__("ADBE Position").value = [150.0, 160.0, 0.0];

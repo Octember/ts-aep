@@ -11,7 +11,8 @@ import { describe, expect, test } from "bun:test";
 import { parse as parse_aep } from "../../src/py_aep/index.ts";
 import { Path, py_eq, TypeError_, ValueError } from "../../src/pyrt/index.ts";
 import { make_tmp_path, raises } from "../../src/pyrt/pytest.ts";
-import { get_comp } from "../helpers.ts";
+import { as_instance, get_comp } from "../helpers.ts";
+import { AVLayer } from "../../src/py_aep/models/layers/av_layer.ts";
 
 const SAMPLES = new Path(import.meta.dir).parent.parent.div("samples", "models");
 
@@ -42,7 +43,7 @@ describe("TestPrecomposeMove", () => {
     expect(new_comp.name).toBe("Pre-comp 1");
     expect(py_eq(new_comp.layers.map((ly: any) => ly.name), ["Gray Solid 1", "Gray Solid 2"])).toBe(true);
     expect(comp.layers.length).toBe(1);
-    const repl = comp.layers[0];
+    const repl = as_instance(comp.layers[0], AVLayer);
     expect(repl.source).toBe(new_comp);
 
     const out = tmp_path.div("precomp.aep");
@@ -51,7 +52,7 @@ describe("TestPrecomposeMove", () => {
     const comp2 = get_comp(app2.project, "Comp 1");
     const nc2 = get_comp(app2.project, "Pre-comp 1");
     expect(py_eq(nc2.layers.map((ly: any) => ly.name), ["Gray Solid 1", "Gray Solid 2"])).toBe(true);
-    expect(comp2.layers[0].source).toBe(nc2);
+    expect(as_instance(comp2.layers[0], AVLayer).source).toBe(nc2);
   });
 
   test("test_settings_inherited", () => {
@@ -191,7 +192,7 @@ describe("TestPrecomposeLeaveAttributes", () => {
     const tmp_path = make_tmp_path();
     const app = _fresh("layer/gray_solid_1_above.aep");
     const comp = get_comp(app.project, "Comp 1");
-    const retained = comp.layers[1];
+    const retained = as_instance(comp.layers[1], AVLayer);
     const original_source = retained.source;
     const new_comp = comp.precompose([1], "PC leave", false);
 
@@ -205,8 +206,8 @@ describe("TestPrecomposeLeaveAttributes", () => {
     const app2 = parse_aep(String(out));
     const comp2 = get_comp(app2.project, "Comp 1");
     const nc2 = get_comp(app2.project, "PC leave");
-    expect(comp2.layers[1].source).toBe(nc2);
-    expect(nc2.layers[0].source.name).toBe("Gray Solid 2");
+    expect(as_instance(comp2.layers[1], AVLayer).source).toBe(nc2);
+    expect(as_instance(nc2.layers[0], AVLayer).source.name).toBe("Gray Solid 2");
   });
 
   test("test_new_comp_sized_from_source", () => {
@@ -232,7 +233,7 @@ describe("TestPrecomposeLeaveAttributes", () => {
   test("test_sourceless_layer_raises", () => {
     const app = _fresh("property/all_animated.aep");
     const comp = get_comp(app.project, "type_shape");
-    expect(comp.layers[0].source == null).toBe(true);
+    expect(as_instance(comp.layers[0], AVLayer).source == null).toBe(true);
     raises(ValueError, () => {
       comp.precompose([0], "PC bad", false);
     });

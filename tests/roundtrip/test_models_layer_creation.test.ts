@@ -13,6 +13,7 @@ import { TextLayer } from "../../src/py_aep/models/layers/text_layer.ts";
 import { Property } from "../../src/py_aep/models/properties/property.ts";
 import { SolidSource } from "../../src/py_aep/models/sources/solid.ts";
 import "../../src/py_aep/binary/_register.ts";
+import { as_instance } from "../helpers.ts";
 
 const SAMPLES_DIR = new Path(import.meta.dir, "..", "..", "samples", "models");
 
@@ -458,8 +459,8 @@ describe("TestAddSolid", () => {
     expect(lyr2.id).toBe(layer_id);
     expect(lyr2 instanceof AVLayer).toBe(true);
     expect(lyr2.name).toBe("RedSolid");
-    expect(lyr2.width).toBe(200);
-    expect(lyr2.height).toBe(200);
+    expect(as_instance(lyr2, AVLayer).width).toBe(200);
+    expect(as_instance(lyr2, AVLayer).height).toBe(200);
   });
 });
 
