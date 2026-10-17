@@ -123,12 +123,12 @@ export class LightLayer extends Layer {
     });
     ldta.out_point = duration;
     ldta.three_d_layer = true;
-    return super._new({
+    return super._new<LightLayer>({
       ldta: ldta,
       name: name,
       containing_comp: containing_comp,
       effect_param_defs: effect_param_defs,
-    }) as LightLayer;
+    });
   }
 
   /**
@@ -169,7 +169,7 @@ export class LightLayer extends Layer {
     if (value.containing_comp !== comp) {
       throw new ValueError("light_source must be a layer in the same composition");
     }
-    if (([LightType.SPOT, LightType.POINT] as number[]).includes(this.light_type)) {
+    if (this.light_type === LightType.SPOT || this.light_type === LightType.POINT) {
       // AE 2026 refuses these two ("Invalid light source specified")
       // and stores a source on a parallel light.
       throw new ValueError(

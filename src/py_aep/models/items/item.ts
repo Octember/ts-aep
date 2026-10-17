@@ -173,8 +173,8 @@ export class Item {
     if (value === old_parent) return;
     // A folder cannot become its own descendant. Walking up from the
     // target also covers value is self and value under the root.
-    for (let ancestor: FolderItem | null = value; ancestor != null; ancestor = ancestor._parent_folder) {
-      if ((ancestor as unknown) === this) throw new ValueError("a folder cannot be moved inside itself");
+    for (let ancestor: Item | null = value; ancestor != null; ancestor = ancestor._parent_folder) {
+      if (ancestor === this) throw new ValueError("a folder cannot be moved inside itself");
     }
 
     const block = this._remove_from_parent_chunks();

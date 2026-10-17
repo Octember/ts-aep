@@ -122,6 +122,17 @@ type LayerNewKw = {
   effect_param_defs?: EffectParamDefs | null;
 };
 
+/** Keyword arguments of the `Layer` constructor. */
+type LayerInitKw = {
+  _ldta: LdtaChunk;
+  _cmta: CmtaChunk | null;
+  _name_utf8: Utf8Chunk;
+  _layer_list: ListChunk;
+  containing_comp: CompItem;
+  properties: (Property | PropertyGroup)[];
+  essential_property_uuids: string[];
+};
+
 /**
  * The `Layer` object provides access to layers within compositions.
  *
@@ -324,15 +335,7 @@ export class Layer extends PropertyGroup {
     object_setattr(this, name, value);
   }
 
-  constructor(kw: {
-    _ldta: LdtaChunk;
-    _cmta: CmtaChunk | null;
-    _name_utf8: Utf8Chunk;
-    _layer_list: ListChunk;
-    containing_comp: CompItem;
-    properties: (Property | PropertyGroup)[];
-    essential_property_uuids: string[];
-  }) {
+  constructor(kw: LayerInitKw) {
     const {
       _ldta,
       _cmta,
@@ -376,9 +379,9 @@ export class Layer extends PropertyGroup {
   /** Build a layer from a fresh ldta chunk (`Layer._new`). */
   // Python marks this override `# type: ignore[override]`; the `never`
   // overload keeps the incompatible base signatures uncallable.
-  static _new(kw: LayerNewKw): Layer;
+  static _new<T extends Layer>(this: new (kw: LayerInitKw) => T, kw: LayerNewKw): T;
   static _new(...args: never[]): never;
-  static _new(kw: LayerNewKw): Layer {
+  static _new<T extends Layer>(this: new (kw: LayerInitKw) => T, kw: LayerNewKw): T {
     const { ldta, name, containing_comp } = kw;
     const root_tdgp_extra = kw.root_tdgp_extra ?? null;
     const effect_param_defs = kw.effect_param_defs ?? null;
@@ -1077,7 +1080,7 @@ export class Layer extends PropertyGroup {
       write_compensation("ADBE Position", new_pos);
     }
 
-    if (([LayerType.CAMERA, LayerType.LIGHT] as number[]).includes(this._ldta.layer_type)) {
+    if (this._ldta.layer_type === LayerType.CAMERA || this._ldta.layer_type === LayerType.LIGHT) {
       // A camera or light keeps its point of interest in the Anchor
       // Point slot, in its parent's space: AE 2026 remaps it like
       // Position (a two-node camera's POI [900, 500, 0] under a null at
@@ -1233,7 +1236,7 @@ export class Layer extends PropertyGroup {
    * appearance).  AVLayers that use this layer as a track matte
    * lose their matte reference.
    */
-  remove(): void {
+  remove(this: Layer): void {
     const comp = this.containing_comp;
     const removed_id = this.id;
 
@@ -1247,7 +1250,7 @@ export class Layer extends PropertyGroup {
 
     // Clean track matte refs on AV layers
     for (const layer of comp.av_layers) {
-      if ((layer as Layer) !== this) {
+      if (layer !== this) {
         const ldta = layer._ldta;
         if ("matte_layer_id" in ldta && ldta.matte_layer_id === removed_id) {
           ldta.matte_layer_id = 0;
@@ -1339,8 +1342,9 @@ export class Layer extends PropertyGroup {
     // Clone the full layer block (LIST:Layr + trailing view chunks)
     const [src_start, src_end] = this.containing_comp._layer_block_slice(this);
     const src_block = this.containing_comp._item_list.chunks.slice(src_start, src_end);
-    const cloned_block = src_block.map((c) => clone_chunk_tree(c));
-    const cloned_list = cloned_block[0] as ListChunk;
+    // The block starts at this layer's own LIST:Layr.
+    const cloned_list = clone_chunk_tree(this._layer_list);
+    const cloned_block = [cloned_list, ...src_block.slice(1).map((c) => clone_chunk_tree(c))];
 
     // Patch layer ID
     const cloned_ldta = find_by_type(cloned_list.chunks, "ldta");
@@ -1568,7 +1572,7 @@ export class Layer extends PropertyGroup {
         comp._layers[target_index]._layer_list,
       );
     } else if (comp._layers.length > 0) {
-      const [, last_end] = comp._layer_block_slice(comp._layers.at(-1)!);
+      const [, last_end] = comp._layer_block_slice(comp._layers[comp._layers.length - 1]);
       chunk_idx = last_end;
     } else {
       chunk_idx = comp._find_first_layer_position();

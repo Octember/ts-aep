@@ -357,7 +357,7 @@ export class FolderItem extends Item {
       if (item != null) {
         blocks.push([item, [chunk]]);
       } else if (blocks.length > 0) {
-        blocks.at(-1)![1].push(chunk);
+        blocks[blocks.length - 1][1].push(chunk);
       } else {
         header.push(chunk);
       }

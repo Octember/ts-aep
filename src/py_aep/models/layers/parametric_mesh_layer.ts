@@ -83,13 +83,13 @@ export class ParametricMeshLayer extends AVLayer {
   static _new(...args: never[]): never;
   static _new(kw: ParametricMeshLayerNewKw): ParametricMeshLayer {
     const { name, layer_id, duration, containing_comp, mesh_type, effect_param_defs = null } = kw;
-    const layer = super._new({
+    const layer = super._new<ParametricMeshLayer>({
       name,
       layer_id,
       duration,
       containing_comp,
       effect_param_defs,
-    }) as ParametricMeshLayer;
+    });
     layer._ldta.layer_type = LayerType.PARAMETRIC_MESH;
     layer._ldta.label = label_index(containing_comp._project._preferences, "Parametrics Label Index", 9);
     layer._ldta.three_d_layer = true;
@@ -123,7 +123,7 @@ export class ParametricMeshLayer extends AVLayer {
     const old_options = getattr(this, "parametric_mesh_options", null);
     if (_type_of(old_options) !== options_cls) {
       try {
-        delete (this as { parametric_mesh_options?: unknown }).parametric_mesh_options;
+        Reflect.deleteProperty(this, "parametric_mesh_options");
       } catch (e) {
         if (!(e instanceof AttributeError)) throw e;
       }
@@ -136,7 +136,7 @@ export class ParametricMeshLayer extends AVLayer {
     const old_bevel = getattr(this, "parametric_bevel_options", null);
     if (_type_of(old_bevel) !== bevel_cls) {
       try {
-        delete (this as { parametric_bevel_options?: unknown }).parametric_bevel_options;
+        Reflect.deleteProperty(this, "parametric_bevel_options");
       } catch (e) {
         if (!(e instanceof AttributeError)) throw e;
       }
