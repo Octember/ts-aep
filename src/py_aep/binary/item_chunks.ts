@@ -249,7 +249,7 @@ export class HeadChunk extends Chunk {
     if (!m) {
       throw new ValueError(`Invalid version format: ${repr(value)}`);
     }
-    const [major, minor, build] = [int(m[1]!), int(m[2]!), int(m[3]!)];
+    const [major, minor, build] = [int(m[1]), int(m[2]), int(m[3])];
     this.ae_version_major_a = floordiv(major, 8);
     this.ae_version_major_b = major % 8;
     this.ae_version_minor = minor;
