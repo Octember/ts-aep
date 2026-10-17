@@ -116,15 +116,63 @@ export function has(cls: Function): boolean {
 /** Pass as the constructor argument to skip attrs' `__init__` (a hand-written `__init__` sets fields itself). */
 export const NO_INIT: unique symbol = Symbol("NO_INIT");
 
-function default_of(a: Attribute): unknown {
-  const d = a.default;
-  if (d === NOTHING) return NOTHING;
-  if (d && typeof d === "object" && "__factory__" in d) return (d as Factory).__factory__();
-  return d;
+function is_factory(d: unknown): d is Factory {
+  return !!d && typeof d === "object" && "__factory__" in d;
 }
 
-/** The generated `__init__`. */
+function default_of(a: Attribute): unknown {
+  return is_factory(a.default) ? a.default.__factory__() : a.default;
+}
+
+/** A generated `__init__`: sets every field and returns how many keys of `kw` it consumed. */
+type Init = (self: any, kw: Record<string, any>) => number;
+const INITS = new WeakMap<Function, Init | null>();
+
+/**
+ * Generate the class's `__init__`, as attrs does: literal names keep each
+ * class's stores monomorphic. Null where `new Function` is refused (Workers,
+ * strict CSP).
+ */
+function compile_init(cls: Function): Init | null {
+  const defs: unknown[] = [];
+  const body = ["let m = 0, v;"];
+  for (const a of fields(cls)) {
+    const name = JSON.stringify(a.name);
+    const alias = JSON.stringify(a.alias);
+    const i = defs.push(is_factory(a.default) ? a.default.__factory__ : a.default) - 1;
+    const dflt = is_factory(a.default) ? `defs[${i}]()` : `defs[${i}]`;
+    const required = a.default === NOTHING;
+    if (!a.init) {
+      if (!required) body.push(`self[${name}] = ${dflt};`);
+      continue;
+    }
+    body.push(`v = undefined; if (${alias} in kw) { m++; v = kw[${alias}]; }`);
+    body.push(`if (v === undefined) ${required ? `throw missing(${alias})` : `v = ${dflt}`};`);
+    body.push(`self[${name}] = v;`);
+  }
+  body.push("return m;");
+  const missing = (alias: string) => new TypeError_(`${cls.name}.__init__() missing 1 required argument: '${alias}'`);
+  try {
+    return new Function("defs", "missing", `return (self, kw) => {\n${body.join("\n")}\n};`)(defs, missing);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * The generated `__init__`. Keyword names are only counted here; when the
+ * count shows an unexpected one (or codegen is blocked), `attrs_init_slow`
+ * runs to raise attrs' error.
+ */
 export function attrs_init(self: any, cls: Function, kw: Record<string, any>): void {
+  let init = INITS.get(cls);
+  if (init === undefined) INITS.set(cls, (init = compile_init(cls)));
+  let n = 0;
+  for (const _ in kw) n++;
+  if (init === null || init(self, kw) !== n) attrs_init_slow(self, cls, kw);
+}
+
+function attrs_init_slow(self: any, cls: Function, kw: Record<string, any>): void {
   const attrs = fields(cls);
   const seen = new Set<string>();
   for (const a of attrs) {

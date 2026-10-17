@@ -136,13 +136,19 @@ export function strip(data: Uint8Array, chars: Uint8Array = WS): Uint8Array {
 
 export function lstrip(data: Uint8Array, chars: Uint8Array = WS): Uint8Array {
   let s = 0;
-  while (s < data.length && chars.includes(data[s])) s++;
+  if (chars.length === 1) {
+    const c = chars[0];
+    while (s < data.length && data[s] === c) s++;
+  } else while (s < data.length && chars.includes(data[s])) s++;
   return data.slice(s);
 }
 
 export function rstrip(data: Uint8Array, chars: Uint8Array = WS): Uint8Array {
   let e = data.length;
-  while (e > 0 && chars.includes(data[e - 1])) e--;
+  if (chars.length === 1) {
+    const c = chars[0];
+    while (e > 0 && data[e - 1] === c) e--;
+  } else while (e > 0 && chars.includes(data[e - 1])) e--;
   return data.slice(0, e);
 }
 

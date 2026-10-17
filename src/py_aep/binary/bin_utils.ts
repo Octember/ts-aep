@@ -99,6 +99,20 @@ export function _get_struct(full_fmt: string): struct.Struct {
   return s;
 }
 
+const _STRUCTS_BY_ENDIAN = new Map<string, Map<string, struct.Struct>>();
+
+/** `_get_struct(endian + fmt)` without building the key string on a hit. */
+export function _struct_for(fmt: string, endian = ">"): struct.Struct {
+  let by_fmt = _STRUCTS_BY_ENDIAN.get(endian);
+  if (by_fmt === undefined) _STRUCTS_BY_ENDIAN.set(endian, (by_fmt = new Map()));
+  let s = by_fmt.get(fmt);
+  if (s === undefined) {
+    s = _get_struct(endian + fmt);
+    by_fmt.set(fmt, s);
+  }
+  return s;
+}
+
 /**
  * Read and unpack binary data from `fp`.
  *
@@ -109,12 +123,14 @@ export function _get_struct(full_fmt: string): struct.Struct {
  */
 export function read_fmt<F extends string>(fmt: F, fp: IO, endian?: string): struct.Unpacked<F>;
 export function read_fmt(fmt: string, fp: IO, endian = ">"): struct.Unpacked<string> {
-  const s = _get_struct(endian + fmt);
-  const data = fp.read(s.size);
-  if (data.length < s.size) {
-    throw new OSError(`Short read: expected ${s.size} bytes, got ${data.length}`);
+  const s = _struct_for(fmt, endian);
+  const values = fp.unpack(s);
+  if (values === null) {
+    // Consume the short tail, as `fp.read(s.size)` does in Python.
+    const got = fp.read(s.size).length;
+    throw new OSError(`Short read: expected ${s.size} bytes, got ${got}`);
   }
-  return s.unpack(data);
+  return values;
 }
 
 /**
@@ -128,9 +144,7 @@ export type WriteFmtOptions = { endian?: string };
 export function write_fmt(fp: IO, fmt: string, ...args: (struct.PackValue | WriteFmtOptions)[]): number {
   const last = args[args.length - 1];
   const opts: WriteFmtOptions = last !== null && typeof last === "object" && Object.getPrototypeOf(last) === Object.prototype ? (args.pop() as WriteFmtOptions) : {};
-  const data = _get_struct((opts.endian ?? ">") + fmt).pack(...(args as struct.PackValue[]));
-  fp.write(data);
-  return data.length;
+  return fp.pack(_struct_for(fmt, opts.endian), args as struct.PackValue[]);
 }
 
 /** The largest finite IEEE-754 single (float32). */
