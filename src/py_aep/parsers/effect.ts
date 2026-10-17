@@ -1,6 +1,7 @@
 /** Effect and parameter definition parsers. */
 
 import type { Chunk, ListChunk } from "../binary/chunk.ts";
+import type { AnglePardChunk, BooleanPardChunk, ColorPardChunk, EnumPardChunk, IntegerPardChunk, PardChunk, ScalarPardChunk, SliderPardChunk, ThreeDPardChunk, TwoDPardChunk } from "../binary/misc_chunks.ts";
 import type { TdmnChunk } from "../binary/property_chunks.ts";
 import { ChunkNotFoundError, filter_by_list_type, filter_by_type, find_by_list_type, find_by_list_type_or_null, find_by_type, find_by_type_or_null } from "../binary/utils.ts";
 import { MATCH_NAME_TO_AUTO_NAME } from "../data/match_names.ts";
@@ -513,7 +514,9 @@ export const parse_effect = _suppress_materialization().decorate(function parse_
   return effect_group;
 });
 
-export type PardExtractor = (body: any, result: ParamDef) => void;
+// Method shorthand: each extractor takes the pard variant its control type
+// reads as (`_PARD_VARIANTS`), so parameters are checked bivariantly.
+export type PardExtractor = { extract(body: PardChunk, result: ParamDef): void }["extract"];
 
 export const _PARD_EXTRACTORS: Map<number, PardExtractor> = new Map();
 
@@ -530,14 +533,14 @@ export function _pard_extractor(
 
 // Python's `@_pard_extractor(...)` decorator is applied as a registration call
 // directly after each definition, which keeps the registration order.
-export function _extract_angle(body: any, result: ParamDef): void {
+export function _extract_angle(body: AnglePardChunk, result: ParamDef): void {
   result.set("last_value", body.last_value);
   if (body.default_ != null) result.set("default", _intify(body.default_));
   result.set("property_value_type", PropertyValueType.OneD);
 }
 _pard_extractor(PropertyControlType.ANGLE)(_extract_angle);
 
-export function _extract_boolean(body: any, result: ParamDef): void {
+export function _extract_boolean(body: BooleanPardChunk, result: ParamDef): void {
   result.set("last_value", body.last_value);
   result.set("default_value", body.default_);
   result.set("min_value", 0);
@@ -545,7 +548,7 @@ export function _extract_boolean(body: any, result: ParamDef): void {
 }
 _pard_extractor(PropertyControlType.BOOLEAN)(_extract_boolean);
 
-export function _extract_color(body: any, result: ParamDef): void {
+export function _extract_color(body: ColorPardChunk, result: ParamDef): void {
   // pard stores colors as [A, R, G, B] in 0-255 range;
   // ExtendScript uses [R, G, B, A] in 0-1 range.
   {
@@ -562,7 +565,7 @@ export function _extract_color(body: any, result: ParamDef): void {
 }
 _pard_extractor(PropertyControlType.COLOR)(_extract_color);
 
-export function _extract_enum(body: any, result: ParamDef): void {
+export function _extract_enum(body: EnumPardChunk, result: ParamDef): void {
   result.set("last_value", body.last_value);
   result.set("nb_options", body.nb_options);
   result.set("default_value", body.default_);
@@ -577,14 +580,14 @@ export function _intify(value: number): number {
   return Number.isInteger(value) ? int(value) : value;
 }
 
-export function _extract_integer(body: any, result: ParamDef): void {
+export function _extract_integer(body: IntegerPardChunk, result: ParamDef): void {
   if (body.default_ != null) result.set("default", body.default_);
   result.set("min_value", body.valid_min);
   result.set("max_value", body.valid_max);
 }
 _pard_extractor(PropertyControlType.INTEGER)(_extract_integer);
 
-export function _extract_scalar(body: any, result: ParamDef): void {
+export function _extract_scalar(body: ScalarPardChunk, result: ParamDef): void {
   result.set("last_value", body.last_value);
   if (body.default_ != null) result.set("default", _intify(body.default_));
   result.set("min_value", _intify(body.valid_min));
@@ -594,7 +597,7 @@ export function _extract_scalar(body: any, result: ParamDef): void {
 }
 _pard_extractor(PropertyControlType.SCALAR)(_extract_scalar);
 
-export function _extract_slider(body: any, result: ParamDef): void {
+export function _extract_slider(body: SliderPardChunk, result: ParamDef): void {
   result.set("last_value", body.last_value);
   if (body.default_ != null && Number.isFinite(body.default_)) {
     result.set("default", _intify(body.default_));
@@ -610,7 +613,7 @@ export function _extract_slider(body: any, result: ParamDef): void {
 }
 _pard_extractor(PropertyControlType.SLIDER)(_extract_slider);
 
-export function _extract_three_d(body: any, result: ParamDef): void {
+export function _extract_three_d(body: ThreeDPardChunk, result: ParamDef): void {
   result.set("last_value", [body.last_value_x, body.last_value_y, body.last_value_z]);
   // Percent of the layer size; `_point_default_pixels` converts it.
   result.set("default_value", body.default_);
@@ -618,31 +621,31 @@ export function _extract_three_d(body: any, result: ParamDef): void {
 }
 _pard_extractor(PropertyControlType.THREE_D)(_extract_three_d);
 
-export function _extract_two_d(body: any, result: ParamDef): void {
+export function _extract_two_d(body: TwoDPardChunk, result: ParamDef): void {
   result.set("last_value", [body.last_value_x, body.last_value_y]);
   result.set("default_value", body.default_);
   result.set("property_value_type", PropertyValueType.TwoD_SPATIAL);
 }
 _pard_extractor(PropertyControlType.TWO_D)(_extract_two_d);
 
-export function _extract_layer(body: any, result: ParamDef): void {
+export function _extract_layer(body: PardChunk, result: ParamDef): void {
   result.set("property_value_type", PropertyValueType.LAYER_INDEX);
   result.set("default_value", 0);
 }
 _pard_extractor(PropertyControlType.LAYER)(_extract_layer);
 
-export function _extract_mask(body: any, result: ParamDef): void {
+export function _extract_mask(body: PardChunk, result: ParamDef): void {
   result.set("property_value_type", PropertyValueType.MASK_INDEX);
   result.set("default_value", 0);
 }
 _pard_extractor(PropertyControlType.MASK)(_extract_mask);
 
-export function _extract_curve(body: any, result: ParamDef): void {
+export function _extract_curve(body: PardChunk, result: ParamDef): void {
   result.set("property_value_type", PropertyValueType.CUSTOM_VALUE);
 }
 _pard_extractor(PropertyControlType.CURVE)(_extract_curve);
 
-export function _extract_no_value(body: any, result: ParamDef): void {
+export function _extract_no_value(body: PardChunk, result: ParamDef): void {
   result.set("property_value_type", PropertyValueType.NO_VALUE);
 }
 _pard_extractor(

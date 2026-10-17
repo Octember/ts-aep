@@ -5,8 +5,8 @@
   "fault_cases": 2640,
   "loose_types": {
     "0 pyrt": {
-      "any": 51,
-      "unknown": 87,
+      "any": 39,
+      "unknown": 108,
       "casts": 37
     },
     "1 binary+enums+data": {
@@ -20,14 +20,14 @@
       "casts": 7
     },
     "3 parsers+synthesis": {
-      "any": 17,
+      "any": 3,
       "unknown": 10,
       "casts": 12
     },
     "4 models": {
       "any": 100,
       "unknown": 103,
-      "casts": 160
+      "casts": 159
     },
     "5 resolvers+svg": {
       "any": 5,
