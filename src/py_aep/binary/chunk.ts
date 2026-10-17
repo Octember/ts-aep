@@ -34,7 +34,7 @@ import {
 } from "../../pyrt/index.ts";
 import { _struct_for, read_bytes, read_fmt, read_pad, write_bytes, write_pad } from "./bin_utils.ts";
 import { _decode_fields, _encode_value, _field_encoder, _struct_info, type Coerce, type FieldKwargs, type FieldValue, type FmtItem, type InitKwargs } from "./fmt_field.ts";
-import { CHUNK_TYPES, register } from "./registry.ts";
+import { CHUNK_TYPES, register, registered } from "./registry.ts";
 import type { HeadChunk } from "./item_chunks.ts";
 
 const _PREFIX_STRUCTS = new WeakMap<readonly Attribute[], struct.Struct[]>();
@@ -541,7 +541,7 @@ export class ContainerChunk extends Chunk {
     const data = read_bytes(fp, size);
     // Registry lookup instead of a deferred import: scalar_chunks imports Chunk
     // from this module, which imports the chunk modules only once Chunk is defined.
-    const Utf8Chunk = CHUNK_TYPES.get("Utf8")!;
+    const Utf8Chunk = registered("Utf8");
     const utf8 = new Utf8Chunk({
       value: this._legacy_value(_legacy_text(data)),
       synthetic: true,
@@ -714,7 +714,7 @@ export function _resolve_cdat_context(siblings: Chunk[], ctx: ReadContext): Reco
 export function _resolve_ldat_context(siblings: Chunk[], ctx: ReadContext): Record<string, unknown> {
   // Registry lookup instead of a deferred import: ldat_chunks subclasses Chunk,
   // so a top-level import would be circular.
-  const Lhd3Chunk = CHUNK_TYPES.get("lhd3")!;
+  const Lhd3Chunk = registered("lhd3");
   if (!siblings?.length) return {};
   const lhd3_sibling: Chunk = siblings[0];
   if (!(lhd3_sibling instanceof Lhd3Chunk)) return {};
@@ -751,7 +751,7 @@ export function _resolve_tdum_context(siblings: Chunk[], ctx: ReadContext): Reco
 export function _resolve_prda_context(siblings: Chunk[], ctx: ReadContext): Record<string, string> {
   // Registry lookup instead of a deferred import: misc_chunks subclasses Chunk,
   // so a top-level import would be circular.
-  const PrinChunk = CHUNK_TYPES.get("prin")!;
+  const PrinChunk = registered("prin");
   for (const sibling of siblings) {
     if (sibling instanceof PrinChunk) {
       return { renderer_match_name: sibling.match_name };
