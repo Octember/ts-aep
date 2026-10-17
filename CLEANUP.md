@@ -1,0 +1,165 @@
+# Cleanup guide: from 1:1 port to TypeScript
+
+The port (see `RULEBOOK.md`) is done: every test passes, every sample saves
+byte-identical, and the differential harness matches py-aep on every sample and
+edit. This guide turns the transliterated code into ordinary TypeScript without
+changing behavior, one pass at a time.
+
+Each pass is a mechanical rewrite with a fixed scope. It is only "done" when
+`tools/gate.sh` passes: `tsc` clean, `bun test` at or above the counts in
+`tools/gate_baseline.json` with 0 failures, all 644 samples byte-identical, and
+the py-aep differential (parse attributes, 25,427 edits, saved bytes)
+identical. No test is skipped, deleted, or loosened to get there.
+
+The trap to watch for: code that looks the same in both forms but behaves
+differently. Every rule below names the condition under which the rewrite is
+exact. If you cannot show the condition holds from the code in front of you,
+leave the call alone. `tsconfig` is not strict, so a declared type does not
+prove a value is non-null; read the code that produces it.
+
+If a rewrite needs a paragraph-long comment to justify it, don't make it.
+
+## Fixed during every pass
+
+- The public surface: names, signatures, and return types of everything
+  `src/py_aep/index.ts` exports and every public (non-`_`) member of a model
+  class. The tests and the differential harness exercise this surface.
+- Exception classes and message text (tests match them).
+- Float operation order and every byte-producing path (`struct`, `codecs`,
+  `json_dumps`, `float_repr`, `format`).
+- `src/pyrt/` itself and `tests/` (unless the pass says otherwise).
+
+## Pass 1: native idioms in function bodies
+
+Replace pyrt helpers with plain TS where the operand types make it exact. No
+renames, no signature changes, no structural changes.
+
+### Truthiness: `py_bool`, `py_or`, `py_and`
+
+`py_bool(x)` is Python truth: `None`, `0`, `NaN`-is-true, empty
+string/array/bytes/Map/Set, `__bool__`, `__len__`. Rewrite by the type `x`
+provably has:
+
+| `x` is | `py_bool(x)` becomes |
+|---|---|
+| `boolean` | `x` |
+| `boolean \| null` | `!!x` |
+| `number` (never null) | `x !== 0` (not `!!x`: `NaN` is truthy in Python) |
+| `string` or `string \| null` (a primitive, see below) | `!!x` |
+| array, `Uint8Array` | `x.length > 0` (nullable: `x != null && x.length > 0`) |
+| `Map` / `Set` | `x.size > 0` (nullable likewise) |
+| class instance with no `__len__` / `__bool__`, or null | `x != null` |
+
+Keep `py_bool` when `x` is or may be:
+
+- a `PropertyGroup` or any subclass (`Layer`, `AVLayer`, `MaskPropertyGroup`,
+  …), a `ListChunk`, `Settings`, `EssentialGraphics`-style containers, or
+  anything else defining `__len__` / `__bool__`: their truth is "non-empty".
+- a `String` object: `_NulTailStr` (fixed-size chunk string fields) and
+  `CosString` (COS data) are `String` objects and always truthy to `!!`.
+  Values read from chunk string fields or COS trees can be these.
+- a `PyFloat` or anything from a COS tree (`cos_get`, `_doc`, `_char_style`,
+  parsed JSON) unless the code has already unboxed it.
+- `any` whose possible values you cannot enumerate.
+
+`py_or(a, b)` is `py_bool(a) ? a : b` and `py_and(a, b)` is
+`py_bool(a) ? b : a`. Write them as that conditional with the native test from
+the table, or as `a || b` only when `a` is a primitive string, a boolean, or a
+nullable object without `__len__`/`__bool__`. A number `a` uses
+`a !== 0 ? a : b`. An array `a`: `a != null && a.length > 0 ? a : b`. `b` is
+evaluated eagerly in the call form and lazily in the rewrite; that is fine
+unless `b` has side effects that later code depends on.
+
+### Maps: `dict_get`, `getitem`, `setdefault`, `dict_pop`
+
+- `dict_get(m, k)` / `dict_get(m, k, null)` → `m.get(k) ?? null`. Exact
+  whenever `m` is a `Map` (a stored `undefined` is never distinguished from
+  `null`; None checks use `== null`).
+- `dict_get(m, k, d)` with a non-null `d` → `m.get(k) ?? d` only when no value
+  stored in `m` can be `null`/`undefined` (a constant table of non-null
+  literals, or a map whose every `set` you can see stores a non-null value).
+  Otherwise `m.has(k) ? m.get(k) : d`.
+- Only when `m` is certainly a `Map`. `dict_get` on an `any` from a COS tree is
+  a Map in practice, but if a non-Map can reach it, keep the call.
+- `getitem(m, k)` raises `KeyError`. Rewrite to `m.get(k)!` only where the key
+  is provably present (an `m.has(k)` guard right before, or `k` came from
+  iterating `m`). Otherwise keep it.
+- `setdefault` / `dict_pop`: keep (they are already one call; the native form
+  is longer).
+
+### Equality and membership: `py_eq`, `contains`, `len`
+
+- `py_eq(a, b)` → `a === b` when both sides are primitive `number`, `string`,
+  `boolean`, or `null` (compare with `null` via `== null` / `!= null`). Keep it
+  when either side can be a `PyFloat`, `bigint`, `String` object, array, bytes,
+  `Map`, `Set`, or a class with `__eq__` (chunks, gradients, COS values, items,
+  layers, `Settings`, synthesis specs, …). A `boolean` vs `number` comparison
+  is `py_eq` too (Python `True == 1`).
+- `contains(c, x)` → `c.includes(x)` for a primitive string `c` (substring) or
+  an array of primitives; `c.has(x)` for a `Set` or `Map`. Keep it for arrays
+  that may hold objects with `__eq__`, arrays of arrays, or `__contains__`
+  objects.
+- `len(x)` → `x.length` (string, array, `Uint8Array`) or `x.size` (`Map`,
+  `Set`) when the type is certain. Keep for `__len__` objects or `any`.
+  Note: a string's `.length` counts UTF-16 units and so does `len` here.
+
+### Iteration: `range`, `enumerate`, `zip`
+
+- `for (const i of range(n))` → `for (let i = 0; i < n; i++)`;
+  `range(a, b)` / `range(a, b, step)` likewise, keeping the bounds expressions
+  evaluated once (hoist into a `const` if they have side effects or are
+  expensive). `for (const _ of range(n))` → `for (let i = 0; i < n; i++)`.
+- `Array.from(range(n), f)` → `Array.from({ length: n }, (_, i) => f(i))` (for
+  `n` ≥ 0; a negative `n` gives an empty list in both).
+- `[...range(n)]` → `Array.from({ length: n }, (_, i) => i)`.
+- `enumerate(xs)` over an array → `xs.entries()`; with a start offset, keep.
+- `zip(a, b)` → index loop over `Math.min(a.length, b.length)` only where it
+  reads more clearly; otherwise keep.
+
+### Indexing and slicing
+
+- `at(xs, i)` → `xs[i]` when `0 <= i < xs.length` is guaranteed by the
+  surrounding code; `xs.at(-1)!` when non-empty is guaranteed. Otherwise keep
+  (it raises `IndexError`).
+- `py_slice(xs, a, b)` with literal non-negative bounds (or omitted ones) →
+  `xs.slice(a, b)`. Keep for negative or computed bounds and any step.
+
+### Keep (these carry Python numerics or formatting the tests depend on)
+
+`round`, `floordiv`, `mod`, `divmod`, `truediv`, `int`, `float`, `sum`,
+`fsum`, `hypot`, `sorted`, `min`, `max`, `py_cmp`, `repr`, `str`,
+`float_repr`, `num_str`, `format`, `split`, `strip`/`lstrip`/`rstrip`,
+`isdigit` & co., `decode`/`encode`, `struct`, `bytes_` helpers, `tkey`,
+`deepcopy`/`copy`, `lru_cache`, `warn`, `py_assert`.
+
+One exception: `int(x)` where `x` is a primitive `number` that is provably
+finite (not `NaN` / `±Infinity`) may become `Math.trunc(x)`. If finiteness
+is not provable from the code, keep `int`.
+
+### Comments
+
+- Delete a `NOTE(port)` comment when the code it explained no longer exists
+  or no longer needs explaining after the rewrite. Keep `NOTE(port)` comments
+  that still explain a non-obvious behavior.
+- Keep `TODO(port)` markers.
+- Don't add comments explaining the rewrite.
+
+### Imports
+
+Drop pyrt names that are no longer used in the file. Keep import order
+otherwise.
+
+## Later passes (not in pass 1)
+
+Each of these changes structure and needs its own guide section first:
+
+- attrs `define(...)` / `field(...)` and `descriptor(Cls, name, ...)` →
+  class fields and accessors (decorators or explicit getters/setters).
+- `int_enum` / `py_enum` → TS `enum` or `as const` objects (touches public
+  API through `E.of`, `E.name_of`).
+- `deferred(...)` cycle breakers → restructured imports.
+- `__getattr__` / `py_object` proxies, `__eq__`/`__len__` dunders → explicit
+  methods.
+- snake_case internals → camelCase (public names stay until an API decision).
+- `Port of py_aep/...` headers and the `RULEBOOK.md` sync rules: retire once
+  upstream syncs stop being file-by-file.

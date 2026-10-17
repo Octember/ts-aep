@@ -6,3 +6,5 @@ samples
 dist/
 *-E
 *.ts-e
+.gate/
+__pycache__/
