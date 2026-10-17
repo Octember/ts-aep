@@ -107,6 +107,7 @@ export function _get_struct(full_fmt: string): struct.Struct {
  *
  * @throws {@link IOError} If fewer bytes are available than the format requires.
  */
+export function read_fmt<F extends string>(fmt: F, fp: IO, endian?: string): struct.Unpacked<F>;
 export function read_fmt(fmt: string, fp: IO, endian = ">"): any[] {
   const s = _get_struct(endian + fmt);
   const data = fp.read(s.size);
