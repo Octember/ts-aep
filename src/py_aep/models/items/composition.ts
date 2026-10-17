@@ -34,7 +34,6 @@ import {
   sorted,
   TypeError_,
   ValueError,
-  zip,
   type ClassAttributes,
   AttributeError,
   type_name,
@@ -2159,18 +2158,18 @@ export class CompItem extends AVItem {
     const zoom = round((this.width * this.pixel_aspect) / CameraLayer._zoom_dividend, 8);
 
     const transform = layer.transform;
-    const anchor_point = transform.__getitem__("ADBE Anchor Point");
+    const anchor_point = transform.property("ADBE Anchor Point");
     anchor_point.value = [center_point[0], center_point[1], 0.0];
     // ExtendScript reports a new two-node camera's position as
     // [0, 0, -zoom] (the point of interest carries the center).
-    const position = transform.__getitem__("ADBE Position");
+    const position = transform.property("ADBE Position");
     position.value = [0.0, 0.0, -zoom];
 
     // AE's new-camera Camera Zoom equals the same computed zoom. Without
     // this the property keeps its 0.0 spec placeholder, which violates its
     // own >= 1 minimum and makes keyframing the zoom raise ValueError.
-    const camera_options = layer.__getitem__("ADBE Camera Options Group");
-    const zoom_prop = camera_options.__getitem__("ADBE Camera Zoom");
+    const camera_options = layer.property("ADBE Camera Options Group");
+    const zoom_prop = camera_options.property("ADBE Camera Zoom");
     zoom_prop.value = zoom;
 
     return layer;
@@ -2209,11 +2208,11 @@ export class CompItem extends AVItem {
     const zoom = round((this.width * this.pixel_aspect) / LightLayer._zoom_dividend, 8);
 
     const transform = layer.transform;
-    const anchor_point = transform.__getitem__("ADBE Anchor Point");
+    const anchor_point = transform.property("ADBE Anchor Point");
     anchor_point.value = [center_point[0], center_point[1], 0.0];
     // Like cameras, lights report position [0, 0, -zoom/2] with the
     // point of interest at the center.
-    const position = transform.__getitem__("ADBE Position");
+    const position = transform.property("ADBE Position");
     position.value = [0.0, 0.0, -zoom / 2];
 
     return layer;
@@ -2465,7 +2464,8 @@ export class CompItem extends AVItem {
     // the new comp cannot resolve, which it refuses to open.
     const matte_map: Map<number, number> = new Map();
     const final_blocks: [ListChunk, ...Chunk[]][] = [];
-    for (const [ly, block] of zip(moved, blocks)) {
+    for (const [i, ly] of moved.entries()) {
+      const block = blocks[i];
       final_blocks.push(block);
       const referenced: number[] = [ly._ldta.matte_layer_id || 0];
       referenced.push(...sorted([...collect_layer_ref_tdpi_ids(ly._layer_list)]));
