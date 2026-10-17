@@ -38,13 +38,13 @@ function count_nl(s: string, end: number): number {
 
 export type LoadsOptions = {
   /** `parse_float`: called with the number's text; default boxes it as `PyFloat`. */
-  parse_float?: (text: string) => unknown;
+  parse_float?: (text: string) => JsonValue;
   /** `parse_int`: called with the number's text; default `number`, or `bigint` past 2**53. */
-  parse_int?: (text: string) => unknown;
+  parse_int?: (text: string) => JsonValue;
   /** `parse_constant`: called with "NaN", "Infinity" or "-Infinity". */
-  parse_constant?: (text: string) => unknown;
+  parse_constant?: (text: string) => JsonValue;
   /** `object_pairs_hook`: builds an object from its `[key, value]` pairs (default: `Map`). */
-  object_pairs_hook?: (pairs: [string, unknown][]) => unknown;
+  object_pairs_hook?: (pairs: [string, JsonValue][]) => JsonValue;
 };
 
 function default_int(text: string): number | bigint {
@@ -121,10 +121,8 @@ export function json_float(x: JsonValue): number {
   return float(typeof x === "bigint" ? Number(x) : x);
 }
 
-/** `json.loads(s)`; the hooks in `opts` decide what custom options produce. */
-export function json_loads(s: string | Uint8Array): JsonValue;
-export function json_loads(s: string | Uint8Array, opts: LoadsOptions): unknown;
-export function json_loads(s: string | Uint8Array, opts: LoadsOptions = {}): any {
+/** `json.loads(s)`. */
+export function json_loads(s: string | Uint8Array, opts: LoadsOptions = {}): JsonValue {
   let text: string;
   if (s instanceof Uint8Array) {
     const enc = detect_encoding(s);
@@ -136,7 +134,7 @@ export function json_loads(s: string | Uint8Array, opts: LoadsOptions = {}): any
   const parse_float = opts.parse_float ?? default_float;
   const parse_int = opts.parse_int ?? default_int;
   const parse_constant = opts.parse_constant ?? ((c: string) => CONSTANTS[c]);
-  const pairs_hook = opts.object_pairs_hook ?? ((pairs: [string, unknown][]) => new Map(pairs));
+  const pairs_hook = opts.object_pairs_hook ?? ((pairs: [string, JsonValue][]) => new Map(pairs));
   const n = text.length;
   const fail = (msg: string, pos: number): never => {
     throw new JSONDecodeError(msg, text, pos);
@@ -195,7 +193,7 @@ export function json_loads(s: string | Uint8Array, opts: LoadsOptions = {}): any
   const NUM = /-?(?:0|[1-9][0-9]*)(\.[0-9]+)?([eE][-+]?[0-9]+)?/y;
 
   // scan_once: returns [value, end] or null (StopIteration) at `i`.
-  const scan_once = (i: number): [unknown, number] | null => {
+  const scan_once = (i: number): [JsonValue, number] | null => {
     if (i >= n) return null;
     const c = text[i];
     if (c === '"') return scanstring(i + 1);
@@ -214,8 +212,8 @@ export function json_loads(s: string | Uint8Array, opts: LoadsOptions = {}): any
     return [m[1] !== undefined || m[2] !== undefined ? parse_float(m[0]) : parse_int(m[0]), end];
   };
 
-  const parse_object = (i: number): [unknown, number] => {
-    const pairs: [string, unknown][] = [];
+  const parse_object = (i: number): [JsonValue, number] => {
+    const pairs: [string, JsonValue][] = [];
     i = skip(i);
     if (text[i] === "}") return [pairs_hook(pairs), i + 1];
     for (;;) {
@@ -234,8 +232,8 @@ export function json_loads(s: string | Uint8Array, opts: LoadsOptions = {}): any
     }
   };
 
-  const parse_array = (i: number): [unknown[], number] => {
-    const out: unknown[] = [];
+  const parse_array = (i: number): [JsonValue[], number] => {
+    const out: JsonValue[] = [];
     i = skip(i);
     if (text[i] === "]") return [out, i + 1];
     for (;;) {

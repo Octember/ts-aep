@@ -1,38 +1,38 @@
 {
-  "pass": 15581,
+  "pass": 15582,
   "skip": 35,
   "samples": 644,
   "fault_cases": 2640,
   "loose_types": {
     "0 pyrt": {
-      "any": 51,
-      "unknown": 87,
+      "any": 50,
+      "unknown": 76,
       "casts": 37
     },
     "1 binary+enums+data": {
-      "any": 9,
-      "unknown": 26,
+      "any": 8,
+      "unknown": 23,
       "casts": 36
     },
     "2 cos+color": {
-      "any": 2,
+      "any": 1,
       "unknown": 15,
       "casts": 7
     },
     "3 parsers+synthesis": {
-      "any": 17,
-      "unknown": 10,
+      "any": 14,
+      "unknown": 9,
       "casts": 12
     },
     "4 models": {
-      "any": 100,
-      "unknown": 103,
-      "casts": 160
+      "any": 82,
+      "unknown": 94,
+      "casts": 159
     },
     "5 resolvers+svg": {
-      "any": 5,
+      "any": 4,
       "unknown": 17,
-      "casts": 38
+      "casts": 35
     },
     "6 cli+entry": {
       "any": 4,
