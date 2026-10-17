@@ -412,7 +412,7 @@ export function _encode_value(
 /** Base for item types whose fields are declared with `fmt_field`. */
 export class FmtItem extends AttrsBase {
   /** Construct an item from bytes using its `_struct_info` metadata. */
-  static frombytes(data: Uint8Array): FmtItem {
+  static frombytes<T extends FmtItem>(this: (new (kw: Record<string, any>) => T) & typeof FmtItem, data: Uint8Array): T {
     const info = _struct_info(this);
     if (info == null) throw new TypeError_(`${this.name} has no fmt_field metadata`);
     const [

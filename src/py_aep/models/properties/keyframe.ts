@@ -9,7 +9,7 @@ import { KeyframeEase } from "./keyframe_ease.ts";
 import { MarkerValue } from "./marker.ts";
 import { TEXT_KIND } from "./parallel.ts";
 import { Shape } from "./shape.ts";
-import type { LdatItem } from "../../binary/ldat_chunks.ts";
+import type { KfPosition, LdatItem } from "../../binary/ldat_chunks.ts";
 import type { Curves } from "./curves.ts";
 import type { Property } from "./property.ts";
 import {
@@ -28,20 +28,6 @@ const _property = deferred<typeof import("./property.ts")>("py_aep/models/proper
 
 // TYPE_CHECKING: `_ValueType = Union[list[float], float, Curves, Gradient, MarkerValue, Shape, TextDocument, None]`
 export type _ValueType = number[] | number | Curves | Gradient | MarkerValue | Shape | TextDocument | null;
-
-/**
- * Duck-typed view of `LdatItem.kf_data`: which of these slots exist depends on
- * the keyframe kind (`Kf*` chunk class), and the code probes with `in`.
- */
-interface _KfData {
-  value: number[];
-  in_speed: number | number[];
-  out_speed: number | number[];
-  in_spatial_tangents: number[];
-  out_spatial_tangents: number[];
-  spatial_auto_bezier: boolean;
-  spatial_continuous: boolean;
-}
 
 /** sentinel: read value from _ldat_item */
 export const _VALUE_FROM_CHUNK: unique symbol = Symbol("_VALUE_FROM_CHUNK");
@@ -377,7 +363,7 @@ export class Keyframe {
    * keyframe type carries no value (e.g. markers).
    */
   _extract_raw_value(): number[] | number | null {
-    const kf_data: _KfData = this._ldat_item.kf_data as _KfData;
+    const kf_data = this._ldat_item.kf_data;
     if (!("value" in kf_data)) return null;
     const values: number[] = [...kf_data.value];
     if (values.length === 1) return values[0];
@@ -394,7 +380,7 @@ export class Keyframe {
    * carries no ease data (e.g. markers).
    */
   _create_ease(): [KeyframeEase[], KeyframeEase[]] {
-    const kf_data: _KfData = this._ldat_item.kf_data as _KfData;
+    const kf_data = this._ldat_item.kf_data;
     if (!("in_speed" in kf_data)) return [[], []];
 
     const factor = this._property != null ? this._property._speed_factor : 1.0;
@@ -434,7 +420,7 @@ export class Keyframe {
    * - If the property value type is neither of these types, returns `null`.
    */
   get in_spatial_tangent(): number[] | null {
-    const kf_data: _KfData = this._ldat_item.kf_data as _KfData;
+    const kf_data = this._ldat_item.kf_data;
     if (!("in_spatial_tangents" in kf_data)) return null;
     if (this.spatial_auto_bezier) {
       const derived = this._auto_spatial_tangents();
@@ -448,7 +434,7 @@ export class Keyframe {
   set in_spatial_tangent(value: number[] | null) {
     if (value == null || this.in_spatial_tangent == null) return;
     validate_sequence({ length: this.in_spatial_tangent.length })(value);
-    const kf_data: _KfData = this._ldat_item.kf_data as _KfData;
+    const kf_data = this._ldat_item.kf_data;
     this._leave_spatial_auto_bezier();
     if ("in_spatial_tangents" in kf_data) {
       kf_data.in_spatial_tangents = this._rescale_tangent(value, { invert: true });
@@ -468,7 +454,7 @@ export class Keyframe {
    * - If the property value type is neither of these types, returns `null`.
    */
   get out_spatial_tangent(): number[] | null {
-    const kf_data: _KfData = this._ldat_item.kf_data as _KfData;
+    const kf_data = this._ldat_item.kf_data;
     if (!("out_spatial_tangents" in kf_data)) return null;
     if (this.spatial_auto_bezier) {
       const derived = this._auto_spatial_tangents();
@@ -482,7 +468,7 @@ export class Keyframe {
   set out_spatial_tangent(value: number[] | null) {
     if (value == null || this.out_spatial_tangent == null) return;
     validate_sequence({ length: this.out_spatial_tangent.length })(value);
-    const kf_data: _KfData = this._ldat_item.kf_data as _KfData;
+    const kf_data = this._ldat_item.kf_data;
     this._leave_spatial_auto_bezier();
     if (value != null && "out_spatial_tangents" in kf_data) {
       kf_data.out_spatial_tangents = this._rescale_tangent(value, { invert: true });
@@ -498,7 +484,8 @@ export class Keyframe {
    * side not written keeps the derived tangent it had.
    */
   _leave_spatial_auto_bezier(): void {
-    const kf_data: _KfData = this._ldat_item.kf_data as _KfData;
+    // Only a spatial keyframe's KfPosition carries the flag.
+    const kf_data = this._ldat_item.kf_data as KfPosition;
     if (!getattr(kf_data, "spatial_auto_bezier", false)) return;
     const derived = this._auto_spatial_tangents();
     if (derived != null) {
@@ -533,9 +520,10 @@ export class Keyframe {
    * return. Returns `null` when the keyframe carries no spatial data.
    */
   _auto_spatial_tangents(): [number[], number[]] | null {
-    if (!("in_spatial_tangents" in (this._ldat_item.kf_data as _KfData))) return null;
+    if (!("in_spatial_tangents" in this._ldat_item.kf_data)) return null;
     const [window, index] = this._neighbour_window();
-    const values = window.map((kf) => [...(kf._ldat_item.kf_data as _KfData).value]);
+    // The neighbours are keys of the same spatial property.
+    const values = window.map((kf) => [...(kf._ldat_item.kf_data as KfPosition).value]);
     return auto_spatial_tangents(values, index);
   }
 
@@ -740,7 +728,7 @@ export class Keyframe {
    * mismatch is a genuine dimension error from the caller and is raised.
    */
   _write_kf_value(raw: number[] | number | null): void {
-    const kf_data: _KfData = this._ldat_item.kf_data as _KfData;
+    const kf_data = this._ldat_item.kf_data;
     if (!("value" in kf_data)) return;
     let new_: number[] | null = typeof raw === "number" ? [float(raw)] : null;
     if (new_ == null && Array.isArray(raw)) new_ = raw.map((v) => float(v));
@@ -1049,7 +1037,7 @@ export class Keyframe {
    * `ThreeD_SPATIAL`, the value is `false`.
    */
   get spatial_auto_bezier(): boolean {
-    const kf_data: _KfData = this._ldat_item.kf_data as _KfData;
+    const kf_data = this._ldat_item.kf_data;
     return getattr(kf_data, "spatial_auto_bezier", false);
   }
 
@@ -1059,7 +1047,7 @@ export class Keyframe {
     // for it; the getter tolerantly reads False there, but a write must not
     // silently vanish (ExtendScript's setSpatialAutoBezierAtKey errors).
     validate_bool(value);
-    const kf_data: _KfData = this._ldat_item.kf_data as _KfData;
+    const kf_data = this._ldat_item.kf_data;
     if (!("spatial_auto_bezier" in kf_data)) {
       throw new ValueError("spatial_auto_bezier can only be set on spatial keyframes");
     }
@@ -1088,14 +1076,14 @@ export class Keyframe {
    * `false`.
    */
   get spatial_continuous(): boolean {
-    const kf_data: _KfData = this._ldat_item.kf_data as _KfData;
+    const kf_data = this._ldat_item.kf_data;
     return getattr(kf_data, "spatial_continuous", false);
   }
 
   set spatial_continuous(value: boolean) {
     // See spatial_auto_bezier: non-spatial kf_data has no such slot.
     validate_bool(value);
-    const kf_data: _KfData = this._ldat_item.kf_data as _KfData;
+    const kf_data = this._ldat_item.kf_data;
     if (!("spatial_continuous" in kf_data)) {
       throw new ValueError("spatial_continuous can only be set on spatial keyframes");
     }
