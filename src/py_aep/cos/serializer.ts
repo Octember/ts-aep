@@ -7,8 +7,8 @@
  * bytes suitable for writing back into a btdk chunk's `binary_data`.
  */
 
-import { BytesIO, b, bytes_, concat, encode, format, getattr, PyFloat, TypeError_, type_name, unbox } from "../../pyrt/index.ts";
-import { CosName, IndirectObject, IndirectReference, Stream } from "./cos.ts";
+import { BytesIO, b, bytes_, concat, encode, format, PyFloat, TypeError_, type_name, unbox } from "../../pyrt/index.ts";
+import { CosName, CosString, IndirectObject, IndirectReference, Stream, type CosDict, type CosNode } from "./cos.ts";
 
 /**
  * Serialize a parsed COS value tree back to binary.
@@ -18,7 +18,7 @@ import { CosName, IndirectObject, IndirectReference, Stream } from "./cos.ts";
  *   `IndirectObject`, `IndirectReference`, or `Stream`.
  * @returns The COS binary representation.
  */
-export function serialize(data: unknown): Uint8Array {
+export function serialize(data: CosNode): Uint8Array {
   const buf = new BytesIO();
   // AE's btdk blob begins with a leading space before the first token.
   buf.write(b(" "));
@@ -36,7 +36,7 @@ export function _space(buf: BytesIO): void {
 }
 
 /** Dispatch `value` to the appropriate serialization handler. */
-export function _write_value(buf: BytesIO, value: unknown, kw: { top_level?: boolean } = {}): void {
+export function _write_value(buf: BytesIO, value: CosNode, kw: { top_level?: boolean } = {}): void {
   const { top_level = false } = kw;
   if (value instanceof Map) {
     if (top_level) {
@@ -56,7 +56,7 @@ export function _write_value(buf: BytesIO, value: unknown, kw: { top_level?: boo
     // Must come before int check since bool is a subclass of int
     _space(buf);
     buf.write(value ? b("true") : b("false"));
-  } else if (typeof value === "bigint" || (typeof value === "number" && Number.isInteger(value) && !Object.is(value, -0))) {
+  } else if (typeof value === "number" && Number.isInteger(value) && !Object.is(value, -0)) {
     // A plain integral JS number is a Python int; a Python float reaches here boxed as `PyFloat`.
     _space(buf);
     buf.write(encode(String(value), "ascii"));
@@ -67,8 +67,8 @@ export function _write_value(buf: BytesIO, value: unknown, kw: { top_level?: boo
     _space(buf);
     _write_identifier(buf, value.value);
   } else if (typeof value === "string" || value instanceof String) {
-    // A CosString / _NulTailStr is a String object in TS (a str subclass in Python),
-    // so a typeof check alone would miss it.
+    // A CosString is a String object in TS (a str subclass in Python), so a
+    // typeof check alone would miss it.
     _space(buf);
     _write_string(buf, value);
   } else if (value instanceof Uint8Array) {
@@ -112,7 +112,7 @@ export function _format_float(value: number): Uint8Array {
 }
 
 /** Write a COS dictionary: `<< /key value /key value >>`. */
-export function _write_dict(buf: BytesIO, d: Map<string, unknown>): void {
+export function _write_dict(buf: BytesIO, d: CosDict): void {
   buf.write(b("<<"));
   _write_dict_content(buf, d);
   _space(buf);
@@ -120,7 +120,7 @@ export function _write_dict(buf: BytesIO, d: Map<string, unknown>): void {
 }
 
 /** Write Map key/value pairs without the `<<`/`>>` delimiters. */
-export function _write_dict_content(buf: BytesIO, d: Map<string, unknown>): void {
+export function _write_dict_content(buf: BytesIO, d: CosDict): void {
   for (const [key, val] of d) {
     _space(buf);
     _write_identifier(buf, key);
@@ -129,7 +129,7 @@ export function _write_dict_content(buf: BytesIO, d: Map<string, unknown>): void
 }
 
 /** Write a COS array: `[ val val val ]`. */
-export function _write_array(buf: BytesIO, lst: unknown[]): void {
+export function _write_array(buf: BytesIO, lst: CosNode[]): void {
   buf.write(b("["));
   _write_array_content(buf, lst);
   _space(buf);
@@ -137,7 +137,7 @@ export function _write_array(buf: BytesIO, lst: unknown[]): void {
 }
 
 /** Write array elements without `[`/`]` delimiters. */
-export function _write_array_content(buf: BytesIO, lst: unknown[]): void {
+export function _write_array_content(buf: BytesIO, lst: CosNode[]): void {
   for (const item of lst) {
     _write_value(buf, item);
   }
@@ -148,7 +148,7 @@ export function _write_identifier(buf: BytesIO, name: string): void {
   buf.write(b("/"));
   let escaped = "";
   for (const ch of name) {
-    const code = ch.codePointAt(0)!;
+    const code = ch.codePointAt(0) ?? 0;
     if (code < 0x21 || code > 0x7e || "()[]<>{}/%#".includes(ch)) {
       escaped += `#${code.toString(16).padStart(2, "0")}`;
     } else {
@@ -166,9 +166,9 @@ export function _write_identifier(buf: BytesIO, name: string): void {
  * raw ASCII / UTF-8 (e.g. bit-flag strings), in which case the original
  * single-byte encoding is reproduced for byte fidelity.
  */
-export function _write_string(buf: BytesIO, s: string | String): void {
+export function _write_string(buf: BytesIO, s: string | CosString): void {
   let raw: Uint8Array;
-  if (getattr(s, "cos_utf16", true)) {
+  if (!(s instanceof CosString) || s.cos_utf16) {
     raw = concat(b("\xfe\xff"), encode(String(s), "utf-16-be"));
   } else {
     raw = encode(String(s), "utf-8");

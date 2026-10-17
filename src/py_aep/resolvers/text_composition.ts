@@ -38,8 +38,7 @@ import * as fontkit from "fontkit";
 import type { Path } from "../../pyrt/index.ts";
 import {
   at,
-  contains,
-  dict_get,
+  KeyError,
   float,
   int,
   islower,
@@ -59,6 +58,8 @@ import {
 } from "../../pyrt/index.ts";
 import { cos_get, run_spans } from "../cos/index.ts";
 import type { CosDict } from "../cos/cos.ts";
+import { cos_contains, cos_float, cos_get_or, cos_int } from "../cos/kinds.ts";
+import { char_style, read } from "../cos/schema.ts";
 import { BoxAutoFitPolicy, BoxFirstBaselineAlignment, BoxVerticalAlignment } from "../enums/index.ts";
 import { resolve_postscript } from "../svg/fonts.ts";
 import type { TextDocument } from "../models/text/text_document.ts";
@@ -79,7 +80,6 @@ export interface HbJs {
   createFont(face: HbJsFace): object;
   createBuffer(): HbJsBuffer;
   shape(font: object, buffer: HbJsBuffer, features: string): void;
-  _load_error?: unknown;
 }
 export interface HbJsFace {
   upem: number;
@@ -90,26 +90,30 @@ export interface HbJsBuffer {
   json(): _HbJsGlyph[];
 }
 
-const _hbjs: HbJs = await (async () => {
+/** The loaded harfbuzzjs API, or how to report that it failed to load. */
+type HbLoad = { hb: HbJs; fail: null } | { hb: null; fail: () => never };
+
+const _hbjs: HbLoad = await (async (): Promise<HbLoad> => {
   try {
-    if (host.platform !== "browser") return await (await import("harfbuzzjs")).default;
+    if (host.platform !== "browser") return { hb: await (await import("harfbuzzjs")).default, fail: null };
     const [{ default: hb_wasm }, { default: hbjs }] = await Promise.all([
       import("harfbuzzjs/hb.js"),
       import("harfbuzzjs/hbjs.js"),
     ]);
-    return hbjs(await hb_wasm({ locateFile: (file: string) => new URL(file, import.meta.url).href }));
+    return { hb: hbjs(await hb_wasm({ locateFile: (file: string) => new URL(file, import.meta.url).href })), fail: null };
   } catch (e) {
-    return { _load_error: e } as HbJs;
+    return {
+      hb: null,
+      fail: () => {
+        throw Object.assign(new Error(`harfbuzzjs is unavailable on this host: ${e}`), { cause: e });
+      },
+    };
   }
 })();
 
 function _hb(): HbJs {
-  if (_hbjs._load_error) {
-    throw Object.assign(new Error(`harfbuzzjs is unavailable on this host: ${_hbjs._load_error}`), {
-      cause: _hbjs._load_error,
-    });
-  }
-  return _hbjs;
+  if (_hbjs.hb == null) return _hbjs.fail();
+  return _hbjs.hb;
 }
 
 /** One glyph of harfbuzzjs's `buffer.json()` output. */
@@ -212,8 +216,9 @@ export const _RTL_BIDI_SCRIPT =
 // (CoreSync eviction, uninstall) before its first shaping; those opens
 // must refuse, not leak OS/HarfBuzz errors into innocuous reads.
 export const _FONT_OPEN_ERRORS: (abstract new (...args: never[]) => object)[] = [OSError];
-if (hb != null && "HarfBuzzError" in hb) {
-  _FONT_OPEN_ERRORS.push(hb.HarfBuzzError!);
+const _harfbuzz_error = hb.HarfBuzzError;
+if (_harfbuzz_error != null) {
+  _FONT_OPEN_ERRORS.push(_harfbuzz_error);
 }
 
 export function _bidirectional_is_rtl(char: string): boolean {
@@ -231,7 +236,7 @@ export function _is_combining(char: string): boolean {
  * `OSError` instances; the `code` check stands in for Python's OSError. Parse
  * failures (fontTools TTLibError / fontkit Error without `code`) propagate in both.
  */
-export function _is_font_open_error(exc: unknown): boolean {
+export function _is_font_open_error(exc: object): boolean {
   if (_FONT_OPEN_ERRORS.some((cls) => exc instanceof cls)) return true;
   return exc instanceof Error && "code" in exc;
 }
@@ -265,29 +270,23 @@ export function _resolve_face(ps_name: string): [Path, number] {
 export function _hb_font(ps_name: string): [_HbFont, number] {
   const [path, face_index] = _resolve_face(ps_name);
   const key = tkey(str(path), face_index);
-  if (!_hb_cache.has(key)) {
+  let cached = _hb_cache.get(key);
+  if (cached === undefined) {
     let face: _HbFace;
     try {
       const blob = hb.Blob.from_file_path(str(path));
       face = new hb.Face(blob, face_index);
     } catch (exc) {
-      if (!_is_font_open_error(exc)) throw exc;
+      if (!(exc instanceof Object) || !_is_font_open_error(exc)) throw exc;
       throw Object.assign(
         new CompositionUnsupported(`font file for ${repr(ps_name)} is unreadable: ${str(path)}`),
         { cause: exc },
       );
     }
-    _hb_cache.set(key, [new hb.Font(face), face.upem]);
+    cached = [new hb.Font(face), face.upem];
+    _hb_cache.set(key, cached);
   }
-  return _hb_cache.get(key)!;
-}
-
-/** The subset of a fontkit font (or `.ttc` collection) this module reads. */
-interface FontkitFace {
-  fonts?: FontkitFace[];
-  unitsPerEm: number;
-  hhea: { ascent: number };
-  glyphForCodePoint(codePoint: number): { id: number; path: { commands: unknown[] }; bbox: { maxY: number } };
+  return cached;
 }
 
 /**
@@ -298,16 +297,17 @@ interface FontkitFace {
 export function _ascender_ratio(ps_name: string): number {
   const [path, face_index] = _resolve_face(ps_name);
   const key = tkey(str(path), face_index);
-  if (!_ascender_cache.has(key)) {
-    let font: FontkitFace;
+  let ratio = _ascender_cache.get(key);
+  if (ratio === undefined) {
+    let font: fontkit.Font;
     try {
       // NOTE(port): fontTools TTFont(path, fontNumber=face_index, lazy=True) ->
-      // fontkit. fontkit's openSync returns a FontCollection for .ttc files, so the
+      // fontkit. fontkit's create returns a FontCollection for .ttc files, so the
       // face is picked with `.fonts[face_index]`.
-      font = fontkit.create(host.fs.readFileSync(str(path)) as never) as unknown as FontkitFace;
-      if (font.fonts) font = font.fonts[face_index];
+      const opened = fontkit.create(host.fs.readFileSync(str(path)));
+      font = "fonts" in opened ? at(opened.fonts, face_index) : opened;
     } catch (exc) {
-      if (!_is_font_open_error(exc)) throw exc;
+      if (!(exc instanceof Object) || !_is_font_open_error(exc)) throw exc;
       throw Object.assign(
         new CompositionUnsupported(`font file for ${repr(ps_name)} is unreadable: ${str(path)}`),
         { cause: exc },
@@ -316,7 +316,10 @@ export function _ascender_ratio(ps_name: string): number {
     // fontkit reads the file into memory and holds no OS handle, so there is
     // nothing to close where Python calls `font.close()` in its `finally`.
     const upem = font.unitsPerEm;
-    let ratio = font.hhea.ascent / upem;
+    // fontTools `font["hhea"]`: a font without the table raises KeyError.
+    const hhea = font.hhea;
+    if (hhea == null) throw new KeyError("'hhea' table not found");
+    ratio = hhea.ascent / upem;
     // TODO(port): getBestCmap() vs fontkit's cmap subtable choice may differ on
     // fonts with several cmaps; 'd' absent is detected as .notdef (id 0), so a
     // font mapping 'd' explicitly to glyph 0 would be skipped here but measured
@@ -331,7 +334,7 @@ export function _ascender_ratio(ps_name: string): number {
     }
     _ascender_cache.set(key, ratio);
   }
-  return _ascender_cache.get(key)!;
+  return ratio;
 }
 
 /** Per-character composition inputs decoded from one style run. */
@@ -346,15 +349,15 @@ export class _CharStyle {
 
   constructor(ps_name: string, style: CosDict) {
     this.font = ps_name;
-    this.size = float(dict_get(style, "1", 36.0));
-    this.tracking = float(dict_get(style, "8", 0.0));
-    this.hscale = float(dict_get(style, "6", 1.0));
-    this.fauxbold = py_bool(dict_get(style, "2", false));
-    this.caps = int(dict_get(style, "12", 0)); // 0 normal, 1 small, 2 all
-    if (py_bool(dict_get(style, "4", true))) {
+    this.size = cos_float(cos_get_or(style, "1", 36.0));
+    this.tracking = cos_float(cos_get_or(style, "8", 0.0));
+    this.hscale = cos_float(cos_get_or(style, "6", 1.0));
+    this.fauxbold = py_bool(cos_get_or(style, "2", false));
+    this.caps = cos_int(cos_get_or(style, "12", 0)); // 0 normal, 1 small, 2 all
+    if (py_bool(cos_get_or(style, "4", true))) {
       this.leading = _AUTO_LEADING_FACTOR * this.size;
     } else {
-      this.leading = float(dict_get(style, "5", _AUTO_LEADING_FACTOR * this.size));
+      this.leading = cos_float(cos_get_or(style, "5", _AUTO_LEADING_FACTOR * this.size));
     }
   }
 
@@ -374,7 +377,8 @@ export function _check_envelope(doc: TextDocument, raw: string): void {
   if (!(orientation == null || py_eq(orientation, 0))) {
     throw new CompositionUnsupported("vertical text");
   }
-  if (contains(py_or(cos_get(doc._doc, "0"), new Map()), "8")) {
+  const text_dict = cos_get(doc._doc, "0");
+  if (cos_contains(py_bool(text_dict) ? text_dict : new Map(), "8")) {
     throw new CompositionUnsupported("manual kerning");
   }
   // Box-frame inputs the composer does not model: the matrix fixture
@@ -393,7 +397,7 @@ export function _check_envelope(doc: TextDocument, raw: string): void {
     throw new CompositionUnsupported("box first-baseline minimum");
   }
   for (const char of Array.from(raw)) {
-    const code = char.codePointAt(0)!;
+    const code = char.codePointAt(0) ?? 0;
     if (char === "\t") {
       throw new CompositionUnsupported("tab characters");
     }
@@ -411,13 +415,13 @@ export function _check_envelope(doc: TextDocument, raw: string): void {
     }
   }
   for (const [_start, _end, style] of run_spans(doc._doc, "6", "6")) {
-    if (py_bool(style.get("18"))) {
+    if (py_bool(style.get("18") ?? null)) {
       throw new CompositionUnsupported("ligatures enabled");
     }
-    if (float(dict_get(style, "36", 0.0)) !== 0.0) {
+    if (cos_float(cos_get_or(style, "36", 0.0)) !== 0.0) {
       throw new CompositionUnsupported("tsume");
     }
-    const kern_type = int(dict_get(style, "11", 1));
+    const kern_type = cos_int(cos_get_or(style, "11", 1));
     if (kern_type === 2) {
       throw new CompositionUnsupported("optical kerning");
     }
@@ -427,31 +431,31 @@ export function _check_envelope(doc: TextDocument, raw: string): void {
       // for text AE lays out unkerned.
       throw new CompositionUnsupported("auto kerning disabled");
     }
-    if (py_bool(style.get("52"))) {
+    if (py_bool(style.get("52") ?? null)) {
       throw new CompositionUnsupported("no-break attribute");
     }
-    if (float(dict_get(style, "9", 0.0)) !== 0.0) {
+    if (cos_float(cos_get_or(style, "9", 0.0)) !== 0.0) {
       throw new CompositionUnsupported("baseline shift");
     }
-    if (int(dict_get(style, "13", 0)) !== 0) {
+    if (cos_int(cos_get_or(style, "13", 0)) !== 0) {
       throw new CompositionUnsupported("super/subscript");
     }
   }
   for (const [_start, _end, style] of run_spans(doc._doc, "5", "5")) {
-    if (py_bool(style.get("29"))) {
+    if (py_bool(style.get("29") ?? null)) {
       throw new CompositionUnsupported("every-line composer");
     }
     // NOTE auto-hyphenate (para key "9") is AE's DEFAULT and is inert
     // for the single-line composer: the explicit M_HYPHENATE matrix
     // layer still breaks greedily (long words char-wrap rather than
     // hyphenate), so it is deliberately NOT refused.
-    if (int(dict_get(style, "33", 0)) !== 0) {
+    if (cos_int(cos_get_or(style, "33", 0)) !== 0) {
       throw new CompositionUnsupported("right-to-left paragraphs");
     }
-    if (int(dict_get(style, "8", 0)) !== 0) {
+    if (cos_int(cos_get_or(style, "8", 0)) !== 0) {
       throw new CompositionUnsupported("non-Roman leading type");
     }
-    if (float(dict_get(style, "4", 0.0)) !== 0.0 || float(dict_get(style, "5", 0.0)) !== 0.0) {
+    if (cos_float(cos_get_or(style, "4", 0.0)) !== 0.0 || cos_float(cos_get_or(style, "5", 0.0)) !== 0.0) {
       // space_before/space_after shift baselines; the matrix never
       // swept them, so the composer does not model them.
       throw new CompositionUnsupported("paragraph spacing");
@@ -463,13 +467,14 @@ export function _char_styles(doc: TextDocument, raw: string): _CharStyle[] {
   const fonts = doc._fonts.map((f) => f.post_script_name);
   const out: _CharStyle[] = [];
   for (const [start, end, style] of run_spans(doc._doc, "6", "6")) {
-    const index = style.get("0") ?? null;
-    if (!(typeof index === "number" && Number.isInteger(index)) || !(0 <= index && index < fonts.length)) {
+    const font_idx = read(char_style, style, "0");
+    const index = font_idx == null ? -1 : Number(font_idx);
+    if (!(0 <= index && index < fonts.length)) {
       throw new CompositionUnsupported("unresolvable font reference");
     }
-    const char_style = new _CharStyle(fonts[index], style);
+    const run_style = new _CharStyle(fonts[index], style);
     for (let k = 0; k < end - start; k++) {
-      out.push(char_style);
+      out.push(run_style);
     }
   }
   if (out.length !== raw.length) {
@@ -641,8 +646,8 @@ export function compose_lines(doc: TextDocument): ComposedLines {
 
   const para_geo: [number, number][] = [];
   for (const [_start, _end, style] of run_spans(doc._doc, "5", "5")) {
-    const base = width - 2 * inset - float(dict_get(style, "2", 0.0)) - float(dict_get(style, "3", 0.0));
-    para_geo.push([base, base - float(dict_get(style, "1", 0.0))]);
+    const base = width - 2 * inset - cos_float(cos_get_or(style, "2", 0.0)) - cos_float(cos_get_or(style, "3", 0.0));
+    para_geo.push([base, base - cos_float(cos_get_or(style, "1", 0.0))]);
   }
 
   const body = raw.endsWith("\r") ? raw.slice(0, -1) : raw;

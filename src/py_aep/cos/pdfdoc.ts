@@ -87,8 +87,8 @@ export function decode_pdf_text_string(raw: Uint8Array | string | CosString): st
   if (raw instanceof CosString && raw.cos_raw != null) {
     return _from_bytes(raw.cos_raw);
   }
-  // A CosString is a String object that passes through as-is.
-  return raw as string;
+  // A decoded CosString passes through with its text.
+  return String(raw);
 }
 
 export function _from_bytes(raw: Uint8Array): string {
@@ -102,8 +102,7 @@ export function _from_bytes(raw: Uint8Array): string {
 export function _translate(text: string, table: Map<number, number>): string {
   let out = "";
   for (const ch of text) {
-    const cp = ch.codePointAt(0)!;
-    const mapped = table.get(cp);
+    const mapped = table.get(ch.codePointAt(0) ?? -1);
     out += mapped === undefined ? ch : String.fromCodePoint(mapped);
   }
   return out;

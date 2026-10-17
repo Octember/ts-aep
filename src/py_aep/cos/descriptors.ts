@@ -18,21 +18,18 @@ import {
   KeyError,
   TypeError_,
   ValueError,
-  dict_get,
   float,
-  getattr,
-  int,
-  is_real,
   py_bool,
   pyfloat,
   repr,
   round,
   instance_dict,
-  type_name,
 } from "../../pyrt/index.ts";
+import type { EnumHelpers } from "../../pyrt/enum.ts";
 import { get_ae_version_major } from "../ae_version.ts";
-
-export const _SENTINEL: unique symbol = Symbol("_SENTINEL");
+import type { Validator } from "../models/validators.ts";
+import type { CosDict, CosNode } from "./cos.ts";
+import { cos_float, cos_int, cos_num } from "./kinds.ts";
 
 /**
  * Read `key` from a COS dict with the descriptors' fault-tolerant
@@ -40,45 +37,56 @@ export const _SENTINEL: unique symbol = Symbol("_SENTINEL");
  * `default`. Shared by `CosField.__get__` and the range models'
  * mixed-value resolution.
  */
-export function _extract(
-  d: Map<string, unknown>,
-  key: string,
-  transform: ((x: unknown) => unknown) | null,
-  default_: any,
-): any {
-  const raw = dict_get(d, key, _SENTINEL);
-  if (raw === _SENTINEL) return default_;
-  if (transform != null) {
-    try {
-      return transform(raw);
-    } catch (e) {
-      // TODO(port): JS cannot distinguish a native TypeError from property access on null/undefined (Python AttributeError, which would propagate) from a Python-style TypeError, so a transform dereferencing null yields default here instead of raising; only affects transforms fed unexpected None/non-container COS values.
-      if (
-        !(
-          e instanceof TypeError_ ||
-          e instanceof TypeError ||
-          e instanceof ValueError ||
-          e instanceof KeyError ||
-          e instanceof IndexError
-        )
-      ) {
-        throw e;
-      }
-      return default_;
+export function _extract<T, D>(d: CosDict, key: string, transform: (x: CosNode) => T, default_: D): T | D {
+  const raw = d.get(key);
+  if (raw === undefined) return default_;
+  try {
+    return transform(raw);
+  } catch (e) {
+    // Python catches (TypeError, ValueError, KeyError, IndexError); the
+    // transforms raise those as pyrt exceptions (`kinds.ts`).
+    if (!(e instanceof TypeError_ || e instanceof ValueError || e instanceof KeyError || e instanceof IndexError)) {
+      throw e;
     }
+    return default_;
   }
-  return raw;
 }
 
-// NOTE(port): pyrt int()/float() do not raise TypeError for None/containers like CPython; this guard supplies it so `_extract` returns the default.
-export function _int_float_guard(fn: (x: Parameters<typeof float>[0]) => number): (x: unknown) => number {
-  return (x: unknown) => {
-    if (!is_real(x) && typeof x !== "string" && typeof x !== "boolean" && typeof x !== "bigint") {
-      throw new TypeError_(`argument must be a string or a real number, not '${type_name(x)}'`);
-    }
-    return fn(x as Parameters<typeof float>[0]);
-  };
+/** An IntEnum with COS conversions (`from_binary` / `to_binary`). */
+export type CosEnum<V> = EnumHelpers<V> & {
+  from_binary(value: number): number;
+  to_binary(self: number): number;
+};
+
+/**
+ * `E.from_binary(raw)` on a COS value: Python's `raw + offset`
+ * (`TypeError` when `raw` is not a number) and the enum lookup.
+ */
+export function enum_from_cos<V>(E: CosEnum<V>, raw: CosNode): V {
+  return E.of(E.from_binary(cos_num(raw)));
 }
+
+/** A model whose `A` attribute holds the COS sub-dict a field reads (`null` without COS backing). */
+export type CosBacked<A extends string> = { readonly [P in A]: CosDict | null } & { _propagate_cos?(): void };
+
+/**
+ * Options of {@link CosField}: `transform` reads the COS value as the
+ * field's `T` (raising for values Python's transform refuses), `reverse`
+ * writes the user's `T` back as a COS value.
+ */
+export interface CosFieldOptions<T extends InstanceValue, O> {
+  transform: (x: CosNode) => T;
+  /** Whether an instance override (Python `obj.__dict__[name]`) holds a `T`. */
+  accepts: (v: InstanceValue) => v is T;
+  reverse?: ((x: NonNullable<T>) => CosNode) | null;
+  read_only?: boolean;
+  validate?: Validator<O> | null;
+  default: T;
+  min_version?: number | null;
+}
+
+/** A value stored in a model's instance dict (`obj.__dict__`). */
+export type InstanceValue = string | number | boolean | object | null;
 
 /**
  * Descriptor that proxies a single key on a COS dict.
@@ -91,7 +99,7 @@ export function _int_float_guard(fn: (x: Parameters<typeof float>[0]) => number)
  *
  * @param dict_attr - Name of the model attribute holding the COS sub-dict (e.g. `"_char_style"`).
  * @param key - String key into that dict (e.g. `"1"` for font_size).
- * @param transform - Optional callable applied when *getting* (COS value -\> user-facing value).
+ * @param transform - Callable applied when *getting* (COS value -\> user-facing value).
  * @param reverse - 1-arg callable applied when *setting* (user-facing -\> COS value). Always returns
  *   a scalar.
  * @param read_only - When `true`, the field cannot be set.
@@ -101,42 +109,24 @@ export function _int_float_guard(fn: (x: Parameters<typeof float>[0]) => number)
  * @param min_version - Minimum AE major version required to *set* this field. Writes to an older
  *   file raise `AttributeError`; reads are always allowed. Mirrors `models.descriptors.ChunkField`.
  */
-export interface CosFieldOptions {
-  transform?: ((x: any) => any) | null;
-  reverse?: ((x: any) => any) | null;
-  read_only?: boolean;
-  validate?: ((value: any, obj: any) => void) | null;
-  default?: any;
-  min_version?: number | null;
-}
-
-export class CosField<T> {
-  declare dict_attr: string;
+export class CosField<T extends InstanceValue, A extends string = string, O extends CosBacked<A> = CosBacked<A>> {
+  declare dict_attr: A;
   declare key: string;
-  declare transform: ((x: any) => any) | null;
-  declare reverse: ((x: any) => any) | null;
+  declare transform: (x: CosNode) => T;
+  declare accepts: (v: InstanceValue) => v is T;
+  declare reverse: ((x: NonNullable<T>) => CosNode) | null;
   declare read_only: boolean;
-  declare validate: ((value: any, obj: any) => void) | null;
-  declare default: any;
+  declare validate: Validator<O> | null;
+  declare default: T;
   declare min_version: number | null;
   declare public_name: string;
 
-  constructor(
-    dict_attr: string,
-    key: string,
-    kw: CosFieldOptions = {},
-  ) {
-    const {
-      transform = null,
-      reverse = null,
-      read_only = false,
-      validate = null,
-      default: default_ = null,
-      min_version = null,
-    } = kw;
+  constructor(dict_attr: A, key: string, kw: CosFieldOptions<T, O>) {
+    const { transform, accepts, reverse = null, read_only = false, validate = null, default: default_, min_version = null } = kw;
     this.dict_attr = dict_attr;
     this.key = key;
     this.transform = transform;
+    this.accepts = accepts;
     this.reverse = reverse;
     this.read_only = read_only;
     this.validate = validate;
@@ -148,12 +138,24 @@ export class CosField<T> {
     this.public_name = name;
   }
 
-  __get__(obj: unknown, objtype?: Function): any {
+  /**
+   * The instance override for this field (Python `obj.__dict__[name]`):
+   * `null` when there is none. Overrides are stored by `__set__` (and the
+   * parser's fallback kwargs) from values of the field's own type.
+   */
+  _override(obj: O): { value: T } | null {
+    const idict: Map<string, InstanceValue> = instance_dict(obj);
+    if (!idict.has(this.public_name)) return null;
+    const value = idict.get(this.public_name) ?? null;
+    return this.accepts(value) ? { value } : null;
+  }
+
+  __get__(obj: O | null, objtype?: Function): T | this {
     if (obj == null) return this;
     // Instance-dict overrides (set by parser or user when no dict)
-    const idict = instance_dict(obj);
-    if (idict.has(this.public_name)) return idict.get(this.public_name);
-    const d: Map<string, unknown> | null = getattr(obj, this.dict_attr);
+    const override = this._override(obj);
+    if (override != null) return override.value;
+    const d = obj[this.dict_attr];
     if (d == null) return this.default;
     return _extract(d, this.key, this.transform, this.default);
   }
@@ -162,15 +164,13 @@ export class CosField<T> {
    * Raise if this field cannot be written to `obj` - read-only, or
    * the file predates the field's `min_version`.
    */
-  _check_writable(obj: unknown): void {
+  _check_writable(obj: O): void {
     if (this.read_only) {
       throw new AttributeError(`${repr(this.public_name)} is read-only.`);
     }
     if (this.min_version != null) {
       if (get_ae_version_major(obj) < this.min_version) {
-        throw new AttributeError(
-          `${repr(this.public_name)} requires AE ${this.min_version}+ file format.`,
-        );
+        throw new AttributeError(`${repr(this.public_name)} requires AE ${this.min_version}+ file format.`);
       }
     }
   }
@@ -179,17 +179,18 @@ export class CosField<T> {
    * Validate a non-`null` user value and reverse-transform it to
    * the form stored in the COS dict.
    */
-  _coerce(obj: unknown, value: unknown): unknown {
+  _coerce(obj: O, value: NonNullable<T>): CosNode {
     if (this.validate != null) this.validate(value, obj);
-    if (this.reverse != null) return this.reverse(value);
-    return value;
+    // Every writable field declares its reverse; only read-only ones omit it.
+    if (this.reverse == null) throw new AttributeError(`${repr(this.public_name)} is read-only.`);
+    return this.reverse(value);
   }
 
-  __set__(obj: unknown, value: unknown): void {
+  __set__(obj: O, value: T | null): void {
     this._check_writable(obj);
     // Clear any instance-dict override
     instance_dict(obj).delete(this.public_name);
-    const d: Map<string, unknown> | null = getattr(obj, this.dict_attr);
+    const d = obj[this.dict_attr];
     if (d == null) {
       // No backing dict - store as instance override
       instance_dict(obj).set(this.public_name, value);
@@ -202,69 +203,67 @@ export class CosField<T> {
     } else {
       d.set(this.key, this._coerce(obj, value));
     }
-    const propagate = getattr(obj, "_propagate_cos", null);
-    if (propagate != null) propagate.call(obj);
+    obj._propagate_cos?.();
   }
+}
 
-  /**
-   * Create a CosField for boolean flags.
-   *
-   * Bakes in `transform=bool` and `reverse=bool` so call sites only
-   * need the dict attribute and key.
-   */
-  // NOTE(port): Python raises TypeError on a repeated transform/reverse keyword; no call site repeats them, so the kwargs-win spread is never observable.
-  static bool(dict_attr: string, key: string, kwargs: CosFieldOptions = {}): CosField<boolean | null> {
-    return new this(dict_attr, key, { transform: py_bool, reverse: py_bool, ...kwargs });
-  }
+/**
+ * The options a `CosField` factory leaves to its caller. `default` is
+ * required: it decides whether the field can read `null` (an instance
+ * override of `null` is only accepted back when the default is `null`).
+ */
+export type CosFieldExtras<D extends InstanceValue, O> = Partial<Pick<CosFieldOptions<D, O>, "read_only" | "validate" | "min_version">> & {
+  default: D;
+};
 
-  /**
-   * Create a CosField for IntEnum-backed fields.
-   *
-   * Auto-detects `from_binary`/`to_binary` on the enum class,
-   * mirroring `ChunkField.enum`. If the enum has a `from_binary`
-   * classmethod it is used as `transform`; otherwise the class
-   * itself is used. If the enum has a `to_binary` method it is used
-   * as `reverse`; otherwise `int` is used.
-   */
-  static enum<T>(enum_cls: any, dict_attr: string, key: string, kwargs: CosFieldOptions = {}): CosField<T> {
-    // NOTE(port): py_aep enums are not classes; Python's fallback `enum_cls(v)` is `enum_cls.of(v)`.
-    kwargs = { ...kwargs };
-    if (!("transform" in kwargs)) {
-      kwargs.transform = "from_binary" in enum_cls ? enum_cls.from_binary.bind(enum_cls) : enum_cls.of;
-    }
-    if (!("reverse" in kwargs)) {
-      kwargs.reverse = "to_binary" in enum_cls ? enum_cls.to_binary.bind(enum_cls) : int;
-    }
-    return new this(dict_attr, key, kwargs);
-  }
+/** Options of a boolean flag field: `transform=bool`, `reverse=bool`. */
+export function bool_field<D extends boolean | null, O>(kw: CosFieldExtras<D, O>): CosFieldOptions<boolean | D, O> {
+  return { transform: py_bool, reverse: py_bool, accepts: (v): v is boolean | D => typeof v === "boolean" || v === kw.default, ...kw };
+}
 
-  /**
-   * Create a CosField that coerces to float in both directions.
-   *
-   * The write-side coercion matters for byte fidelity: AE stores
-   * these keys as floats, and an `int` passed by a caller would
-   * serialize without the decimal marker.
-   */
-  static float<T>(dict_attr: string, key: string, kwargs: CosFieldOptions = {}): CosField<number | null> {
-    kwargs = { ...kwargs };
-    // The stored value is a Python float, so box it to keep `1.0` from serializing as `1`.
-    if (!("reverse" in kwargs)) kwargs.reverse = (x: number | string | boolean) => pyfloat(float(x));
-    // NOTE(port): a repeated transform keyword raises TypeError in Python; no call site passes one. _int_float_guard supplies float(None)'s TypeError.
-    return new this(dict_attr, key, { transform: _int_float_guard(float), ...kwargs });
-  }
+/**
+ * Options of a float field, coerced to float in both directions.
+ *
+ * The write-side coercion matters for byte fidelity: AE stores these keys
+ * as floats, and an `int` passed by a caller would serialize without the
+ * decimal marker. The stored value is a Python float, so it is boxed to
+ * keep `1.0` from serializing as `1`.
+ */
+export function float_field<D extends number | null, O>(kw: CosFieldExtras<D, O>): CosFieldOptions<number | D, O> {
+  return {
+    transform: cos_float,
+    reverse: (x: number) => pyfloat(float(x)),
+    accepts: (v): v is number | D => typeof v === "number" || v === kw.default,
+    ...kw,
+  };
+}
 
-  /**
-   * Create a CosField for integer-stored keys.
-   *
-   * Coerces to `int` on read and rounds to the nearest integer on
-   * write. AE stores these keys as integers; a real-typed value is
-   * misread at 16.16 scale (stored `50.0` read back as `3276800`,
-   * probed AE 2026), so the write-side coercion matters for fidelity.
-   */
-  static int<T>(dict_attr: string, key: string, kwargs: CosFieldOptions = {}): CosField<number | null> {
-    kwargs = { ...kwargs };
-    if (!("reverse" in kwargs)) kwargs.reverse = round;
-    // NOTE(port): a repeated transform keyword raises TypeError in Python; no call site passes one.
-    return new this(dict_attr, key, { transform: _int_float_guard(int), ...kwargs });
-  }
+/**
+ * Options of an integer-stored field: `int` on read, rounded to the
+ * nearest integer on write. AE stores these keys as integers; a
+ * real-typed value is misread at 16.16 scale (stored `50.0` read back as
+ * `3276800`, probed AE 2026), so the write-side coercion matters for
+ * fidelity.
+ */
+export function int_field<D extends number | null, O>(kw: CosFieldExtras<D, O>): CosFieldOptions<number | D, O> {
+  return {
+    transform: cos_int,
+    reverse: (x: number) => round(x),
+    accepts: (v): v is number | D => typeof v === "number" || v === kw.default,
+    ...kw,
+  };
+}
+
+/**
+ * Options of an IntEnum-backed field: `from_binary` on read (Python's
+ * `raw + offset`, so a non-number raises `TypeError`), `to_binary` on
+ * write.
+ */
+export function enum_field<V extends number, D extends V | null, O>(E: CosEnum<V>, kw: CosFieldExtras<D, O>): CosFieldOptions<V | D, O> {
+  return {
+    transform: (x: CosNode) => enum_from_cos(E, x),
+    reverse: (v: V) => E.to_binary(v),
+    accepts: (v): v is V | D => E.has(v) || v === kw.default,
+    ...kw,
+  };
 }

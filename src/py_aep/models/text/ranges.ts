@@ -33,41 +33,38 @@ import {
   TypeError_,
   ValueError,
   deepcopy,
-  dict_get,
   float,
-  getattr,
   getitem,
-  int,
   max,
+  py_assert,
   py_bool,
   py_eq,
-  py_or,
   repr,
   round,
-  setdefault,
   sorted,
   split,
   str,
   descriptor,
-  is_real,
   pyfloat,
-
 } from "../../../pyrt/index.ts";
 import { CosField, CosName, cos_get, run_spans } from "../../cos/index.ts";
-import { _extract } from "../../cos/descriptors.ts";
+import type { CosDict, CosNode } from "../../cos/cos.ts";
+import { _extract, bool_field, enum_field, float_field, int_field, enum_from_cos, type CosEnum, type CosFieldExtras, type CosFieldOptions, type InstanceValue } from "../../cos/descriptors.ts";
+import { cos_dict, cos_float, cos_get_or, cos_in, cos_insert, cos_int, cos_item, cos_iter, cos_num, cos_pop, cos_setdefault, cos_setitem, is, py_add, py_int, py_num, py_number, py_sub, type PyNum } from "../../cos/kinds.ts";
+import { char_style, kern_payload, doc_text, font_ref, read, run } from "../../cos/schema.ts";
 import { AutoKernType, BaselineDirection, DigitSet, FontBaselineOption, FontCapsOption, LeadingType, LineJoinType, ParagraphDirection, ParagraphJustification } from "../../enums/index.ts";
 import type { ComposerEngine } from "../../enums/index.ts";
 import { CompositionUnsupported, compose_lines } from "../../resolvers/text_composition.ts";
 import { font_version_string } from "../../svg/fonts.ts";
-import { validate_bool, validate_enum, validate_font_name, validate_normalized_float, validate_number, validate_positive_nonzero_number, validate_positive_number, validate_rgb_color, validate_s4, validate_text } from "../validators.ts";
+import { validate_bool, validate_enum, validate_font_name, validate_normalized_float, validate_number, validate_positive_nonzero_number, validate_positive_number, validate_rgb_color, validate_s4, validate_text, type Validator } from "../validators.ts";
 import { FontObject } from "./font_object.ts";
 import type { TextDocument } from "./text_document.ts";
 
 // NOTE(port): thin alias of pyrt py_bool (Python truthiness), exported under the builtin name.
-export const bool = (x: unknown): boolean => py_bool(x);
+export const bool = (x: CosNode): boolean => py_bool(x);
 
-/** A COS dict (string keys to any value): a `Map` so numeric-looking keys keep their order. */
-export type Dict = Map<string, any>;
+/** A per-character manual-kern value: the stored `isinstance(.., int)` value, `null` where none is stored. */
+type KernValue = number | boolean | null;
 
 // AE's exact error strings (AE 26.3, English locale); py_aep raises these
 // from ValueError so behavior parity does not depend on hosting AE.
@@ -125,17 +122,17 @@ export function _visible_length(doc: TextDocument): number {
 }
 
 /** Character style-run spans. */
-export function _char_run_spans(doc: TextDocument): [number, number, Dict][] {
+export function _char_run_spans(doc: TextDocument): [number, number, CosDict][] {
   return run_spans(doc._doc, "6", "6");
 }
 
 /** Paragraph style-run spans (one run per paragraph). */
-export function _para_run_spans(doc: TextDocument): [number, number, Dict][] {
+export function _para_run_spans(doc: TextDocument): [number, number, CosDict][] {
   return run_spans(doc._doc, "5", "5");
 }
 
 /** Manual-kerning run spans; payload key `"0"` holds the value. */
-export function _kern_run_spans(doc: TextDocument): [number, number, Dict][] {
+export function _kern_run_spans(doc: TextDocument): [number, number, CosDict][] {
   return run_spans(doc._doc, "8", null);
 }
 
@@ -146,12 +143,12 @@ export function _kern_run_spans(doc: TextDocument): [number, number, Dict][] {
  * collected depth-first through the nested `"6"` arrays. Empty when the
  * document has no cache.
  */
-export function _cached_line_nodes(doc: TextDocument): Dict[] {
+export function _cached_line_nodes(doc: TextDocument): CosDict[] {
   const entries = cos_get(doc._doc, "1", "2");
   if (!Array.isArray(entries)) return [];
-  const lines: Dict[] = [];
+  const lines: CosDict[] = [];
 
-  const collect = (node: unknown): void => {
+  const collect = (node: CosNode): void => {
     if (!(node instanceof Map)) return;
     if (str(node.get("99") ?? null) === "L") {
       lines.push(node);
@@ -185,7 +182,7 @@ export function _cached_line_data(doc: TextDocument): [[number, number][], (numb
  * (`seg["15"]["0"]`) and its baseline is the `/L` `"10"` value. Returns
  * `null` for an empty node list (no cache).
  */
-export function _line_data_from_nodes(nodes: Dict[]): [[number, number][], (number | null)[]] | null {
+export function _line_data_from_nodes(nodes: CosDict[]): [[number, number][], (number | null)[]] | null {
   const lengths: number[] = [];
   const baselines: (number | null)[] = [];
   for (const node of nodes) {
@@ -194,12 +191,12 @@ export function _line_data_from_nodes(nodes: Dict[]): [[number, number][], (numb
     if (Array.isArray(children)) {
       for (const seg of children) {
         const count = cos_get(seg, "15", "0");
-        if (typeof count === "number" && Number.isInteger(count)) total += count;
+        if (is(py_int, count)) total += Number(count);
       }
     }
     lengths.push(total);
     const baseline = node.get("10") ?? null;
-    baselines.push(is_real(baseline) ? float(baseline) : null);
+    baselines.push(is(py_number, baseline) ? float(baseline) : null);
   }
   if (!lengths.length) return null;
   const spans: [number, number][] = [];
@@ -217,11 +214,11 @@ export function _line_data_from_nodes(nodes: Dict[]): [[number, number][], (numb
  * Stored at `/L "0" "0"`; AE omits it on the first line (origin `(0, 0)`),
  * where the baseline key `"10"` is absent too.
  */
-export function _line_origin(node: Dict): [number, number] {
+export function _line_origin(node: CosDict): [number, number] {
   const origin = cos_get(node, "0", "0");
-  if (Array.isArray(origin) && origin.length >= 2) return [float(origin[0]), float(origin[1])];
+  if (Array.isArray(origin) && origin.length >= 2) return [cos_float(origin[0]), cos_float(origin[1])];
   const baseline = node.get("10") ?? null;
-  const y = is_real(baseline) ? float(baseline) : 0.0;
+  const y = is(py_number, baseline) ? float(baseline) : 0.0;
   return [0.0, y];
 }
 
@@ -234,7 +231,7 @@ export function _line_origin(node: Dict): [number, number] {
  * advances are cumulative from the line start. Multiple segments are
  * chained by carrying the running total forward.
  */
-export function _line_advances(node: Dict): number[] {
+export function _line_advances(node: CosDict): number[] {
   const out: number[] = [];
   let base = 0.0;
   const children = node.get("6") ?? null;
@@ -243,12 +240,15 @@ export function _line_advances(node: Dict): number[] {
     const advances = cos_get(seg, "15", "7", "7");
     if (!Array.isArray(advances)) continue;
     for (const advance of advances) {
-      if (is_real(advance)) out.push(base + float(advance));
+      if (is(py_number, advance)) out.push(base + float(advance));
     }
     if (out.length) base = out[out.length - 1];
   }
   return out;
 }
+
+const is_spans = (v: InstanceValue): v is [number, number][] =>
+  Array.isArray(v) && v.every((span) => Array.isArray(span) && span.length === 2);
 
 /**
  * Recompose the document when its calibration proved the composer.
@@ -260,10 +260,10 @@ export function _line_advances(node: Dict): number[] {
  * write invalidates it via `TextDocument._mark_layout_dirty`.
  */
 export function _fresh_composed_spans(doc: TextDocument): [number, number][] | null {
-  if ((doc?._composition_calibrated ?? null) !== true) return null;
+  if (doc._composition_calibrated !== true) return null;
   if (doc.__dict__.has("_composed_cache")) {
-    const memo: [number, number][] | null = doc.__dict__.get("_composed_cache");
-    return memo;
+    const memo = doc.__dict__.get("_composed_cache") ?? null;
+    return memo != null && is_spans(memo) ? memo : null;
   }
   let spans: [number, number][] | null;
   try {
@@ -288,12 +288,12 @@ export function _fresh_composed_spans(doc: TextDocument): [number, number][] | n
  * the AE-parity clamp semantics) remains.
  */
 export function _composed_line_spans(doc: TextDocument): [number, number][] | null {
-  if (!doc?.box_text) {
+  if (!doc.box_text) {
     const para = _para_run_spans(doc);
     if (!para.length) return null;
     return para.map(([start, end]): [number, number] => [start, end]);
   }
-  if (doc?._layout_dirty) {
+  if (doc._layout_dirty) {
     const fresh = _fresh_composed_spans(doc);
     if (fresh != null) return fresh;
   }
@@ -302,10 +302,10 @@ export function _composed_line_spans(doc: TextDocument): [number, number][] | nu
 }
 
 /** Extract `[R, G, B]` from a COS SimplePaint structure. */
-export function _parse_color(paint: unknown): number[] | null {
+export function _parse_color(paint: CosNode): number[] | null {
   const argb = cos_get(paint, "0", "1");
   if (Array.isArray(argb) && argb.length >= 4) {
-    return [float(argb[1]), float(argb[2]), float(argb[3])];
+    return [cos_float(argb[1]), cos_float(argb[2]), cos_float(argb[3])];
   }
   return null;
 }
@@ -316,12 +316,12 @@ export function _parse_color(paint: unknown): number[] | null {
  * The 4-float array is `[alpha, R, G, B]`; AE stores a fully opaque
  * alpha of `1.0`.
  */
-export function _build_color_paint(rgb: number[]): Dict {
-  return new Map<string, any>([
+export function _build_color_paint(rgb: number[]): CosDict {
+  return new Map<string, CosNode>([
     ["99", new CosName("SimplePaint")],
     [
       "0",
-      new Map<string, any>([
+      new Map<string, CosNode>([
         ["0", 1],
         ["1", [pyfloat(1.0), pyfloat(float(rgb[0])), pyfloat(float(rgb[1])), pyfloat(float(rgb[2]))]],
       ]),
@@ -330,13 +330,13 @@ export function _build_color_paint(rgb: number[]): Dict {
 }
 
 /** Build a COS CoolTypeFont entry for a font PostScript name. */
-export function _build_font_entry(post_script_name: string): Dict {
-  return new Map<string, any>([
+export function _build_font_entry(post_script_name: string): CosDict {
+  return new Map<string, CosNode>([
     [
       "0",
-      new Map<string, any>([
+      new Map<string, CosNode>([
         ["99", new CosName("CoolTypeFont")],
-        ["0", new Map<string, any>([["0", post_script_name], ["2", 1]])],
+        ["0", new Map<string, CosNode>([["0", post_script_name], ["2", 1]])],
       ]),
     ],
   ]);
@@ -367,21 +367,26 @@ export function _register_font_at(
   kw: { used_record?: boolean } = {},
 ): number {
   const { used_record = true } = kw;
-  const cos: Dict = doc._cos_data;
-  const font_array: unknown[] = setdefault(setdefault(setdefault(cos, "0", new Map()), "1", new Map()), "0", []);
+  const cos = doc._cos_data;
+  const font_array = cos_setdefault(cos_setdefault(cos_setdefault(cos, "0", new Map()), "1", new Map()), "0", []);
   const entry = _build_font_entry(post_script_name);
+  const font_entry = entry.get("0");
+  const font_data = font_entry instanceof Map ? font_entry.get("0") : null;
+  py_assert(font_entry instanceof Map && font_data instanceof Map);
   const version = font_version_string(post_script_name);
-  if (version != null) (getitem(getitem(entry, "0"), "0") as Dict).set("5", version);
-  font_array.splice(index, 0, entry);
+  if (version != null) font_data.set("5", version);
+  cos_insert(font_array, index, entry);
 
-  const bump = (holder: Dict): void => {
-    const current = holder.get("0") ?? null;
-    if (typeof current === "number" && Number.isInteger(current) && current >= index) {
-      holder.set("0", current + 1);
+  const bump = (holder: CosDict): void => {
+    const current = read(font_ref, holder, "0");
+    if (current != null && Number(current) >= index) {
+      holder.set("0", Number(current) + 1);
     }
   };
 
-  for (const entry_doc of py_or(dict_get(dict_get(cos, "1", new Map()), "1", []), []) as Dict[]) {
+  const state = cos_get_or(cos, "1", new Map());
+  const entry_docs = cos_get_or(state, "1", []);
+  for (const entry_doc of cos_iter(py_bool(entry_docs) ? entry_docs : [])) {
     const runs = cos_get(entry_doc, "0", "6", "0");
     if (!Array.isArray(runs)) continue;
     for (const run of runs) {
@@ -401,7 +406,7 @@ export function _register_font_at(
     }
   }
   const sessions = cos_get(cos, "1", "5");
-  const new_record: Dict = new Map<string, any>([["0", index]]);
+  const new_record: CosDict = new Map([["0", index]]);
   if (version != null) new_record.set("1", version);
   if (Array.isArray(sessions)) {
     let appended = false;
@@ -417,11 +422,7 @@ export function _register_font_at(
       }
     }
   }
-  doc._fonts.splice(
-    index,
-    0,
-    new FontObject({ _font_data: getitem(getitem(entry, "0"), "0"), _font_entry: getitem(entry, "0") }),
-  );
+  doc._fonts.splice(index, 0, new FontObject({ _font_data: font_data, _font_entry: font_entry }));
   return index;
 }
 
@@ -448,7 +449,7 @@ export function _replace_layer_font(docs: TextDocument[], from_name: string, to_
   }
   if (!from_indices.size) return false;
   const referenced = docs.some((doc) =>
-    _char_run_spans(doc).some(([, , style]) => from_indices.has(style.get("0") ?? null)),
+    _char_run_spans(doc).some(([, , style]) => cos_in(style.get("0"), from_indices)),
   );
   if (!referenced) return false;
 
@@ -468,7 +469,7 @@ export function _replace_layer_font(docs: TextDocument[], from_name: string, to_
 
   for (const doc of docs) {
     for (const [, , style] of _char_run_spans(doc)) {
-      if (from_indices.has(style.get("0") ?? null)) style.set("0", to_index);
+      if (cos_in(style.get("0"), from_indices)) style.set("0", to_index);
     }
   }
   _repoint_used_font_record(first, from_indices, to_index, to_name);
@@ -496,7 +497,7 @@ export function _repoint_used_font_record(
     const records = session instanceof Map ? session.get("4") ?? null : null;
     if (!Array.isArray(records)) continue;
     for (const record of records) {
-      if (!(record instanceof Map) || !from_indices.has(record.get("0") ?? null)) continue;
+      if (!(record instanceof Map) || !cos_in(record.get("0"), from_indices)) continue;
       record.set("0", to_index);
       if (version == null) record.delete("1");
       else record.set("1", version);
@@ -527,8 +528,9 @@ export const _NON_LAYOUT_CHAR_KEYS: ReadonlySet<string> = new Set(["53", "54", "
  * without the hook are skipped.
  */
 export function _mark_layout_dirty(doc: TextDocument): void {
-  const mark = doc?._mark_layout_dirty ?? null;
-  if (mark != null) mark.call(doc);
+  // Python `getattr(doc, "_mark_layout_dirty", None)`: duck-typed test
+  // documents may lack the hook.
+  if (typeof doc._mark_layout_dirty === "function") doc._mark_layout_dirty();
 }
 
 /**
@@ -539,10 +541,9 @@ export function _mark_layout_dirty(doc: TextDocument): void {
  * structural op must end here.
  */
 export function _refresh_style_aliases(doc: TextDocument): void {
-  const cos_doc: Dict = doc._doc;
-  const char = cos_get(cos_doc, "0", "6", "0", 0, "0", "0", "6");
+  const char = cos_get(doc._doc, "0", "6", "0", 0, "0", "0", "6");
   if (char instanceof Map) doc._char_style = char;
-  const para = cos_get(cos_doc, "0", "5", "0", 0, "0", "0", "5");
+  const para = cos_get(doc._doc, "0", "5", "0", 0, "0", "0", "5");
   if (para instanceof Map) doc._para_style = para;
 }
 
@@ -575,6 +576,11 @@ export function _snap_to_pairs(raw: string, start: number, end: number): [number
   return [start, end];
 }
 
+/** A run entry's count, `run.get("1", 0)`, as a Python number (`TypeError` for other kinds). */
+function _run_count(run: CosNode): PyNum {
+  return py_num(cos_get_or(run, "1", 0));
+}
+
 /**
  * Split `{"0": payload, "1": count}` entries in place at u16 offsets.
  *
@@ -582,16 +588,15 @@ export function _snap_to_pairs(raw: string, start: number, end: number): [number
  * 0's payload object only ever narrows (never detaches) and the
  * `_char_style` alias stays inside the serialized tree.
  */
-export function _split_run_array(runs: Dict[], offsets: Set<number>): void {
+export function _split_run_array(runs: CosNode[], offsets: Set<number>): void {
   const cuts = sorted(offsets);
-  let pos = 0;
+  let pos: PyNum = 0;
   let i = 0;
   while (i < runs.length) {
-    const length = dict_get(runs[i], "1", 0);
-    const run_end = pos + length;
+    const run_end = py_add(pos, _run_count(runs[i]));
     let cut: number | null = null;
     for (const offset of cuts) {
-      if (pos < offset && offset < run_end) {
+      if (float(pos) < offset && offset < float(run_end)) {
         cut = offset;
         break;
       }
@@ -602,8 +607,8 @@ export function _split_run_array(runs: Dict[], offsets: Set<number>): void {
       continue;
     }
     const clone = deepcopy(runs[i]);
-    runs[i].set("1", cut - pos);
-    clone.set("1", run_end - cut);
+    cos_setitem(runs[i], "1", py_sub(cut, pos));
+    cos_setitem(clone, "1", py_sub(run_end, cut));
     runs.splice(i + 1, 0, clone);
     pos = cut;
     i += 1;
@@ -617,11 +622,12 @@ export function _split_run_array(runs: Dict[], offsets: Set<number>): void {
  * no-op set leaves a uniform document at one run (`W_NOOP`). The first
  * run of each merged group keeps its object (aliasing, key order).
  */
-export function _merge_adjacent_runs(runs: Dict[]): void {
+export function _merge_adjacent_runs(runs: CosNode[]): void {
   let i = 0;
   while (i + 1 < runs.length) {
-    if (py_eq(runs[i].get("0") ?? null, runs[i + 1].get("0") ?? null)) {
-      runs[i].set("1", dict_get(runs[i], "1", 0) + dict_get(runs[i + 1], "1", 0));
+    const here = cos_dict(runs[i], "get").get("0") ?? null;
+    if (py_eq(here, cos_dict(runs[i + 1], "get").get("0") ?? null)) {
+      cos_setitem(runs[i], "1", py_add(_run_count(runs[i]), _run_count(runs[i + 1])));
       runs.splice(i + 1, 1);
     } else {
       i += 1;
@@ -636,7 +642,7 @@ export function _merge_adjacent_runs(runs: Dict[]): void {
  * at the visible length extends through the raw terminator
  * (`W_MERGE_SAME`); `value=None` clears the key.
  */
-export function _apply_char_key(doc: TextDocument, start: number, end: number, key: string, value: unknown): void {
+export function _apply_char_key(doc: TextDocument, start: number, end: number, key: string, value: CosNode): void {
   const raw = _raw_text(doc);
   [start, end] = _snap_to_pairs(raw, start, end);
   if (start === end) return;
@@ -645,10 +651,10 @@ export function _apply_char_key(doc: TextDocument, start: number, end: number, k
   const runs = cos_get(doc._doc, "0", "6", "0");
   if (!Array.isArray(runs) || !runs.length) return;
   _split_run_array(runs, new Set([start, end]));
-  let pos = 0;
+  let pos: PyNum = 0;
   for (const run of runs) {
-    const run_end = pos + (dict_get(run, "1", 0) as number);
-    if (pos >= start && run_end <= end) {
+    const run_end = py_add(pos, _run_count(run));
+    if (float(pos) >= start && float(run_end) <= end) {
       const style = cos_get(run, "0", "0", "6");
       if (style instanceof Map) {
         if (value == null) style.delete(key);
@@ -661,10 +667,10 @@ export function _apply_char_key(doc: TextDocument, start: number, end: number, k
   _refresh_style_aliases(doc);
 }
 
-/** Per-character manual-kern values decoded from the kern runs. */
-export function _kern_values(doc: TextDocument): unknown[] {
+/** Per-character manual-kern values decoded from the kern runs (the stored values; `null` where none). */
+export function _kern_values(doc: TextDocument): CosNode[] {
   const total = u16_len(_raw_text(doc));
-  const values: unknown[] = new Array(total).fill(null);
+  const values: CosNode[] = new Array<CosNode>(total).fill(null);
   for (const [start, end, payload] of _kern_run_spans(doc)) {
     const value = payload.get("0") ?? null;
     if (value != null) {
@@ -683,36 +689,36 @@ export function _kern_values(doc: TextDocument): unknown[] {
  * dict is kept in place when it exists so `doc["0"]`'s key order is
  * preserved; a fresh key is appended, like AE's creation order.
  */
-export function _rebuild_kern_runs(doc: TextDocument, values: unknown[]): void {
-  const inner: Dict = setdefault(doc._doc, "0", new Map());
+export function _rebuild_kern_runs(doc: TextDocument, values: CosNode[]): void {
+  const inner = cos_setdefault(doc._doc, "0", new Map());
   const has_value = values.some((v) => v != null);
   if (!has_value) {
     // AE drops the array entirely once no manual values remain
     // (probed `X_AKT_SET`); the leading-edge value at "7" only
     // exists alongside the array, so it goes too.
-    inner.delete("8");
-    inner.delete("7");
+    cos_pop(inner, "8");
+    cos_pop(inner, "7");
     return;
   }
-  const runs: Dict[] = [];
+  const runs: CosNode[] = [];
   let i = 0;
   const total = values.length;
   while (i < total) {
     if (values[i] == null) {
       let j = i;
       while (j < total && values[j] == null) j += 1;
-      runs.push(new Map<string, any>([["0", new Map()], ["1", j - i]]));
+      runs.push(new Map<string, CosNode>([["0", new Map()], ["1", j - i]]));
       i = j;
     } else {
-      runs.push(new Map<string, any>([["0", new Map<string, any>([["0", values[i]]])], ["1", 1]]));
+      runs.push(new Map<string, CosNode>([["0", new Map([["0", values[i]]])], ["1", 1]]));
       i += 1;
     }
   }
-  const holder = inner.get("8");
+  const holder = cos_dict(inner, "get").get("8");
   if (holder instanceof Map) {
     holder.set("0", runs);
   } else {
-    inner.set("8", new Map<string, any>([["0", runs]]));
+    cos_setitem(inner, "8", new Map([["0", runs]]));
   }
 }
 
@@ -732,8 +738,8 @@ export function _splice_text(
   start: number,
   end: number,
   new_text: string,
-  insert_runs: Dict[] | null = null,
-  insert_kern: unknown[] | null = null,
+  insert_runs: CosNode[] | null = null,
+  insert_kern: CosNode[] | null = null,
 ): void {
   const raw = _raw_text(doc);
   const total = u16_len(raw);
@@ -744,37 +750,37 @@ export function _splice_text(
   const new_raw = u16_slice(raw, 0, start) + new_text + u16_slice(raw, end, total);
   let parts = split(new_raw, "\r");
   if (parts[parts.length - 1] === "") parts = parts.slice(0, -1);
-  const inner: Dict = setdefault(doc._doc, "0", new Map());
+  const inner = cos_setdefault(doc._doc, "0", new Map());
 
   const runs = cos_get(inner, "6", "0");
   if (Array.isArray(runs) && runs.length) {
-    let insert_entries: Dict[];
+    let insert_entries: CosNode[];
     if (insert_runs == null) {
-      let donor: Dict | null = null;
-      let pos = 0;
+      let donor: CosNode | undefined;
+      let pos: PyNum = 0;
       for (const run of runs) {
-        const run_end = pos + (dict_get(run, "1", 0) as number);
-        if (pos <= start && start < run_end) {
-          donor = deepcopy<Dict>(run);
+        const run_end = py_add(pos, _run_count(run));
+        if (float(pos) <= start && start < float(run_end)) {
+          donor = deepcopy(run);
           break;
         }
         pos = run_end;
       }
-      if (donor == null) donor = deepcopy<Dict>(runs[runs.length - 1]);
-      donor.set("1", insert_len);
+      if (donor === undefined) donor = deepcopy(runs[runs.length - 1]);
+      cos_setitem(donor, "1", insert_len);
       insert_entries = insert_len ? [donor] : [];
     } else {
       insert_entries = insert_runs;
     }
     _split_run_array(runs, new Set([start, end]));
-    const rebuilt: Dict[] = [];
-    let pos = 0;
+    const rebuilt: CosNode[] = [];
+    let pos: PyNum = 0;
     let inserted = false;
     for (const run of runs) {
-      const run_end = pos + (dict_get(run, "1", 0) as number);
-      if (run_end <= start) {
+      const run_end = py_add(pos, _run_count(run));
+      if (float(run_end) <= start) {
         rebuilt.push(run);
-      } else if (pos >= end) {
+      } else if (float(pos) >= end) {
         if (!inserted) {
           rebuilt.push(...insert_entries);
           inserted = true;
@@ -790,15 +796,15 @@ export function _splice_text(
 
   const para_runs = cos_get(inner, "5", "0");
   if (Array.isArray(para_runs) && para_runs.length) {
-    const old_spans: [number, number, Dict][] = [];
-    let pos = 0;
+    const old_spans: [number, number, CosNode][] = [];
+    let pos: PyNum = 0;
     for (const entry of para_runs) {
-      const length = dict_get(entry, "1", 0) as number;
-      old_spans.push([pos, pos + length, entry]);
-      pos += length;
+      const length = _run_count(entry);
+      old_spans.push([float(pos), float(py_add(pos, length)), entry]);
+      pos = py_add(pos, length);
     }
 
-    const donor_entry = (new_pos: number): Dict => {
+    const donor_entry = (new_pos: number): CosNode => {
       let old_pos: number;
       if (new_pos < start) old_pos = new_pos;
       else if (new_pos >= start + insert_len) old_pos = new_pos - insert_len + (end - start);
@@ -810,7 +816,7 @@ export function _splice_text(
       return old_spans[old_spans.length - 1][2];
     };
 
-    const new_para_runs: Dict[] = [];
+    const new_para_runs: CosNode[] = [];
     let pos2 = 0;
     for (const [i, part] of parts.entries()) {
       const entry = donor_entry(pos2);
@@ -818,24 +824,24 @@ export function _splice_text(
       // (aliased by `_para_style`); clone everything else.
       const clone = i === 0 && entry === para_runs[0] ? entry : deepcopy(entry);
       const part_len = u16_len(part) + 1;
-      clone.set("1", part_len);
+      cos_setitem(clone, "1", part_len);
       new_para_runs.push(clone);
       pos2 += part_len;
     }
     para_runs.splice(0, para_runs.length, ...new_para_runs);
   }
 
-  if (insert_kern == null) insert_kern = new Array(insert_len).fill(null);
+  if (insert_kern == null) insert_kern = new Array<CosNode>(insert_len).fill(null);
   _rebuild_kern_runs(doc, [...kern_values.slice(0, start), ...insert_kern, ...kern_values.slice(end)]);
   if (start === 0) {
     // Replacing the leading edge invalidates the pair-0 kern value
     // (AE-unprobed; dropping it mirrors the auto_kern_type setter).
-    inner.delete("7");
+    cos_pop(inner, "7");
   }
 
-  inner.set("0", new_raw);
-  const rebuild_lines = doc?._rebuild_line_count_runs ?? null;
-  if (rebuild_lines != null) rebuild_lines.call(doc, parts);
+  cos_setitem(inner, "0", new_raw);
+  // Python `getattr(doc, "_rebuild_line_count_runs", None)`: duck-typed test documents may lack it.
+  if (typeof doc._rebuild_line_count_runs === "function") doc._rebuild_line_count_runs(parts);
   _refresh_style_aliases(doc);
 }
 
@@ -844,15 +850,15 @@ export function _splice_text(
  * range (paragraph runs are structural: never split, never merged -
  * `W_PARA_PARTIAL` styles the whole containing paragraph).
  */
-export function _apply_para_key(doc: TextDocument, start: number, end: number, key: string, value: unknown): void {
+export function _apply_para_key(doc: TextDocument, start: number, end: number, key: string, value: CosNode): void {
   if (start === end) return;
   _mark_layout_dirty(doc);
   const runs = cos_get(doc._doc, "0", "5", "0");
   if (!Array.isArray(runs)) return;
-  let pos = 0;
+  let pos: PyNum = 0;
   for (const run of runs) {
-    const run_end = pos + (dict_get(run, "1", 0) as number);
-    if (pos < end && run_end > start) {
+    const run_end = py_add(pos, _run_count(run));
+    if (float(pos) < end && float(run_end) > start) {
       const style = cos_get(run, "0", "0", "5");
       if (style instanceof Map) {
         if (value == null) style.delete(key);
@@ -867,15 +873,21 @@ export function _apply_para_key(doc: TextDocument, start: number, end: number, k
 // RangeField descriptor
 // ---------------------------------------------------------------------------
 
+/** Which run array a {@link RangeField} resolves over. */
+export type RangeKind = "char" | "para" | "kern";
+
 /** Constructor options of {@link RangeField | RangeField}. */
-export interface RangeFieldOptions {
-  transform?: ((raw: any) => any) | null;
-  default?: any;
+export interface RangeFieldOptions<T extends InstanceValue> {
+  transform: (raw: CosNode) => T;
+  default?: T | null;
   gate?: string | null;
-  reverse?: ((value: any) => any) | null;
-  validate?: ((value: any, instance?: any) => void) | null;
+  reverse?: ((value: NonNullable<T>) => CosNode) | null;
+  validate?: Validator<TextDocument> | null;
   read_only?: boolean;
 }
+
+/** The options a `RangeField` factory leaves to its caller. */
+type RangeFieldExtras<T extends InstanceValue> = Partial<Omit<RangeFieldOptions<T>, "transform">>;
 
 /**
  * Read-only descriptor resolving one COS style key over a range.
@@ -896,7 +908,7 @@ export interface RangeFieldOptions {
  *
  * @param kind - `"char"` or `"para"` - which run array to resolve over.
  * @param key - String key into each run's style dict.
- * @param transform - Optional callable applied to each stored value.
+ * @param transform - Callable applied to each stored value.
  * @param default - Per-run value when the key is absent from the run.
  * @param gate - Optional boolean style key gating run participation.
  * @param reverse - 1-arg callable applied when setting (user-facing -\> COS value), mirroring
@@ -905,30 +917,19 @@ export interface RangeFieldOptions {
  *   TextDocument CosField validators.
  * @param read_only - When `true`, the field cannot be set.
  */
-export class RangeField {
-  declare kind: string;
+export class RangeField<T extends InstanceValue> {
+  declare kind: RangeKind;
   declare key: string;
-  declare transform: ((raw: any) => any) | null;
-  declare default_: any;
+  declare transform: (raw: CosNode) => T;
+  declare default_: T | null;
   declare gate: string | null;
-  declare reverse: ((value: any) => any) | null;
-  declare validate: ((value: any, instance?: any) => void) | null;
+  declare reverse: ((value: NonNullable<T>) => CosNode) | null;
+  declare validate: Validator<TextDocument> | null;
   declare read_only: boolean;
   declare public_name: string;
 
-  constructor(
-    kind: string,
-    key: string,
-    kw: RangeFieldOptions = {},
-  ) {
-    const {
-      transform = null,
-      default: default_ = null,
-      gate = null,
-      reverse = null,
-      validate = null,
-      read_only = false,
-    } = kw;
+  constructor(kind: RangeKind, key: string, kw: RangeFieldOptions<T>) {
+    const { transform, default: default_ = null, gate = null, reverse = null, validate = null, read_only = false } = kw;
     this.kind = kind;
     this.key = key;
     this.transform = transform;
@@ -943,34 +944,35 @@ export class RangeField {
     this.public_name = name;
   }
 
-  __get__(obj: any, objtype?: Function | null): any {
+  __get__(obj: CharacterRange | null, objtype?: Function | null): T | null | this {
     if (obj == null) return this;
     return obj._resolve_mixed(this.kind, this.key, this.transform, this.default_, this.gate);
   }
 
-  __set__(obj: any, value: any): void {
+  __set__(obj: CharacterRange, value: T | null): void {
     if (this.read_only) throw new AttributeError(`${repr(this.public_name)} is read-only.`);
+    let raw: CosNode = null;
     if (value != null) {
       if (this.validate != null) this.validate(value, obj._doc_ref);
-      if (this.reverse != null) value = this.reverse(value);
+      // Every writable field declares its reverse; only read-only ones omit it.
+      if (this.reverse == null) throw new AttributeError(`${repr(this.public_name)} is read-only.`);
+      raw = this.reverse(value);
     }
     const [start, end] = obj._bounds();
-    if (this.kind === "char") _apply_char_key(obj._doc_ref, start, end, this.key, value);
-    else _apply_para_key(obj._doc_ref, start, end, this.key, value);
+    if (this.kind === "char") _apply_char_key(obj._doc_ref, start, end, this.key, raw);
+    else _apply_para_key(obj._doc_ref, start, end, this.key, raw);
     obj._propagate();
   }
 
   /** Create a RangeField for boolean style flags. */
-  static bool(kind: string, key: string, kwargs: RangeFieldOptions = {}): RangeField {
-    return new this(kind, key, { transform: bool, reverse: bool, ...kwargs });
+  static bool(kind: RangeKind, key: string, kwargs: RangeFieldExtras<boolean> = {}): RangeField<boolean> {
+    return new RangeField<boolean>(kind, key, { transform: bool, reverse: bool, ...kwargs });
   }
 
   /** Create a RangeField that coerces to float. */
-  static float(kind: string, key: string, kwargs: RangeFieldOptions = {}): RangeField {
-    const kw: RangeFieldOptions = { ...kwargs };
+  static float(kind: RangeKind, key: string, kwargs: RangeFieldExtras<number> = {}): RangeField<number> {
     // The stored value is a Python float, so box it to keep `1.0` from serializing as `1`.
-    if (!("reverse" in kw)) kw.reverse = (x: any) => pyfloat(float(x));
-    return new this(kind, key, { transform: float, ...kw });
+    return new RangeField<number>(kind, key, { transform: cos_float, reverse: (x: number) => pyfloat(float(x)), ...kwargs });
   }
 
   /**
@@ -981,33 +983,28 @@ export class RangeField {
    * misread at 16.16 scale (stored `50.0` read back as `3276800`,
    * probed AE 2026).
    */
-  static int(kind: string, key: string, kwargs: RangeFieldOptions = {}): RangeField {
-    const kw: RangeFieldOptions = { ...kwargs };
-    if (!("reverse" in kw)) kw.reverse = round;
-    return new this(kind, key, { transform: int, ...kw });
+  static int(kind: RangeKind, key: string, kwargs: RangeFieldExtras<number> = {}): RangeField<number> {
+    return new RangeField<number>(kind, key, { transform: cos_int, reverse: (x: number) => round(x), ...kwargs });
   }
 
-  /** Create a RangeField for IntEnum-backed style keys. */
-  static enum(enum_cls: any, kind: string, key: string, kwargs: RangeFieldOptions = {}): RangeField {
-    const kw: RangeFieldOptions = { ...kwargs };
-    if (!("transform" in kw)) {
-      const from_binary = getattr(enum_cls, "from_binary", null);
-      kw.transform =
-        from_binary != null ? (raw: any) => from_binary.call(enum_cls, raw) : (raw: any) => enum_cls.of(raw);
-    }
-    if (!("reverse" in kw)) {
-      const to_binary = getattr(enum_cls, "to_binary", null);
-      kw.reverse = to_binary != null ? (value: any) => to_binary.call(enum_cls, value) : int;
-    }
-    if (!("validate" in kw)) {
-      // Reject out-of-enum ints on write (ExtendScript parity); reads
-      // stay tolerant via `from_binary`. Without this a stray int
-      // serializes a value that reads back as `None`/undefined.
-      kw.validate = validate_enum(enum_cls);
-    }
-    return new this(kind, key, kw);
+  /**
+   * Create a RangeField for IntEnum-backed style keys. Writes reject
+   * out-of-enum ints (ExtendScript parity); reads stay tolerant via
+   * `from_binary`. Without the check a stray int serializes a value
+   * that reads back as `None`/undefined.
+   */
+  static enum<V extends number>(enum_cls: CosEnum<V>, kind: RangeKind, key: string, kwargs: RangeFieldExtras<V> = {}): RangeField<V> {
+    return new RangeField<V>(kind, key, {
+      transform: (raw: CosNode) => enum_from_cos(enum_cls, raw),
+      reverse: (value: V) => enum_cls.to_binary(value),
+      validate: validate_enum(enum_cls),
+      ...kwargs,
+    });
   }
 }
+
+/** A `TextDocument` style dict attribute. */
+type StyleAttr = "_char_style" | "_para_style";
 
 /**
  * A {@link CosField | CosField} whose writes style the whole
@@ -1021,12 +1018,11 @@ export class RangeField {
  * without run backing (parser fallbacks) fall back to the base
  * override behavior.
  */
-export class DocumentWideCosField extends CosField<any> {
-  __set__(obj: any, value: any): void {
-    const self: any = this;
-    const is_char = self.dict_attr === "_char_style";
-    const backing = getattr(obj, self.dict_attr, null);
-    let runs: any = null;
+export class DocumentWideCosField<T extends InstanceValue> extends CosField<T, StyleAttr, TextDocument> {
+  __set__(obj: TextDocument, value: T | null): void {
+    const is_char = this.dict_attr === "_char_style";
+    const backing = obj[this.dict_attr];
+    let runs: CosNode = null;
     if (backing != null) {
       runs = cos_get(obj._doc, "0", is_char ? "6" : "5", "0");
     }
@@ -1036,27 +1032,38 @@ export class DocumentWideCosField extends CosField<any> {
       super.__set__(obj, value);
       return;
     }
-    self._check_writable(obj);
-    obj.__dict__.delete(self.public_name);
-    const raw_value = value == null ? null : self._coerce(obj, value);
+    this._check_writable(obj);
+    obj.__dict__.delete(this.public_name);
+    const raw_value = value == null ? null : this._coerce(obj, value);
     const total = u16_len(_raw_text(obj));
-    if (is_char) _apply_char_key(obj, 0, total, self.key, raw_value);
-    else _apply_para_key(obj, 0, total, self.key, raw_value);
-    const propagate = getattr(obj, "_propagate_cos", null);
-    if (propagate != null) propagate.call(obj);
+    if (is_char) _apply_char_key(obj, 0, total, this.key, raw_value);
+    else _apply_para_key(obj, 0, total, this.key, raw_value);
+    if (typeof obj._propagate_cos === "function") obj._propagate_cos();
+  }
+
+  /** `CosField.bool`: a boolean flag on the document's first char / para style. */
+  static bool<D extends boolean | null>(dict_attr: StyleAttr, key: string, kw: CosFieldExtras<D, TextDocument>): DocumentWideCosField<boolean | D> {
+    return new DocumentWideCosField(dict_attr, key, bool_field(kw));
+  }
+
+  /** `CosField.float`: a float style key, coerced to float in both directions. */
+  static float<D extends number | null>(dict_attr: StyleAttr, key: string, kw: CosFieldExtras<D, TextDocument>): DocumentWideCosField<number | D> {
+    return new DocumentWideCosField(dict_attr, key, float_field(kw));
+  }
+
+  /** `CosField.int`: an integer-stored style key. */
+  static int<D extends number | null>(dict_attr: StyleAttr, key: string, kw: CosFieldExtras<D, TextDocument>): DocumentWideCosField<number | D> {
+    return new DocumentWideCosField(dict_attr, key, int_field(kw));
   }
 
   /**
-   * Reject out-of-enum ints on write (ExtendScript parity).
-   *
-   * Mirrors `RangeField.enum`; the base `CosField.enum` does not
-   * validate, so a stray int would serialize a value that reads back
+   * `CosField.enum`, rejecting out-of-enum ints on write (ExtendScript
+   * parity). Mirrors `RangeField.enum`; the base `CosField.enum` does
+   * not validate, so a stray int would serialize a value that reads back
    * as `null`/undefined. Reads stay tolerant via `from_binary`.
    */
-  static enum(enum_cls: any, dict_attr: string, key: string, kwargs: Record<string, any> = {}): any {
-    const kw: Record<string, any> = { ...kwargs };
-    if (!("validate" in kw)) kw.validate = validate_enum(enum_cls);
-    return super.enum(enum_cls, dict_attr, key, kw);
+  static enum<V extends number, D extends V | null>(enum_cls: CosEnum<V>, dict_attr: StyleAttr, key: string, kw: CosFieldExtras<D, TextDocument>): DocumentWideCosField<V | D> {
+    return new DocumentWideCosField(dict_attr, key, enum_field(enum_cls, { validate: validate_enum(enum_cls), ...kw }));
   }
 }
 
@@ -1223,7 +1230,7 @@ export class CharacterRange extends _TextRange {
    * caret index (the raw runs cover the terminator, so an EOF caret
    * still lands inside the final run).
    */
-  _overlapping(spans: [number, number, Dict][]): Dict[] {
+  _overlapping(spans: [number, number, CosDict][]): CosDict[] {
     const [start, end] = this._bounds();
     if (start === end) {
       for (const [run_start, run_end, payload] of spans) {
@@ -1231,14 +1238,14 @@ export class CharacterRange extends _TextRange {
       }
       return spans.length ? [spans[spans.length - 1][2]] : [];
     }
-    const out: Dict[] = [];
+    const out: CosDict[] = [];
     for (const [run_start, run_end, payload] of spans) {
       if (run_start < end && run_end > start) out.push(payload);
     }
     return out;
   }
 
-  _spans_for(kind: string): [number, number, Dict][] {
+  _spans_for(kind: RangeKind): [number, number, CosDict][] {
     if (kind === "char") return _char_run_spans(this._doc_ref);
     if (kind === "para") return _para_run_spans(this._doc_ref);
     return _kern_run_spans(this._doc_ref);
@@ -1250,16 +1257,10 @@ export class CharacterRange extends _TextRange {
    * Uniform value -\> that value; disagreement -\> `null`; every run
    * gated out -\> `null`.
    */
-  _resolve_mixed(
-    kind: string,
-    key: string,
-    transform: ((raw: any) => any) | null,
-    default_: any,
-    gate: string | null,
-  ): any {
+  _resolve_mixed<T>(kind: RangeKind, key: string, transform: (raw: CosNode) => T, default_: T | null, gate: string | null): T | null {
     let payloads = this._overlapping(this._spans_for(kind));
     if (gate != null) {
-      payloads = payloads.filter((p) => py_bool(p.get(gate)));
+      payloads = payloads.filter((p) => py_bool(p.get(gate) ?? null));
       if (!payloads.length) return null;
     }
     if (!payloads.length) return default_;
@@ -1269,8 +1270,8 @@ export class CharacterRange extends _TextRange {
   }
 
   _propagate(): void {
-    const propagate = this._doc_ref?._propagate_cos ?? null;
-    if (propagate != null) propagate.call(this._doc_ref);
+    // Python `getattr(self._doc_ref, "_propagate_cos", None)`: duck-typed test documents may lack it.
+    if (typeof this._doc_ref._propagate_cos === "function") this._doc_ref._propagate_cos();
   }
 
   // -- Content ---------------------------------------------------------------
@@ -1326,15 +1327,18 @@ export class CharacterRange extends _TextRange {
     [src_start, src_end] = _snap_to_pairs(src_raw, src_start, src_end);
     const text_slice = u16_slice(src_raw, src_start, src_end);
 
-    const entries: Dict[] = [];
-    let pos = 0;
-    for (const run of py_or(cos_get(src_doc._doc, "0", "6", "0"), [])) {
-      const run_end = pos + (dict_get(run, "1", 0) as number);
-      const overlap_start = Math.max(pos, src_start);
-      const overlap_end = Math.min(run_end, src_end);
-      if (overlap_end > overlap_start) {
+    const entries: CosNode[] = [];
+    let pos: PyNum = 0;
+    const src_runs = cos_get(src_doc._doc, "0", "6", "0");
+    for (const run of cos_iter(py_bool(src_runs) ? src_runs : [])) {
+      const run_end = py_add(pos, _run_count(run));
+      // `max(pos, src_start)` / `min(run_end, src_end)` keep the winning
+      // operand itself, so a float position stays a float.
+      const overlap_start: PyNum = src_start > float(pos) ? src_start : pos;
+      const overlap_end: PyNum = src_end < float(run_end) ? src_end : run_end;
+      if (float(overlap_end) > float(overlap_start)) {
         const clone = deepcopy(run);
-        clone.set("1", overlap_end - overlap_start);
+        cos_setitem(clone, "1", py_sub(overlap_end, overlap_start));
         entries.push(clone);
       }
       pos = run_end;
@@ -1345,9 +1349,9 @@ export class CharacterRange extends _TextRange {
       for (const clone of entries) {
         const style = cos_get(clone, "0", "0", "6");
         if (style instanceof Map) {
-          const index = style.get("0") ?? null;
-          if (typeof index === "number" && Number.isInteger(index) && 0 <= index && index < src_doc._fonts.length) {
-            needed.set(index, src_doc._fonts[index].post_script_name);
+          const index = read(char_style, style, "0");
+          if (index != null && 0 <= Number(index) && Number(index) < src_doc._fonts.length) {
+            needed.set(Number(index), src_doc._fonts[Number(index)].post_script_name);
           }
         }
       }
@@ -1363,19 +1367,18 @@ export class CharacterRange extends _TextRange {
       for (const clone of entries) {
         const style = cos_get(clone, "0", "0", "6");
         if (style instanceof Map) {
-          const index = style.get("0") ?? null;
-          if (typeof index === "number" && Number.isInteger(index) && needed.has(index)) {
-            style.set("0", getitem(target_index, needed.get(index)));
-          }
+          const index = read(char_style, style, "0");
+          const name = index != null ? needed.get(Number(index)) : undefined;
+          if (name !== undefined) style.set("0", getitem(target_index, name));
         }
       }
     }
 
     const kern_slice = _kern_values(src_doc).slice(src_start, src_end);
-    let src_edge: number | null = null;
+    let src_edge: number | boolean | null = null;
     if (src_start === 0) {
       const edge = cos_get(src_doc._doc, "0", "7");
-      if (typeof edge === "number" && Number.isInteger(edge)) src_edge = edge;
+      if (is(py_int, edge)) src_edge = edge;
     }
     const raw = _raw_text(doc);
     let [start, end] = this._bounds();
@@ -1387,7 +1390,7 @@ export class CharacterRange extends _TextRange {
       // 0, otherwise it becomes the pair value between the preceding
       // character and the pasted text (probed Y_PASTE_EDGE0/_MID).
       if (start === 0) {
-        setdefault(doc._doc, "0", new Map()).set("7", src_edge);
+        cos_setitem(cos_setdefault(doc._doc, "0", new Map()), "7", src_edge);
       } else {
         const values = _kern_values(doc);
         if (start - 1 < values.length) {
@@ -1429,7 +1432,7 @@ export class CharacterRange extends _TextRange {
    * values remain (probed `X_AKT_SET`).
    */
   get auto_kern_type(): AutoKernType | null {
-    return this._resolve_mixed("char", "11", (raw: any) => AutoKernType.from_binary(raw), AutoKernType.NO_AUTO_KERN, null);
+    return this._resolve_mixed("char", "11", (raw) => enum_from_cos(AutoKernType, raw), AutoKernType.NO_AUTO_KERN, null);
   }
 
   set auto_kern_type(value: AutoKernType) {
@@ -1448,8 +1451,7 @@ export class CharacterRange extends _TextRange {
       for (let i = start; i < Math.min(end, values.length); i++) values[i] = null;
       _rebuild_kern_runs(doc, values);
       if (start === 0) {
-        const holder = dict_get(doc._doc, "0") as Dict | null;
-        if (holder != null) holder.delete("7");
+        cos_pop(cos_get_or(doc._doc, "0", new Map()), "7");
       }
     }
     this._propagate();
@@ -1491,10 +1493,10 @@ export class CharacterRange extends _TextRange {
 
   /** The range's {@link FontObject}; `null` when mixed. Read-only. */
   get font_object(): FontObject | null {
-    const idx = this._resolve_mixed("char", "0", null, null, null);
+    const idx = this._resolve_mixed("char", "0", (raw) => raw, null, null);
     const fonts = this._doc_ref._fonts;
-    if (typeof idx === "number" && Number.isInteger(idx) && 0 <= idx && idx < fonts.length) {
-      return fonts[idx];
+    if (is(py_int, idx) && 0 <= Number(idx) && Number(idx) < fonts.length) {
+      return fonts[Number(idx)];
     }
     return null;
   }
@@ -1512,7 +1514,7 @@ export class CharacterRange extends _TextRange {
   get leading(): number | null {
     const auto = this.auto_leading;
     if (auto == null || auto) return null;
-    return this._resolve_mixed("char", "5", float, null, null);
+    return this._resolve_mixed("char", "5", cos_float, null, null);
   }
 
   set leading(value: number | null) {
@@ -1538,20 +1540,21 @@ export class CharacterRange extends _TextRange {
    * value affects characters `[max(0, start - 1), end)` - AE's pair
    * shift - disables auto-kerning for them, and stores the
    * leading-edge value at `doc["0"]["7"]` when the range starts at 0.
+   * A boolean stored where AE writes an int reads back as itself.
    */
-  get kerning(): number | null {
+  get kerning(): number | boolean | null {
     if (this.auto_kern_type !== AutoKernType.NO_AUTO_KERN) return null;
-    const value = this._resolve_mixed("kern", "0", null, null, null);
-    return typeof value === "number" && Number.isInteger(value) ? value : null;
+    const value = this._resolve_mixed("kern", "0", (raw) => raw, null, null);
+    return is(py_int, value) ? value : null;
   }
 
-  set kerning(value: number) {
+  set kerning(value: number | boolean | null) {
     validate_s4(value, this._doc_ref);
     // `validate_s4` accepts a float (see its definition): round it on
     // write, matching the sibling `tracking` field, whose `RangeField.int`
     // sets `reverse=round`. `round` also normalizes bools (a subclass of
     // int) so the serializer emits an integer, not a `true`/`false` token.
-    value = round(value);
+    const rounded = round(cos_num(value));
     const doc = this._doc_ref;
     const raw = _raw_text(doc);
     let [start, end] = this._bounds();
@@ -1565,12 +1568,12 @@ export class CharacterRange extends _TextRange {
     // run); `_apply_char_key` below re-extends the style write.
     const kern_start = Math.max(0, start - 1);
     const values = _kern_values(doc);
-    for (let i = kern_start; i < Math.min(end, values.length); i++) values[i] = value;
+    for (let i = kern_start; i < Math.min(end, values.length); i++) values[i] = rounded;
     _rebuild_kern_runs(doc, values);
     if (start === 0) {
       // Pair position 0 (before the first character): AE stores the
       // leading-edge value at doc["0"]["7"], created after key "8".
-      setdefault(doc._doc, "0", new Map()).set("7", value);
+      cos_setitem(cos_setdefault(doc._doc, "0", new Map()), "7", rounded);
     }
     _apply_char_key(doc, kern_start, end, "11", AutoKernType.to_binary(AutoKernType.NO_AUTO_KERN));
     this._propagate();

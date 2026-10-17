@@ -29,7 +29,7 @@
 
 import { py_bool, warn } from "../../pyrt/index.ts";
 import { cos_get } from "../cos/index.ts";
-import type { CosDict } from "../cos/cos.ts";
+import type { CosDict, CosNode } from "../cos/cos.ts";
 import { FontObject } from "../models/text/font_object.ts";
 import { TextDocument } from "../models/text/text_document.ts";
 import type { ListChunk } from "../binary/chunk.ts";
@@ -92,7 +92,7 @@ export function parse_fonts(cos_data: CosDict): FontObject[] {
  *
  * Path: `doc["0"]["6"]["0"][0]["0"]["0"]["6"]`
  */
-export function _get_first_char_style(doc: CosDict): CosDict | null {
+export function _get_first_char_style(doc: CosNode): CosDict | null {
   const result = cos_get(doc, "0", "6", "0", 0, "0", "0", "6");
   if (result instanceof Map) {
     return result;
@@ -105,7 +105,7 @@ export function _get_first_char_style(doc: CosDict): CosDict | null {
  *
  * Path: `doc["0"]["5"]["0"][0]["0"]["0"]["5"]`
  */
-export function _get_first_para_style(doc: CosDict): CosDict | null {
+export function _get_first_para_style(doc: CosNode): CosDict | null {
   const result = cos_get(doc, "0", "5", "0", 0, "0", "0", "5");
   if (result instanceof Map) {
     return result;

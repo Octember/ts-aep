@@ -32,7 +32,9 @@
  */
 
 import * as zlib from "../../pyrt/zlib.ts";
-import type { CosDict, CosValue } from "../cos/cos.ts";
+/** PDF objects are walked dynamically (outside the typed text-document tree). */
+type CosValue = any;
+type CosDict = Map<string, CosValue>;
 import { IndirectReference } from "../cos/index.ts";
 import { STD14_EXTENT, STD14_FIRST_CODE, STD14_STANDARD_QUOTES, STD14_WIDTHS } from "../data/std14_metrics.ts";
 import { UnsupportedAiLayersError, _find_ai_icc, _object_offsets, _parse_object_at, read_ai_layer_ocgs } from "./ai_layers.ts";
