@@ -3,11 +3,6 @@
 import { AttributeError, IndexError, KeyError, TypeError_, ValueError } from "./errors.ts";
 import { float_repr, PyFloat } from "./num.ts";
 
-/**
- * A Python value whose type is only known at runtime (duck-typed containers,
- * dunders, JSON hooks, cloned objects). The one `any` in this module: every
- * other dynamic parameter is this alias.
- */
 export type Dynamic = any;
 
 /**
