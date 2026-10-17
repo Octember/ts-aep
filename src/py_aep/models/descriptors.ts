@@ -25,7 +25,7 @@ import { get_ae_version_major } from "../ae_version.ts";
 import { validate_bool, validate_enum } from "./validators.ts";
 
 /** Callable applied to a chunk value on read (`transform`) or write (`reverse`). */
-export type ChunkTransform = (value: FieldValue) => FieldValue;
+export type ChunkTransform<R = FieldValue> = (value: FieldValue) => R;
 
 /**
  * The names of `O`'s methods that take no arguments (`pre_set` / `post_set`
@@ -38,8 +38,8 @@ export type HookName<O> = object extends O
 /** The name of an attribute of `O` (a chunk body); any name when the owner is not known. */
 export type AttrName<O> = object extends O ? string : string & keyof O;
 
-/** The chunk or item `O[A]` holds, ignoring a missing (`null`) body. */
-type ChunkBody<O, A extends string> = A extends keyof O ? NonNullable<O[A]> : FieldValue;
+/** The chunk or item `O[A]` holds, ignoring a missing (`null`) body; any object when the owner is not known. */
+type ChunkBody<O, A extends string> = A extends keyof O ? NonNullable<O[A]> : object;
 
 /** Field names of that body. A body with no known keys accepts any name. */
 type ChunkFieldKey<O, A extends string> = [keyof ChunkBody<O, A> & string] extends [never]
@@ -85,10 +85,16 @@ export type ChunkFieldOptions<T, O> = {
 
 /**
  * `ChunkField` options. `transform` reads the chunk field's real type. It is
- * required when that type is not already what the descriptor returns (`T`).
+ * required when that type is not already what the descriptor returns (`T`),
+ * and optional when the owner is not known (`O` is `object`).
  */
-type ChunkFieldKw<T, O, Raw> = Omit<ChunkFieldOptions<T, O>, "transform"> &
-  ([Raw] extends [T] ? { transform?: ((value: Raw) => T) | null } : { transform: (value: Raw) => T });
+type ChunkFieldKw<T, O, Raw> = object extends O
+  ? ChunkFieldOptions<T, O>
+  : Omit<ChunkFieldOptions<T, O>, "transform"> &
+      ([Raw] extends [T] ? { transform?: ((value: Raw) => T) | null } : { transform: (value: Raw) => T });
+
+/** `ChunkField.enum` options: `transform` reads the chunk field's real type and defaults to the enum's `from_binary`. */
+type ChunkFieldEnumKw<T, O, Raw> = Omit<ChunkFieldOptions<T, O>, "transform"> & { transform?: ((value: Raw) => T) | null };
 
 export const _SENTINEL: unique symbol = Symbol("_SENTINEL");
 
@@ -148,7 +154,7 @@ export function is_enum(x: Dynamic): x is EnumHelpers<unknown> {
  * Detects a `from_binary` classmethod (via `__self__`) or a direct
  * enum class reference.
  */
-export function _enum_class(transform: ChunkTransform | null | undefined): EnumHelpers<unknown> | null {
+export function _enum_class<R>(transform: ChunkTransform<R> | null | undefined): EnumHelpers<unknown> | null {
   if (transform == null) return null;
   let enum_cls = getattr(transform, "__self__", null);
   if (enum_cls == null && is_enum(transform)) enum_cls = transform;
@@ -432,7 +438,7 @@ export class ChunkField<
     enum_cls: E,
     chunk_attr: A & NoInfer<AttrName<O>>,
     field: F,
-    kw: ChunkFieldOptions<EnumValue<E> | Raw, O> & { allow_out_of_enum_values: true },
+    kw: ChunkFieldEnumKw<EnumValue<E> | Raw, O, RawField<O, A, F>> & { allow_out_of_enum_values: true },
   ): ChunkField<EnumValue<E> | Raw, O>;
   static enum<
     E extends EnumHelpers<unknown>,
@@ -443,7 +449,7 @@ export class ChunkField<
     enum_cls: E,
     chunk_attr: A & NoInfer<AttrName<O>>,
     field: string & F,
-    kw?: ChunkFieldOptions<EnumValue<E>, O> & { allow_out_of_enum_values?: false },
+    kw?: ChunkFieldEnumKw<EnumValue<E>, O, RawField<O, A, F>> & { allow_out_of_enum_values?: false },
   ): ChunkField<EnumValue<E>, O>;
   static enum(
     enum_cls: EnumHelpers<unknown>,
