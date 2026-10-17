@@ -42,6 +42,7 @@ import {
   deferred,
   type ClassAttributes,
 } from "../../../pyrt/index.ts";
+import type { MatchNameTypes } from "../properties/match_name_types.ts";
 
 const _synthesis_core = deferred<typeof import("../../synthesis/core.ts")>("py_aep/synthesis/core");
 const _av_layer = deferred<typeof import("./av_layer.ts")>("py_aep/models/layers/av_layer");
@@ -737,7 +738,7 @@ export class Layer extends PropertyGroup {
    * Scale, Rotation, etc.) are accessible via
    * {@link PropertyGroup.properties | properties}.
    */
-  get transform(): PropertyGroup {
+  get transform(): MatchNameTypes["ADBE Transform Group"] {
     const group = this.__getitem__("ADBE Transform Group");
     py_assert(group instanceof PropertyGroup);
     return group;
@@ -787,7 +788,7 @@ export class Layer extends PropertyGroup {
    * {@link effects} and {@link masks}, this group is never synthesized for
    * other layer kinds because AE does not expose it on them.
    */
-  get text(): PropertyGroup | null {
+  get text(): MatchNameTypes["ADBE Text Properties"] | null {
     return this._optional_group("ADBE Text Properties");
   }
 
@@ -800,7 +801,7 @@ export class Layer extends PropertyGroup {
    * no such group at all, not that the `.aep` merely omitted an empty
    * one (AE writes the Effect / Mask Parade only once it has content).
    */
-  _optional_group(match_name: string): PropertyGroup | null {
+  _optional_group<K extends keyof MatchNameTypes>(match_name: K): (MatchNameTypes[K] & PropertyGroup) | null {
     const group = this._child_or_null(match_name);
     return group instanceof PropertyGroup ? group : null;
   }

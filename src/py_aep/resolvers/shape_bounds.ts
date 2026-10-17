@@ -47,7 +47,6 @@ import type { PropertyGroup } from "../models/properties/property_group.ts";
 
 declare module "../models/properties/match_name_types.ts" {
   interface MatchNameTypes {
-    "ADBE Vector Transform Group": PropertyGroup;
     "ADBE Vector Anchor": Property<number[]>;
     "ADBE Vector Position": Property<number[]>;
     "ADBE Vector Scale": Property<number[]>;
@@ -74,8 +73,6 @@ declare module "../models/properties/match_name_types.ts" {
     "ADBE Vector Shape - Rect": PropertyGroup;
     "ADBE Vector Shape - Ellipse": PropertyGroup;
     "ADBE Vector Shape - Star": PropertyGroup;
-    "ADBE Vector Graphic - Fill": PropertyGroup;
-    "ADBE Vector Graphic - Stroke": PropertyGroup;
     "ADBE Vector Graphic - G-Fill": PropertyGroup;
     "ADBE Vector Graphic - G-Stroke": PropertyGroup;
     "ADBE Vector Fill Color": Property<number[]>;
