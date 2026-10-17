@@ -7,11 +7,11 @@ import { build_om_container, build_rout_block, clone_chunk_tree } from "../../bi
 import { RenderSettingsItem, type RoutItem } from "../../binary/render_chunks.ts";
 import { Utf8Chunk } from "../../binary/scalar_chunks.ts";
 import { find_by_type, index_by_identity, split_on_type } from "../../binary/utils.ts";
-import { ChunkField, type Dynamic } from "../descriptors.ts";
+import { ChunkField } from "../descriptors.ts";
 import type { CompItem } from "../items/composition.ts";
 import type { Project } from "../project.ts";
 import { _validate_number, validate_bool, validate_positive_int, validate_positive_number, validate_sequence, validate_string } from "../validators.ts";
-import { SettingsView, type SettingsSpec, settings_to_number, settings_to_string } from "./settings.ts";
+import { SettingsView, type SettingsSpec, type SettingValue, type SettingValues, settings_to_number, settings_to_string } from "./settings.ts";
 import type { RenderQueue } from "./render_queue.ts";
 import {
   deepcopy,
@@ -57,13 +57,37 @@ export function _next_item_id(rq: RenderQueue): number {
  * The render settings view: AE marks the item's render settings as
  * written by a script on every `setSettings` (AE 2026).
  */
-export class _RenderSettingsView extends SettingsView {
+export class _RenderSettingsView extends SettingsView<RenderSettingValues> {
   declare _owner: RenderQueueItem;
-  __setitem__(key: string, value: Dynamic): void {
+  __setitem__(key: string, value: unknown): void {
     super.__setitem__(key, value);
     this._owner._ldat.settings_written = 1;
   }
 }
+
+/** The value each render setting reads as: its {@link RenderQueueItem} attribute's type. */
+export type RenderSettingValues = SettingValues & {
+  "3:2 Pulldown": RenderQueueItem["_pulldown"];
+  "Color Depth": RenderQueueItem["_color_depth"];
+  "Disk Cache": RenderQueueItem["_disk_cache"];
+  "Effects": RenderQueueItem["_effects"];
+  "Field Render": RenderQueueItem["_field_render"];
+  "Frame Blending": RenderQueueItem["_frame_blending"];
+  "Frame Rate": RenderQueueItem["_frame_rate_setting"];
+  "Guide Layers": RenderQueueItem["_guide_layers"];
+  "Motion Blur": RenderQueueItem["_motion_blur"];
+  "Proxy Use": RenderQueueItem["_proxy_use"];
+  "Quality": RenderQueueItem["_quality"];
+  "Resolution": RenderQueueItem["_resolution"];
+  "Skip Existing Files": RenderQueueItem["_skip_existing_files"];
+  "Solo Switches": RenderQueueItem["_solo_switches"];
+  "Time Span Duration": RenderQueueItem["time_span_duration"];
+  "Time Span End": RenderQueueItem["time_span_end"];
+  "Time Span Start": RenderQueueItem["time_span_start"];
+  "Time Span": RenderQueueItem["_time_span_source"];
+  "Use comp's frame rate": RenderQueueItem["_comp_frame_rate"];
+  "Use this frame rate": RenderQueueItem["_use_this_frame_rate"];
+};
 
 // ---------------------------------------------------------------------------
 // RENDER_SETTINGS: ExtendScript key -> (attribute, optional enum class)
@@ -511,11 +535,11 @@ export class RenderQueueItem {
    *
    * @example
    */
-  get settings(): SettingsView {
+  get settings(): SettingsView<RenderSettingValues> {
     return new _RenderSettingsView(this, RENDER_SETTINGS);
   }
 
-  set settings(value: Map<string, Dynamic> | SettingsView) {
+  set settings(value: Map<string, unknown> | SettingsView) {
     // NOTE(port): Python isinstance(value, Mapping) accepts dict and SettingsView (a MutableMapping); Map and SettingsView are their TS counterparts.
     if (!(value instanceof Map || value instanceof SettingsView)) {
       throw new ValueError("Settings must be a dictionary of key-value pairs");
@@ -727,7 +751,7 @@ export class RenderQueueItem {
    * @param format_ - The output format. `GetSettingsFormat.NUMBER` returns numeric values (enums
    *   unwrapped to ints). `GetSettingsFormat.STRING` returns all values as strings
    */
-  get_settings(format_: GetSettingsFormat = GetSettingsFormat.STRING): Map<string, Dynamic> {
+  get_settings(format_: GetSettingsFormat = GetSettingsFormat.STRING): Map<string, SettingValue> {
     if (format_ === GetSettingsFormat.STRING) {
       return settings_to_string(this.settings);
     }
@@ -747,7 +771,7 @@ export class RenderQueueItem {
    * @param key - The setting key (e.g. `"Quality"`, `"Frame Rate"`).
    * @param format_ - The output format.
    */
-  get_setting(key: string, format_: GetSettingsFormat = GetSettingsFormat.STRING): Dynamic {
+  get_setting(key: string, format_: GetSettingsFormat = GetSettingsFormat.STRING): SettingValue {
     return getitem(this.get_settings(format_), key);
   }
 
