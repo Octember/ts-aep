@@ -62,11 +62,12 @@ export function* range(a: number, b?: number, step = 1): Generator<number> {
 }
 
 /** `zip(a, b, ...)` (shortest; `strict` raises on length mismatch). */
-export function zip<T extends unknown[][]>(...arrays: T): { [K in keyof T]: T[K][number] }[] {
+export function zip<T extends unknown[][]>(...arrays: T): { [K in keyof T]: T[K][number] }[];
+export function zip(...arrays: unknown[][]): unknown[][] {
   let n = Infinity;
   for (const a of arrays) n = Math.min(n, a.length);
   if (n === Infinity) n = 0;
-  const out: any[] = [];
+  const out: unknown[][] = [];
   for (let i = 0; i < n; i++) {
     const row = [];
     for (const a of arrays) row.push(a[i]);
@@ -221,9 +222,9 @@ export function tkey(...parts: unknown[]): string {
  */
 export function getattr<O, N extends string & keyof NonNullable<O>>(obj: O, name: N): Required<NonNullable<O>>[N];
 export function getattr<O, N extends string & keyof NonNullable<O>, D>(obj: O, name: N, dflt: D): Required<NonNullable<O>>[N] | D;
-export function getattr(obj: any, name: string, ...dflt: [unknown?]): any;
-export function getattr(obj: any, name: string, ...dflt: [unknown?]): any {
-  if (obj != null && name in Object(obj)) return obj[name];
+export function getattr(obj: unknown, name: string, ...dflt: [unknown?]): any;
+export function getattr(obj: unknown, name: string, ...dflt: [unknown?]): unknown {
+  if (obj != null && name in Object(obj)) return Reflect.get(Object(obj), name, obj);
   if (dflt.length) return dflt[0];
   throw new AttributeError(`'${obj?.constructor?.name}' object has no attribute '${name}'`);
 }
@@ -360,38 +361,45 @@ export function list_mul<T>(xs: readonly T[], n: number): T[] {
   return out;
 }
 
+/** A Python Mapping: a `Map`, an object with `items()`, or one with `keys()` + `__getitem__`. */
+export type Mapping<K, V> = Map<K, V> | { items(): Iterable<[K, V]> } | KeyedMapping<K, V>;
+type KeyedMapping<K, V> = { keys(): Iterable<K>; __getitem__(key: K): V };
+
+function is_keyed_mapping<K, V>(x: KeyedMapping<K, V> | Iterable<[K, V]>): x is KeyedMapping<K, V> {
+  return typeof Reflect.get(x, "keys") === "function" && typeof Reflect.get(x, "__getitem__") === "function";
+}
+
 /**
  * `mapping.items()` over the Mapping protocol: a `Map`'s entries, an
  * object's own `items()`, or `keys()` + `__getitem__`.
  */
-export function mapping_items(m: any): [any, any][] {
+export function mapping_items<K, V>(m: Mapping<K, V>): [K, V][] {
   if (m instanceof Map) return [...m.entries()];
-  if (typeof m.items === "function") return [...m.items()];
-  if (typeof m.keys === "function" && typeof m.__getitem__ === "function") {
-    return [...m.keys()].map((k: unknown): [unknown, unknown] => [k, m.__getitem__(k)]);
+  if ("items" in m && typeof m.items === "function") return [...m.items()];
+  if ("keys" in m && typeof m.keys === "function" && typeof m.__getitem__ === "function") {
+    return [...m.keys()].map((k): [K, V] => [k, m.__getitem__(k)]);
   }
   throw new TypeError_(`'${type_name(m)}' object is not a mapping`);
 }
 
 /**
  * `dict(arg)`: a new `Map` from a mapping (`Map`, an object with `keys()` /
- * `items()`) or an iterable of key/value pairs, in iteration order.
+ * `__getitem__`) or an iterable of key/value pairs, in iteration order.
  */
-export function dict<K = any, V = any>(arg?: any): Map<K, V> {
+export function dict<K, V>(arg?: KeyedMapping<K, V> | Map<K, V> | Iterable<[K, V]> | null): Map<K, V> {
   if (arg == null) return new Map();
   if (arg instanceof Map) return new Map(arg);
   // CPython: anything with `keys()` is a mapping, read through `keys()` + `__getitem__`.
-  if (typeof arg.keys === "function" && typeof arg.__getitem__ === "function") {
-    return new Map([...arg.keys()].map((k: any): [any, any] => [k, arg.__getitem__(k)]));
+  if (is_keyed_mapping(arg)) {
+    return new Map([...arg.keys()].map((k): [K, V] => [k, arg.__getitem__(k)]));
   }
   const out = new Map<K, V>();
   let i = 0;
-  for (const pair of arg as Iterable<any>) {
-    const kv = [...pair];
-    if (kv.length !== 2) {
-      throw new ValueError(`dictionary update sequence element #${i} has length ${kv.length}; 2 is required`);
+  for (const pair of arg) {
+    if (pair.length !== 2) {
+      throw new ValueError(`dictionary update sequence element #${i} has length ${pair.length}; 2 is required`);
     }
-    out.set(kv[0], kv[1]);
+    out.set(pair[0], pair[1]);
     i++;
   }
   return out;
@@ -516,8 +524,9 @@ export function copy<T>(x: T): T {
 
 /** `functools.lru_cache(maxsize=None)` for functions of primitive / object-identity arguments. */
 export function lru_cache<A extends unknown[], R>(fn: (...args: A) => R): ((...args: A) => R) & { cache_clear(): void } {
-  const roots = new Map<unknown, unknown>();
-  const RESULT = Symbol("result");
+  /** One argument position of the cache trie; `result` is set once a call ends here. */
+  type Node = { next: Map<unknown, Node>; result?: { value: R } };
+  const root: Node = { next: new Map() };
   const single = new Map<A[0], R>();
   const wrapped = (...args: A): R => {
     if (args.length === 1) {
@@ -525,18 +534,19 @@ export function lru_cache<A extends unknown[], R>(fn: (...args: A) => R): ((...a
       if (r === undefined && !single.has(args[0])) single.set(args[0], (r = fn(...args)));
       return r!;
     }
-    let node: Map<any, any> = roots;
+    let node = root;
     for (const a of args) {
-      let next = node.get(a);
-      if (!next) node.set(a, (next = new Map()));
+      let next = node.next.get(a);
+      if (!next) node.next.set(a, (next = { next: new Map() }));
       node = next;
     }
-    if (!node.has(RESULT)) node.set(RESULT, fn(...args));
-    return node.get(RESULT);
+    node.result ??= { value: fn(...args) };
+    return node.result.value;
   };
   return Object.assign(wrapped, {
     cache_clear: () => {
-      roots.clear();
+      root.next.clear();
+      root.result = undefined;
       single.clear();
     },
   });
