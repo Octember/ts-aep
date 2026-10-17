@@ -1,9 +1,8 @@
 /** Parsers for format-specific render options (Ropt chunk). */
 
 import type { Chunk } from "../binary/chunk.ts";
-import type { OpenExrRoptChunk, PngRoptChunk, RoptChunk } from "../binary/render_chunks.ts";
-import type { Utf8Chunk } from "../binary/scalar_chunks.ts";
-import { ChunkNotFoundError, find_by_type } from "../binary/utils.ts";
+import type { OpenExrRoptChunk, PngRoptChunk } from "../binary/render_chunks.ts";
+import { find_by_type_or_null } from "../binary/utils.ts";
 import { CineonFormatOptions, JpegFormatOptions, OpenExrFormatOptions, PngFormatOptions, TargaFormatOptions, TiffFormatOptions, XmlFormatOptions } from "../models/renderqueue/format_options/index.ts";
 
 export type FormatOptions =
@@ -26,13 +25,8 @@ export const _XML_FORMAT_CODES: ReadonlySet<string> = new Set([".AVI", "H264", "
  *   is not yet supported.
  */
 export function parse_format_options(chunks: Chunk[]): FormatOptions | null {
-  let ropt_chunk: RoptChunk;
-  try {
-    ropt_chunk = find_by_type(chunks, "Ropt");
-  } catch (e) {
-    if (!(e instanceof ChunkNotFoundError)) throw e;
-    return null;
-  }
+  const ropt_chunk = find_by_type_or_null(chunks, "Ropt");
+  if (ropt_chunk === null) return null;
 
   const format_code = ropt_chunk.format_code;
 
@@ -52,13 +46,7 @@ export function parse_format_options(chunks: Chunk[]): FormatOptions | null {
     return new OpenExrFormatOptions({ _body: ropt_chunk as OpenExrRoptChunk });
   }
   if (format_code === "png!") {
-    let hdr10_utf8: Utf8Chunk | null;
-    try {
-      hdr10_utf8 = find_by_type(chunks, "Utf8");
-    } catch (e) {
-      if (!(e instanceof ChunkNotFoundError)) throw e;
-      hdr10_utf8 = null;
-    }
+    const hdr10_utf8 = find_by_type_or_null(chunks, "Utf8");
     return new PngFormatOptions({
       _body: ropt_chunk as PngRoptChunk,
       _hdr10_utf8: hdr10_utf8,

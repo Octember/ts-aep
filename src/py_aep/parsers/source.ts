@@ -1,5 +1,5 @@
 import type { U1Chunk } from "../binary/scalar_chunks.ts";
-import { ChunkNotFoundError, find_by_list_type, find_by_type } from "../binary/utils.ts";
+import { ChunkNotFoundError, find_by_list_type, find_by_type, find_by_type_or_null } from "../binary/utils.ts";
 import { FileSource } from "../models/sources/file.ts";
 import { PlaceholderSource } from "../models/sources/placeholder.ts";
 import { SolidSource } from "../models/sources/solid.ts";
@@ -22,12 +22,7 @@ export function parse_source(
   let linl: U1Chunk | null;
   try {
     clrs = find_by_list_type(pin_child_chunks, "CLRS");
-    try {
-      linl = find_by_type(clrs.chunks, "linl");
-    } catch (e) {
-      if (!(e instanceof ChunkNotFoundError)) throw e;
-      linl = null;
-    }
+    linl = find_by_type_or_null(clrs.chunks, "linl");
   } catch (e) {
     if (!(e instanceof ChunkNotFoundError)) throw e;
     clrs = null;

@@ -1,9 +1,8 @@
 /** Orientation, shape, text document, and gradient property parsers. */
 
 import type { ListChunk } from "../binary/chunk.ts";
-import type { OmtnChunk } from "../binary/misc_chunks.ts";
 import type { TdmnChunk } from "../binary/property_chunks.ts";
-import { ChunkNotFoundError, filter_by_list_type, filter_by_type, find_by_list_type, find_by_type } from "../binary/utils.ts";
+import { ChunkNotFoundError, filter_by_list_type, filter_by_type, find_by_list_type, find_by_list_type_or_null, find_by_type, find_by_type_or_null } from "../binary/utils.ts";
 import { CosParser } from "../cos/index.ts";
 import { decode_btdk } from "../cos/schema.ts";
 // Python's builtin `SyntaxError` as raised by `CosParser`.
@@ -139,13 +138,7 @@ export function _parse_shape_shap(shap_chunk: ListChunk, layer: Layer | null, ma
     feather_points = [];
   }
 
-  let omtn: OmtnChunk | null;
-  try {
-    omtn = find_by_type(shap_chunk.chunks, "omtn");
-  } catch (e) {
-    if (!(e instanceof ChunkNotFoundError)) throw e;
-    omtn = null;
-  }
+  const omtn = find_by_type_or_null(shap_chunk.chunks, "omtn");
 
   return Shape._from_binary({
     _shph: shph_chunk,
@@ -325,13 +318,8 @@ export function parse_gradient(
   const prop = parse_property(tdbs_chunk, match_name, composition, property_depth, tdmn);
 
   prop._wrapper = gcst_chunk;
-  let gcky_chunk: ListChunk;
-  try {
-    gcky_chunk = find_by_list_type(gcst_chunk.chunks, "GCky");
-  } catch (e) {
-    if (!(e instanceof ChunkNotFoundError)) throw e;
-    return prop;
-  }
+  const gcky_chunk = find_by_list_type_or_null(gcst_chunk.chunks, "GCky");
+  if (gcky_chunk === null) return prop;
 
   prop._kf_value_container = gcky_chunk;
   const utf8_chunks = filter_by_type(gcky_chunk.chunks, "Utf8");

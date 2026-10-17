@@ -1,7 +1,6 @@
 import { getitem, KeyError, warn } from "../../pyrt/index.ts";
 import type { Chunk, ListChunk } from "../binary/chunk.ts";
-import type { CmtaChunk } from "../binary/item_chunks.ts";
-import { ChunkNotFoundError, filter_by_list_type, filter_by_type, find_by_list_type, find_by_type } from "../binary/utils.ts";
+import { filter_by_list_type, filter_by_type, find_by_list_type, find_by_type, find_by_type_or_null } from "../binary/utils.ts";
 import { LayerType } from "../enums/index.ts";
 import { _suppress_materialization } from "../models/descriptors.ts";
 import { AVLayer } from "../models/layers/av_layer.ts";
@@ -71,13 +70,7 @@ export const parse_layer = _suppress_materialization().decorate(function parse_l
 ): Layer {
   const child_chunks = layer_chunk.chunks;
 
-  let cmta: CmtaChunk | null;
-  try {
-    cmta = find_by_type(child_chunks, "cmta");
-  } catch (e) {
-    if (!(e instanceof ChunkNotFoundError)) throw e;
-    cmta = null;
-  }
+  const cmta = find_by_type_or_null(child_chunks, "cmta");
 
   const ldta = find_by_type(child_chunks, "ldta");
   const name_utf8 = find_by_type(child_chunks, "Utf8");

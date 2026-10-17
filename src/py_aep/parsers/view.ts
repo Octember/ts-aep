@@ -1,5 +1,4 @@
-import type { AsciiChunk } from "../binary/scalar_chunks.ts";
-import { ChunkNotFoundError, filter_by_type, find_by_type, group_chunks } from "../binary/utils.ts";
+import { filter_by_type, find_by_type, find_by_type_or_null, group_chunks } from "../binary/utils.ts";
 import { AVItem } from "../models/items/av_item.ts";
 import { View } from "../models/viewer/view.ts";
 import { ViewOptions } from "../models/viewer/view_options.ts";
@@ -79,13 +78,8 @@ export function _parse_views(block: Chunk[], item: Item | null, viewer: Viewer):
  *   does not contain a recognised viewer type.
  */
 export function _build_viewer(block: Chunk[]): Viewer | null {
-  let fitt: AsciiChunk;
-  try {
-    fitt = find_by_type(block, "fitt");
-  } catch (e) {
-    if (!(e instanceof ChunkNotFoundError)) throw e;
-    return null;
-  }
+  const fitt = find_by_type_or_null(block, "fitt");
+  if (fitt === null) return null;
 
   const foac = find_by_type(block, "foac");
   const fiac = find_by_type(block, "fiac");

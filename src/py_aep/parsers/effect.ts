@@ -1,8 +1,8 @@
 /** Effect and parameter definition parsers. */
 
 import type { Chunk, ListChunk } from "../binary/chunk.ts";
-import type { TdmnChunk, TdsbChunk } from "../binary/property_chunks.ts";
-import { ChunkNotFoundError, filter_by_list_type, filter_by_type, find_by_list_type, find_by_type } from "../binary/utils.ts";
+import type { TdmnChunk } from "../binary/property_chunks.ts";
+import { ChunkNotFoundError, filter_by_list_type, filter_by_type, find_by_list_type, find_by_list_type_or_null, find_by_type, find_by_type_or_null } from "../binary/utils.ts";
 import { MATCH_NAME_TO_AUTO_NAME } from "../data/match_names.ts";
 import { EFFECT_PARAM_SPATIAL_FLAGS } from "../data/spatial_flags.ts";
 import { PropertyControlType, PropertyType, PropertyValueType } from "../enums/index.ts";
@@ -477,13 +477,7 @@ export const parse_effect = _suppress_materialization().decorate(function parse_
   const tdsn = find_by_type(tdgp_chunk.chunks, "tdsn");
   const effect_name_utf8 = tdsn.utf8;
 
-  let effect_tdsb: TdsbChunk | null;
-  try {
-    effect_tdsb = find_by_type(tdgp_chunk.chunks, "tdsb");
-  } catch (e) {
-    if (!(e instanceof ChunkNotFoundError)) throw e;
-    effect_tdsb = null;
-  }
+  const effect_tdsb = find_by_type_or_null(tdgp_chunk.chunks, "tdsb");
 
   const effect_group = new PropertyGroup({
     _tdmn: tdmn,
@@ -716,13 +710,8 @@ export function _parse_effect_parameter_def(parameter_chunks: Chunk[]): ParamDef
 export function parse_effect_definitions(
   root_chunks: Chunk[],
 ): Map<string, Map<string, ParamDef>> {
-  let efdg_chunk: ListChunk;
-  try {
-    efdg_chunk = find_by_list_type(root_chunks, "EfdG");
-  } catch (e) {
-    if (!(e instanceof ChunkNotFoundError)) throw e;
-    return new Map();
-  }
+  const efdg_chunk = find_by_list_type_or_null(root_chunks, "EfdG");
+  if (efdg_chunk === null) return new Map();
 
   const effect_defs = new Map<string, Map<string, ParamDef>>();
   const efdf_chunks = filter_by_list_type(efdg_chunk.chunks, "EfDf");
@@ -754,13 +743,8 @@ export function parse_effect_definitions(
 export function effect_definition_entries(
   root_chunks: Chunk[],
 ): [string, string, ListChunk][] {
-  let efdg_chunk: ListChunk;
-  try {
-    efdg_chunk = find_by_list_type(root_chunks, "EfdG");
-  } catch (e) {
-    if (!(e instanceof ChunkNotFoundError)) throw e;
-    return [];
-  }
+  const efdg_chunk = find_by_list_type_or_null(root_chunks, "EfdG");
+  if (efdg_chunk === null) return [];
 
   const entries: [string, string, ListChunk][] = [];
   for (const efdf_chunk of filter_by_list_type(efdg_chunk.chunks, "EfDf")) {

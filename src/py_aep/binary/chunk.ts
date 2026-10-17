@@ -19,7 +19,6 @@ import {
   bytes_,
   decode,
   define,
-  dict_get,
   encode,
   field,
   fields,
@@ -806,6 +805,14 @@ function _type_name(code: number): string {
   let name = _TYPE_NAMES.get(code);
   if (name === undefined) {
     name = decode(struct.pack(">I", code), "ASCII");
+    // Reuse the registered literal: Map lookups and `===` against literals
+    // compare atomized strings by identity, decoded ones by content.
+    for (const registered of CHUNK_TYPES.keys()) {
+      if (registered === name) {
+        name = registered;
+        break;
+      }
+    }
     _TYPE_NAMES.set(code, name);
   }
   return name;
@@ -855,7 +862,7 @@ export function read_chunks(
   let pos = end - size;
   while (pos < end) {
     const [chunk_type, len_body] = read_header(fp);
-    const cls = dict_get(CHUNK_TYPES, chunk_type, Chunk);
+    const cls = CHUNK_TYPES.get(chunk_type) ?? Chunk;
 
     const read_kw = { chunk_type, ctx, parent_result: result, defer_list_types };
     const resolver = _CONTEXT_RESOLVERS.get(chunk_type);
