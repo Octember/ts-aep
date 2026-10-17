@@ -43,6 +43,7 @@ import {
   deferred,
   type ClassAttributes,
 } from "../../../pyrt/index.ts";
+import type { EffectParamDefs } from "../../parsers/effect.ts";
 
 const _synthesis_core = deferred<typeof import("../../synthesis/core.ts")>("py_aep/synthesis/core");
 const _av_layer = deferred<typeof import("./av_layer.ts")>("py_aep/models/layers/av_layer");
@@ -381,7 +382,7 @@ export class Layer extends PropertyGroup {
     name: string;
     containing_comp: CompItem;
     root_tdgp_extra?: Chunk[] | null;
-    effect_param_defs?: Map<string, Map<string, Map<string, any>>> | null;
+    effect_param_defs?: EffectParamDefs | null;
   }): Layer;
   static _new(kw: any): any {
     const { ldta, name, containing_comp } = kw;

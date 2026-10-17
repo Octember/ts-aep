@@ -9,6 +9,7 @@ import { _UNDEFINED_ID, Layer, _no_source_id } from "./layer.ts";
 import { AttributeError, ValueError, descriptor, py_cmp } from "../../../pyrt/index.ts";
 import type { CompItem } from "../items/composition.ts";
 import type { PropertyGroup } from "../properties/property_group.ts";
+import type { EffectParamDefs } from "../../parsers/effect.ts";
 
 export function _require_environment_lights(comp: CompItem, what: string): void {
   /** Environment lights and their light source arrived in AE 24.3. */
@@ -87,7 +88,7 @@ export class LightLayer extends Layer {
     duration: number;
     containing_comp: CompItem;
     light_type?: number;
-    effect_param_defs?: Map<string, Map<string, Map<string, unknown>>> | null;
+    effect_param_defs?: EffectParamDefs | null;
   }): LightLayer;
   static _new(...args: any[]): any;
   static _new(kw: {
@@ -96,7 +97,7 @@ export class LightLayer extends Layer {
     duration: number;
     containing_comp: CompItem;
     light_type?: number;
-    effect_param_defs?: Map<string, Map<string, Map<string, unknown>>> | null;
+    effect_param_defs?: EffectParamDefs | null;
   }): LightLayer {
     // NOTE(port): Python `# type: ignore[override]` is type-only; overloads above mirror Layer._new's signature set.
     const {

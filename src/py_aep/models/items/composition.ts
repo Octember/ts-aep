@@ -65,6 +65,7 @@ import type { MarkerValue } from "../properties/marker.ts";
 const _item = deferred<typeof import("../../parsers/item.ts")>("py_aep/parsers/item");
 import { parse_layer } from "../../parsers/layer.ts";
 import { renderer_options_for } from "./renderer_options/index.ts";
+import type { EffectParamDefs } from "../../parsers/effect.ts";
 const _composition = deferred<typeof import("../../parsers/composition.ts")>("py_aep/parsers/composition");
 
 // The binary prin chunk stores internal plugin match_names (e.g. ADBE Escher)
@@ -1043,7 +1044,7 @@ export class CompItem extends AVItem {
   declare prin_list: ListChunk;
   declare _prin: PrinChunk;
   declare _prda: PrdaChunk;
-  declare _deferred_layers: [ListChunk[], Map<string, Map<string, Map<string, any>>>] | null;
+  declare _deferred_layers: [ListChunk[], EffectParamDefs] | null;
   declare _layers_loaded: boolean;
   declare _deferred_child_chunks: Chunk[] | null;
   declare _marker_property: Property<MarkerValue | null> | null;
@@ -1061,7 +1062,7 @@ export class CompItem extends AVItem {
     _name_utf8: Utf8Chunk;
     project: Project;
     parent_folder: FolderItem;
-    effect_param_defs: Map<string, Map<string, Map<string, any>>>;
+    effect_param_defs: EffectParamDefs;
     proxy_source: FileSource | SolidSource | PlaceholderSource | null;
   }) {
     // Skip AVItem's extra params - they're all descriptor-backed on
@@ -1293,7 +1294,7 @@ export class CompItem extends AVItem {
     const [layer_chunks, deferred_effect_param_defs] = deferred;
     this._deferred_layers = null;
 
-    let effect_param_defs: Map<string, Map<string, Map<string, any>>>;
+    let effect_param_defs: EffectParamDefs;
     if (deferred_effect_param_defs?.size > 0) {
       effect_param_defs = deferred_effect_param_defs;
     } else if (this._project != null) {

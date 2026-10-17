@@ -6,6 +6,7 @@ import { label_index } from "../preferences.ts";
 import { AVLayer } from "./av_layer.ts";
 import type { CompItem } from "../items/composition.ts";
 import type { PropertyGroup } from "../properties/property_group.ts";
+import type { EffectParamDefs } from "../../parsers/effect.ts";
 
 /**
  * The `ShapeLayer` object represents a shape layer within a composition.
@@ -40,7 +41,7 @@ export class ShapeLayer extends AVLayer {
     layer_id: number;
     duration: number;
     containing_comp: CompItem;
-    effect_param_defs?: Map<string, Map<string, Map<string, any>>> | null;
+    effect_param_defs?: EffectParamDefs | null;
   }): ShapeLayer;
   static _new(kw: Record<string, unknown>): ShapeLayer;
   static _new(kw: any): any {

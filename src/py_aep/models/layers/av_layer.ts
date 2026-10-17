@@ -35,6 +35,7 @@ import { Layer } from "./layer.ts";
 import { AVItem } from "../items/av_item.ts";
 import { FootageItem } from "../items/footage.ts";
 import { SolidSource } from "../sources/solid.ts";
+import type { EffectParamDefs } from "../../parsers/effect.ts";
 const _composition = deferred<typeof import("../items/composition.ts")>("py_aep/models/items/composition");
 const _core = deferred<typeof import("../../synthesis/core.ts")>("py_aep/synthesis/core");
 
@@ -252,7 +253,7 @@ export class AVLayer extends Layer {
     three_d_layer?: boolean;
     label?: number;
     root_tdgp_extra?: Chunk[] | null;
-    effect_param_defs?: Map<string, Map<string, Map<string, any>>> | null;
+    effect_param_defs?: EffectParamDefs | null;
   }): AVLayer;
   static _new(kw: any): AVLayer;
   static _new(kw: any): any {

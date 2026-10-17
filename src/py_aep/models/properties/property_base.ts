@@ -26,6 +26,7 @@ import type { Layer } from "../layers/layer.ts";
 import type { MaskPropertyGroup } from "./mask_property_group.ts";
 import type { Property } from "./property.ts";
 import type { PropertyGroup } from "./property_group.ts";
+import type { EffectParamDefs } from "../../parsers/effect.ts";
 
 const _property_group = deferred<typeof import("./property_group.ts")>("py_aep/models/properties/property_group");
 const _property = deferred<typeof import("../../parsers/property.ts")>("py_aep/parsers/property");
@@ -648,7 +649,7 @@ export class PropertyBase {
     const comp = layer.containing_comp;
 
     // Get effect param defs from the project
-    let effect_param_defs: Map<string, Map<string, Map<string, unknown>>> = new Map();
+    let effect_param_defs: EffectParamDefs = new Map();
     const project = comp._project;
     if (project != null) {
       effect_param_defs = project._effect_param_defs;

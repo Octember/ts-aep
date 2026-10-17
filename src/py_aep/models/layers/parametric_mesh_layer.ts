@@ -17,6 +17,7 @@ import { AVLayer } from "./av_layer.ts";
 import type { CompItem } from "../items/composition.ts";
 import type { Property } from "../properties/property.ts";
 import type { PropertyGroup } from "../properties/property_group.ts";
+import type { EffectParamDefs } from "../../parsers/effect.ts";
 
 /**
  * `type(None)` is NoneType, which is never `null` itself. Keeps the
@@ -76,7 +77,7 @@ export class ParametricMeshLayer extends AVLayer {
     duration: number;
     containing_comp: CompItem;
     mesh_type: ParametricMeshType;
-    effect_param_defs?: Map<string, Map<string, Map<string, unknown>>> | null;
+    effect_param_defs?: EffectParamDefs | null;
   }): ParametricMeshLayer;
   static _new(kw: any): ParametricMeshLayer;
   static _new(kw: any): any {

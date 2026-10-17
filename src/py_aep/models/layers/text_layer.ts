@@ -8,6 +8,7 @@ import { label_index } from "../preferences.ts";
 import { AVLayer } from "./av_layer.ts";
 import type { CompItem } from "../items/composition.ts";
 import type { PropertyGroup } from "../properties/property_group.ts";
+import type { EffectParamDefs } from "../../parsers/effect.ts";
 
 /**
  * The `TextLayer` object represents a text layer within a composition.
@@ -36,7 +37,7 @@ type TextLayerNewKw = {
   btds: ListChunk;
   btgu: ListChunk;
   tdmn: TdmnChunk;
-  effect_param_defs?: Map<string, Map<string, Map<string, unknown>>> | null;
+  effect_param_defs?: EffectParamDefs | null;
 };
 
 export class TextLayer extends AVLayer {

@@ -112,6 +112,7 @@ import { parse_output_templates, parse_render_templates } from "../parsers/templ
 import { PlaceholderSource } from "./sources/placeholder.ts";
 import { UnsupportedSVGError, read_svg } from "../svg/index.ts";
 import { build_shape_layer_contents } from "../svg/build.ts";
+import type { EffectParamDefs } from "../parsers/effect.ts";
 
 /** `itertools.count(start)` (the clip-run counter). */
 // NOTE(port): matches `itertools.count(start)`: an unbounded counter yielding start, start+1, ...
@@ -369,7 +370,7 @@ export class Project {
   declare _items: Map<number, Item>;
   declare _render_queue: RenderQueue | null;
   declare _active_item: Item | null;
-  declare _effect_param_defs: Map<string, Map<string, Map<string, any>>>;
+  declare _effect_param_defs: EffectParamDefs;
   declare _effect_definitions_cache: [string, string, ListChunk][] | null;
   declare _used_in_linked: boolean;
   declare _id_counter_reconciled: boolean;
