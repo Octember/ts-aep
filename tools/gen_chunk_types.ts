@@ -2,7 +2,11 @@
 // runtime chunk registry: `ChunkTypes` maps each chunk_type passed to
 // `register("xxxx", ...)(Cls)` in src/py_aep/binary to `Cls`, so the lookup
 // helpers in binary/utils.ts return the registered class for a literal type.
-// The module holds only `import type` and type declarations: it emits nothing.
+// Each class with struct fields is augmented with those fields' types, derived
+// from the format (`u4_field` -> number, `u8_field` -> bigint, bytes -> Uint8Array,
+// encoded bytes -> string, `bool_field` / `coerce: py_bool` -> boolean, an enum
+// coerce -> that enum, `items_field` -> the item class). Optional fields include
+// null. The module holds only `import type` and type declarations: it emits nothing.
 //
 // usage: bun tools/gen_chunk_types.ts          rewrite chunk_types.ts
 //        bun tools/gen_chunk_types.ts --check  exit 1 if it is stale
@@ -62,12 +66,289 @@ if (errors.length) {
   process.exit(1);
 }
 
-const by_file = new Map<string, Set<string>>([["chunk.ts", new Set(["Chunk"])]]);
-const sorted_types = [...types].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
-for (const { cls, file } of types.values()) {
-  if (!by_file.has(file)) by_file.set(file, new Set());
-  by_file.get(file)!.add(cls);
+// --- struct field types -------------------------------------------------------
+
+const HELPER_FMT: Record<string, string> = {
+  u1_field: "B",
+  u2_field: "H",
+  u4_field: "I",
+  u8_field: "Q",
+  s2_field: "h",
+  s4_field: "i",
+  f4_field: "f",
+  f8_field: "d",
+  bool_field: "B",
+};
+
+const files = fs.readdirSync(BINARY).filter((f) => f.endsWith(".ts") && f !== "chunk_types.ts");
+const source = new Map<string, ts.SourceFile>();
+for (const file of files) {
+  source.set(file, ts.createSourceFile(file, fs.readFileSync(path.join(BINARY, file), "utf8"), ts.ScriptTarget.Latest, true));
 }
+
+const prop_name = (name: ts.PropertyName): string | null => {
+  if (ts.isIdentifier(name) || ts.isStringLiteral(name) || ts.isNumericLiteral(name)) return name.text;
+  return null;
+};
+
+type ClassInfo = {
+  name: string;
+  file: string;
+  base: string | null;
+  /** get/set/method names: a struct field must not redeclare these. */
+  accessors: Set<string>;
+  /** Return type of a getter that is not itself a struct field (`color` over `color_r/g/b`). */
+  getters: Map<string, string>;
+  /** `declare` type text of own properties, when present. */
+  declared: Map<string, string>;
+};
+const classes = new Map<string, ClassInfo>();
+for (const [file, sf] of source) {
+  for (const st of sf.statements) {
+    if (!ts.isClassDeclaration(st) || !st.name) continue;
+    const accessors = new Set<string>();
+    const getters = new Map<string, string>();
+    const declared = new Map<string, string>();
+    for (const m of st.members) {
+      const name = m.name && prop_name(m.name);
+      if (!name) continue;
+      if (ts.isGetAccessor(m) || ts.isSetAccessor(m) || ts.isMethodDeclaration(m)) accessors.add(name);
+      if (ts.isGetAccessor(m) && m.type) getters.set(name, m.type.getText(sf).replace(/\s+/g, " ").trim());
+      if (ts.isPropertyDeclaration(m) && m.type) declared.set(name, m.type.getText(sf).replace(/\s+/g, " ").trim());
+    }
+    const base =
+      st.heritageClauses?.flatMap((h) => (h.token === ts.SyntaxKind.ExtendsKeyword ? h.types : [])).map((t) => t.expression.getText(sf))[0] ??
+      null;
+    classes.set(`${file}:${st.name.text}`, { name: st.name.text, file, base, accessors, getters, declared });
+  }
+}
+const find_class = (name: string, from: string): ClassInfo | undefined =>
+  classes.get(`${from}:${name}`) ?? [...classes.values()].find((c) => c.name === name);
+
+const has_accessor = (info: ClassInfo, field: string): boolean => {
+  for (let c: ClassInfo | undefined = info; c; c = c.base ? find_class(c.base, c.file) : undefined) {
+    if (c.accessors.has(field)) return true;
+  }
+  return false;
+};
+
+const obj_prop = (obj: ts.ObjectLiteralExpression, name: string): ts.Expression | undefined => {
+  for (const p of obj.properties) {
+    if (!ts.isPropertyAssignment(p) || prop_name(p.name) !== name) continue;
+    return p.initializer;
+  }
+  return undefined;
+};
+
+/** Type a struct format stands for. `encoding` decodes `s`/`p`/`c` to string; `coerce` replaces the unpacked type. */
+function type_of_fmt(fmt: string, encoding: string | null, coerce: string | null, optional: boolean): string {
+  let base: string;
+  if (coerce === "py_bool") base = "boolean";
+  else if (coerce) base = coerce;
+  else {
+    const m = /^(\d*)([a-zA-Z?])$/.exec(fmt);
+    if (!m) errors.push(`unparsed struct format ${JSON.stringify(fmt)}`);
+    const code = m ? m[2] : "";
+    if (code === "q" || code === "Q") base = "bigint";
+    else if (code === "?") base = "boolean";
+    else if (code === "s" || code === "p" || code === "c") base = encoding ? "string" : "Uint8Array";
+    else if (code && "bBhHiIlLefd".includes(code)) base = "number";
+    else {
+      errors.push(`unknown struct code ${JSON.stringify(code)} in ${JSON.stringify(fmt)}`);
+      base = "unknown";
+    }
+  }
+  return optional ? `${base} | null` : base;
+}
+
+/**
+ * The type of one `define()` field, or null when the property is not a struct
+ * field (`field({ default })`, a raw `chunk_type`, ...).
+ */
+function field_type(init: ts.Expression): { type: string; refs: string[] } | null {
+  if (!ts.isCallExpression(init) || !ts.isIdentifier(init.expression)) return null;
+  const helper = init.expression.text;
+  const opt = init.arguments.find((a): a is ts.ObjectLiteralExpression => ts.isObjectLiteralExpression(a));
+  const optional = !!opt && obj_prop(opt, "optional")?.kind === ts.SyntaxKind.TrueKeyword;
+  const enc_node = opt && obj_prop(opt, "encoding");
+  const encoding = enc_node && ts.isStringLiteral(enc_node) ? enc_node.text : enc_node ? "" : null;
+  const coerce_node = opt && obj_prop(opt, "coerce");
+  const coerce = coerce_node && ts.isIdentifier(coerce_node) ? coerce_node.text : null;
+  if (helper === "items_field") {
+    const cls = init.arguments[0];
+    if (!cls || !ts.isIdentifier(cls)) {
+      errors.push("items_field() item class is not a name");
+      return null;
+    }
+    const type = optional ? `${cls.text}[] | null` : `${cls.text}[]`;
+    return { type, refs: [cls.text] };
+  }
+  let fmt: string | null = null;
+  let enc = encoding;
+  let crc = coerce;
+  if (helper === "fmt_field") {
+    const a0 = init.arguments[0];
+    if (!a0 || !ts.isStringLiteral(a0)) {
+      errors.push("fmt_field() format is not a string literal");
+      return null;
+    }
+    fmt = a0.text;
+  } else if (helper === "bytes_field") fmt = "s";
+  else if (helper === "str_field") {
+    fmt = "s";
+    enc = enc || "utf-8";
+  } else if (helper === "ascii_field") {
+    fmt = "s";
+    enc = "ascii";
+  } else if (helper === "bool_field") {
+    fmt = "B";
+    crc = crc ?? "py_bool";
+  } else if (helper in HELPER_FMT) {
+    const mapped = HELPER_FMT[helper];
+    if (mapped == null) return null;
+    fmt = mapped;
+  }
+  else return null;
+  // An enum coerce names the enum type (`coerce: SomeEnum` -> `SomeEnum`).
+  const refs = crc && crc !== "py_bool" ? [crc] : [];
+  return { type: type_of_fmt(fmt, enc, crc, optional), refs };
+}
+
+type OwnedFields = { cls: string; file: string; fields: { name: string; type: string }[]; refs: Set<string> };
+const owned: OwnedFields[] = [];
+for (const [file, sf] of source) {
+  for (const st of sf.statements) {
+    if (!ts.isExpressionStatement(st) || !ts.isCallExpression(st.expression)) continue;
+    const call = st.expression;
+    if (!ts.isIdentifier(call.expression) || call.expression.text !== "define") continue;
+    const cls_node = call.arguments[0];
+    const spec = call.arguments[1];
+    if (!cls_node || !ts.isIdentifier(cls_node) || !spec || !ts.isObjectLiteralExpression(spec)) {
+      errors.push(`${file}: define() is not define(Class, { ... })`);
+      continue;
+    }
+    const info = find_class(cls_node.text, file);
+    if (!info) {
+      errors.push(`${file}: define() on unknown class ${cls_node.text}`);
+      continue;
+    }
+    const fields: { name: string; type: string }[] = [];
+    const refs = new Set<string>();
+    for (const p of spec.properties) {
+      if (!ts.isPropertyAssignment(p)) continue;
+      const name = prop_name(p.name);
+      if (!name) {
+        errors.push(`${file}: ${cls_node.text} has a computed field name`);
+        continue;
+      }
+      const parsed = field_type(p.initializer);
+      if (!parsed) continue;
+      if (has_accessor(info, name)) continue;
+      // A hand-written enum annotation wins over the unpacked integer (`declare status: RQItemStatus`).
+      const declared = info.declared.get(name);
+      const enum_name = declared && /^[A-Z][A-Za-z0-9_]*$/.test(declared) && parsed.type === "number" ? declared : null;
+      // An integer field the code also stores a boolean in (`_spatial_marker = false`) keeps
+      // `number | boolean`: writing `0`/`1` instead would change the value held on the object.
+      const bool_union =
+        declared === `${parsed.type} | boolean` || declared === `boolean | ${parsed.type}` ? declared : null;
+      // `q`/`Q` unpack to bigint, but the field default and every writer pass a number
+      // (`sspc.data_size = size`). Storing `0n` instead is a different value, so the field
+      // holds both.
+      const big = parsed.type === "bigint" ? "number | bigint" : null;
+      const type = enum_name ?? bool_union ?? big ?? parsed.type;
+      if (enum_name) refs.add(enum_name);
+      for (const r of parsed.refs) refs.add(r);
+      fields.push({ name, type });
+    }
+    if (fields.length) owned.push({ cls: cls_node.text, file, fields, refs });
+  }
+}
+if (errors.length) {
+  console.error(errors.join("\n"));
+  process.exit(1);
+}
+
+// `find_by_type(chunks, "Ropt")` is typed as the registered base, while `read()`
+// returns a variant. Models keep the base, so a field every variant defines the
+// same way is added there (`body.solid_name`). A field the variants type
+// differently stays on the variant only.
+const NO_VARIANT = new Set(["Chunk", "ContainerChunk", "ListChunk", "FmtItem", "AttrsBase"]);
+const variant_kids = new Map<string, ClassInfo[]>();
+for (const info of classes.values()) {
+  const parent = info.base ? find_class(info.base, info.file) : undefined;
+  if (!parent || NO_VARIANT.has(parent.name)) continue;
+  const key = `${parent.file}:${parent.name}`;
+  const list = variant_kids.get(key);
+  if (list) list.push(info);
+  else variant_kids.set(key, [info]);
+}
+const owned_by = new Map(owned.map((o) => [`${o.file}:${o.cls}`, o]));
+for (const [key, list] of variant_kids) {
+  const parent = classes.get(key);
+  if (!parent) continue;
+  const types_by_name = new Map<string, Set<string>>();
+  const add = (name: string, type: string) => {
+    if (parent.accessors.has(name)) return;
+    const declared = parent.declared.get(name);
+    if (declared != null && declared !== type) return;
+    const set = types_by_name.get(name);
+    if (set) set.add(type);
+    else types_by_name.set(name, new Set([type]));
+  };
+  for (const child of list) {
+    const child_owned = owned_by.get(`${child.file}:${child.name}`);
+    if (child_owned) for (const f of child_owned.fields) add(f.name, f.type);
+    for (const [name, type] of child.getters) add(name, type);
+  }
+  const extra: { name: string; type: string }[] = [];
+  for (const [name, set] of types_by_name) {
+    if (set.size !== 1) continue;
+    const type = [...set][0];
+    if (type == null) continue;
+    if (parent.declared.get(name) === type) continue;
+    if (owned_by.get(key)?.fields.some((f) => f.name === name)) continue;
+    extra.push({ name, type });
+  }
+  if (!extra.length) continue;
+  const entry = owned_by.get(key);
+  if (entry) entry.fields.push(...extra);
+  else {
+    const created: OwnedFields = { cls: parent.name, file: parent.file, fields: extra, refs: new Set() };
+    owned.push(created);
+    owned_by.set(key, created);
+  }
+}
+const by_file = new Map<string, Set<string>>([["chunk.ts", new Set(["Chunk"])]]);
+const add_import = (file: string, name: string) => {
+  const set = by_file.get(file);
+  if (set) set.add(name);
+  else by_file.set(file, new Set([name]));
+};
+const sorted_types = [...types].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
+for (const { cls, file } of types.values()) add_import(file, cls);
+for (const { file, refs } of owned) for (const r of refs) add_import(file, r);
+const ident = (name: string) => (/^[A-Za-z_$][\w$]*$/.test(name) ? name : JSON.stringify(name));
+const by_module = new Map<string, OwnedFields[]>();
+const module_group = (file: string): OwnedFields[] => {
+  const group = by_module.get(file);
+  if (group) return group;
+  const created: OwnedFields[] = [];
+  by_module.set(file, created);
+  return created;
+};
+for (const o of owned) module_group(o.file).push(o);
+const augmentations = [...by_module]
+  .sort(([a], [b]) => a.localeCompare(b))
+  .map(([file, groups]) => {
+    const body = groups
+      .sort((a, b) => a.cls.localeCompare(b.cls))
+      .flatMap(({ cls, fields }) => [
+        `  interface ${cls} {`,
+        ...fields.map((f) => `    ${ident(f.name)}: ${f.type};`),
+        "  }",
+      ]);
+    return [`declare module "./${file}" {`, ...body, "}"].join("\n");
+  });
 const key = (t: string) => (/^[A-Za-z_$][\w$]*$/.test(t) ? t : JSON.stringify(t));
 const out = [
   "// Generated by tools/gen_chunk_types.ts; do not edit.",
@@ -90,6 +371,16 @@ const out = [
   "/** The class a chunk of type `K` is read as: its registered class, else `Chunk`. */",
   "export type ChunkOf<K extends string> = K extends keyof ChunkTypes ? ChunkTypes[K] : Chunk;",
   "",
+  "// Struct fields of each chunk/item class (`define(Cls, { f: u4_field(), ... })`).",
+  "// Integers are `number`, `q`/`Q` are `number | bigint` (the unpack is a bigint, the",
+  "// writers store a number), raw `s` is `Uint8Array`, an encoding makes `string`,",
+  "// `bool_field` and `coerce: py_bool` are `boolean`, an enum coerce (or a `declare`",
+  "// of an enum over an integer) is that enum, `items_field` is the item class.",
+  "// Optional fields include `null`. A field shared by every variant of a",
+  "// registered base (`RoptChunk`, `OptiChunk`) is declared on the base too,",
+  "// which is what `find_by_type` returns and what models store.",
+  ...augmentations,
+  "",
 ].join("\n");
 
 if (process.argv.includes("--check")) {
@@ -98,8 +389,8 @@ if (process.argv.includes("--check")) {
     console.error("src/py_aep/binary/chunk_types.ts is stale: run bun tools/gen_chunk_types.ts");
     process.exit(1);
   }
-  console.log(`chunk_types.ts up to date (${types.size} chunk types)`);
+  console.log(`chunk_types.ts up to date (${types.size} chunk types, ${owned.reduce((n, o) => n + o.fields.length, 0)} fields)`);
 } else {
   fs.writeFileSync(OUT, out);
-  console.log(`wrote src/py_aep/binary/chunk_types.ts (${types.size} chunk types)`);
+  console.log(`wrote src/py_aep/binary/chunk_types.ts (${types.size} chunk types, ${owned.reduce((n, o) => n + o.fields.length, 0)} fields)`);
 }

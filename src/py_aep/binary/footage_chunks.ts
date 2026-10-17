@@ -220,7 +220,7 @@ export class SspcChunk extends Chunk {
    * files (PNG, AI, ...) and sequences the file sizes on disk. AE re-derives
    * it on a cache miss, so `0` is accepted.
    */
-  declare data_size: number;
+  declare data_size: number | bigint;
   declare _reserved_d4: Uint8Array;
 
   // -- BitField descriptors (not attrs fields) ---------------------------
@@ -906,6 +906,8 @@ export function build_ai_layer_opti_data(
   return buf;
 }
 
+type _OptiReadKw = { chunk_type?: string; [key: string]: unknown };
+
 /**
  * Footage asset info chunk (polymorphic).
  *
@@ -916,7 +918,8 @@ export function build_ai_layer_opti_data(
 export class OptiChunk extends Chunk {
   declare chunk_type: string;
 
-  static read(fp: IO, size: number, kw: { chunk_type?: string; [key: string]: unknown } = {}): OptiChunk {
+  static read(fp: IO, size: number, kw?: _OptiReadKw): OptiChunk;
+  static read(fp: IO, size: number, kw: _OptiReadKw = {}): Chunk {
     const { chunk_type = "" } = kw;
     if (this !== OptiChunk) {
       // Variant subclass - use its own read

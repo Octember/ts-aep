@@ -101,11 +101,11 @@ export class PlaceholderSource extends FootageSource {
   }
 
   _resolve_name(raw_name: string): string {
-    return (this._opti as PlaceholderOptiChunk).placeholder_name;
+    return this._opti.placeholder_name;
   }
 
   _store_name(value: string): void {
     validate_opti_name(value);
-    (this._opti as PlaceholderOptiChunk).placeholder_name = value;
+    this._opti.placeholder_name = value;
   }
 }
