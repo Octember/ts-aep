@@ -747,14 +747,28 @@ export function _resolve_context(chunk_type: string, siblings: Chunk[], ctx: Rea
 
 /** Read the 8-byte chunk header: (chunk_type, len_body). */
 export function read_header(fp: IO): [string, number] {
-  const data = fp.read(8);
-  if (data.length < 8) {
-    throw new OSError(`Short read on chunk header: expected 8 bytes, got ${data.length}`);
+  const fields = fp instanceof BytesIO ? fp.unpack(_HEADER_CODES) : null;
+  if (fields === null) {
+    const data = fp.read(8);
+    if (data.length < 8) {
+      throw new OSError(`Short read on chunk header: expected 8 bytes, got ${data.length}`);
+    }
+    const [raw_type, len_body] = _HEADER_STRUCT.unpack(data);
+    return [decode(raw_type, "ASCII"), len_body];
   }
-  const [raw_type, len_body] = _HEADER_STRUCT.unpack(data);
-  const chunk_type = decode(raw_type, "ASCII");
+  const [code, len_body] = fields;
+  let chunk_type = _TYPE_NAMES.get(code);
+  if (chunk_type === undefined) {
+    chunk_type = decode(struct.pack(">I", code), "ASCII");
+    _TYPE_NAMES.set(code, chunk_type);
+  }
   return [chunk_type, len_body];
 }
+
+/** The chunk header with the type as its big-endian u32 code. */
+const _HEADER_CODES = new struct.Struct(">II");
+/** Decoded chunk types by code; only codes that decode as ASCII get in. */
+const _TYPE_NAMES = new Map<number, string>();
 
 /**
  * Write a complete chunk: header + body + pad byte.
@@ -802,13 +816,8 @@ export function read_chunks(
 
     const resolver = _CONTEXT_RESOLVERS.get(chunk_type);
     const ctx_kw = resolver ? resolver(result, ctx) : {};
-    const chunk = cls.read(fp, len_body, {
-      chunk_type,
-      ctx,
-      parent_result: result,
-      defer_list_types,
-      ...ctx_kw,
-    });
+    const read_kw = { chunk_type, ctx, parent_result: result, defer_list_types };
+    const chunk = cls.read(fp, len_body, resolver ? Object.assign(read_kw, ctx_kw) : read_kw);
     result.push(chunk);
 
     // Consume pad byte if len_body is odd
