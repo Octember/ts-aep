@@ -11,7 +11,7 @@ import { CmtaChunk } from "../../binary/item_chunks.ts";
 import { build_gide_list, build_ovdg, clone_chunk_tree, remap_layer_ref_tdpi, rewrite_owner_tdpi, rewrite_time_base } from "../../binary/mutations.ts";
 import { TdmnChunk, TdsbChunk, TdsnChunk } from "../../binary/property_chunks.ts";
 import { Utf8Chunk } from "../../binary/scalar_chunks.ts";
-import { find_by_type, index_by_identity } from "../../binary/utils.ts";
+import { find_by_type, index_by_identity, list_type_of } from "../../binary/utils.ts";
 import { parse_properties } from "../../parsers/property.ts";
 import { get_match_name_runs } from "../../parsers/utils.ts";
 import { Mat4, aspect_scale, build_world_matrix, compose_orientation, decompose_transform, layer_source_aspect, position_space_aspect, rig_aims_at_poi, rotation_part, square_pixels, strip_orientation } from "../../resolvers/transform.ts";
@@ -494,7 +494,7 @@ export class Layer extends PropertyGroup {
       chunk.value = value;
       const chunks = this._layer_list.chunks;
       // AE 15 writes the comment before the LIST:OvdG closing a layer.
-      const ends_with_ovdg = getattr(chunks.at(-1), "list_type", null) === "OvdG";
+      const ends_with_ovdg = list_type_of(chunks.at(-1)) === "OvdG";
       chunks.splice(ends_with_ovdg ? chunks.length - 1 : chunks.length, 0, chunk);
       this._cmta = chunk;
     }
