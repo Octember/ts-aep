@@ -11,7 +11,7 @@ import { validate_bool, validate_rgb_color } from "../validators.ts";
 // NOTE(port): property_group.ts reaches this module only through `deferred(...)` (the
 // port of Python's in-method import), so `extends PropertyGroup` evaluates after it.
 import { PropertyGroup, _insert_before_group_end } from "./property_group.ts";
-import { deferred, descriptor, getattr, len, mod, py_assert, py_bool, zip, instance_dict } from "../../../pyrt/index.ts";
+import { deferred, descriptor, getattr, mod, py_assert, zip, instance_dict } from "../../../pyrt/index.ts";
 import type { Utf8Chunk } from "../../binary/scalar_chunks.ts";
 import type { AVLayer } from "../layers/av_layer.ts";
 import type { Property } from "./property.ts";
@@ -117,7 +117,7 @@ export class MaskPropertyGroup extends PropertyGroup {
    */
   get roto_bezier(): boolean {
     const tdsb = this._mask_shape_tdsb;
-    return tdsb != null ? py_bool(tdsb.roto_bezier) : false;
+    return tdsb != null ? !!tdsb.roto_bezier : false;
   }
 
   set roto_bezier(value: boolean) {
@@ -131,12 +131,12 @@ export class MaskPropertyGroup extends PropertyGroup {
       this._materialize_mask_shape({ roto_bezier: true });
       return;
     }
-    if (py_bool(this._mask_shape_tdsb.roto_bezier) === value) {
+    if (!!this._mask_shape_tdsb.roto_bezier === value) {
       return;
     }
     const path = this.property("ADBE Mask Shape") as Property;
     const shapes = (
-      py_bool(path.keyframes) ? path.keyframes.map((kf) => kf.value) : [path.value]
+      path.keyframes?.length > 0 ? path.keyframes.map((kf) => kf.value) : [path.value]
     ) as Shape[];
     if (value) {
       // Measured on AE 2026: switching RotoBezier on gives each vertex
@@ -184,7 +184,7 @@ export class MaskPropertyGroup extends PropertyGroup {
   static _new(parent_property_: any, property_depth: any, kw: any): any {
     const parent_property = parent_property_ as PropertyGroup;
     const { name, mask_id } = kw as { name: string; mask_id: number };
-    const color = _MASK_COLOR_CYCLE[mod(mask_id - 1, len(_MASK_COLOR_CYCLE))];
+    const color = _MASK_COLOR_CYCLE[mod(mask_id - 1, _MASK_COLOR_CYCLE.length)];
     const _tdmn = new TdmnChunk({ value: "ADBE Mask Atom" });
     const _mkif = new MkifChunk({
       mode: 1, // binary PF_MaskMode for MaskMode.ADD
@@ -305,7 +305,7 @@ export class MaskPropertyGroup extends PropertyGroup {
         getattr(c, "value", null) === "ADBE Mask Shape" &&
         c.synthetic,
     );
-    const insert_at = found_at >= 0 ? found_at : len(chunks);
+    const insert_at = found_at >= 0 ? found_at : chunks.length;
     if (found_at >= 0) {
       chunks.splice(found_at, 2);
     }

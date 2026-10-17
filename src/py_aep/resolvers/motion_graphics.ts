@@ -41,7 +41,7 @@ import type { AVLayer } from "../models/layers/av_layer.ts";
 import type { Layer } from "../models/layers/layer.ts";
 import type { Property } from "../models/properties/property.ts";
 import type { PropertyGroup } from "../models/properties/property_group.ts";
-import { deferred, dict_get, py_bool, py_eq, py_or, float, int, json_dumps } from "../../pyrt/index.ts";
+import { deferred, dict_get, py_bool, py_eq, float, int, json_dumps } from "../../pyrt/index.ts";
 
 const _composition = deferred<typeof import("../models/items/composition.ts")>("py_aep/models/items/composition");
 const _footage = deferred<typeof import("../models/items/footage.ts")>("py_aep/models/items/footage");
@@ -307,7 +307,7 @@ export function font_caps_json(prop: Property): string {
   let font: any = "";
   let size: number = 0;
   if (value instanceof _text_document().TextDocument) {
-    font = py_or(value.font, "");
+    font = value.font || "";
     const fs = value.font_size;
     if (fs != null) size = Number.isInteger(float(fs)) ? int(fs) : fs;
   }

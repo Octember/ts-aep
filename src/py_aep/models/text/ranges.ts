@@ -153,11 +153,11 @@ export function _cached_line_nodes(doc: TextDocument): Dict[] {
 
   const collect = (node: any): void => {
     if (!(node instanceof Map)) return;
-    if (str(dict_get(node, "99")) === "L") {
+    if (str(node.get("99") ?? null) === "L") {
       lines.push(node);
       return;
     }
-    const children = dict_get(node, "6");
+    const children = node.get("6") ?? null;
     if (Array.isArray(children)) {
       for (const child of children) collect(child);
     }
@@ -190,7 +190,7 @@ export function _line_data_from_nodes(nodes: Dict[]): [[number, number][], (numb
   const baselines: (number | null)[] = [];
   for (const node of nodes) {
     let total = 0;
-    const children = dict_get(node, "6");
+    const children = node.get("6") ?? null;
     if (Array.isArray(children)) {
       for (const seg of children) {
         const count = cos_get(seg, "15", "0");
@@ -198,7 +198,7 @@ export function _line_data_from_nodes(nodes: Dict[]): [[number, number][], (numb
       }
     }
     lengths.push(total);
-    const baseline = dict_get(node, "10");
+    const baseline = node.get("10") ?? null;
     baselines.push(is_real(baseline) ? float(baseline) : null);
   }
   if (!lengths.length) return null;
@@ -220,7 +220,7 @@ export function _line_data_from_nodes(nodes: Dict[]): [[number, number][], (numb
 export function _line_origin(node: Dict): [number, number] {
   const origin = cos_get(node, "0", "0");
   if (Array.isArray(origin) && origin.length >= 2) return [float(origin[0]), float(origin[1])];
-  const baseline = dict_get(node, "10");
+  const baseline = node.get("10") ?? null;
   const y = is_real(baseline) ? float(baseline) : 0.0;
   return [0.0, y];
 }
@@ -237,7 +237,7 @@ export function _line_origin(node: Dict): [number, number] {
 export function _line_advances(node: Dict): number[] {
   const out: number[] = [];
   let base = 0.0;
-  const children = dict_get(node, "6");
+  const children = node.get("6") ?? null;
   if (!Array.isArray(children)) return out;
   for (const seg of children) {
     const advances = cos_get(seg, "15", "7", "7");
@@ -375,7 +375,7 @@ export function _register_font_at(
   font_array.splice(index, 0, entry);
 
   const bump = (holder: Dict): void => {
-    const current = dict_get(holder, "0");
+    const current = holder.get("0") ?? null;
     if (typeof current === "number" && Number.isInteger(current) && current >= index) {
       holder.set("0", current + 1);
     }
@@ -406,7 +406,7 @@ export function _register_font_at(
   if (Array.isArray(sessions)) {
     let appended = false;
     for (const session of sessions) {
-      const records = session instanceof Map ? dict_get(session, "4") : null;
+      const records = session instanceof Map ? session.get("4") ?? null : null;
       if (!Array.isArray(records)) continue;
       for (const record of records) {
         if (record instanceof Map) bump(record);
@@ -448,7 +448,7 @@ export function _replace_layer_font(docs: TextDocument[], from_name: string, to_
   }
   if (!from_indices.size) return false;
   const referenced = docs.some((doc) =>
-    _char_run_spans(doc).some(([, , style]) => from_indices.has(dict_get(style, "0"))),
+    _char_run_spans(doc).some(([, , style]) => from_indices.has(style.get("0") ?? null)),
   );
   if (!referenced) return false;
 
@@ -468,7 +468,7 @@ export function _replace_layer_font(docs: TextDocument[], from_name: string, to_
 
   for (const doc of docs) {
     for (const [, , style] of _char_run_spans(doc)) {
-      if (from_indices.has(dict_get(style, "0"))) style.set("0", to_index);
+      if (from_indices.has(style.get("0") ?? null)) style.set("0", to_index);
     }
   }
   _repoint_used_font_record(first, from_indices, to_index, to_name);
@@ -493,10 +493,10 @@ export function _repoint_used_font_record(
   const sessions = cos_get((doc as any)._cos_data, "1", "5");
   if (!Array.isArray(sessions)) return;
   for (const session of sessions) {
-    const records = session instanceof Map ? dict_get(session, "4") : null;
+    const records = session instanceof Map ? session.get("4") ?? null : null;
     if (!Array.isArray(records)) continue;
     for (const record of records) {
-      if (!(record instanceof Map) || !from_indices.has(dict_get(record, "0"))) continue;
+      if (!(record instanceof Map) || !from_indices.has(record.get("0") ?? null)) continue;
       record.set("0", to_index);
       if (version == null) record.delete("1");
       else record.set("1", version);
@@ -620,7 +620,7 @@ export function _split_run_array(runs: Dict[], offsets: Set<number>): void {
 export function _merge_adjacent_runs(runs: Dict[]): void {
   let i = 0;
   while (i + 1 < runs.length) {
-    if (py_eq(dict_get(runs[i], "0"), dict_get(runs[i + 1], "0"))) {
+    if (py_eq(runs[i].get("0") ?? null, runs[i + 1].get("0") ?? null)) {
       runs[i].set("1", dict_get(runs[i], "1", 0) + dict_get(runs[i + 1], "1", 0));
       runs.splice(i + 1, 1);
     } else {
@@ -666,7 +666,7 @@ export function _kern_values(doc: TextDocument): any[] {
   const total = u16_len(_raw_text(doc));
   const values: any[] = new Array(total).fill(null);
   for (const [start, end, payload] of _kern_run_spans(doc)) {
-    const value = dict_get(payload, "0");
+    const value = payload.get("0") ?? null;
     if (value != null) {
       for (let i = start; i < Math.min(end, total); i++) values[i] = value;
     }
@@ -1259,7 +1259,7 @@ export class CharacterRange extends _TextRange {
   ): any {
     let payloads = this._overlapping(this._spans_for(kind));
     if (gate != null) {
-      payloads = payloads.filter((p) => py_bool(dict_get(p, gate)));
+      payloads = payloads.filter((p) => py_bool(p.get(gate)));
       if (!payloads.length) return null;
     }
     if (!payloads.length) return default_;
@@ -1346,7 +1346,7 @@ export class CharacterRange extends _TextRange {
       for (const clone of entries) {
         const style = cos_get(clone, "0", "0", "6");
         if (style instanceof Map) {
-          const index = dict_get(style, "0");
+          const index = style.get("0") ?? null;
           if (typeof index === "number" && Number.isInteger(index) && 0 <= index && index < src_doc._fonts.length) {
             needed.set(index, src_doc._fonts[index].post_script_name);
           }
@@ -1364,7 +1364,7 @@ export class CharacterRange extends _TextRange {
       for (const clone of entries) {
         const style = cos_get(clone, "0", "0", "6");
         if (style instanceof Map) {
-          const index = dict_get(style, "0");
+          const index = style.get("0") ?? null;
           if (typeof index === "number" && Number.isInteger(index) && needed.has(index)) {
             style.set("0", getitem(target_index, getitem(needed, index)));
           }

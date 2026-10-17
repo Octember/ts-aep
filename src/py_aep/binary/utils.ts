@@ -12,7 +12,6 @@ import {
   json_dumps,
   json_loads,
   len,
-  py_bool,
 } from "../../pyrt/index.ts";
 
 const _chunk = deferred<typeof import("./chunk.ts")>("py_aep/binary/chunk");
@@ -386,17 +385,17 @@ export function toggle_flag_chunk(
   const { after_types = [] } = kw;
 
   const existing = container.chunks.flatMap((c, i) => (c.chunk_type === chunk_type ? [i] : []));
-  if (enable && !py_bool(existing)) {
+  if (enable && existing.length === 0) {
     const new_chunk = new (_chunk().Chunk)({ chunk_type, data: b("\x01") });
     const anchors = container.chunks.flatMap((c, i) =>
       after_types.includes(c.chunk_type) ? [i] : [],
     );
-    if (py_bool(anchors)) {
+    if (anchors.length > 0) {
       container.chunks.splice(anchors.at(-1)! + 1, 0, new_chunk);
     } else {
       container.chunks.push(new_chunk);
     }
-  } else if (!enable && py_bool(existing)) {
+  } else if (!enable && existing.length > 0) {
     for (const i of [...existing].reverse()) {
       container.chunks.splice(i, 1);
     }

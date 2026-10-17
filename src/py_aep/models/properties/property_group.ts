@@ -13,12 +13,10 @@ import {
   getattr,
   getitem,
   int,
-  len,
   max,
   object_getattr,
   object_setattr,
   py_assert,
-  py_bool,
   py_object,
   py_or,
   repr,
@@ -110,7 +108,7 @@ export function _baked_effect_def(name: string): [string, string, ListChunk] | n
    * the returned chunks and the table stays pristine.
    */
   let match_name: string;
-  let entry = dict_get(BUILTIN_EFFECTS, name);
+  let entry = BUILTIN_EFFECTS.get(name) ?? null;
   if (entry != null) {
     match_name = name;
   } else {
@@ -121,7 +119,7 @@ export function _baked_effect_def(name: string): [string, string, ListChunk] | n
   }
   const [display, blob] = entry;
   const raw = bytes_.fromhex(blob);
-  const sspc = read_chunks(new BytesIO(raw), len(raw))[0];
+  const sspc = read_chunks(new BytesIO(raw), raw.length)[0];
   py_assert(sspc instanceof ListChunk);
   return [match_name, display, sspc];
 }
@@ -184,7 +182,7 @@ export function _next_mask_name(names: Iterable<string>): string {
     const number = digits != null ? int(digits) : 1;
     if (number > highest) {
       highest = number;
-      width = digits != null ? len(digits) : 1;
+      width = digits != null ? digits.length : 1;
     }
   }
   return `Mask ${String(highest + 1).padStart(width, "0")}`;
@@ -344,7 +342,7 @@ export function _reorder_and_fill(
 
 export function _apply_bounds(prop: Property): void {
   /** Apply min/max override from `_PROPERTY_MIN_MAX` if one exists. */
-  const bounds = dict_get(_PROPERTY_MIN_MAX, prop.match_name);
+  const bounds = _PROPERTY_MIN_MAX.get(prop.match_name);
   if (bounds != null) {
     prop._min_value_fallback = bounds[0];
     prop._max_value_fallback = bounds[1];
@@ -368,7 +366,7 @@ export function _derive_layer_styles_enabled(
   let blend_options: PropertyGroup | null = null;
   for (const child of group.properties) {
     if (!(child instanceof PropertyGroup)) continue;
-    const child_specs = dict_get(_LAYER_STYLE_CHILD_SPECS, child.match_name);
+    const child_specs = _LAYER_STYLE_CHILD_SPECS.get(child.match_name) ?? null;
     if (child_specs != null && synthesize_subgroups) {
       _reorder_and_fill(child, child_specs, child.property_depth + 1, { ae_major });
     }
@@ -574,7 +572,7 @@ export class PropertyGroup extends PropertyBase {
       const name: string = split(this._fnam_utf8.value, "\0")[0];
       return name;
     }
-    return dict_get(MATCH_NAME_TO_AUTO_NAME, this.match_name, this.match_name);
+    return MATCH_NAME_TO_AUTO_NAME.get(this.match_name) ?? this.match_name;
   }
 
   /**
@@ -636,7 +634,7 @@ export class PropertyGroup extends PropertyBase {
      * Looks up child specs for the group's match name, reorders/fills
      * children, and defers synthesis on child groups recursively.
      */
-    const specs = dict_get(_GROUP_CHILD_SPECS, this.match_name);
+    const specs = _GROUP_CHILD_SPECS.get(this.match_name) ?? null;
     if (specs != null) {
       _reorder_and_fill(this, specs, this.property_depth + 1, {
         ae_major,
@@ -948,7 +946,7 @@ export class PropertyGroup extends PropertyBase {
       const text_doc = layer.text.source_text.value;
       const ps_name: string = py_or(text_doc.font, "");
       const family = split(ps_name, "-", 1)[0];
-      const resolved = py_bool(family) ? resolve_font_exact(family) : null;
+      const resolved = family ? resolve_font_exact(family) : null;
       if (resolved == null) {
         throw new ValueError(
           `Could not locate an installed font for family ${repr(family)}; pass font_file explicitly.`,
@@ -1304,10 +1302,7 @@ export class PropertyGroup extends PropertyBase {
     const comp = this._containing_layer.containing_comp;
 
     // AE bakes a per-container, per-type numbered name into the tdsn.
-    const base = py_or(
-      dict_get(_VECTOR_CREATION_NAMES, match_name),
-      dict_get(MATCH_NAME_TO_AUTO_NAME, match_name, match_name),
-    );
+    const base = _VECTOR_CREATION_NAMES.get(match_name) || (MATCH_NAME_TO_AUTO_NAME.get(match_name) ?? match_name);
     const same_type = this.properties.filter((p) => p.match_name === match_name).length;
     const path_time_base =
       match_name === "ADBE Vector Shape - Group" ? comp._cdta.internal_timebase : null;

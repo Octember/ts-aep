@@ -34,7 +34,7 @@ export class BitField {
 
   __set__(obj: any, value: boolean): void {
     const raw = getattr(obj, this.byte_field);
-    if (py_bool(value)) {
+    if (value) {
       obj[this.byte_field] = or(raw, this.mask);
     } else {
       obj[this.byte_field] = and_not(raw, this.mask);

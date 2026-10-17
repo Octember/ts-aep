@@ -23,7 +23,7 @@
  * order; reproducing it exactly is required for byte-identical output.
  */
 
-import { decode, encode, dict_get, getitem, json_dumps, json_loads, num_str, str } from "../../pyrt/index.ts";
+import { encode, dict_get, getitem, json_dumps, json_loads, str } from "../../pyrt/index.ts";
 import { b64decode, b64encode } from "../../pyrt/base64.ts";
 
 // baseProfileType values.

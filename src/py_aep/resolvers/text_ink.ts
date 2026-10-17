@@ -118,8 +118,8 @@ export function _refuse(reason: string): NotImplementedError {
 
 export function _check_styles(doc: TextDocument): void {
   for (const [_start, _end, style] of run_spans(doc._doc, "6", "6")) {
-    if (py_bool(dict_get(style, "2"))) throw _refuse("faux bold");
-    if (py_bool(dict_get(style, "3"))) throw _refuse("faux italic");
+    if (py_bool(style.get("2"))) throw _refuse("faux bold");
+    if (py_bool(style.get("3"))) throw _refuse("faux italic");
     if (int(dict_get(style, "12", 0)) !== 0) throw _refuse("small or all caps");
     if (float(dict_get(style, "6", 1.0)) !== 1.0 || float(dict_get(style, "7", 1.0)) !== 1.0) {
       throw _refuse("horizontal or vertical scale");
@@ -273,7 +273,7 @@ export function _point_text_ink(
     if (index > 0) {
       baseline += max(line_styles.map((s) => s.leading));
     }
-    if (py_bool(paragraph)) {
+    if (paragraph) {
       const style = paragraph_styles[index];
       const justification = _justification(style);
       let origin = 0.0;
@@ -327,7 +327,7 @@ export function _box_text_ink(
   }
   for (const [[start, end], baseline] of zip(composed.spans, composed.baselines)) {
     const text = rstrip(raw.slice(start, end), "\r");
-    if (!py_bool(text)) continue;
+    if (!text) continue;
     const style = paragraph_styles[paragraph_of[start]];
     if (_justification(style) !== ParagraphJustification.LEFT_JUSTIFY) {
       throw _refuse("non-left-justified box text");

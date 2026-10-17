@@ -6,7 +6,7 @@ import { ChunkField } from "../descriptors.ts";
 import { label_index } from "../preferences.ts";
 import { AVLayer } from "./av_layer.ts";
 import { _UNDEFINED_ID, Layer, _no_source_id } from "./layer.ts";
-import { AttributeError, ValueError, descriptor, dict_get, py_cmp } from "../../../pyrt/index.ts";
+import { AttributeError, ValueError, descriptor, py_cmp } from "../../../pyrt/index.ts";
 import type { CompItem } from "../items/composition.ts";
 import type { PropertyGroup } from "../properties/property_group.ts";
 
@@ -149,7 +149,7 @@ export class LightLayer extends Layer {
     if (this._light_source_id === 0) {
       return null;
     }
-    return dict_get(this.containing_comp.layers_by_id, this._light_source_id);
+    return this.containing_comp.layers_by_id.get(this._light_source_id) ?? null;
   }
 
   set light_source(value: Layer | null) {

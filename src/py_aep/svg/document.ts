@@ -1,6 +1,6 @@
 /** SVG root parsing: canvas size and the viewBox origin transform. */
 
-import { dict_get, float, min, max, py_bool, py_eq, py_or, split, pattern_findall } from "../../pyrt/index.ts";
+import { float, min, max, py_eq, split, pattern_findall } from "../../pyrt/index.ts";
 import { NUMBER_RE, parse_length } from "./_util.ts";
 import { Affine } from "./transform.ts";
 
@@ -16,7 +16,7 @@ export type ViewBox = readonly [number, number, number, number];
  * not positive: SVG treats those as an error / no viewBox).
  */
 export function _view_box(value: string | null): ViewBox | null {
-  if (!py_bool(value)) return null;
+  if (!value) return null;
   const nums = pattern_findall(NUMBER_RE, value!).map((n) => float(n));
   if (nums.length !== 4 || !nums.every((n) => Number.isFinite(n))) return null;
   if (nums[2] <= 0 || nums[3] <= 0) return null;
@@ -73,13 +73,13 @@ export function viewport_transform(
   const [min_x, min_y, vb_w, vb_h] = vb;
   let sx = width / vb_w;
   let sy = height / vb_h;
-  const tokens = split(py_or(preserve_aspect_ratio, "")).filter((t) => t !== "defer");
-  const align = py_bool(tokens) ? tokens[0] : "xMidYMid";
+  const tokens = split(preserve_aspect_ratio || "").filter((t) => t !== "defer");
+  const align = tokens.length > 0 ? tokens[0] : "xMidYMid";
   if (align !== "none") {
     const s = py_eq(tokens.slice(1, 2), ["slice"]) ? max([sx, sy]) : min([sx, sy]);
     sx = sy = s;
-    const ax = dict_get(new Map<string, number>([["xMin", 0.0], ["xMid", 0.5], ["xMax", 1.0]]), align.slice(0, 4), 0.5);
-    const ay = dict_get(new Map<string, number>([["YMin", 0.0], ["YMid", 0.5], ["YMax", 1.0]]), align.slice(4), 0.5);
+    const ax = (new Map<string, number>([["xMin", 0.0], ["xMid", 0.5], ["xMax", 1.0]])).get(align.slice(0, 4)) ?? 0.5;
+    const ay = (new Map<string, number>([["YMin", 0.0], ["YMid", 0.5], ["YMax", 1.0]])).get(align.slice(4)) ?? 0.5;
     x += (width - vb_w * s) * ax;
     y += (height - vb_h * s) * ay;
   }

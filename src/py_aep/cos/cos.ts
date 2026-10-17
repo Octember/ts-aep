@@ -11,12 +11,10 @@ import {
   bytes_eq,
   concat,
   decode,
-  dict_get,
   float,
   int,
   IndexError,
   OverflowError,
-  PyException,
   py_assert,
   py_enum,
   py_eq,
@@ -116,7 +114,7 @@ export function cos_get(data: any, ...keys: (string | number)[]): any {
   for (const key of keys) {
     if (cur == null) return null;
     if (cur instanceof Map) {
-      cur = dict_get(cur, str(key));
+      cur = cur.get(str(key)) ?? null;
     } else if (Array.isArray(cur)) {
       try {
         cur = at(cur, int(key));
@@ -152,7 +150,7 @@ export function run_spans(
   if (!Array.isArray(runs)) return spans;
   let pos = 0;
   for (const run of runs) {
-    const length: any = run instanceof Map ? dict_get(run, "1") : null;
+    const length: any = run instanceof Map ? run.get("1") ?? null : null;
     // Python `isinstance(True, int)` is True, so booleans count as lengths 1/0 (`int()` below).
     const is_int = typeof length === "boolean" || (typeof length === "number" && Number.isInteger(length));
     if (!is_int) continue;
@@ -204,7 +202,7 @@ export class Token {
   }
 
   __eq__(other: any): boolean {
-    return other instanceof Token && py_eq(this.type, other.type) && py_eq(this.value, other.value);
+    return other instanceof Token && this.type === other.type && py_eq(this.value, other.value);
   }
 }
 
@@ -227,8 +225,8 @@ export class IndirectObject {
   __eq__(other: any): boolean {
     return (
       other instanceof IndirectObject &&
-      py_eq(this.object_number, other.object_number) &&
-      py_eq(this.generation_number, other.generation_number) &&
+      this.object_number === other.object_number &&
+      this.generation_number === other.generation_number &&
       py_eq(this.data, other.data)
     );
   }
@@ -251,8 +249,8 @@ export class IndirectReference {
   __eq__(other: any): boolean {
     return (
       other instanceof IndirectReference &&
-      py_eq(this.object_number, other.object_number) &&
-      py_eq(this.generation_number, other.generation_number)
+      this.object_number === other.object_number &&
+      this.generation_number === other.generation_number
     );
   }
 }
@@ -542,7 +540,7 @@ export class CosParser {
   expect_char(exp: Uint8Array, head: Uint8Array): void {
     const char = this.get_char();
     if (char == null || !bytes_eq(char, exp)) {
-      this.raise_lex(concat(head, py_or(char, bytes_.EMPTY)), concat(head, exp));
+      this.raise_lex(concat(head, char?.length > 0 ? char : bytes_.EMPTY), concat(head, exp));
     }
   }
 

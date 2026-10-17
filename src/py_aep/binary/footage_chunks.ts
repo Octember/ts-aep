@@ -21,9 +21,7 @@ import {
   encode,
   field,
   int,
-  len,
   OverflowError,
-  py_bool,
   round,
   struct,
 } from "../../pyrt/index.ts";
@@ -778,8 +776,8 @@ export function build_exr_opti_data(compression: number, channel_names: readonly
   const body = new Uint8Array(_OEXR_OPTI_SIZE);
   body.set(b("oEXR"), 0);
   struct.pack_into(">HI", body, 4, 1, _OEXR_OPTI_SIZE);
-  struct.pack_into("<HHHHH", body, 0x0a, 1, 0, compression, 1, len(channel_names));
-  struct.pack_into("<H", body, 0x2e, len(channel_names) + len(layers));
+  struct.pack_into("<HHHHH", body, 0x0a, 1, 0, compression, 1, channel_names.length);
+  struct.pack_into("<H", body, 0x2e, channel_names.length + layers.size);
   return body;
 }
 
@@ -945,7 +943,7 @@ export class OptiChunk extends Chunk {
     const asset_type_int = struct.unpack(">H", bytes_.slice(disc_raw, 4, 6))[0];
     fp.seek(-6, 1);
     // Placeholder: asset_type is empty but asset_type_int == 2
-    if (!py_bool(asset_type) && asset_type_int === 2) {
+    if (!asset_type && asset_type_int === 2) {
       return PlaceholderOptiChunk.read(fp, size, { chunk_type });
     }
     const variant_cls = dict_get(_OPTI_VARIANTS, asset_type, OptiChunk)!;

@@ -62,7 +62,7 @@ export function _param_def_to_spec(match_name: string, param_def: Map<string, an
   const pvt = dict_get(param_def, "property_value_type", PropertyValueType.OneD);
   const control_type = getitem(param_def, "property_control_type");
   const is_color = control_type === PropertyControlType.COLOR;
-  const dims = dict_get(_PVT_DIMENSIONS, pvt, 1);
+  const dims = _PVT_DIMENSIONS.get(pvt) ?? 1;
   const is_spatial =
     [PropertyValueType.TwoD_SPATIAL, PropertyValueType.ThreeD_SPATIAL].includes(pvt) || is_color;
   const [value, default_value] = _resolve_effect_value(match_name, param_def, control_type);
@@ -70,7 +70,7 @@ export function _param_def_to_spec(match_name: string, param_def: Map<string, an
   // fields are passed as `undefined` so their defaults apply.
   return new PropSpec(
     match_name,
-    py_or(dict_get(param_def, "name"), match_name),
+    py_or(param_def.get("name"), match_name),
     value,
     pvt,
     dims,
@@ -83,7 +83,7 @@ export function _param_def_to_spec(match_name: string, param_def: Map<string, an
     control_type !== PropertyControlType.MASK,
     undefined,
     undefined,
-    dict_get(EFFECT_PARAM_SPATIAL_FLAGS, control_type),
+    EFFECT_PARAM_SPATIAL_FLAGS.get(control_type) ?? null,
   );
 }
 
@@ -113,8 +113,8 @@ export function _resolve_effect_value(
     // value beyond the choice count is managed by the plug-in (the OCIO
     // transforms keep hashed ids there, which ExtendScript reports) and
     // is kept.
-    let value = dict_get(param_def, "default_value");
-    const last = dict_get(param_def, "last_value");
+    let value = param_def.get("default_value") ?? null;
+    const last = param_def.get("last_value") ?? null;
     if (last != null && (value == null || last > dict_get(param_def, "nb_options", 0))) {
       value = last;
     }
@@ -125,7 +125,7 @@ export function _resolve_effect_value(
     // size. The cached value is that same percentage or a 16.16-rounded
     // fraction: Path Text's 80 % caches 0.7999878, ExtendScript reports
     // exactly 80 on a 100-pixel layer.
-    const value = dict_get(param_def, "default_value");
+    const value = param_def.get("default_value") ?? null;
     return [value, value];
   }
   // Any other control: AE leaves a parameter at its default out of the
@@ -135,10 +135,10 @@ export function _resolve_effect_value(
   // wrote the definition (another one when the definition is borrowed),
   // or stale - S_BlurDirectional's Bias caches 0 where ExtendScript
   // reports 0.5. It only stands in for a pard that declares no default.
-  let value = dict_get(param_def, "default_value");
-  if (value == null) value = dict_get(_PROPERTY_DEFAULTS, match_name);
-  if (value == null) value = dict_get(param_def, "default");
-  if (value == null) value = dict_get(param_def, "last_value");
+  let value = param_def.get("default_value") ?? null;
+  if (value == null) value = _PROPERTY_DEFAULTS.get(match_name) ?? null;
+  if (value == null) value = param_def.get("default") ?? null;
+  if (value == null) value = param_def.get("last_value") ?? null;
   return [value, value];
 }
 
@@ -154,29 +154,29 @@ export function _resolve_effect_value(
  *     param_def: The parameter definition dict.
  */
 export function _apply_param_def_metadata(prop: Property, param_def: Map<string, any>): void {
-  prop.last_value = dict_get(param_def, "last_value");
-  const min_val = dict_get(param_def, "min_value");
+  prop.last_value = param_def.get("last_value") ?? null;
+  const min_val = param_def.get("min_value") ?? null;
   if (min_val != null) prop._min_value_fallback = min_val;
-  const max_val = dict_get(param_def, "max_value");
+  const max_val = param_def.get("max_value") ?? null;
   if (max_val != null) prop._max_value_fallback = max_val;
   // The pard UI slider range - distinct from the valid range and the
   // source of an Essential Graphics slider controller's Smin/Smax.
-  prop._slider_min = dict_get(param_def, "slider_min");
-  prop._slider_max = dict_get(param_def, "slider_max");
-  prop.nb_options = dict_get(param_def, "nb_options");
+  prop._slider_min = param_def.get("slider_min") ?? null;
+  prop._slider_max = param_def.get("slider_max") ?? null;
+  prop.nb_options = param_def.get("nb_options") ?? null;
   // Direct write: the public setter has user-write semantics (validation
   // plus pdnm/pard chunk rewrites).
-  prop._property_parameters = dict_get(param_def, "property_parameters");
-  const units = dict_get(param_def, "units_text");
+  prop._property_parameters = param_def.get("property_parameters") ?? null;
+  const units = param_def.get("units_text") ?? null;
   if (units != null) prop._units_text = units;
   // The pard param flags carry the authoritative can-vary bit; the
   // residue table keeps the rare params where they disagree with
   // ExtendScript (e.g. the Puppet Engine dropdown).
-  const can_vary = dict_get(param_def, "can_vary_over_time");
+  const can_vary = param_def.get("can_vary_over_time") ?? null;
   if (can_vary != null && !_CANVARY_OVERRIDES.has(prop.match_name)) {
     prop._can_vary_over_time = can_vary;
   }
-  if (py_bool(dict_get(param_def, "expressions_disabled"))) {
+  if (py_bool(param_def.get("expressions_disabled"))) {
     prop._expressions_disabled = true;
   }
 }
@@ -270,8 +270,8 @@ export function _merge_param_def(
   // Prefer the override table, then the pard default field. For LAYER
   // references, pard stores a meaningless 0 and we have no static
   // override, so leave default_value unset entirely.
-  let static_default = dict_get(_PROPERTY_DEFAULTS, prop.match_name);
-  if (static_default == null) static_default = dict_get(param_def, "default");
+  let static_default = _PROPERTY_DEFAULTS.get(prop.match_name) ?? null;
+  if (static_default == null) static_default = param_def.get("default") ?? null;
   if (static_default != null) {
     prop.default_value = static_default;
   } else if (
@@ -279,9 +279,9 @@ export function _merge_param_def(
       getitem(param_def, "property_control_type"),
     )
   ) {
-    prop.default_value = _point_default_pixels(dict_get(param_def, "default_value"), point_size);
+    prop.default_value = _point_default_pixels(param_def.get("default_value") ?? null, point_size);
   } else if (getitem(param_def, "property_control_type") !== PropertyControlType.LAYER) {
-    prop.default_value = dict_get(param_def, "default_value");
+    prop.default_value = param_def.get("default_value") ?? null;
   }
   _apply_param_def_metadata(prop, param_def);
 }
@@ -314,11 +314,11 @@ export function _synthesize_effect_property(
   const pvt = dict_get(param_def, "property_value_type", PropertyValueType.OneD);
 
   if (pvt === PropertyValueType.NO_VALUE) {
-    const raw_display = dict_get(param_def, "name");
+    const raw_display = param_def.get("name") ?? null;
     const display =
       typeof raw_display === "string" && raw_display
         ? raw_display
-        : dict_get(MATCH_NAME_TO_AUTO_NAME, match_name, "");
+        : MATCH_NAME_TO_AUTO_NAME.get(match_name) ?? "";
     return PropertyGroup._new(match_name, display, property_depth, {
       parent_property,
       synthetic: true,
@@ -393,7 +393,7 @@ export function _parse_effect_properties(
   // missing, producing children in canonical parT order.
   const ordered: (Property | PropertyGroup)[] = [];
   for (const [match_name, param_def] of param_defs) {
-    const existing = dict_get(parsed_by_mn, match_name);
+    const existing = parsed_by_mn.get(match_name) ?? null;
     if (existing != null) {
       if (existing instanceof Property) {
         _merge_param_def(existing, param_def, point_size);
@@ -488,13 +488,13 @@ export const parse_effect = _suppress_materialization().decorate(function parse_
   // Layer-level sspc may have an empty parT when the same effect type
   // is used more than once (AE doesn't duplicate the data).  Fall back
   // to previously cached or project-level EfdG definitions.
-  if (!py_bool(param_defs) && effect_param_defs.has(group_match_name)) {
+  if (!param_defs?.size && effect_param_defs.has(group_match_name)) {
     param_defs = getitem(effect_param_defs, group_match_name);
   }
 
   // Cache successful parT parsing so later instances of the same
   // effect can reuse the definitions.
-  if (py_bool(param_defs) && !effect_param_defs.has(group_match_name)) {
+  if (param_defs?.size > 0 && !effect_param_defs.has(group_match_name)) {
     effect_param_defs.set(group_match_name, param_defs);
   }
   // Resolve _name_utf8 from the effect tdgp's tdsn child
@@ -699,13 +699,13 @@ export function _parse_effect_parameter_def(parameter_chunks: Chunk[]): Map<stri
     ["expressions_disabled", pard_chunk.expressions_disabled],
   ]);
 
-  const extractor = dict_get(_PARD_EXTRACTORS, control_type);
+  const extractor = _PARD_EXTRACTORS.get(control_type);
   if (extractor != null) extractor(pard_chunk, result);
 
   // An arbitrary-data parameter's default follows its pard: the Curves
   // effect's untouched curves, byte-identical to an untouched instance's.
   const default_arbp = filter_by_type(parameter_chunks, "aRbp");
-  if (py_bool(default_arbp)) {
+  if (default_arbp?.length > 0) {
     result.set("default_arbp", default_arbp[0]);
   }
 
@@ -716,7 +716,7 @@ export function _parse_effect_parameter_def(parameter_chunks: Chunk[]): Map<stri
     const pdnm_data = utf8_chunk.value;
     if (control_type === PropertyControlType.ENUM) {
       result.set("property_parameters", split(pdnm_data, "|"));
-    } else if (py_bool(pdnm_data)) {
+    } else if (pdnm_data) {
       result.set("name", pdnm_data);
     }
   } catch (e) {

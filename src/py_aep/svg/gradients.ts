@@ -11,7 +11,7 @@
  * module only produces the geometric/stop representation.
  */
 
-import { py_bool, py_or, dict_get, setdefault, max, degrees, hypot } from "../../pyrt/index.ts";
+import { py_bool, py_or, setdefault, max, degrees, hypot } from "../../pyrt/index.ts";
 import { LengthContext, local_name, parse_length, parse_ratio } from "./_util.ts";
 import { parse_color } from "./colors.ts";
 import { _split_declarations } from "./style.ts";
@@ -24,7 +24,7 @@ export type { Element };
 export function _href(elem: Element): string | null {
   for (const key of ["href", "{http://www.w3.org/1999/xlink}href"]) {
     const ref = elem.get(key);
-    if (py_bool(ref)) {
+    if (ref) {
       return ref.startsWith("#") ? ref.slice(1) : ref;
     }
   }
@@ -48,7 +48,7 @@ export class GradientDef {
   }
 
   attr(name: string, default_: string): string {
-    return dict_get(this.attrs, name, default_);
+    return this.attrs.get(name) ?? default_;
   }
 }
 
@@ -61,7 +61,7 @@ export function collect_gradients(root: Element): Map<string, GradientDef> {
   for (const elem of root.iter()) {
     if (["linearGradient", "radialGradient"].includes(local_name(elem.tag))) {
       const gid = elem.get("id");
-      if (py_bool(gid)) {
+      if (gid) {
         defs.set(gid, new GradientDef(elem));
       }
     }
@@ -71,10 +71,10 @@ export function collect_gradients(root: Element): Map<string, GradientDef> {
     const seen = new Set<string>();
     // `ref` is reassigned while walking the href chain, so it stays a `let`.
     let ref = gd.href;
-    while (py_bool(ref) && defs.has(ref) && !seen.has(ref)) {
+    while (ref && defs.has(ref) && !seen.has(ref)) {
       seen.add(ref);
       const parent = defs.get(ref)!;
-      if (!py_bool(gd.stops)) {
+      if (!gd.stops?.length) {
         gd.stops = [...parent.stops];
       }
       for (const [k, v] of parent.attrs) {
@@ -97,13 +97,13 @@ export function _parse_stops(elem: Element): GradientStop[] {
     // document order; AE 2026 imports `0.6 red, 0.3 blue` as red then a
     // hard switch to blue at 0.6).
     const parsed_offset = parse_ratio(child.get("offset"), 0.0);
-    const offset = py_bool(stops) ? max([parsed_offset, stops.at(-1)!.offset]) : parsed_offset;
+    const offset = stops.length > 0 ? max([parsed_offset, stops.at(-1)!.offset]) : parsed_offset;
     const style = _stop_style(child);
     const color = py_or(
-      parse_color(dict_get(style, "stop-color", "#000000")),
+      parse_color(style.get("stop-color") ?? "#000000"),
       [0.0, 0.0, 0.0, 1.0],
     );
-    const opacity = parse_ratio(dict_get(style, "stop-opacity"), 1.0);
+    const opacity = parse_ratio(style.get("stop-opacity") ?? null, 1.0);
     stops.push(
       new GradientStop(offset, [color[0], color[1], color[2], color[3] * opacity]),
     );

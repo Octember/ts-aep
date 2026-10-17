@@ -26,7 +26,7 @@ export function get_match_name_runs(root_chunk: ListChunk): [string, Chunk[]][] 
           continue;
         }
         skip_to_next_tdmn_flag = false;
-        if (!py_bool(runs) || at(runs, -1)[0] !== match_name) {
+        if (runs.length === 0 || at(runs, -1)[0] !== match_name) {
           runs.push([match_name, []]);
         }
         at(runs, -1)[1].push(chunk);

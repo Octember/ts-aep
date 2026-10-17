@@ -6,7 +6,7 @@
  * `matrix(a b c d e f)` ordering.
  */
 
-import { float, py_bool, radians, repr, pattern_findall } from "../../pyrt/index.ts";
+import { float, radians, repr, pattern_findall } from "../../pyrt/index.ts";
 import { NUMBER_RE } from "./_util.ts";
 import { UnsupportedSVGError } from "./errors.ts";
 
@@ -96,7 +96,7 @@ export function _numbers(text: string): number[] {
  */
 export function parse_transform(value: string): Affine {
   let result = IDENTITY;
-  if (!py_bool(value)) {
+  if (!value) {
     return result;
   }
   for (const [, name, args] of value.matchAll(_FUNC_RE)) {

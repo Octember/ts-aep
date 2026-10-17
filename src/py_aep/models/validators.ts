@@ -15,7 +15,6 @@ import {
   Path,
   TypeError_,
   ValueError,
-  dict_get,
   encode,
   float_repr,
   int,
@@ -166,7 +165,7 @@ export const _ENUM_VALIDATORS = new Map<any, Validator>();
  *     enum_cls: The enum class the value must be a member of.
  */
 export function validate_enum(enum_cls: any): Validator {
-  const cached = dict_get(_ENUM_VALIDATORS, enum_cls);
+  const cached = _ENUM_VALIDATORS.get(enum_cls) ?? null;
   if (cached != null) return cached;
 
   const _validator = function (value: any, instance: any = null): void {

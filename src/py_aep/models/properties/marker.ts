@@ -1,4 +1,4 @@
-import { ValueError, descriptor, enumerate, len, py_bool, py_or, round } from "../../../pyrt/index.ts";
+import { ValueError, descriptor, enumerate, round } from "../../../pyrt/index.ts";
 import { Label } from "../../enums/index.ts";
 
 import { NmhdChunk } from "../../binary/misc_chunks.ts";
@@ -82,12 +82,12 @@ export class MarkerValue {
     this._nmrd = null;
     this._frame_time = 0;
     this._param_utf8s = [];
-    if (py_bool(params)) {
+    if (params?.size > 0) {
       for (const [key, val] of params!) {
         this._param_utf8s.push(new Utf8Chunk({ value: key }));
         this._param_utf8s.push(new Utf8Chunk({ value: val }));
       }
-      this._nmhd.num_params = len(params);
+      this._nmhd.num_params = params.size;
     }
   }
 
@@ -127,14 +127,14 @@ export class MarkerValue {
     obj._keyframe = _keyframe;
     obj._nmrd = _nmrd;
     obj._frame_time = frame_time;
-    obj._param_utf8s = py_or(_param_utf8s, []);
+    obj._param_utf8s = _param_utf8s?.length > 0 ? _param_utf8s : [];
     return obj;
   }
 
   /** Key-value pairs for Flash Video cue-point parameters. Read / Write. */
   get params(): Map<string, string> {
     const result = new Map<string, string>();
-    for (let i = 0; i < len(this._param_utf8s) - 1; i += 2) {
+    for (let i = 0; i < this._param_utf8s.length - 1; i += 2) {
       const key = this._param_utf8s[i].value;
       const val = this._param_utf8s[i + 1].value;
       result.set(key, val);
@@ -147,7 +147,7 @@ export class MarkerValue {
     const old = this._param_utf8s;
     const new_: Utf8Chunk[] = [];
     for (const [i, [key, val]] of enumerate(value)) {
-      if (2 * i + 1 < len(old)) {
+      if (2 * i + 1 < old.length) {
         // Reuse existing chunk pairs in place (keeps tree position).
         old[2 * i].value = key;
         old[2 * i + 1].value = val;
@@ -156,9 +156,9 @@ export class MarkerValue {
         new_.push(new Utf8Chunk({ value: key }), new Utf8Chunk({ value: val }));
       }
     }
-    const removed = old.slice(len(new_));
-    const added = new_.slice(len(old));
-    if (this._nmrd != null && (py_bool(removed) || py_bool(added))) {
+    const removed = old.slice(new_.length);
+    const added = new_.slice(old.length);
+    if (this._nmrd != null && (removed.length > 0 || added.length > 0)) {
       // Splice grown / shrunk pairs into the backing Nmrd list.
       const chunks = this._nmrd.chunks;
       for (const chunk of removed) {
@@ -168,9 +168,9 @@ export class MarkerValue {
           if (!(e instanceof ValueError)) throw e;
         }
       }
-      if (py_bool(added)) {
+      if (added.length > 0) {
         const kept = new_.slice(0, new_.length - added.length);
-        const anchor = py_bool(kept) ? kept.at(-1)! : this._cue_point_name_utf8;
+        const anchor = kept.length > 0 ? kept.at(-1)! : this._cue_point_name_utf8;
         let pos: number;
         try {
           pos = index_by_identity(chunks, anchor);
@@ -182,7 +182,7 @@ export class MarkerValue {
       }
     }
     this._param_utf8s = new_;
-    this._nmhd.num_params = len(value);
+    this._nmhd.num_params = value.size;
   }
 
   /** The time of the marker, in frames. */

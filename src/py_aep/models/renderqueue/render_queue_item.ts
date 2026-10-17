@@ -24,7 +24,6 @@ import {
   getitem,
   int,
   max,
-  py_bool,
   repr,
   round,
   StopIteration,
@@ -396,7 +395,7 @@ export class RenderQueueItem {
     validate_string(value);
     if (this._rcom_utf8 != null) {
       this._rcom_utf8.value = value;
-    } else if (py_bool(value)) {
+    } else if (value) {
       const utf8_chunk = new Utf8Chunk({ value: value });
       const rcom_chunk = new ContainerChunk({
         chunk_type: "RCom",
@@ -834,7 +833,7 @@ export class RenderQueueItem {
     // in AE 2026: it writes 0 here for an empty queue (and normalizes a
     // stale 1 back to 0 on save). The other ARsi state bytes are session
     // UI state with no fixed empty value, so they are left as-is.
-    if (!py_bool(rq._items)) {
+    if (!rq._items?.length) {
       rq._arsi.queue_nonempty = 0;
       // An empty queue's settings 'list' holds only an lhd3 (AE writes no
       // ldat). Re-hide the now-empty ldat so the written shape matches a
@@ -875,7 +874,7 @@ export class RenderQueueItem {
     let new_rcom_utf8: Utf8Chunk | null = null;
     if (this._rcom != null) {
       new_rcom = clone_chunk_tree(this._rcom) as ContainerChunk;
-      if (py_bool(new_rcom.chunks)) {
+      if (new_rcom.chunks?.length > 0) {
         new_rcom_utf8 = new_rcom.chunks[0] as Utf8Chunk;
       }
     }

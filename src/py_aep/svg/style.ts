@@ -7,7 +7,7 @@
  * inline `style` attribute.
  */
 
-import { contains, dict_get, py_bool, sorted, split, strip } from "../../pyrt/index.ts";
+import { contains, sorted, split, strip } from "../../pyrt/index.ts";
 
 // Presentation properties py_aep tracks (the paintable subset plus the text
 // properties needed to outline `<text>`/`<tspan>`).
@@ -89,10 +89,10 @@ export function parse_css(text: string): CssRule[] {
   let order = 0;
   for (const [, sel_group, body] of text.matchAll(_RULE_RE)) {
     const [decls, important] = _split_declarations(body);
-    if (!py_bool(decls)) continue;
+    if (!decls?.size) continue;
     for (const raw of sel_group.split(",")) {
       const sel = strip(raw);
-      if (!py_bool(sel)) continue;
+      if (!sel) continue;
       rules.push(new CssRule(_specificity(sel), order, sel, decls, important));
       order += 1;
     }
@@ -206,8 +206,8 @@ export function resolve_properties(
 
   // Matching CSS rules, applied in (specificity, order) ascending so the
   // strongest wins.
-  const elem_id = dict_get(attrs, "id", "");
-  const classes = new Set(split(dict_get(attrs, "class", "")));
+  const elem_id = attrs.get("id") ?? "";
+  const classes = new Set(split(attrs.get("class") ?? ""));
   const matched = css_rules.filter((r) =>
     selector_matches(r.selector, tag, elem_id, classes),
   );
@@ -217,7 +217,7 @@ export function resolve_properties(
   }
 
   // Inline style attribute (strongest normal declarations).
-  const [inline, inline_important] = _split_declarations(dict_get(attrs, "style", ""));
+  const [inline, inline_important] = _split_declarations(attrs.get("style") ?? "");
   for (const [k, v] of inline) style.set(k, v);
 
   // `!important` declarations outrank every normal one: a stylesheet's

@@ -3,7 +3,7 @@
 import * as fontkit from "fontkit";
 import * as host from "../../pyrt/host.ts";
 
-import { ValueError, float, py_or, str } from "../../pyrt/index.ts";
+import { ValueError, float, str } from "../../pyrt/index.ts";
 import type { PathLike } from "../../pyrt/index.ts";
 
 export type _PathLike = PathLike;
@@ -78,7 +78,7 @@ export function read_design_axes(font_file: _PathLike, font_number: number = 0):
       axes.push(
         new FontDesignAxis(
           axis_tag,
-          py_or(axis_name, axis_tag) as string,
+          (axis_name || axis_tag) as string,
           float(info.min),
           float(info.default),
           float(info.max),

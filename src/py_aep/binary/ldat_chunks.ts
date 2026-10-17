@@ -10,11 +10,8 @@ import {
   concat,
   define,
   descriptor,
-  dict_get,
   int_enum,
   py_assert,
-  py_bool,
-  range,
   struct,
   tkey,
   ValueError,
@@ -107,7 +104,7 @@ export class Lhd3Chunk extends Chunk {
 
   /** Effective item type derived from raw type and item size. */
   get item_type(): LdatItemType {
-    return dict_get(_ITEM_TYPE_MAP, tkey(this.item_type_raw, this.item_size), LdatItemType.unknown);
+    return _ITEM_TYPE_MAP.get(tkey(this.item_type_raw, this.item_size)) ?? LdatItemType.unknown;
   }
 }
 define(Lhd3Chunk, {
@@ -424,7 +421,7 @@ export class LdatItem extends AttrsBase {
     const [time_units, in_interp, out_interp, key_flags] = struct.unpack(">iBBH", data.slice(0, 8));
 
     const payload = data.slice(8);
-    const num_value = dict_get(_NUM_VALUE, item_type);
+    const num_value = _NUM_VALUE.get(item_type) ?? null;
     let kf_data: any;
     let trailing: Uint8Array;
 
@@ -546,7 +543,7 @@ export class LdatChunk extends Chunk {
       });
     }
     const items: any[] = [];
-    for (const _ of range(count)) {
+    for (let i = 0, n = count; i < n; i++) {
       const item_data = read_bytes(fp, item_size);
       items.push(_read_item(item_data, item_type));
     }
@@ -558,14 +555,14 @@ export class LdatChunk extends Chunk {
       item_type,
       item_size,
     });
-    if (py_bool(trailing)) {
+    if (trailing?.length > 0) {
       instance._trailing = trailing;
     }
     return instance;
   }
 
   write(fp: IO): number {
-    if (!py_bool(this.items)) {
+    if (!this.items?.length) {
       return write_bytes(fp, this.data);
     }
     let written = 0;
@@ -576,7 +573,7 @@ export class LdatChunk extends Chunk {
         written += write_bytes(fp, item.tobytes());
       }
     }
-    if (py_bool(this._trailing)) {
+    if (this._trailing?.length > 0) {
       written += write_bytes(fp, this._trailing);
     }
     return written;

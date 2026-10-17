@@ -15,7 +15,7 @@ import type { Property } from "../models/properties/property.ts";
 import type { CompItem } from "../models/items/composition.ts";
 import type { Keyframe } from "../models/properties/keyframe.ts";
 import { parse_property } from "./property_value.ts";
-import { at, enumerate } from "../../pyrt/index.ts";
+import { at } from "../../pyrt/index.ts";
 
 /**
  * Parse markers from an MRST chunk.
@@ -49,7 +49,7 @@ export function parse_markers(
   const mrky_chunk = find_by_list_type(mrst_chunk.chunks, "mrky");
   marker_prop._kf_value_container = mrky_chunk;
   const nmrd_chunks = filter_by_list_type(mrky_chunk.chunks, "Nmrd");
-  for (const [i, nmrd_chunk] of enumerate(nmrd_chunks)) {
+  for (const [i, nmrd_chunk] of nmrd_chunks.entries()) {
     const kf = at(marker_prop.keyframes, i);
     kf._cache_value(
       parse_marker(

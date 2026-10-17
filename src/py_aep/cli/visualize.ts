@@ -27,15 +27,12 @@ import { BitsPerChannel, Label } from "../enums/index.ts";
 import {
   Path,
   RuntimeError,
-  dict_get,
-  enumerate,
   format,
   getattr,
   int,
   len,
   py_and,
   py_bool,
-  py_or,
   repr,
   round,
   str,
@@ -76,7 +73,7 @@ export function build_project_node(app: Application, include_properties: boolean
     ["bits_per_channel", BitsPerChannel.name_of(project.bits_per_channel)],
     ["expression_engine", project.expression_engine],
   ]);
-  if (py_bool(project.effect_names)) attrs.set("effects_used", len(project.effect_names));
+  if (project.effect_names?.length > 0) attrs.set("effects_used", project.effect_names.length);
 
   const children: Node[] = [];
   const root = project.root_folder;
@@ -88,7 +85,7 @@ export function build_project_node(app: Application, include_properties: boolean
   if (project.render_queue == null) {
     throw new RuntimeError("Project render_queue should not be None");
   }
-  if (py_bool(project.render_queue.items)) {
+  if (project.render_queue.items?.length > 0) {
     children.push(build_render_queue_node(project));
   }
 
@@ -141,9 +138,9 @@ export function build_comp_node(comp: CompItem, project: Project, include_proper
     ["size", `${comp.width}x${comp.height}`],
     ["duration", `${format(comp.duration, ".2f")}s`],
     ["frame_rate", pyfloat(comp.frame_rate)],
-    ["layers_count", len(comp.layers)],
+    ["layers_count", comp.layers.length],
   ]);
-  if (py_bool(comp.markers)) attrs.set("markers", len(comp.markers));
+  if (comp.markers?.length > 0) attrs.set("markers", comp.markers.length);
 
   const children: Node[] = [];
   for (const layer of comp.layers) {
@@ -165,7 +162,7 @@ export function build_footage_node(footage: FootageItem): Node {
     ["size", `${footage.width}x${footage.height}`],
   ]);
   if (footage.duration > 0) attrs.set("duration", `${format(footage.duration, ".2f")}s`);
-  if (py_bool(footage.file)) attrs.set("file", new Path(footage.file).name);
+  if (footage.file) attrs.set("file", new Path(footage.file).name);
 
   return {
     type: "Footage",
@@ -182,9 +179,9 @@ export function build_layer_node(layer: Layer, project: Project, include_propert
     ["enabled", layer.enabled],
   ]);
   if (!layer.enabled) attrs.set("enabled", false);
-  if (py_bool(layer.null_layer)) attrs.set("null", true);
+  if (layer.null_layer) attrs.set("null", true);
   if (py_bool(layer.parent)) attrs.set("parent", layer.parent.name);
-  if (py_bool(layer.markers)) attrs.set("markers", len(layer.markers));
+  if (layer.markers?.length > 0) attrs.set("markers", layer.markers.length);
 
   const children: Node[] = [];
   if (include_properties) {
@@ -200,7 +197,7 @@ export function build_layer_node(layer: Layer, project: Project, include_propert
 
   return {
     type: "Layer",
-    name: py_or(layer.name, "(unnamed)"),
+    name: layer.name || "(unnamed)",
     attrs,
     children,
   };
@@ -232,13 +229,13 @@ export function build_property_node(prop: Property): Node {
   const attrs: Map<string, any> = new Map<string, any>();
   if (prop._animated) {
     attrs.set("animated", true);
-    attrs.set("keyframes", len(prop.keyframes));
+    attrs.set("keyframes", prop.keyframes.length);
   }
   if (py_bool(py_and(prop.expression_enabled, prop.expression))) attrs.set("expression", true);
   if (prop.value != null && !prop._animated) {
     // Format value for display
     if (Array.isArray(prop.value)) {
-      if (len(prop.value) <= 4) attrs.set("value", prop.value);
+      if (prop.value.length <= 4) attrs.set("value", prop.value);
     } else if (typeof prop.value === "number") {
       // NOTE(port): int/float — integral values are plain numbers by design (RULEBOOK §4); an integral Python float (100.0) displays as `100` here instead of `100.0`.
       attrs.set("value", round(prop.value, 2));
@@ -260,10 +257,10 @@ export function build_render_queue_node(project: Project): Node {
   if (project.render_queue == null) {
     throw new RuntimeError("Project render_queue should not be None");
   }
-  const attrs: Map<string, any> = new Map<string, any>([["items", len(project.render_queue.items)]]);
+  const attrs: Map<string, any> = new Map<string, any>([["items", project.render_queue.items.length]]);
 
   const children: Node[] = [];
-  for (const [i, item] of enumerate(project.render_queue.items)) {
+  for (const [i, item] of project.render_queue.items.entries()) {
     children.push(build_render_queue_item_node(item, i + 1, project));
   }
 
@@ -277,7 +274,7 @@ export function build_render_queue_node(project: Project): Node {
 
 /** Build a render queue item node with output modules. */
 export function build_render_queue_item_node(item: RenderQueueItem, index: number, project: Project): Node {
-  const attrs: Map<string, any> = new Map<string, any>([["output_modules", len(item.output_modules)]]);
+  const attrs: Map<string, any> = new Map<string, any>([["output_modules", item.output_modules.length]]);
 
   // Try to find the comp name
   const comp = item.comp;
@@ -299,8 +296,8 @@ export function build_render_queue_item_node(item: RenderQueueItem, index: numbe
 /** Build an output module node. */
 export function build_output_module_node(om: OutputModule): Node {
   const attrs: Map<string, any> = new Map<string, any>();
-  if (py_bool(om.file)) attrs.set("file", new Path(om.file).name);
-  if (py_bool(om.file_template)) attrs.set("name_template", om.file_template);
+  if (om.file) attrs.set("file", new Path(om.file).name);
+  if (om.file_template) attrs.set("name_template", om.file_template);
 
   return {
     type: "OutputModule",
@@ -343,13 +340,13 @@ export function format_text(
     ["RenderQueueItem", "📋"],
     ["OutputModule", "💾"],
   ]);
-  const icon = dict_get(type_icon, node.type, "•");
+  const icon = type_icon.get(node.type) ?? "•";
 
   let attrs_str = "";
-  if (py_bool(node.attrs)) {
+  if (node.attrs?.size > 0) {
     // Filter out None values
     const filtered = new Map<string, any>([...node.attrs].filter(([, v]) => v != null));
-    if (py_bool(filtered)) {
+    if (filtered.size > 0) {
       attrs_str = " " + repr(filtered);
     }
   }
@@ -361,8 +358,8 @@ export function format_text(
   let child_prefix = prefix + (is_last ? "    " : "│   ");
   if (current_depth === 0) child_prefix = "";
 
-  for (const [i, child] of enumerate(children)) {
-    const is_last_child = i === len(children) - 1;
+  for (const [i, child] of children.entries()) {
+    const is_last_child = i === children.length - 1;
     format_text(child, output, child_prefix, is_last_child, max_depth, current_depth + 1);
   }
 }
@@ -403,7 +400,7 @@ export function format_dot(node: Node, output: TextIO, max_depth: number | null 
       ["Property", "#bdc3c7"],
       ["Transform", "#1abc9c"],
     ]);
-    const color = dict_get(colors, n.type, "#cccccc");
+    const color = colors.get(n.type) ?? "#cccccc";
 
     // Build label
     const name = escape_dot(str(n.name));
@@ -414,7 +411,7 @@ export function format_dot(node: Node, output: TextIO, max_depth: number | null 
     }
 
     let label: string;
-    if (py_bool(attrs_lines)) {
+    if (attrs_lines.length > 0) {
       label = "{{" + n.type + "|" + name + "|" + attrs_lines.join("\\l") + "\\l}}";
     } else {
       label = "{{" + n.type + "|" + name + "}}";
@@ -422,7 +419,7 @@ export function format_dot(node: Node, output: TextIO, max_depth: number | null 
 
     output.write(`    ${nid} [label="${label}", style=filled, fillcolor="${color}"];\n`);
 
-    if (py_bool(parent_id)) {
+    if (parent_id) {
       output.write(`    ${parent_id} -> ${nid};\n`);
     }
 
@@ -478,7 +475,7 @@ export function format_mermaid(node: Node, output: TextIO, max_depth: number | n
 
     output.write(`    ${shape}\n`);
 
-    if (py_bool(parent_id)) {
+    if (parent_id) {
       output.write(`    ${parent_id} --> ${nid}\n`);
     }
 
@@ -666,7 +663,7 @@ export function main(): number {
   const root_node = build_project_node(app, include_properties);
 
   // Output using context manager (get_output): a file when --output is given, else stdout.
-  const output_path = py_bool(args.output) ? new Path(args.output as string) : null;
+  const output_path = args.output ? new Path(args.output as string) : null;
 
   // @contextlib.contextmanager: returns [output, close] (the `with` enter/exit pair).
   function get_output(): [TextIO, () => void] {

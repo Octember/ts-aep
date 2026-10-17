@@ -289,7 +289,7 @@ export function get_import_as_types(suffix: string): ReadonlySet<ImportAsType> {
  *     ValueError: If the extension is not a supported footage format.
  */
 export function get_file_format(suffix: string): FileFormat {
-  const fmt = dict_get(_FILE_FORMATS, suffix.toLowerCase());
+  const fmt = _FILE_FORMATS.get(suffix.toLowerCase()) ?? null;
   if (fmt == null) throw new ValueError(`Unsupported footage format: ${repr(suffix)}`);
   return fmt;
 }

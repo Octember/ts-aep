@@ -39,7 +39,6 @@ import {
   copysign,
   decode,
   dict_get,
-  enumerate,
   float,
   fspath,
   getitem,
@@ -165,7 +164,7 @@ export function _parse_item(reader: _Reader, os_type: string): any {
     reader.ustr(); // name from classID (unused)
     const cls = reader.key();
     const out = new Map<string, any>([["_class", cls]]);
-    for (const _ of range(reader.u4())) {
+    for (let i = 0, n = reader.u4(); i < n; i++) {
       const key = reader.key();
       out.set(key, _parse_item(reader, decode(reader.raw(4), "latin-1")));
     }
@@ -214,7 +213,7 @@ export function _parse_effects_descriptor(body: Uint8Array): Map<string, any> {
   /** Parse an `lmfx`/`lfx2` block body: version u4s (ending 16) + root Objc. */
   const reader = new _Reader(body);
   let found = false;
-  for (const _ of range(4)) {
+  for (let i = 0; i < 4; i++) {
     if (reader.u4() === 16) {
       found = true;
       break;
@@ -379,7 +378,7 @@ export function _py_iter(value: any): any[] {
 }
 
 export function _color(value: any): number[] {
-  if (!(value instanceof Map) || dict_get(value, "_class") !== "RGBC") {
+  if (!(value instanceof Map) || (value.get("_class") ?? null) !== "RGBC") {
     throw new UnsupportedStyleError(`unsupported color model ${_repr(value)}`);
   }
   return [
@@ -398,12 +397,12 @@ export function _point(value: any): number[] {
 }
 
 export function _gradient(value: any): Gradient {
-  if (!(value instanceof Map) || dict_get(value, "_class") !== "Grdn") {
+  if (!(value instanceof Map) || (value.get("_class") ?? null) !== "Grdn") {
     throw new UnsupportedStyleError(`expected a gradient, got ${_repr(value)}`);
   }
-  if (dict_get(value, "GrdF") !== "CstS") {
+  if ((value.get("GrdF") ?? null) !== "CstS") {
     // Noise gradients ("ClNs") have no AE representation.
-    throw new UnsupportedStyleError(`unsupported gradient form ${repr(dict_get(value, "GrdF"))}`);
+    throw new UnsupportedStyleError(`unsupported gradient form ${repr(value.get("GrdF") ?? null)}`);
   }
   // `Lctn` stop locations are always on Photoshop's fixed 0..4096 scale.
   // The sibling `Intr` field is the gradient editor's Smoothness slider
@@ -663,12 +662,12 @@ export function _convert_style(
     values.set(`${prefix}/AEColorChoice`, instance.has("Grad") ? 2.0 : 1.0);
   }
   if (_GRADIENT_SMOOTHNESS_PREFIXES.has(prefix)) {
-    const grad = dict_get(instance, "Grad");
+    const grad = instance.get("Grad") ?? null;
     // bool is an int in Python, so a boolean Intr also counts as a number here.
-    const intr = grad instanceof Map ? dict_get(grad, "Intr") : null;
+    const intr = grad instanceof Map ? grad.get("Intr") ?? null : null;
     if (
       grad instanceof Map &&
-      dict_get(grad, "GrdF") === "CstS" &&
+      (grad.get("GrdF") ?? null) === "CstS" &&
       (typeof intr === "number" || typeof intr === "boolean")
     ) {
       values.set(`${prefix}/gradientSmoothness`, (Number(intr) / 4096.0) * 100.0);
@@ -731,10 +730,10 @@ export function _blend_options_values(
   // `brst` lists the channels EXCLUDED from blending as big-endian u4
   // indices (0=R, 1=G, 2=B); an absent/empty block keeps all channels on.
   const restricted = new Set<number>();
-  for (const off of range(0, blocks.channel_restrictions.length - 3, 4)) {
+  for (let off = 0, n = blocks.channel_restrictions.length - 3; off < n; off += 4) {
     restricted.add(struct.unpack(">I", bytes_.slice(blocks.channel_restrictions, off, off + 4))[0]);
   }
-  for (const [index, name] of enumerate(["R", "G", "B"])) {
+  for (const [index, name] of ["R", "G", "B"].entries()) {
     values.set(`ADBE ${name} Channel Blend`, restricted.has(index) ? 0.0 : 1.0);
   }
   return values;
@@ -769,8 +768,8 @@ export function parse_layer_styles(
   // or a channel restriction (`brst`).
   const blend_data =
     blocks.fill_opacity != null ||
-    py_bool(blocks.blend_interior) ||
-    py_bool(blocks.channel_restrictions);
+    !!blocks.blend_interior ||
+    blocks.channel_restrictions?.length > 0;
   let descriptor = new Map<string, any>();
   if (blocks.effects != null) {
     try {
@@ -957,7 +956,7 @@ export function _instance_box(
   let lead = 0;
   let trail = 0;
   if (key === "DrSh" || key === "OrGl") {
-    const precise = key === "OrGl" && dict_get(instance, "GlwT") === "PrBL";
+    const precise = key === "OrGl" && (instance.get("GlwT") ?? null) === "PrBL";
     const reach = _blur_reach(
       float(dict_get(instance, "blur", 0)),
       float(dict_get(instance, "Ckmt", 0)),
@@ -966,7 +965,7 @@ export function _instance_box(
     [lead, trail] = _pads(reach, py_bool(dict_get(instance, "AntA", false)));
     if (key === "DrSh") {
       const angle = radians(
-        py_bool(dict_get(instance, "uglg")) ? global_angle : float(dict_get(instance, "lagl", 0)),
+        py_bool(instance.get("uglg")) ? global_angle : float(dict_get(instance, "lagl", 0)),
       );
       const distance = float(dict_get(instance, "Dstn", 0));
       dx = _round_away(-Math.cos(angle) * distance);

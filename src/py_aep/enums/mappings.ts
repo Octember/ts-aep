@@ -6,7 +6,7 @@
  * and the Python enum types that match ExtendScript.
  */
 
-import { bytes_, dict_get } from "../../pyrt/index.ts";
+import { bytes_ } from "../../pyrt/index.ts";
 import { OutputAudio } from "./output_module.ts";
 
 /**
@@ -174,7 +174,7 @@ export function adobe_color_profile_names(): string[] {
  *     name: The color-space name (e.g. `"sRGB IEC61966-2.1"`).
  */
 export function profile_id_for_name(name: string): Uint8Array | null {
-  const uid_hex = dict_get(_NAME_TO_ICC_PROFILE, name);
+  const uid_hex = _NAME_TO_ICC_PROFILE.get(name) ?? null;
   return uid_hex != null ? bytes_.fromhex(uid_hex) : null;
 }
 
@@ -205,7 +205,7 @@ export function map_output_color_space(
     return working_space;
   }
   const uid_hex = bytes_.hex(output_profile_id);
-  return dict_get(_ICC_PROFILE_MAPPING, uid_hex);
+  return _ICC_PROFILE_MAPPING.get(uid_hex) ?? null;
 }
 
 /**
@@ -238,5 +238,5 @@ export function map_media_color_space(
   if (uid_hex === "f".repeat(32)) {
     return "Embedded";
   }
-  return dict_get(_ICC_PROFILE_MAPPING, uid_hex, uid_hex);
+  return _ICC_PROFILE_MAPPING.get(uid_hex) ?? uid_hex;
 }

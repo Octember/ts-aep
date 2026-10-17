@@ -4,11 +4,9 @@ import {
   IndexError,
   descriptor,
   deferred,
-  dict_get,
   getattr,
   max,
   py_assert,
-  py_bool,
   py_eq,
   py_or,
   repr,
@@ -332,7 +330,7 @@ export class PropertyBase {
   /** The automatic (display) name derived from `match_name`. */
   get auto_name(): string {
     if (this._auto_name != null) return this._auto_name;
-    return dict_get(MATCH_NAME_TO_AUTO_NAME, this.match_name, this.match_name);
+    return MATCH_NAME_TO_AUTO_NAME.get(this.match_name) ?? this.match_name;
   }
 
   /**
@@ -349,7 +347,7 @@ export class PropertyBase {
     if (this._name != null) return this._name;
     if (this._name_utf8 != null) {
       const text: string = split(this._name_utf8.value, "\0")[0];
-      if (py_bool(text) && text !== TDSN_SENTINEL) return text;
+      if (text && text !== TDSN_SENTINEL) return text;
     }
     return this.auto_name;
   }
@@ -384,7 +382,7 @@ export class PropertyBase {
     if (this._name != null) return true;
     if (this._name_utf8 != null) {
       const text: string = split(this._name_utf8.value, "\0")[0];
-      return py_bool(text) && text !== TDSN_SENTINEL;
+      return !!text && text !== TDSN_SENTINEL;
     }
     return false;
   }

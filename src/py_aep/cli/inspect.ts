@@ -33,7 +33,6 @@ import {
   getitem,
   int,
   len,
-  py_bool,
   repr,
   sorted,
   str,
@@ -57,7 +56,7 @@ export function _chunk_detail(chunk: Chunk): string {
     let v = repr(val);
     // Python len() and slicing count code points, not UTF-16 units.
     const cps = Array.from(v);
-    if (len(cps) > 60) v = cps.slice(0, 57).join("") + "...";
+    if (cps.length > 60) v = cps.slice(0, 57).join("") + "...";
     return `value=${v}`;
   }
   const data = getattr(chunk, "data", null);
@@ -76,7 +75,7 @@ export function print_tree(chunk: Chunk, depth: number = 0, max_depth: number = 
   if (max_depth >= 0 && depth > max_depth) return;
   const label = chunk_label(chunk);
   if (chunk instanceof ListChunk) {
-    const n = len(chunk.chunks);
+    const n = chunk.chunks.length;
     print(`${"  ".repeat(depth)}${label} (${n} children)`);
     for (const c of chunk.chunks) print_tree(c, depth + 1, max_depth);
   } else {
@@ -111,22 +110,22 @@ export function _inspect_item(path: Path, index: number): number {
   }
 
   const items = filter_by_list_type(fold.chunks, "Item");
-  if (index >= len(items)) {
-    print(`ERROR: Item[${index}] out of range (only ${len(items)} items)`, { file: sys.stderr });
+  if (index >= items.length) {
+    print(`ERROR: Item[${index}] out of range (only ${items.length} items)`, { file: sys.stderr });
     return 1;
   }
 
   // Python `items[index]` accepts negative indexes; `at` keeps that and raises IndexError.
   const item = at(items, index);
-  print(`=== ${path.name} Item[${index}] (${len(item.chunks)} children) ===`);
+  print(`=== ${path.name} Item[${index}] (${item.chunks.length} children) ===`);
   for (const [i, c] of item.chunks.entries()) {
     const label = chunk_label(c);
     if (c instanceof ListChunk) {
-      print(`  [${format(i, "2d")}] ${label} (${len(c.chunks)} children)`);
+      print(`  [${format(i, "2d")}] ${label} (${c.chunks.length} children)`);
       for (const [j, cc] of c.chunks.entries()) {
         const cl = chunk_label(cc);
         if (cc instanceof ListChunk) {
-          print(`    [${format(j, "2d")}] ${cl} (${len(cc.chunks)} children)`);
+          print(`    [${format(j, "2d")}] ${cl} (${cc.chunks.length} children)`);
         } else {
           const detail = _chunk_detail(cc);
           print(`    [${format(j, "2d")}] ${cl} (${detail})`);
@@ -165,10 +164,10 @@ export function _item_summary(path: Path): number {
   }
 
   const items = filter_by_list_type(fold.chunks, "Item");
-  print(`${path.name}: ${len(items)} items in Fold`);
+  print(`${path.name}: ${items.length} items in Fold`);
   for (const [i, item] of items.entries()) {
     const children = item.chunks.map((c) => chunk_label(c));
-    print(`  Item[${i}]: ${len(children)} children - ${children.join(", ")}`);
+    print(`  Item[${i}]: ${children.length} children - ${children.join(", ")}`);
   }
   return 0;
 }
@@ -214,27 +213,27 @@ export function _dump_chunk(path: Path, chunk_path: string): number {
 
   if (!chunks.has(chunk_path)) {
     const matches = sorted(chunks.keys()).filter((p) => p.includes(chunk_path));
-    if (!py_bool(matches)) {
+    if (matches.length === 0) {
       print(`Chunk path not found: ${chunk_path}`, { file: sys.stderr });
       print("\nAvailable leaf chunk paths:", { file: sys.stderr });
       for (const p of sorted(chunks.keys())) {
-        print(`  ${p} (${len(getitem(chunks, p))}B)`, { file: sys.stderr });
+        print(`  ${p} (${getitem(chunks, p).length}B)`, { file: sys.stderr });
       }
       return 1;
     }
-    if (len(matches) === 1) {
+    if (matches.length === 1) {
       chunk_path = matches[0];
     } else {
       print(`Ambiguous chunk path '${chunk_path}'. Matches:`, { file: sys.stderr });
       for (const m of matches) {
-        print(`  ${m} (${len(getitem(chunks, m))}B)`, { file: sys.stderr });
+        print(`  ${m} (${getitem(chunks, m).length}B)`, { file: sys.stderr });
       }
       return 1;
     }
   }
 
   const data = getitem(chunks, chunk_path);
-  print(`\n[${chunk_path}] (${len(data)} bytes)\n`);
+  print(`\n[${chunk_path}] (${data.length} bytes)\n`);
   print(format_hex_dump(data));
   return 0;
 }

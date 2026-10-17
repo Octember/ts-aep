@@ -14,7 +14,6 @@ import {
   decode,
   define,
   descriptor,
-  dict_get,
   encode,
   field,
   floordiv,
@@ -270,7 +269,7 @@ export class HeadChunk extends Chunk {
    * 12, 20, 21, 27, 99 and 255 with their own pair kept).
    */
   sync_file_format_version(): void {
-    const pair = dict_get(FORMAT_VERSIONS, this.ae_version_major);
+    const pair = FORMAT_VERSIONS.get(this.ae_version_major) ?? null;
     if (pair != null) {
       [this.file_format_version, this._format_subversion] = pair;
     }

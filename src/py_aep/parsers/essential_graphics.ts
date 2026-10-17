@@ -5,7 +5,7 @@ import type { U4Chunk, Utf8Chunk } from "../binary/scalar_chunks.ts";
 import type { Chunk, ListChunk } from "../binary/chunk.ts";
 import { _suppress_materialization } from "../models/descriptors.ts";
 import { EssentialGraphicsController, SourcePropertyRef } from "../models/essential_graphics.ts";
-import { at, dict_get, getitem, int, json_loads, py_bool, py_eq, sorted } from "../../pyrt/index.ts";
+import { at, dict_get, getitem, int, json_loads, py_eq, sorted } from "../../pyrt/index.ts";
 
 // AE stores 0xFFFFFFFF in a CPrp path node's `index` to mean "match by name".
 export const _BY_NAME_INDEX = 0xffffffff;
@@ -22,7 +22,7 @@ export function _parse_source_property_path(raw: string): SourcePropertyRef[] {
   const path: SourcePropertyRef[] = [];
   for (const key of sorted(nodes.keys(), int)) {
     const node: Map<string, any> = getitem(nodes, key);
-    const index = dict_get(node, "index");
+    const index = node.get("index") ?? null;
     path.push(
       new SourcePropertyRef(
         dict_get(node, "matchName", ""),
@@ -46,7 +46,7 @@ export function _parse_controller(cctl_chunk: ListChunk): EssentialGraphicsContr
   const ctyp = find_by_type(cctl_chunk.chunks, "CTyp") as U4Chunk;
 
   const uuid_chunks = filter_by_type(cctl_chunk.chunks, "Utf8");
-  const uuid = py_bool(uuid_chunks) ? (uuid_chunks[0] as Utf8Chunk).value : "";
+  const uuid = uuid_chunks?.length > 0 ? (uuid_chunks[0] as Utf8Chunk).value : "";
 
   // The controlled-property path is the nested LIST:CPrp's Utf8 (JSON), a
   // different CPrp from the override-side OvG2/CPrp. Absent for some
@@ -63,17 +63,17 @@ export function _parse_controller(cctl_chunk: ListChunk): EssentialGraphicsContr
   }
   if (cprp != null) {
     const path_utf8 = filter_by_type(cprp.chunks, "Utf8");
-    if (py_bool(path_utf8)) {
+    if (path_utf8?.length > 0) {
       source_property_path = _parse_source_property_path((path_utf8[0] as Utf8Chunk).value);
     }
     // CCId / CLId identify the source comp + layer that own the
     // controlled property (the layer is matched by its `layer_id`).
     const ccid = filter_by_type(cprp.chunks, "CCId");
-    if (py_bool(ccid)) {
+    if (ccid?.length > 0) {
       source_comp_id = (ccid[0] as U4Chunk).value;
     }
     const clid = filter_by_type(cprp.chunks, "CLId");
-    if (py_bool(clid)) {
+    if (clid?.length > 0) {
       source_layer_id = (clid[0] as U4Chunk).value;
     }
   }

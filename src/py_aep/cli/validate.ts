@@ -15,12 +15,10 @@ import {
   AttributeError,
   KeyError,
   Path,
-  ValueError,
   attrs_has,
   decode,
   descriptors_of,
   dict_get,
-  enumerate,
   fields,
   getitem,
   isclose,
@@ -145,7 +143,7 @@ export function _get_field_names(obj: any): readonly string[] | null {
     const is_descriptor = "chunk_attr" in attr || "dict_attr" in attr;
     if (is_descriptor && typeof (attr as any).__get__ === "function") names.add(name);
   }
-  if (py_bool(names)) {
+  if (names.size > 0) {
     const result = sorted(names);
     _field_names_cache.set(cls, result);
     return result;
@@ -156,7 +154,7 @@ export function _get_field_names(obj: any): readonly string[] | null {
   for (const name of _property_accessors(cls)) {
     if (!name.startsWith("_") && !descriptors.has(name)) names.add(name);
   }
-  const result2: readonly string[] | null = py_bool(names) ? sorted(names) : null;
+  const result2: readonly string[] | null = names.size > 0 ? sorted(names) : null;
   _field_names_cache.set(cls, result2);
   return result2;
 }
@@ -307,7 +305,7 @@ export function compare_values(expected: any, parsed: any, tolerance = 0.001): b
   }
   if (typeof expected === "string" && typeof parsed === "string") return expected === parsed;
   if (Array.isArray(expected) && Array.isArray(parsed)) {
-    if (len(expected) !== len(parsed)) return false;
+    if (expected.length !== parsed.length) return false;
     return zip(expected, parsed).every(([e, p]) => compare_values(e, p, tolerance));
   }
   return py_eq(expected, parsed);
@@ -336,7 +334,7 @@ export class ValidationResult {
   /** Add a difference. */
   add_diff(path: string, expected: any, parsed: any, category = "other"): void {
     this.differences.push(`${path}: expected ${repr(expected)}, got ${repr(parsed)}`);
-    this.categories.set(category, (dict_get(this.categories, category, 0) as number) + 1);
+    this.categories.set(category, ((this.categories.get(category) ?? 0) as number) + 1);
   }
 
   /** Add a warning. */
@@ -375,7 +373,7 @@ export function _compare_fields(
     if (class_name) result.defined_fields.add(`${class_name}.${parsed_key}`);
     if (expected.has(exp_key)) {
       const exp_val = expected.get(exp_key);
-      if (exp_val instanceof Map && py_bool(dict_get(exp_val, "_undefined"))) continue;
+      if (exp_val instanceof Map && py_bool(exp_val.get("_undefined"))) continue;
       if (class_name) result.compared_fields.add(`${class_name}.${parsed_key}`);
       const parsed_val = get_enum_value(parsed.get(parsed_key) ?? null);
       if (!compare_values(exp_val, parsed_val)) {
@@ -393,33 +391,33 @@ export function _compare_markers(
   result: ValidationResult,
 ): void {
   /** Compare a list of markers (used by both layers and compositions). */
-  if (len(expected_markers) !== len(parsed_markers)) {
-    result.add_diff(`${path}.numMarkers`, len(expected_markers), len(parsed_markers), "markers");
+  if (expected_markers.length !== parsed_markers.length) {
+    result.add_diff(`${path}.numMarkers`, expected_markers.length, parsed_markers.length, "markers");
   }
-  for (const [i, [exp_marker, parsed_marker]] of enumerate(zip(expected_markers, parsed_markers))) {
+  for (const [i, [exp_marker, parsed_marker]] of zip(expected_markers, parsed_markers).entries()) {
     compare_marker(exp_marker, parsed_marker, `${path}.markers[${i}]`, frame_rate, result);
   }
 }
 
 export function _compare_guides(expected_guides: Dict[], parsed_guides: Dict[], path: string, result: ValidationResult): void {
   /** Compare a list of guides. */
-  if (len(expected_guides) !== len(parsed_guides)) {
-    result.add_diff(`${path}.numGuides`, len(expected_guides), len(parsed_guides), "composition");
+  if (expected_guides.length !== parsed_guides.length) {
+    result.add_diff(`${path}.numGuides`, expected_guides.length, parsed_guides.length, "composition");
   }
   const guide_mappings = {
     orientationType: "orientation_type",
     position: "position",
     positionType: "position_type",
   };
-  for (const [i, [exp_guide, parsed_guide]] of enumerate(zip(expected_guides, parsed_guides))) {
+  for (const [i, [exp_guide, parsed_guide]] of zip(expected_guides, parsed_guides).entries()) {
     _compare_fields(exp_guide, parsed_guide, guide_mappings, `${path}.guides[${i}]`, "composition", result, "Guide");
   }
 }
 
 export function _compare_proxy_source(expected_item: Dict, parsed_item: Dict, path: string, result: ValidationResult): void {
   /** Compare proxySource on an AVItem (comp or footage). */
-  const exp_proxy = dict_get(expected_item, "proxySource");
-  const parsed_proxy = dict_get(parsed_item, "proxy_source");
+  const exp_proxy = expected_item.get("proxySource") ?? null;
+  const parsed_proxy = parsed_item.get("proxy_source") ?? null;
   if (py_bool(exp_proxy) && py_bool(parsed_proxy)) {
     const proxy_path = `${path}.proxySource`;
     const source_mappings = {
@@ -451,8 +449,8 @@ export function _compare_children_by_match_name(
   result: ValidationResult,
 ): void {
   /** Match expected/parsed property children by matchName, then recurse. */
-  if (len(expected_props) !== len(parsed_props)) {
-    result.add_diff(`${path}.numProperties`, len(expected_props), len(parsed_props), "properties");
+  if (expected_props.length !== parsed_props.length) {
+    result.add_diff(`${path}.numProperties`, expected_props.length, parsed_props.length, "properties");
   }
 
   // Build match-name lookup.  When multiple children share the same
@@ -467,20 +465,20 @@ export function _compare_children_by_match_name(
   // Track how many of each match_name we have consumed.
   const match_name_idx = new Map<string, number>();
 
-  for (const [i, exp_prop] of enumerate(expected_props)) {
+  for (const [i, exp_prop] of expected_props.entries()) {
     const exp_match_name = dict_get(exp_prop, "matchName", "");
     const exp_name = dict_get(exp_prop, "name", `[${i}]`);
     const child_path = `${path}.${exp_name}`;
 
     const candidates = parsed_by_match_name.get(exp_match_name);
-    if (!py_bool(candidates)) {
+    if (!candidates?.length) {
       result.add_diff(child_path, "exists", "missing", "properties");
       continue;
     }
 
-    const idx = dict_get(match_name_idx, exp_match_name, 0) as number;
+    const idx = (match_name_idx.get(exp_match_name) ?? 0) as number;
     let parsed_prop: Dict;
-    if (idx < len(candidates)) {
+    if (idx < candidates.length) {
       parsed_prop = candidates![idx];
       match_name_idx.set(exp_match_name, idx + 1);
     } else {
@@ -488,7 +486,7 @@ export function _compare_children_by_match_name(
     }
 
     const has_child_properties = exp_prop.has("properties");
-    const exp_property_type = dict_get(exp_prop, "propertyType");
+    const exp_property_type = exp_prop.get("propertyType") ?? null;
     if (has_child_properties || exp_property_type === "IndexedGroup") {
       compare_property_group(exp_prop, parsed_prop, child_path, result);
     } else {
@@ -529,7 +527,7 @@ export function compare_marker(
   /** Compare marker properties. */
   // Calculate time from frame_time if available
   let parsed_time: number | null = null;
-  if (dict_get(parsed_marker, "frame_time") != null) {
+  if (parsed_marker.get("frame_time") != null) {
     parsed_time = truediv(getitem(parsed_marker, "frame_time"), frame_rate);
   }
 
@@ -537,7 +535,7 @@ export function compare_marker(
   result.track_field("Marker", "time", expected_marker.has("time"));
   if (expected_marker.has("time")) {
     const exp_val = getitem(expected_marker, "time");
-    if (!(exp_val instanceof Map) || !py_bool(dict_get(exp_val, "_undefined"))) {
+    if (!(exp_val instanceof Map) || !py_bool(exp_val.get("_undefined"))) {
       if (!compare_values(exp_val, parsed_time)) {
         result.add_diff(`${path}.time`, exp_val, parsed_time, "markers");
       }
@@ -627,7 +625,7 @@ export function compare_layer(
   result.track_field("Layer", "light_source_id", expected_layer.has("lightSource"));
   if (expected_layer.has("index")) {
     const exp_index = getitem(expected_layer, "index");
-    const parsed_index = dict_get(parsed_layer, "index");
+    const parsed_index = parsed_layer.get("index") ?? null;
     if (parsed_index != null && exp_index !== parsed_index + 1) {
       result.add_diff(`${path}.index`, exp_index, parsed_index + 1, "layers");
     }
@@ -642,7 +640,7 @@ export function compare_layer(
         result.add_diff(`${path}.lightSource`, null, parsed_ls_id, "layers");
       }
     } else if (exp_ls instanceof Map) {
-      const exp_ls_index = dict_get(exp_ls, "index");
+      const exp_ls_index = exp_ls.get("index") ?? null;
       if (exp_ls_index != null && parsed_ls_id === 0) {
         result.add_diff(`${path}.lightSource`, exp_ls_index, null, "layers");
       }
@@ -705,18 +703,18 @@ export function compare_property(
   result.track_field(
     "Property",
     "min_value",
-    expected_prop.has("hasMin") && py_bool(dict_get(expected_prop, "hasMin")),
+    expected_prop.has("hasMin") && py_bool(expected_prop.get("hasMin")),
   );
   result.track_field(
     "Property",
     "max_value",
-    expected_prop.has("hasMax") && py_bool(dict_get(expected_prop, "hasMax")),
+    expected_prop.has("hasMax") && py_bool(expected_prop.get("hasMax")),
   );
 
   // Compare propertyIndex (ExtendScript is 1-based, parsed is 0-based)
   if (expected_prop.has("propertyIndex")) {
     const exp_pi = getitem(expected_prop, "propertyIndex");
-    const parsed_pi = dict_get(parsed_prop, "property_index");
+    const parsed_pi = parsed_prop.get("property_index") ?? null;
     if (parsed_pi != null && exp_pi !== parsed_pi + 1) {
       result.add_diff(`${path}.propertyIndex`, exp_pi, parsed_pi + 1, "properties");
     }
@@ -725,8 +723,8 @@ export function compare_property(
   // Compare value
   if (expected_prop.has("value")) {
     const exp_val = getitem(expected_prop, "value");
-    const parsed_val = dict_get(parsed_prop, "value");
-    if (!(exp_val instanceof Map) || !py_bool(dict_get(exp_val, "_undefined"))) {
+    const parsed_val = parsed_prop.get("value") ?? null;
+    if (!(exp_val instanceof Map) || !py_bool(exp_val.get("_undefined"))) {
       if (parsed_val == null) {
         result.add_diff(`${path}.value`, exp_val, parsed_val, "properties");
       } else if (!compare_values(exp_val, parsed_val)) {
@@ -748,7 +746,7 @@ export function compare_property(
   // Compare individual keyframes
   const exp_keyframes = dict_get(expected_prop, "keyframes", []) as Dict[];
   const parsed_keyframes = dict_get(parsed_prop, "keyframes", []) as Dict[];
-  for (const [ki, [exp_kf, parsed_kf]] of enumerate(zip(exp_keyframes, parsed_keyframes))) {
+  for (const [ki, [exp_kf, parsed_kf]] of zip(exp_keyframes, parsed_keyframes).entries()) {
     compare_keyframe(exp_kf, parsed_kf, `${path}.keyframes[${ki}]`, result);
   }
 
@@ -758,14 +756,14 @@ export function compare_property(
   // the bound present).
   if (expected_prop.has("hasMin")) {
     const exp_has_min = py_bool(getitem(expected_prop, "hasMin"));
-    const parsed_has_min = py_bool(dict_get(parsed_prop, "has_min"));
+    const parsed_has_min = py_bool(parsed_prop.get("has_min"));
     if (exp_has_min !== parsed_has_min) {
       result.add_diff(`${path}.hasMin`, exp_has_min, parsed_has_min, "properties");
     }
   }
   if (expected_prop.has("hasMax")) {
     const exp_has_max = py_bool(getitem(expected_prop, "hasMax"));
-    const parsed_has_max = py_bool(dict_get(parsed_prop, "has_max"));
+    const parsed_has_max = py_bool(parsed_prop.get("has_max"));
     if (exp_has_max !== parsed_has_max) {
       result.add_diff(`${path}.hasMax`, exp_has_max, parsed_has_max, "properties");
     }
@@ -775,20 +773,20 @@ export function compare_property(
   // The presence check above already flags an under-reported bound; gating
   // the value comparison on the parsed side too avoids a redundant second
   // diff (.minValue: 0 vs None) for the same root cause.
-  if (py_bool(dict_get(expected_prop, "hasMin")) && py_bool(dict_get(parsed_prop, "has_min"))) {
+  if (py_bool(expected_prop.get("hasMin")) && py_bool(parsed_prop.get("has_min"))) {
     if (expected_prop.has("minValue")) {
       const exp_min = getitem(expected_prop, "minValue");
-      const parsed_min = dict_get(parsed_prop, "min_value");
+      const parsed_min = parsed_prop.get("min_value") ?? null;
       if (!compare_values(exp_min, parsed_min)) {
         result.add_diff(`${path}.minValue`, exp_min, parsed_min, "properties");
       }
     }
   }
 
-  if (py_bool(dict_get(expected_prop, "hasMax")) && py_bool(dict_get(parsed_prop, "has_max"))) {
+  if (py_bool(expected_prop.get("hasMax")) && py_bool(parsed_prop.get("has_max"))) {
     if (expected_prop.has("maxValue")) {
       const exp_max = getitem(expected_prop, "maxValue");
-      const parsed_max = dict_get(parsed_prop, "max_value");
+      const parsed_max = parsed_prop.get("max_value") ?? null;
       if (!compare_values(exp_max, parsed_max)) {
         result.add_diff(`${path}.maxValue`, exp_max, parsed_max, "properties");
       }
@@ -797,7 +795,7 @@ export function compare_property(
 
   // Compare TextDocument value
   if (expected_prop.has("textDocument")) {
-    const parsed_value = dict_get(parsed_prop, "value");
+    const parsed_value = parsed_prop.get("value") ?? null;
     if (parsed_value instanceof Map) {
       compare_text_document(getitem(expected_prop, "textDocument"), parsed_value, `${path}.textDocument`, result);
     }
@@ -805,7 +803,7 @@ export function compare_property(
 
   // Compare Shape value
   if (expected_prop.has("shapeValue")) {
-    const parsed_value = dict_get(parsed_prop, "value");
+    const parsed_value = parsed_prop.get("value") ?? null;
     if (parsed_value instanceof Map) {
       compare_shape_value(getitem(expected_prop, "shapeValue"), parsed_value, `${path}.shapeValue`, result);
     }
@@ -817,10 +815,10 @@ export function compare_property(
   result.track_field("Property", "alternate_source", expected_prop.has("alternateSource"));
   if (expected_prop.has("alternateSource")) {
     const exp_alt = getitem(expected_prop, "alternateSource");
-    const parsed_alt = dict_get(parsed_prop, "alternate_source");
+    const parsed_alt = parsed_prop.get("alternate_source") ?? null;
     if (exp_alt == null) {
       if (parsed_alt != null) {
-        const pid = parsed_alt instanceof Map ? dict_get(parsed_alt, "id") : parsed_alt;
+        const pid = parsed_alt instanceof Map ? parsed_alt.get("id") ?? null : parsed_alt;
         result.add_diff(`${path}.alternateSource`, null, pid, "properties");
       }
     } else if (exp_alt instanceof Map) {
@@ -828,11 +826,11 @@ export function compare_property(
         result.add_diff(`${path}.alternateSource`, exp_alt, null, "properties");
       } else {
         for (const key of ["id", "name"]) {
-          if (!py_eq(dict_get(exp_alt, key), dict_get(parsed_alt, key))) {
+          if (!py_eq(exp_alt.get(key) ?? null, parsed_alt.get(key) ?? null)) {
             result.add_diff(
               `${path}.alternateSource.${key}`,
-              dict_get(exp_alt, key),
-              dict_get(parsed_alt, key),
+              exp_alt.get(key) ?? null,
+              parsed_alt.get(key) ?? null,
               "properties",
             );
           }
@@ -850,34 +848,34 @@ export function compare_property(
   result.track_field("Property", "essential_property_source", expected_prop.has("essentialPropertySource"));
   if (expected_prop.has("essentialPropertySource")) {
     const exp_eps = getitem(expected_prop, "essentialPropertySource");
-    const parsed_eps = dict_get(parsed_prop, "essential_property_source");
+    const parsed_eps = parsed_prop.get("essential_property_source") ?? null;
     if (exp_eps == null) {
       if (parsed_eps != null) {
-        const pname = parsed_eps instanceof Map ? dict_get(parsed_eps, "name") : parsed_eps;
+        const pname = parsed_eps instanceof Map ? parsed_eps.get("name") ?? null : parsed_eps;
         result.add_diff(`${path}.essentialPropertySource`, null, pname, "properties");
       }
     } else if (!(parsed_eps instanceof Map)) {
       result.add_diff(`${path}.essentialPropertySource`, exp_eps, null, "properties");
     } else if (dict_get(exp_eps, "sourceType") === "AVLayer") {
-      if (!py_eq(dict_get(exp_eps, "name"), dict_get(parsed_eps, "name"))) {
+      if (!py_eq(dict_get(exp_eps, "name"), parsed_eps.get("name") ?? null)) {
         result.add_diff(
           `${path}.essentialPropertySource.name`,
           dict_get(exp_eps, "name"),
-          dict_get(parsed_eps, "name"),
+          parsed_eps.get("name") ?? null,
           "properties",
         );
       }
       const exp_idx = dict_get(exp_eps, "index");
-      const parsed_idx = dict_get(parsed_eps, "index");
+      const parsed_idx = parsed_eps.get("index") ?? null;
       if (exp_idx != null && parsed_idx != null && exp_idx !== parsed_idx + 1) {
         result.add_diff(`${path}.essentialPropertySource.index`, exp_idx, parsed_idx + 1, "properties");
       }
     } else if (dict_get(exp_eps, "sourceType") === "Property") {
-      if (!py_eq(dict_get(exp_eps, "matchName"), dict_get(parsed_eps, "match_name"))) {
+      if (!py_eq(dict_get(exp_eps, "matchName"), parsed_eps.get("match_name") ?? null)) {
         result.add_diff(
           `${path}.essentialPropertySource.matchName`,
           dict_get(exp_eps, "matchName"),
-          dict_get(parsed_eps, "match_name"),
+          parsed_eps.get("match_name") ?? null,
           "properties",
         );
       }
@@ -923,9 +921,9 @@ export function compare_shape_value(
     result.defined_fields.add(`Shape.${fp_attr}`);
     if (expected_shape.has(exp_key)) {
       const exp_val = expected_shape.get(exp_key);
-      if (exp_val instanceof Map && py_bool(dict_get(exp_val, "_undefined"))) continue;
+      if (exp_val instanceof Map && py_bool(exp_val.get("_undefined"))) continue;
       result.compared_fields.add(`Shape.${fp_attr}`);
-      const parsed_val = parsed_fps.map((fp) => dict_get(fp, fp_attr));
+      const parsed_val = parsed_fps.map((fp) => fp.get(fp_attr) ?? null);
       if (!compare_values(exp_val, parsed_val)) {
         result.add_diff(`${path}.${exp_key}`, exp_val, parsed_val, "shape");
       }
@@ -954,7 +952,7 @@ export function compare_keyframe(
 
   // Compare value. The exporter writes None for a key value ExtendScript
   // cannot read (a Curves key's, which aborts the script).
-  if (dict_get(expected_kf, "value") != null && dict_get(parsed_kf, "value") != null) {
+  if (expected_kf.get("value") != null && parsed_kf.get("value") != null) {
     const exp_val = getitem(expected_kf, "value");
     const parsed_val = getitem(parsed_kf, "value");
     if (exp_val instanceof Map && exp_val.has("vertices")) {
@@ -966,12 +964,12 @@ export function compare_keyframe(
       // Dict value (e.g. marker) - normalize keys and compare matching
       const normalized = _normalize_keys(exp_val);
       for (const [key, nval] of normalized) {
-        const pval = dict_get(parsed_val, key);
+        const pval = parsed_val.get(key) ?? null;
         if (pval != null && !compare_values(nval, pval)) {
           result.add_diff(`${path}.value.${key}`, nval, pval, "keyframes");
         }
       }
-    } else if (!(exp_val instanceof Map) || !py_bool(dict_get(exp_val, "_undefined"))) {
+    } else if (!(exp_val instanceof Map) || !py_bool(exp_val.get("_undefined"))) {
       if (!compare_values(exp_val, parsed_val)) {
         result.add_diff(`${path}.value`, exp_val, parsed_val, "keyframes");
       }
@@ -1006,11 +1004,11 @@ export function compare_keyframe(
       if (len(exp_ease) !== len(parsed_ease)) {
         result.add_diff(`${path}.${ease_key}.length`, len(exp_ease), len(parsed_ease), "keyframes");
       }
-      for (const [ei, [exp_e, parsed_e]] of enumerate(zip(exp_ease, parsed_ease))) {
-        const exp_speed = exp_e instanceof Map ? dict_get(exp_e, "speed") : null;
-        const exp_influence = exp_e instanceof Map ? dict_get(exp_e, "influence") : null;
-        const parsed_speed = parsed_e instanceof Map ? dict_get(parsed_e, "speed") : null;
-        const parsed_influence = parsed_e instanceof Map ? dict_get(parsed_e, "influence") : null;
+      for (const [ei, [exp_e, parsed_e]] of zip(exp_ease, parsed_ease).entries()) {
+        const exp_speed = exp_e instanceof Map ? exp_e.get("speed") ?? null : null;
+        const exp_influence = exp_e instanceof Map ? exp_e.get("influence") ?? null : null;
+        const parsed_speed = parsed_e instanceof Map ? parsed_e.get("speed") ?? null : null;
+        const parsed_influence = parsed_e instanceof Map ? parsed_e.get("influence") ?? null : null;
         if (!compare_values(exp_speed, parsed_speed)) {
           result.add_diff(`${path}.${ease_key}[${ei}].speed`, exp_speed, parsed_speed, "keyframes");
         }
@@ -1042,7 +1040,7 @@ export function compare_text_document(
   // the ExtendScript ground truth is host-dependent (e.g. a live Windows font
   // path) and there is nothing in the binary to decode. `font` (the stored
   // PostScript name) is compared instead.
-  const text_value = dict_get(expected_doc, "text");
+  const text_value = expected_doc.get("text");
   if (typeof text_value === "string" && text_value.includes("\r")) {
     // ExtendScript reports AE's CR line breaks; TextDocument.text
     // normalizes them to LF by design.
@@ -1154,7 +1152,7 @@ export function compare_property_group(
   result.track_field("PropertyGroup", "property_index", expected_group.has("propertyIndex"));
   if (expected_group.has("propertyIndex")) {
     const exp_pi = getitem(expected_group, "propertyIndex");
-    const parsed_pi = dict_get(parsed_group, "property_index");
+    const parsed_pi = parsed_group.get("property_index") ?? null;
     if (parsed_pi != null && exp_pi !== parsed_pi + 1) {
       result.add_diff(`${path}.propertyIndex`, exp_pi, parsed_pi + 1, "properties");
     }
@@ -1217,14 +1215,14 @@ export function compare_comp_item(
   // Compare layer counts
   const exp_layers = dict_get(expected_item, "layers", []) as Dict[];
   const parsed_layers = dict_get(parsed_comp, "layers", []) as Dict[];
-  if (len(exp_layers) !== len(parsed_layers)) {
-    result.add_diff(`${path}.numLayers`, len(exp_layers), len(parsed_layers), "composition");
+  if (exp_layers.length !== parsed_layers.length) {
+    result.add_diff(`${path}.numLayers`, exp_layers.length, parsed_layers.length, "composition");
   }
 
   // Compare each layer
   const comp_duration = dict_get(expected_item, "duration", 60.0) as number;
   const frame_rate = dict_get(expected_item, "frameRate", 24.0) as number;
-  for (const [i, [exp_layer, parsed_layer]] of enumerate(zip(exp_layers, parsed_layers))) {
+  for (const [i, [exp_layer, parsed_layer]] of zip(exp_layers, parsed_layers).entries()) {
     compare_layer(exp_layer, parsed_layer, `${path}.layers[${i}]`, comp_duration, frame_rate, result);
   }
 
@@ -1252,7 +1250,7 @@ export function compare_folder_hierarchy(
   /** Compare folder hierarchy. */
   const expected_folders = new Map<any, Dict>();
   for (const item of expected_items) {
-    if (dict_get(item, "itemType") === "FolderItem") {
+    if ((item.get("itemType") ?? null) === "FolderItem") {
       expected_folders.set(getitem(item, "id"), item);
     }
   }
@@ -1269,11 +1267,11 @@ export function compare_folder_hierarchy(
       result.add_diff(`Folder[${getitem(exp_folder, "name")}]`, "exists", "missing", "folders");
     } else {
       const parsed_folder = parsed_folders.get(folder_id)!;
-      if (!py_eq(getitem(exp_folder, "name"), dict_get(parsed_folder, "name"))) {
+      if (!py_eq(getitem(exp_folder, "name"), parsed_folder.get("name") ?? null)) {
         result.add_diff(
           `Folder[id=${folder_id}].name`,
           getitem(exp_folder, "name"),
-          dict_get(parsed_folder, "name"),
+          parsed_folder.get("name") ?? null,
           "folders",
         );
       }
@@ -1314,8 +1312,8 @@ export function compare_footage_item(
   _compare_fields(expected_item, parsed_item, footage_mappings, path, "footage", result, "FootageItem");
 
   // Compare mainSource (FootageSource fields)
-  const exp_source = dict_get(expected_item, "mainSource");
-  const parsed_source = dict_get(parsed_item, "main_source");
+  const exp_source = expected_item.get("mainSource") ?? null;
+  const parsed_source = parsed_item.get("main_source") ?? null;
   if (py_bool(exp_source) && py_bool(parsed_source)) {
     const source_path = `${path}.mainSource`;
 
@@ -1363,7 +1361,7 @@ export function compare_footage_item(
       // both / and \ on every host OS (AE stores Windows-style paths,
       // and a parsed sequence frame path mixes the two); plain Path
       // fails to split backslashes when the validator runs on POSIX.
-      if (py_bool(exp_file) && py_bool(parsed_file)) {
+      if (exp_file && parsed_file) {
         const exp_name = new PureWindowsPath(exp_file).name;
         const parsed_name = new PureWindowsPath(parsed_file).name;
         if (exp_name !== parsed_name) {
@@ -1486,18 +1484,18 @@ export function compare_render_queue(
   const expected_items = dict_get(expected_rq, "items", []) as Dict[];
   const parsed_items = dict_get(parsed_rq, "items", []) as Dict[];
 
-  if (len(expected_items) !== len(parsed_items)) {
-    result.add_diff("RenderQueue.numItems", len(expected_items), len(parsed_items), "renderqueue");
+  if (expected_items.length !== parsed_items.length) {
+    result.add_diff("RenderQueue.numItems", expected_items.length, parsed_items.length, "renderqueue");
     if (verbose) {
       console.log(
-        `  Item count mismatch: expected ${len(expected_items)}, got ${len(parsed_items)}`,
+        `  Item count mismatch: expected ${expected_items.length}, got ${parsed_items.length}`,
       );
     }
   }
 
   // Compare each render queue item
-  for (const [i, exp_item] of enumerate(expected_items)) {
-    if (i >= len(parsed_items)) {
+  for (const [i, exp_item] of expected_items.entries()) {
+    if (i >= parsed_items.length) {
       result.add_diff(`RenderQueueItem[${i}]`, "exists", "missing", "renderqueue");
       continue;
     }
@@ -1522,19 +1520,19 @@ export function compare_render_queue(
 
     // Compare render settings
     if (exp_item.has("settings")) {
-      compare_settings(getitem(exp_item, "settings"), dict_get(parsed_item, "settings"), `${path}.settings`, result);
+      compare_settings(getitem(exp_item, "settings"), parsed_item.get("settings") ?? null, `${path}.settings`, result);
     }
 
     // Compare output modules
     const exp_oms = dict_get(exp_item, "outputModules", []) as Dict[];
     const parsed_oms = dict_get(parsed_item, "output_modules", []) as Dict[];
 
-    if (len(exp_oms) !== len(parsed_oms)) {
-      result.add_diff(`${path}.numOutputModules`, len(exp_oms), len(parsed_oms), "renderqueue");
+    if (exp_oms.length !== parsed_oms.length) {
+      result.add_diff(`${path}.numOutputModules`, exp_oms.length, parsed_oms.length, "renderqueue");
     }
 
-    for (const [j, exp_om] of enumerate(exp_oms)) {
-      if (j >= len(parsed_oms)) {
+    for (const [j, exp_om] of exp_oms.entries()) {
+      if (j >= parsed_oms.length) {
         result.add_diff(`${path}.outputModule[${j}]`, "exists", "missing", "renderqueue");
         continue;
       }
@@ -1555,7 +1553,7 @@ export function compare_render_queue(
       if (exp_om.has("file")) {
         const exp_file = getitem(exp_om, "file") as string;
         const parsed_file = dict_get(parsed_om, "file", "");
-        if (py_bool(exp_file) && py_bool(parsed_file)) {
+        if (exp_file && py_bool(parsed_file)) {
           // See the footage-source note: PureWindowsPath keeps
           // basename extraction host-OS-independent.
           const exp_name = new PureWindowsPath(exp_file).name;
@@ -1598,11 +1596,11 @@ export function compare_viewer(
 
   const exp_views = dict_get(expected_viewer, "views", []) as Dict[];
   const parsed_views: Dict[] = dict_get(parsed_viewer, "views", []);
-  if (len(exp_views) !== len(parsed_views)) {
-    result.add_diff("Viewer.views.length", len(exp_views), len(parsed_views), "viewer");
+  if (exp_views.length !== parsed_views.length) {
+    result.add_diff("Viewer.views.length", exp_views.length, parsed_views.length, "viewer");
   }
 
-  for (const [i, [exp_view, parsed_view]] of enumerate(zip(exp_views, parsed_views))) {
+  for (const [i, [exp_view, parsed_view]] of zip(exp_views, parsed_views).entries()) {
     const path = `Viewer.views[${i}]`;
 
     const exp_opts = dict_get(exp_view, "options", new Map()) as Dict;
@@ -1656,7 +1654,7 @@ export function validate_aep(
 
   // Get expected items
   const expected_items = dict_get(expected, "items", []);
-  const comps = expected_items.filter((i: Dict) => dict_get(i, "itemType") === "CompItem");
+  const comps = expected_items.filter((i: Dict) => (i.get("itemType") ?? null) === "CompItem");
 
   // Compare compositions
   if (verbose) console.log("\n=== Comparing Compositions ===");
@@ -1692,7 +1690,7 @@ export function validate_aep(
 
   // Compare footage items
   if (verbose) console.log("\n=== Comparing Footage Items ===");
-  const expected_footage = expected_items.filter((i: Dict) => dict_get(i, "itemType") === "FootageItem");
+  const expected_footage = expected_items.filter((i: Dict) => (i.get("itemType") ?? null) === "FootageItem");
   const parsed_items_dict: Dict = dict_get(parsed, "items", new Map());
   const parsed_footage_by_id = new Map<any, Dict>();
   for (const [item_id, item] of parsed_items_dict) {
@@ -1703,7 +1701,7 @@ export function validate_aep(
     const fi_id = getitem(exp_fi, "id");
     const fi_name = getitem(exp_fi, "name");
 
-    const parsed_fi = dict_get(parsed_footage_by_id, fi_id);
+    const parsed_fi = parsed_footage_by_id.get(fi_id) ?? null;
     if (parsed_fi == null) {
       result.add_diff(`Footage[${fi_name}]`, "exists", "missing", "footage");
       if (verbose) console.log(`  ${fi_name} (id=${fi_id}): MISSING!`);
@@ -1729,7 +1727,7 @@ export function validate_aep(
   compare_render_queue(expected_rq, dict_get(parsed, "render_queue", new Map()), result, verbose);
 
   // Compare active viewer
-  const expected_viewer = dict_get(expected, "activeViewer");
+  const expected_viewer = expected.get("activeViewer") ?? null;
   if (expected_viewer != null && app.active_viewer != null) {
     if (verbose) console.log("\n=== Comparing Viewer ===");
     const parsed_viewer = to_dict(app.active_viewer);
@@ -1751,22 +1749,22 @@ export function print_results(
   /** Print validation results. */
   console.log("\n" + "=".repeat(60));
 
-  if (!py_bool(result.differences)) {
+  if (!result.differences?.length) {
     console.log("SUCCESS: All parsed values match expected values!");
     return;
   }
 
   let filtered_diffs = result.differences;
-  if (py_bool(category_filter)) {
+  if (category_filter) {
     // Filter by category prefix
     const needle = (category_filter as string).toLowerCase();
     filtered_diffs = result.differences.filter((d) => d.toLowerCase().includes(needle));
   }
 
-  console.log(`TOTAL DIFFERENCES FOUND: ${len(result.differences)}`);
+  console.log(`TOTAL DIFFERENCES FOUND: ${result.differences.length}`);
 
-  if (py_bool(category_filter)) {
-    console.log(`(Showing ${len(filtered_diffs)} matching filter '${category_filter}')`);
+  if (category_filter) {
+    console.log(`(Showing ${filtered_diffs.length} matching filter '${category_filter}')`);
   }
 
   console.log("\nDifferences by category:");
@@ -1774,14 +1772,14 @@ export function print_results(
     console.log(`  ${cat}: ${count}`);
   }
 
-  if (verbose && py_bool(filtered_diffs)) {
+  if (verbose && filtered_diffs?.length > 0) {
     console.log("\nAll differences:");
     for (const d of filtered_diffs.slice(0, 200)) {
       // Limit output
       console.log(`  ${d}`);
     }
-    if (len(filtered_diffs) > 200) {
-      console.log(`  ... and ${len(filtered_diffs) - 200} more`);
+    if (filtered_diffs.length > 200) {
+      console.log(`  ... and ${filtered_diffs.length - 200} more`);
     }
   }
 }
@@ -1794,9 +1792,9 @@ export function print_coverage(result: ValidationResult): void {
   console.log(`\n${"=".repeat(60)}`);
   console.log("FIELD COVERAGE REPORT");
   console.log(`${"=".repeat(60)}`);
-  console.log(`\nCompared (${len(compared)}):\n  ` + compared.join("\n  "));
-  console.log(`\nNot compared (${len(not_compared)}):`);
-  if (py_bool(not_compared)) {
+  console.log(`\nCompared (${compared.length}):\n  ` + compared.join("\n  "));
+  console.log(`\nNot compared (${not_compared.length}):`);
+  if (not_compared?.length > 0) {
     console.log("  " + not_compared.join("\n  "));
   } else {
     console.log("  (none)");
@@ -1944,7 +1942,7 @@ export function main(args: string[] | null = null): number {
 
   if (parsed_args.coverage) print_coverage(result);
 
-  return !py_bool(result.differences) ? 0 : 1;
+  return !result.differences?.length ? 0 : 1;
 }
 
 // `if __name__ == "__main__": sys.exit(main())`

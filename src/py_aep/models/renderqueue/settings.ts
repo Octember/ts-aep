@@ -11,12 +11,8 @@ import {
   KeyError,
   TypeError_,
   ValueError,
-  contains,
-  dict_get,
   getattr,
   int,
-  len,
-  py_bool,
   py_eq,
   repr,
   sorted,
@@ -69,7 +65,7 @@ export class SettingsView {
   // -- reads -------------------------------------------------------------
 
   __getitem__(key: string): any {
-    const spec = dict_get(this._specs, key);
+    const spec = this._specs.get(key) ?? null;
     if (spec == null) throw new KeyError(repr(key));
     const [attr_name] = spec;
     return getattr(this._owner, attr_name);
@@ -78,7 +74,7 @@ export class SettingsView {
   // -- writes ------------------------------------------------------------
 
   __setitem__(key: string, value: any): void {
-    const spec = dict_get(this._specs, key);
+    const spec = this._specs.get(key) ?? null;
     if (spec == null) {
       const valid = sorted(this._specs.keys());
       throw new KeyError(`Unknown setting ${repr(key)}. Valid keys: ${repr(valid)}`);
@@ -110,11 +106,11 @@ export class SettingsView {
   }
 
   __len__(): number {
-    return len(this._specs);
+    return this._specs.size;
   }
 
   __contains__(key: unknown): boolean {
-    return contains(this._specs, key);
+    return this._specs.has(key as string);
   }
 
   // -- MutableMapping mixin methods (inherited in Python) -----------------
@@ -300,11 +296,11 @@ export const _RESIZE_TO_STRINGS: Map<string, string> = new Map<string, string>([
  */
 export function build_resize_to_strings(preferences: Preferences): Map<string, string> {
   const presets = preferences.composition_presets();
-  if (!py_bool(presets)) return _RESIZE_TO_STRINGS;
+  if (!presets?.length) return _RESIZE_TO_STRINGS;
   const best = new Map<string, CompPreset>();
   for (const preset of presets) {
     const key = tkey(preset.width, preset.height);
-    const current = dict_get(best, key);
+    const current = best.get(key);
     if (current == null || preset.frame_rate <= current.frame_rate) best.set(key, preset);
   }
   return new Map<string, string>([...best.entries()].map(([key, preset]) => [key, preset.name] as [string, string]));
@@ -341,8 +337,8 @@ export function _to_string_value(
   }
   // `isinstance(value, IntEnum)`: the spec's enum class stands in for the member's owning class.
   if (enum_class != null && enum_class.has(value)) return enum_label(enum_class, value);
-  if (key === "Resolution") return dict_get(_RESOLUTION_STRINGS, tkey(...value), "Custom");
-  if (key === "Resize to") return dict_get(resize_map, tkey(...value), "Custom");
+  if (key === "Resolution") return _RESOLUTION_STRINGS.get(tkey(...value)) ?? "Custom";
+  if (key === "Resize to") return resize_map.get(tkey(...value)) ?? "Custom";
   if (typeof value === "boolean") return str(value).toLowerCase();
   // NOTE(port): int/float — integral values are plain numbers by design (RULEBOOK §4); a float getter value such as 30.0 (Time Span Duration, Use comp's frame rate) renders "30" here where Python gives "30.0" (returned string only, never saved).
   return str(value);
@@ -383,7 +379,7 @@ export function settings_to_string(
       [k, v],
     ): [string, string] => [
       k,
-      _to_string_value(k, v, resize_map, settings instanceof SettingsView ? dict_get(settings._specs, k)?.[1] : null),
+      _to_string_value(k, v, resize_map, settings instanceof SettingsView ? (settings._specs.get(k) ?? null)?.[1] : null),
     ]),
   );
 }

@@ -8,13 +8,10 @@ import {
   bytes_,
   BytesIO,
   copy,
-  dict_get,
   encode,
   floordiv,
   getitem,
   len,
-  py_bool,
-  py_or,
   rstrip,
   struct,
   ValueError,
@@ -59,7 +56,7 @@ export function zeros_list(n: number): number[] {
 
 /** Remove all chunks of `chunk_type` from the list in-place. */
 export function remove_chunks_by_type(chunks: Chunk[], chunk_type: string): void {
-  let i = len(chunks) - 1;
+  let i = chunks.length - 1;
   while (i >= 0) {
     if (chunks[i].chunk_type === chunk_type) {
       chunks.splice(i, 1);
@@ -102,7 +99,7 @@ export function _unflag_markers(parent_chunks: Chunk[], target: ListChunk): void
   if (idx > 0 && parent_chunks[idx - 1].chunk_type === "tdmn") {
     parent_chunks[idx - 1].synthetic = false;
   }
-  if (idx + 1 < len(parent_chunks) && parent_chunks[idx + 1].chunk_type === "tdmn") {
+  if (idx + 1 < parent_chunks.length && parent_chunks[idx + 1].chunk_type === "tdmn") {
     parent_chunks[idx + 1].synthetic = false;
   }
 }
@@ -122,7 +119,7 @@ export function rewrite_owner_tdpi(chunk: Chunk, layer_id: number): void {
     if (
       c.chunk_type === "tdmn" &&
       (c as TdmnChunk).value.endsWith("-0000") &&
-      i + 1 < len(chunks) &&
+      i + 1 < chunks.length &&
       chunks[i + 1] instanceof ListChunk
     ) {
       for (const inner of (chunks[i + 1] as ListChunk).chunks) {
@@ -148,7 +145,7 @@ export function collect_layer_ref_tdpi_ids(chunk: Chunk, out: Set<number> | null
   for (const [i, c] of chunks.entries()) {
     if (
       c.chunk_type === "tdmn" &&
-      i + 1 < len(chunks) &&
+      i + 1 < chunks.length &&
       chunks[i + 1] instanceof ListChunk &&
       !(c as TdmnChunk).value.endsWith("-0000")
     ) {
@@ -183,7 +180,7 @@ export function remap_layer_ref_tdpi(chunk: Chunk, id_map: Map<number, number>):
   for (const [i, c] of chunks.entries()) {
     if (
       c.chunk_type === "tdmn" &&
-      i + 1 < len(chunks) &&
+      i + 1 < chunks.length &&
       chunks[i + 1] instanceof ListChunk
     ) {
       if ((c as TdmnChunk).value.endsWith("-0000")) continue;
@@ -191,7 +188,7 @@ export function remap_layer_ref_tdpi(chunk: Chunk, id_map: Map<number, number>):
         if (inner.chunk_type !== "tdpi") continue;
         const tdpi = inner as S4Chunk;
         if (tdpi.value) {
-          tdpi.value = dict_get(id_map, tdpi.value, 0);
+          tdpi.value = id_map.get(tdpi.value) ?? 0;
         }
       }
     }
@@ -386,7 +383,7 @@ export function build_parallel_ldat_item(
       `unsupported parallel item type <LdatItemType.${LdatItemType.name_of(item_type)}: ${item_type}>`,
     );
   }
-  const body_len = 8 + (kf_data instanceof Uint8Array ? len(kf_data) : len(kf_data.tobytes()));
+  const body_len = 8 + (kf_data instanceof Uint8Array ? kf_data.length : len(kf_data.tobytes()));
   const item = new LdatItem({
     time_units: 0,
     in_interpolation_type: interp,
@@ -422,9 +419,9 @@ export function build_shap(
   const shph = new ShphChunk();
   shph.open = open_path;
   [shph.top_left_x, shph.top_left_y, shph.bottom_right_x, shph.bottom_right_y] = bbox;
-  const n_verts = floordiv(len(points), 3);
+  const n_verts = floordiv(points.length, 3);
   const lhd3 = new Lhd3Chunk({
-    count: len(points),
+    count: points.length,
     item_size: 8,
     item_type_raw: 4,
     count_b: n_verts,
@@ -438,10 +435,10 @@ export function build_shap(
   });
   const inner = new ListChunk({ list_type: "list", chunks: [lhd3, ldat] });
   const omtn = new OmtnChunk({
-    tensions: py_or(tensions, []).map((t) => new TensionItem({ value: t })),
+    tensions: (tensions?.length > 0 ? tensions : []).map((t) => new TensionItem({ value: t })),
   });
   const chunks: Chunk[] = [shph, inner, omtn];
-  if (py_bool(feather_points)) {
+  if (feather_points?.length > 0) {
     // NOTE(port): FeatherPointItem has plain int/float fields and no converters, so a shallow copy equals attrs.evolve(fp).
     chunks.push(new Fth5Chunk({ points: feather_points.map((fp) => copy(fp)) }));
   }
@@ -795,7 +792,7 @@ export function build_pin_list(
     chunks: [
       sspc,
       new Utf8Chunk({ value: layer_name }),
-      ...py_or(path_chunks, []),
+      ...(path_chunks?.length > 0 ? path_chunks : []),
       opti,
       PguiChunk.new_(),
       clrs,
@@ -928,7 +925,7 @@ export function build_default_mask_shape(
 ): [TdmnChunk, ListChunk] {
   const { aspect, roto_bezier = false } = kw;
   const raw = bytes_.fromhex(_DEFAULT_ROTO_MASK_SHAPE_OMS);
-  const oms = read_chunks(new BytesIO(raw), len(raw))[0] as ListChunk;
+  const oms = read_chunks(new BytesIO(raw), raw.length)[0] as ListChunk;
   const tdbs = oms.chunks[0] as ListChunk;
   for (const c of tdbs.chunks) {
     if (c instanceof Tdb4Chunk) {
@@ -1093,7 +1090,7 @@ export function build_expression_control(
   },
 ): [TdmnChunk, ListChunk] {
   const { tdsn_name, time_base, layer_id, layer_param_name = null } = kw;
-  const part = read_chunks(new BytesIO(part_bytes), len(part_bytes))[0];
+  const part = read_chunks(new BytesIO(part_bytes), part_bytes.length)[0];
 
   function param_tdbs(name: string, enable_flags: number): ListChunk {
     const tdb4 = new Tdb4Chunk({

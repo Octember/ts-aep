@@ -537,7 +537,7 @@ export class Project {
     ae_preferences_dir: Path | null = null,
     platform: string | null = null,
   ): Project {
-    platform = py_or(platform, this._platform);
+    platform = platform || this._platform;
     const macos = platform === "macos";
     const preferences = new Preferences(ae_preferences_dir);
     const head = new HeadChunk();
@@ -606,7 +606,7 @@ export class Project {
       new ListChunk({
         list_type: "sfnm",
         chunks: [
-          new Utf8Chunk({ value: py_or(solids_name, "Solids") }),
+          new Utf8Chunk({ value: solids_name || "Solids" }),
           new U4LeChunk({ chunk_type: "sfid" }),
         ],
       }),
@@ -714,7 +714,7 @@ export class Project {
     this._used_in_linked = true;
     for (const composition of this.compositions) {
       for (const source_id of composition._source_ids_for_linking()) {
-        const source = dict_get(this.items, source_id);
+        const source = this.items.get(source_id) ?? null;
         if (source != null && hasattr(source, "_used_in")) {
           (source as any)._used_in.add(composition);
         }
@@ -874,7 +874,7 @@ export class Project {
       const cppl = find_by_list_type(this._root_chunks, "CPPl");
       for (const pprf of filter_by_type(cppl.chunks, "pprf") as any[]) {
         if (bytes_eq(icc_profile_id(pprf.data), profile_id)) {
-          return py_or(icc_profile_description(pprf.data), "None");
+          return icc_profile_description(pprf.data) || "None";
         }
       }
     }
@@ -1573,7 +1573,7 @@ export class Project {
       }
       if (spec.is_adjustment) (layer as AVLayer).adjustment_layer = true;
       if (spec.preserve_transparency) (layer as AVLayer).preserve_transparency = true;
-      if (py_bool(spec.masks)) {
+      if (spec.masks?.length > 0) {
         // A PSD vector-mask/shape-layer path: AE creates one mask
         // per subpath (psd_vector_mask* fixtures).
         const parade = layer.property("ADBE Mask Parade") as PropertyGroup;
@@ -1916,7 +1916,7 @@ export class Project {
     >();
     for (const [layer, source_text] of this._iter_text_source_properties()) {
       let entries: [TextDocument, number][];
-      if (py_bool(source_text.keyframes)) {
+      if (source_text.keyframes?.length > 0) {
         entries = source_text.keyframes.map(
           (kf: any) => [kf.value as TextDocument, kf.time - layer.start_time] as [TextDocument, number],
         );
@@ -1973,9 +1973,9 @@ export class Project {
     let changed = false;
     for (const [, source_text] of this._iter_text_source_properties()) {
       let docs = source_text.keyframes.map((kf: any) => kf.value as TextDocument);
-      if (!py_bool(docs)) docs = [source_text.value as TextDocument];
+      if (!docs?.length) docs = [source_text.value as TextDocument];
       docs = docs.filter((doc) => doc != null);
-      if (py_bool(docs) && _replace_layer_font(docs, from_name, to_name)) changed = true;
+      if (docs?.length > 0 && _replace_layer_font(docs, from_name, to_name)) changed = true;
     }
     return changed;
   }
@@ -2034,7 +2034,7 @@ export class Project {
   remove_unused_footage(): number {
     let removed = 0;
     for (const footage of this.footages) {
-      if (!py_bool(footage.used_in)) {
+      if (!footage.used_in?.length) {
         footage.remove();
         removed += 1;
       }
@@ -2072,7 +2072,7 @@ export class Project {
       }
       if (item instanceof CompItem) {
         for (const source_id of item._source_ids_for_linking()) {
-          const source = dict_get(this.items, source_id);
+          const source = this.items.get(source_id) ?? null;
           if (source != null) queue.push(source);
         }
       }
@@ -2310,7 +2310,7 @@ export class Project {
       if (!(e instanceof ChunkNotFoundError)) throw e;
       return "Solids";
     }
-    return py_or(name, "Solids");
+    return name || "Solids";
   }
 
   get _sfid(): U4LeChunk | null {
@@ -2340,7 +2340,7 @@ export class Project {
   get _solids_folder(): FolderItem {
     const sfid = this._sfid;
     const recorded = sfid != null ? sfid.value : 0;
-    const folder = recorded ? dict_get(this.items, recorded) : null;
+    const folder = recorded ? this.items.get(recorded) ?? null : null;
     if (folder instanceof FolderItem) return folder;
     const name = this._solids_folder_name;
     for (const existing of this.root_folder.folders) {
@@ -2510,7 +2510,7 @@ descriptor(
   Project,
   "xmp_packet",
   new ChunkField("_aep", "_xmp", {
-    transform: (s: any) => (py_bool(s) && py_bool(strip(s)) ? ET_fromstring(s) : null),
+    transform: (s: any) => (py_bool(s) && strip(s) ? ET_fromstring(s) : null),
     reverse: (el: any) => (el != null ? ET_tostring(el) : ""),
   }),
 );
@@ -2586,8 +2586,8 @@ export function _stamp_style_tdb4(leaf: Property, match_name: string, timebase: 
   const tdb4 = (leaf as any)._tdb4;
   if (tdb4 == null) return;
   const canon = py_or(
-    dict_get(_STYLE_TDB4_CANON, match_name),
-    dict_get(_STYLE_TDB4_CANON, match_name.slice(match_name.lastIndexOf("/") + 1)),
+    _STYLE_TDB4_CANON.get(match_name),
+    _STYLE_TDB4_CANON.get(match_name.slice(match_name.lastIndexOf("/") + 1)) ?? null,
   );
   if (canon == null) return;
   const [hint, hint_flag, cvot, type_flags, category, pad2a, vector, spatial] = canon;
@@ -2660,7 +2660,7 @@ export function _serialize_import_layer_styles(layer: Layer, styles: PsdLayerSty
   // enabled OR the layer carries blend-options data (a Photoshop Fill
   // slider away from 100% enables the chain with zero styles - the
   // psd_fill_opacity fixture).
-  const styled = styles != null && py_bool(py_or(styles.enabled, styles.blend_options));
+  const styled = styles != null && py_bool(styles.enabled?.length > 0 ? styles.enabled : styles.blend_options);
   const container_flags = styled ? 1 : 3;
   container._ensure_materialized();
   py_assert((container as any)._tdsb != null);
@@ -2711,14 +2711,14 @@ export function _serialize_import_layer_styles(layer: Layer, styles: PsdLayerSty
         "matches its output",
     );
   }
-  if (!py_bool(styles.values)) return;
+  if (!styles.values?.size) return;
   const timebase = (layer.containing_comp as any)._cdta.internal_timebase;
   const source = layer.source as AVItem;
   const point_aspect = (source.width * source.pixel_aspect) / source.height;
   const leaves = _style_leaf_map(container);
   for (const [match_name, value] of styles.values) {
-    if (_values_equal(value, dict_get(_STYLE_SPEC_DEFAULTS, match_name))) continue;
-    const leaf = dict_get(leaves, match_name);
+    if (_values_equal(value, _STYLE_SPEC_DEFAULTS.get(match_name) ?? null)) continue;
+    const leaf = leaves.get(match_name) ?? null;
     if (leaf == null) continue;
     leaf.value = value;
     if (value instanceof Gradient && (leaf as any)._tdb4 != null) {

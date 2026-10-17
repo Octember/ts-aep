@@ -21,11 +21,8 @@ import {
   float,
   floordiv,
   int,
-  len,
   object_setattr,
   py_assert,
-  py_bool,
-  py_or,
   struct,
   type IO,
 } from "../../pyrt/index.ts";
@@ -440,13 +437,13 @@ export class CdatChunk extends Chunk {
 
   write(fp: IO): number {
     let written = 0;
-    if (py_bool(this.values)) {
-      const count = len(this.values);
+    if (this.values?.length > 0) {
+      const count = this.values.length;
       const fmt = `${this.is_le ? "<" : ">"}${count}d`;
       const raw = struct.pack(fmt, ...this.values);
       written += write_bytes(fp, raw);
     }
-    if (py_bool(this.pad)) {
+    if (this.pad?.length > 0) {
       written += write_bytes(fp, this.pad);
     }
     return written;
@@ -510,7 +507,7 @@ export class TdumChunk extends Chunk {
       is_color,
       is_integer,
     });
-    if (py_bool(trailing)) {
+    if (trailing?.length > 0) {
       object_setattr(instance, "_trailing", trailing);
     }
     return instance;
@@ -523,10 +520,10 @@ export class TdumChunk extends Chunk {
     } else if (this.is_integer) {
       raw = struct.pack(">I", int(this.values[0]));
     } else {
-      raw = struct.pack(`>${len(this.values)}d`, ...this.values);
+      raw = struct.pack(`>${this.values.length}d`, ...this.values);
     }
     let written = write_bytes(fp, raw);
-    if (py_bool(this._trailing)) {
+    if (this._trailing?.length > 0) {
       written += write_bytes(fp, this._trailing);
     }
     return written;
@@ -555,16 +552,16 @@ export class OtdaChunk extends Chunk {
     const vals = struct.unpack(`>${n}d`, raw.slice(0, n * 8));
     const trailing = raw.slice(n * 8);
     const instance = new this({ chunk_type, values: vals });
-    if (py_bool(trailing)) {
+    if (trailing.length > 0) {
       object_setattr(instance, "_trailing", trailing);
     }
     return instance;
   }
 
   write(fp: IO): number {
-    const raw = struct.pack(`>${len(this.values)}d`, ...this.values);
+    const raw = struct.pack(`>${this.values.length}d`, ...this.values);
     let written = write_bytes(fp, raw);
-    if (py_bool(this._trailing)) {
+    if (this._trailing?.length > 0) {
       written += write_bytes(fp, this._trailing);
     }
     return written;
@@ -627,7 +624,7 @@ export class TdsnChunk extends ContainerChunk {
   static _legacy_value(text: string): string {
     // An empty legacy name is an unnamed property: the name resolves from
     // the match name, as for the sentinel.
-    return py_or(text, TDSN_SENTINEL);
+    return text || TDSN_SENTINEL;
   }
 
   static _legacy_string(value: string): string {
@@ -734,10 +731,10 @@ export class CurvesArbpChunk extends Chunk {
    *     ValueError: If the data is not 1644 bytes long.
    */
   static from_arbp(arbp: Chunk): CurvesArbpChunk {
-    if (len(arbp.data) !== CURVES_ARBP_SIZE) {
-      throw new ValueError(`a Curves aRbp is ${CURVES_ARBP_SIZE} bytes, not ${len(arbp.data)}`);
+    if (arbp.data.length !== CURVES_ARBP_SIZE) {
+      throw new ValueError(`a Curves aRbp is ${CURVES_ARBP_SIZE} bytes, not ${arbp.data.length}`);
     }
-    const chunk = this.read(new BytesIO(arbp.data), len(arbp.data), { chunk_type: "aRbp" });
+    const chunk = this.read(new BytesIO(arbp.data), arbp.data.length, { chunk_type: "aRbp" });
     py_assert(chunk instanceof this);
     return chunk as CurvesArbpChunk;
   }

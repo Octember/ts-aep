@@ -4,7 +4,7 @@
  * These enums match the values used in After Effects ExtendScript.
  */
 
-import { KeyError, TypeError_, ValueError, dict_get, getitem, int, int_enum, py_bool, repr, type EnumValue } from "../../pyrt/index.ts";
+import { KeyError, TypeError_, ValueError, getitem, int, int_enum, repr, type EnumValue } from "../../pyrt/index.ts";
 
 /**
  * Label color for items, layers, keyframes and markers.
@@ -100,7 +100,7 @@ export const AlphaMode = int_enum("AlphaMode", {
 }, {
   /** Convert binary value to AlphaMode. */
   from_binary(value: number): number {
-    return dict_get(_ALPHA_MODE_BINARY_MAP, value, this.IGNORE);
+    return _ALPHA_MODE_BINARY_MAP.get(value) ?? this.IGNORE;
   },
   /** Convert AlphaMode to binary value. */
   to_binary(self: number): number {
@@ -130,7 +130,7 @@ export const BitsPerChannel = int_enum("BitsPerChannel", {
 }, {
   /** Convert binary value to BitsPerChannel. */
   from_binary(value: number): number {
-    return dict_get(_BITS_PER_CHANNEL_BINARY_MAP, value, this.EIGHT);
+    return _BITS_PER_CHANNEL_BINARY_MAP.get(value) ?? this.EIGHT;
   },
   /** Convert BitsPerChannel to binary value. */
   to_binary(self: number): number {
@@ -217,7 +217,7 @@ export const BlendingMode = int_enum("BlendingMode", {
 }, {
   /** Convert binary blending mode value to BlendingMode. */
   from_binary(value: number): number {
-    return dict_get(_BLENDING_MODE_BINARY_MAP, value, this.NORMAL);
+    return _BLENDING_MODE_BINARY_MAP.get(value) ?? this.NORMAL;
   },
   /**
    * Convert BlendingMode to its binary transfer-mode value.
@@ -407,7 +407,7 @@ export const FieldSeparationType = int_enum("FieldSeparationType", {
 }, {
   /** Convert binary value to FieldSeparationType. */
   from_binary(value: number): number {
-    return dict_get(_FIELD_SEP_BINARY_MAP, value, this.OFF);
+    return _FIELD_SEP_BINARY_MAP.get(value) ?? this.OFF;
   },
   /** Convert FieldSeparationType to binary value. */
   to_binary(self: number): number {
@@ -436,7 +436,7 @@ export const FootageTimecodeDisplayStartType = int_enum("FootageTimecodeDisplayS
 }, {
   /** Convert binary value to FootageTimecodeDisplayStartType. */
   from_binary(value: number): number {
-    return dict_get(_FOOTAGE_TIMECODE_BINARY_MAP, value, this.FTCS_START_0);
+    return _FOOTAGE_TIMECODE_BINARY_MAP.get(value) ?? this.FTCS_START_0;
   },
   /** Convert FootageTimecodeDisplayStartType to binary value. */
   to_binary(self: number): number {
@@ -519,7 +519,7 @@ export const GpuAccelType = int_enum("GpuAccelType", {
    * Returns the UUID string itself if the UUID is not recognized.
    */
   from_binary(uuid: string): number | string {
-    const result = dict_get(_GPU_UUID_TO_ENUM, uuid);
+    const result = _GPU_UUID_TO_ENUM.get(uuid) ?? null;
     return result != null ? result : uuid;
   },
   /**
@@ -534,7 +534,7 @@ export const GpuAccelType = int_enum("GpuAccelType", {
    */
   to_binary(value: number | string): string {
     if (this.has(value)) {
-      const uuid = dict_get(_GPU_ENUM_TO_UUID, value);
+      const uuid = _GPU_ENUM_TO_UUID.get(value as number) ?? null;
       if (uuid == null) {
         const known = [..._GPU_UUID_TO_ENUM]
           .map(([u, e]) => `${this.name_of(e)} (${u})`)
@@ -587,7 +587,7 @@ export const GuideOrientationType = int_enum("GuideOrientationType", {
 }, {
   /** Convert binary value to GuideOrientationType. */
   from_binary(value: number): number {
-    return dict_get(_GUIDE_ORIENTATION_BINARY_MAP, value, this.HORIZONTAL);
+    return _GUIDE_ORIENTATION_BINARY_MAP.get(value) ?? this.HORIZONTAL;
   },
   /** Convert GuideOrientationType to binary value. */
   to_binary(self: number): number {
@@ -825,7 +825,7 @@ export const MaskMotionBlur = int_enum("MaskMotionBlur", {
    * to enum integer order where ON = 7013 < OFF = 7014).
    */
   from_binary(value: number): number {
-    return dict_get(_MASK_MOTION_BLUR_BINARY_MAP, value, this.SAME_AS_LAYER);
+    return _MASK_MOTION_BLUR_BINARY_MAP.get(value) ?? this.SAME_AS_LAYER;
   },
   /** Convert MaskMotionBlur to binary value. */
   to_binary(self: number): number {
@@ -913,7 +913,7 @@ export const PulldownPhase = int_enum("PulldownPhase", {
 }, {
   /** Convert binary value to PulldownPhase. */
   from_binary(value: number): number {
-    return dict_get(_PULLDOWN_BINARY_MAP, value, this.OFF);
+    return _PULLDOWN_BINARY_MAP.get(value) ?? this.OFF;
   },
   /** Convert PulldownPhase to binary value. */
   to_binary(self: number): number {
@@ -1087,7 +1087,7 @@ export const ViewerType = int_enum("ViewerType", {
    *     ValueError: If the label is not recognized.
    */
   from_string(label: string | null): number {
-    if (!py_bool(label)) label = "";
+    if (!label) label = "";
     try {
       return getitem(_VIEWER_STRING_MAP, label);
     } catch (e) {

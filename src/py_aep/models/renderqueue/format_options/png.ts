@@ -100,7 +100,7 @@ export class PngFormatOptions extends FormatOptionsBase {
   }
 
   set include_hdr10_metadata(value: boolean) {
-    this._hdr10_meta.set("colorMetadataPresent", py_bool(value));
+    this._hdr10_meta.set("colorMetadataPresent", !!value);
     this._sync_hdr10();
   }
 
@@ -112,7 +112,7 @@ export class PngFormatOptions extends FormatOptionsBase {
    * is trusted). Read / Write.
    */
   get color_primaries(): Hdr10ColorPrimaries | number {
-    const raw = dict_get(this._hdr10_meta, "displayPrimaries");
+    const raw = this._hdr10_meta.get("displayPrimaries") ?? null;
     if (raw == null) return Hdr10ColorPrimaries.P3_D65;
     return enum_or_raw((v: any) => {
       // Python `int(v)` raises TypeError for a list / dict; pyrt `int` would not.
@@ -135,7 +135,7 @@ export class PngFormatOptions extends FormatOptionsBase {
    * `Luminance Minimum` field in the PNG Options dialog. Read / Write.
    */
   get luminance_min(): number | null {
-    const raw = dict_get(this._hdr10_meta, "minLuminance");
+    const raw = this._hdr10_meta.get("minLuminance") ?? null;
     return raw != null ? float(raw) : null;
   }
 
@@ -155,7 +155,7 @@ export class PngFormatOptions extends FormatOptionsBase {
    * `Luminance Maximum` field in the PNG Options dialog. Read / Write.
    */
   get luminance_max(): number | null {
-    const raw = dict_get(this._hdr10_meta, "maxLuminance");
+    const raw = this._hdr10_meta.get("maxLuminance") ?? null;
     return raw != null ? float(raw) : null;
   }
 
@@ -175,7 +175,7 @@ export class PngFormatOptions extends FormatOptionsBase {
    * `Content Light Maximum` field in the PNG Options dialog. Read / Write.
    */
   get content_light_max(): number | null {
-    const raw = dict_get(this._hdr10_meta, "maxContentLightLevel");
+    const raw = this._hdr10_meta.get("maxContentLightLevel") ?? null;
     return raw != null ? float(raw) : null;
   }
 
@@ -195,7 +195,7 @@ export class PngFormatOptions extends FormatOptionsBase {
    * `Content Light Average` field in the PNG Options dialog. Read / Write.
    */
   get content_light_average(): number | null {
-    const raw = dict_get(this._hdr10_meta, "maxFrameAverageLightLevel");
+    const raw = this._hdr10_meta.get("maxFrameAverageLightLevel") ?? null;
     return raw != null ? float(raw) : null;
   }
 

@@ -6,7 +6,7 @@
  */
 
 import { OutputChannels, OutputColorDepth, TimeSpanSource } from "../enums/index.ts";
-import { IndexError, PyException, dict_get, floordiv, format, getitem, int, mod, num_str, py_bool, py_or, round } from "../../pyrt/index.ts";
+import { IndexError, PyException, floordiv, format, getitem, int, mod, num_str, py_bool, py_or, round } from "../../pyrt/index.ts";
 import type { CompItem } from "../models/items/composition.ts";
 
 // Roou format_id (4-char) to file extension.
@@ -305,7 +305,7 @@ export function resolve_output_filename(
   pulldown_phase: number | null = null,
   file_extension: string | null = null,
 ): string {
-  if (!py_bool(file_template)) {
+  if (!file_template) {
     return "";
   }
 
@@ -348,24 +348,24 @@ export function resolve_output_filename(
     ],
     [
       "channels",
-      channels != null ? dict_get(OUTPUT_CHANNELS_NAMES, channels, "RGB") : null,
+      channels != null ? OUTPUT_CHANNELS_NAMES.get(channels) ?? "RGB" : null,
     ],
     [
       "projectColorDepth",
-      project_color_depth != null ? dict_get(PROJECT_COLOR_DEPTH_NAMES, project_color_depth, "8bit") : null,
+      project_color_depth != null ? PROJECT_COLOR_DEPTH_NAMES.get(project_color_depth) ?? "8bit" : null,
     ],
     [
       "outputColorDepth",
-      output_color_depth != null ? dict_get(OUTPUT_COLOR_DEPTH_NAMES, output_color_depth, "Millions") : null,
+      output_color_depth != null ? OUTPUT_COLOR_DEPTH_NAMES.get(output_color_depth) ?? "Millions" : null,
     ],
     ["compressor", compressor],
     [
       "fieldOrder",
-      field_render != null ? dict_get(FIELD_ORDER_NAMES, field_render, "Off") : null,
+      field_render != null ? FIELD_ORDER_NAMES.get(field_render) ?? "Off" : null,
     ],
     [
       "pulldownPhase",
-      pulldown_phase != null ? dict_get(PULLDOWN_PHASE_NAMES, pulldown_phase, "Off") : null,
+      pulldown_phase != null ? PULLDOWN_PHASE_NAMES.get(pulldown_phase) ?? "Off" : null,
     ],
     ["projectFolder", ""], // Always resolves to empty string
     ["fileExtension", file_extension],

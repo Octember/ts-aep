@@ -577,7 +577,7 @@ export function _rig_matrix(layer: Layer, time: number | null, space_aspect: num
  */
 export function _auto_rotation(layer: Layer, time: number, position: number[]): [Mat4 | null, number] {
   const mode = layer.auto_orient;
-  const three_d = py_bool(layer._ldta.three_d_layer);
+  const three_d = !!layer._ldta.three_d_layer;
   if (mode === AutoOrientType.ALONG_PATH) {
     const prop = layer.transform.__getitem__("ADBE Position") as Property;
     if (prop.dimensions_separated) {

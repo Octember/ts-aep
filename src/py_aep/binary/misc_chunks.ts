@@ -108,7 +108,7 @@ export class PrdaChunk extends Chunk {
       py_assert(result instanceof PrdaChunk);
       return result;
     }
-    const variant = dict_get(_PRDA_VARIANTS, renderer_match_name);
+    const variant = _PRDA_VARIANTS.get(renderer_match_name);
     if (variant == null || variant[1] !== size) {
       // preserve unknown raw bytes
       return new this({ chunk_type, data: read_bytes(fp, size) });
@@ -599,7 +599,7 @@ export class PardChunk extends Chunk {
    */
   get param_flags(): number {
     const pad: Uint8Array = getattr(this, "_pad_post", b(""));
-    if (len(pad) > 3) return pad[3];
+    if (pad.length > 3) return pad[3];
     const data = getattr(this, "data", b(""));
     if (len(data) > 51) return data[51];
     return 0;
@@ -615,7 +615,7 @@ export class PardChunk extends Chunk {
    */
   get expressions_disabled(): boolean {
     const pre: Uint8Array = getattr(this, "_pad_pre", b(""));
-    if (len(pre) > 6) return (pre[6] & 0x02) !== 0;
+    if (pre.length > 6) return (pre[6] & 0x02) !== 0;
     const data = getattr(this, "data", b(""));
     if (len(data) > 6) return (data[6] & 0x02) !== 0;
     return false;
@@ -624,7 +624,7 @@ export class PardChunk extends Chunk {
   /** Decoded parameter name (from `_raw_name` up to first NUL). */
   get name(): string {
     const raw: Uint8Array = getattr(this, "_raw_name", b(""));
-    if (!len(raw)) return "";
+    if (!raw.length) return "";
     const nul = bytes_.find(raw, 0x00);
     if (nul >= 0) return decode(bytes_.slice(raw, 0, nul), "utf-8", "surrogateescape");
     return decode(raw, "utf-8", "surrogateescape");
@@ -632,7 +632,7 @@ export class PardChunk extends Chunk {
 
   set name(value: string) {
     const encoded = bytes_.slice(encode(value, "utf-8", "surrogateescape"), 0, 31);
-    this._raw_name = bytes_.concat(encoded, bytes_.repeat(b("\x00"), 32 - len(encoded)));
+    this._raw_name = bytes_.concat(encoded, bytes_.repeat(b("\x00"), 32 - encoded.length));
   }
 }
 define(PardChunk, {

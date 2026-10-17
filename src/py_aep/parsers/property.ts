@@ -18,7 +18,7 @@ import { parse_markers } from "./marker.ts";
 import { parse_property } from "./property_value.ts";
 import { parse_gradient, parse_orientation, parse_shape, parse_text_document } from "./specialized_properties.ts";
 import { get_chunks_by_match_name, get_match_name_runs } from "./utils.ts";
-import { deferred, dict_get, enumerate, py_bool, warn, zip } from "../../pyrt/index.ts";
+import { deferred, dict_get, enumerate, warn, zip } from "../../pyrt/index.ts";
 
 const _property = deferred<typeof import("../models/properties/property.ts")>("py_aep/models/properties/property");
 
@@ -151,7 +151,7 @@ export function parse_properties(
     if (first_chunk == null) continue;
 
     const list_type = first_chunk.list_type;
-    const handler = dict_get(_PROPERTY_PARSERS, list_type);
+    const handler = _PROPERTY_PARSERS.get(list_type);
     if (handler != null) {
       properties.push(
         ...handler(
@@ -252,10 +252,10 @@ export function _dispatch_tdbs(ctx: _ParseContext): (Property | PropertyGroup)[]
   // so the scans do not run for every leaf on the hot parse path.
   if (ctx.match_name === "ADBE Layer Source Alternate") {
     const blsi = filter_by_type(ctx.chunks, "blsi");
-    if (py_bool(blsi)) {
+    if (blsi?.length > 0) {
       prop._blsi = blsi[0] as U4Chunk;
       const blsv = filter_by_type(ctx.chunks, "blsv");
-      if (py_bool(blsv)) {
+      if (blsv?.length > 0) {
         prop._blsv = blsv[0] as U4Chunk;
       }
     }
@@ -264,7 +264,7 @@ export function _dispatch_tdbs(ctx: _ParseContext): (Property | PropertyGroup)[]
   // after an active variable-font axis slot's tdbs.
   if (ctx.match_name.startsWith(VF_AXIS_PREFIX)) {
     const vfdn = filter_by_type(ctx.chunks, "vfdn");
-    if (py_bool(vfdn)) {
+    if (vfdn?.length > 0) {
       prop._vfdn = vfdn[0] as VfdnChunk;
     }
   }
@@ -273,7 +273,7 @@ export function _dispatch_tdbs(ctx: _ParseContext): (Property | PropertyGroup)[]
   // keyframe when the curves are keyed.
   if (ctx.match_name === "ADBE CurvesCustom-0001") {
     const arbs = filter_by_list_type(ctx.chunks, "aRbs");
-    if (py_bool(arbs)) {
+    if (arbs?.length > 0) {
       prop._arbs = arbs[0];
     }
   }
@@ -357,7 +357,7 @@ export function _dispatch_ovg2(ctx: _ParseContext): (Property | PropertyGroup)[]
    * override leaf's own partial-copy chunks - the leaf's `value` stays its own.
    */
   const tdgps = [...filter_by_list_type(ctx.chunks, "tdgp")];
-  if (!py_bool(tdgps)) return [];
+  if (tdgps.length === 0) return [];
   const group = parse_property_group(
     tdgps[0],
     ctx.match_name,

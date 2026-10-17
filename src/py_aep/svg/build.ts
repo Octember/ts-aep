@@ -10,7 +10,7 @@
  * points, type, and color stops AE writes for an SVG import.
  */
 
-import { dict_get, float, max, min, py_bool, py_eq, py_or, zip } from "../../pyrt/index.ts";
+import { float, max, min, py_bool, py_eq, zip } from "../../pyrt/index.ts";
 import { to_f4 } from "../binary/bin_utils.ts";
 import { Gradient, GradientAlphaStop, GradientColorStop } from "../models/properties/gradient.ts";
 import { Shape } from "../models/properties/shape.ts";
@@ -215,7 +215,7 @@ export function _apply_gradient(
   cx: number,
   cy: number,
 ): void {
-  _leaf(group, "ADBE Vector Grad Type").value = dict_get(_GRAD_TYPE, paint.kind, 1.0);
+  _leaf(group, "ADBE Vector Grad Type").value = _GRAD_TYPE.get(paint.kind) ?? 1.0;
   _leaf(group, "ADBE Vector Grad Start Pt").value = [
     paint.start[0] - cx,
     paint.start[1] - cy,
@@ -241,8 +241,8 @@ export function _apply_gradient(
 
 /** Convert reader gradient stops to an AE `Gradient` (color + alpha). */
 export function _gradient_value(paint: GradientPaint): Gradient {
-  const stops = py_or(paint.stops, []);
-  if (!py_bool(stops)) {
+  const stops = paint.stops?.length > 0 ? paint.stops : [];
+  if (!stops?.length) {
     return new Gradient();
   }
   const color_stops = stops.map(

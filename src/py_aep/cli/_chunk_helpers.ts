@@ -10,7 +10,7 @@
 import "../binary/_register.ts";
 import { ListChunk, read_aep } from "../binary/chunk.ts";
 import type { Chunk } from "../binary/chunk.ts";
-import { BytesIO, bytes_, floordiv, format, getitem, len, py_bool, range, str, ValueError } from "../../pyrt/index.ts";
+import { BytesIO, bytes_, floordiv, format, getitem, range, str, ValueError } from "../../pyrt/index.ts";
 import type { Path } from "../../pyrt/index.ts";
 
 /**
@@ -49,7 +49,7 @@ export function build_chunk_path(
   identifier: string,
   counters: Map<string, number>,
 ): string {
-  const counter_key = py_bool(parent_path) ? parent_path + "/" + identifier : identifier;
+  const counter_key = parent_path ? parent_path + "/" + identifier : identifier;
 
   if (!counters.has(counter_key)) {
     counters.set(counter_key, 0);
@@ -58,11 +58,11 @@ export function build_chunk_path(
   }
 
   if (getitem(counters, counter_key) > 0) {
-    return py_bool(parent_path)
+    return parent_path
       ? `${parent_path}/${identifier}[${getitem(counters, counter_key)}]`
       : `${identifier}[${getitem(counters, counter_key)}]`;
   }
-  return py_bool(parent_path) ? `${parent_path}/${identifier}` : identifier;
+  return parent_path ? `${parent_path}/${identifier}` : identifier;
 }
 
 /**
@@ -87,7 +87,7 @@ export function* walk_chunks(
     const identifier = chunk_label(chunk);
     const current_path = build_chunk_path(parent_path, identifier, counters);
 
-    const size = chunk.chunk_type !== "LIST" ? len(chunk.tobytes()) : 0;
+    const size = chunk.chunk_type !== "LIST" ? chunk.tobytes().length : 0;
     const is_list = chunk instanceof ListChunk && chunk.chunks != null;
     yield [current_path, identifier, size, depth, is_list];
 
@@ -120,7 +120,7 @@ export function _extract_chunks_recursive(
     const current_path = build_chunk_path(parent_path, identifier, counters);
 
     if (chunk instanceof ListChunk) {
-      if (py_bool(chunk.chunks)) {
+      if (chunk.chunks?.length > 0) {
         const child_counters = new Map<string, number>();
         _extract_chunks_recursive(chunk.chunks, current_path, result, child_counters, typed);
       }
@@ -183,7 +183,7 @@ export function format_hex_dump(data: Uint8Array, bytes_per_line = 16): string {
   const mid = floordiv(bytes_per_line, 2);
 
   if (bytes_per_line === 0) throw new ValueError("range() arg 3 must not be zero");
-  for (const i of range(0, len(data), bytes_per_line)) {
+  for (const i of range(0, data.length, bytes_per_line)) {
     const chunk = bytes_.slice(data, i, i + bytes_per_line);
 
     const left_bytes = bytes_.slice(chunk, null, mid);
@@ -191,7 +191,7 @@ export function format_hex_dump(data: Uint8Array, bytes_per_line = 16): string {
     const left = Array.from(left_bytes, (b) => format(b, "02X")).join(" ");
     const right = Array.from(right_bytes, (b) => format(b, "02X")).join(" ");
 
-    const joined = py_bool(right) ? `${left}  ${right}` : left;
+    const joined = right ? `${left}  ${right}` : left;
 
     const full_width = (mid * 3 - 1) + 2 + (mid * 3 - 1);
     const hex_str = joined.padEnd(full_width);
