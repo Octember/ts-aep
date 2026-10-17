@@ -1,4 +1,4 @@
-import { float, round } from "../../../pyrt/index.ts";
+import { round } from "../../../pyrt/index.ts";
 import { LdtaChunk } from "../../binary/layer_chunks.ts";
 import { LayerType } from "../../enums/index.ts";
 import { default_camera_zoom } from "../../resolvers/transform.ts";
@@ -58,7 +58,7 @@ export class CameraLayer extends Layer {
     const options = this.__getitem__("ADBE Camera Options Group");
     const zoom = options.__getitem__("ADBE Camera Zoom");
     // The layer's time 0 is the comp time it starts at.
-    const z = float(zoom.value_at_time(this.start_time));
+    const z = zoom.value_at_time(this.start_time);
     return [comp.width / 2.0, comp.height / 2.0, -z];
   }
 
@@ -103,7 +103,7 @@ export class CameraLayer extends Layer {
       ),
       layer_type: LayerType.CAMERA,
       layer_flags_2: 0x01,
-      layer_name: layer_name,
+      layer_name,
     });
     ldta.out_point = duration;
     ldta.three_d_layer = true;

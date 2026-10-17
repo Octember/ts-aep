@@ -462,7 +462,7 @@ export class Layer extends PropertyGroup {
       this._ldta.name_set = false;
     } else {
       const source_item = this.containing_comp._project.items.get(source_id);
-      this._ldta.name_set = !py_eq(source_item?.name ?? null, value);
+      this._ldta.name_set = (source_item?.name ?? null) !== value;
     }
   }
 

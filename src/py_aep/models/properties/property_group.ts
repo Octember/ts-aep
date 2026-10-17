@@ -9,7 +9,6 @@ import {
   bytes_,
   deferred,
   dict_get,
-  float,
   getattr,
   getitem,
   int,
@@ -21,7 +20,6 @@ import {
   py_or,
   repr,
   split,
-  str,
   instance_dict,
   type_name,
 } from "../../../pyrt/index.ts";
@@ -938,7 +936,7 @@ export class PropertyGroup extends PropertyBase {
           `Could not locate an installed font for family ${repr(family)}; pass font_file explicitly.`,
         );
       }
-      font_file = str(resolved[0]);
+      font_file = resolved[0].toString();
       font_number = resolved[1];
     }
     const axes = read_design_axes(font_file, font_number);
@@ -958,7 +956,7 @@ export class PropertyGroup extends PropertyBase {
     if (slot == null) throw new ValueError("All 8 variable-font axis slots are in use.");
 
     slot._ensure_materialized();
-    const tag_raw = float(_vf_tag_from_str(axis_tag));
+    const tag_raw = _vf_tag_from_str(axis_tag);
     const tdbs = slot._tdbs;
     tdb4_apply_vf_axis_template(slot._tdb4);
     py_assert(slot._cdat != null);
@@ -1291,7 +1289,7 @@ export class PropertyGroup extends PropertyBase {
       match_name,
       this._free_numbered_name(base, same_type + 1),
       {
-        subgroups: dict_get(_VECTOR_SUBGROUPS, match_name, []) as [string, number, number][],
+        subgroups: (_VECTOR_SUBGROUPS.get(match_name) ?? []) as [string, number, number][],
         path_time_base,
       },
     );

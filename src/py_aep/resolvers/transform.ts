@@ -25,7 +25,7 @@ import type { LightLayer } from "../models/layers/light_layer.ts";
 import type { MatchNameTypes } from "../models/properties/match_name_types.ts";
 import type { Property } from "../models/properties/property.ts";
 import type { PropertyGroup } from "../models/properties/property_group.ts";
-import { NotImplementedError, ValueError, degrees, float, float_repr, hasattr, max, min, mod, py_bool, repr, sum, hypot } from "../../pyrt/index.ts";
+import { NotImplementedError, ValueError, degrees, float_repr, hasattr, max, min, mod, repr, sum, hypot } from "../../pyrt/index.ts";
 
 type _PropertyName = {
   [K in keyof MatchNameTypes]: MatchNameTypes[K] extends Property<infer _V> ? K : never;
@@ -370,7 +370,7 @@ export function build_world_matrix(
   // Position lives in its parent's pixels (the comp's for the root).
   let m = Mat4.identity();
   const comp = layer.containing_comp;
-  let space_aspect = float(comp.pixel_aspect);
+  let space_aspect = comp.pixel_aspect;
   for (const lyr of chain.reverse()) {
     if ((lyr !== layer || as_parent) && _RIG_TYPES.has(lyr._ldta.layer_type)) {
       if (flatten_2d) {
@@ -403,8 +403,8 @@ export function build_world_matrix(
 /** Pixel aspect of a layer's own pixels: its source's, else square. */
 export function layer_source_aspect(layer: Layer): number {
   const source = hasattr(layer, "source") ? (layer as AVLayer).source : null;
-  const aspect = hasattr(source, "pixel_aspect") ? source!.pixel_aspect : null;
-  return py_bool(aspect) ? float(aspect!) : 1.0;
+  const aspect = source != null && "pixel_aspect" in source ? source!.pixel_aspect : null;
+  return aspect != null && aspect !== 0 ? aspect! : 1.0;
 }
 
 /**
@@ -412,7 +412,7 @@ export function layer_source_aspect(layer: Layer): number {
  * the comp's at the root, square under a camera or light.
  */
 export function position_space_aspect(parent: Layer | null, comp: CompItem): number {
-  if (parent == null) return float(comp.pixel_aspect);
+  if (parent == null) return comp.pixel_aspect;
   if (_RIG_TYPES.has(parent._ldta.layer_type)) return 1.0;
   return layer_source_aspect(parent);
 }
@@ -931,7 +931,7 @@ export function transform_from_points(
 
   return {
     anchor_point: [0.0, 0.0, 0.0],
-    position: [float(top_left[0]), float(top_left[1]), float(top_left[2])],
+    position: [top_left[0], top_left[1], top_left[2]],
     x_rotation: rx_deg,
     y_rotation: ry_deg,
     z_rotation: rz_deg,

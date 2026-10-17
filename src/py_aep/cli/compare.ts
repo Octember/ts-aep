@@ -26,12 +26,10 @@ import {
   b,
   bytes_eq,
   deepcopy,
-  dict_get,
   float,
   format,
   getattr,
   getitem,
-  hasattr,
   int,
   max,
   py_bool,
@@ -48,7 +46,7 @@ import {
 
 // NOTE(port): print(*args) with default sep=" " and end="\n"; console.log of one pre-joined string appends the same newline.
 export function print(...args: string[]): void {
-  console.log(args.map((a) => str(a)).join(" "));
+  console.log(args.join(" "));
 }
 
 // NOTE(port): print(..., file=sys.stderr); console.error of one string appends the same newline.
@@ -243,7 +241,7 @@ export function _chunk_floats(chunk: FloatChunk): number[] | null {
   }
   if (ct === "ldat") {
     const items = chunk.items;
-    if (py_bool(items) && items.every((i: { x: number; y: number }) => hasattr(i, "x") && hasattr(i, "y"))) {
+    if (py_bool(items) && items.every((i: { x: number; y: number }) => "x" in i && "y" in i)) {
       return items.flatMap((i: { x: number; y: number }) => [i.x, i.y]);
     }
   }
@@ -510,7 +508,7 @@ export function compare_multi_aep_files(
       if (present.length < 2) continue;
     }
 
-    const data_list = Array.from(range(files.length), (i) => dict_get(all_data[i], path, b("")));
+    const data_list = Array.from(range(files.length), (i) => all_data[i].get(path) ?? b(""));
     const sizes = data_list.map((d) => d.length);
     const max_len = max(sizes);
 
@@ -666,8 +664,8 @@ export function print_results(
 
         // Context display
         if (context > 0 && data1 != null && data2 != null) {
-          const d1 = dict_get(data1, diff.path, b(""));
-          const d2 = dict_get(data2, diff.path, b(""));
+          const d1 = data1.get(diff.path) ?? b("");
+          const d2 = data2.get(diff.path) ?? b("");
           if (d1?.length > 0) {
             print(_format_context_line("File 1", d1, byte_diff.offset, context));
           }
@@ -761,7 +759,7 @@ export function print_multi_results(
         if (context > 0 && all_data?.length! > 0) {
           for (let i = 0, n = files.length; i < n; i++) {
             const label = i === 0 ? "ref" : `[${i}]`;
-            const data = dict_get(all_data![i], chunk_diff.path, b(""));
+            const data = all_data![i].get(chunk_diff.path) ?? b("");
             if (!data?.length) continue;
             print(_format_context_line(label, data, diff.offset, context));
           }
@@ -791,8 +789,8 @@ export function to_json_output(
   suppressed = 0,
 ) {
   return {
-    file1: str(file1),
-    file2: str(file2),
+    file1: file1.toString(),
+    file2: file2.toString(),
     chunks_with_differences: differences.map((diff) => ({
       path: diff.path,
       size1: diff.size1,
@@ -809,8 +807,8 @@ export function to_json_output(
         bit_position: bd.bit_position,
       })),
     })),
-    only_in_file1: only_in_file1,
-    only_in_file2: only_in_file2,
+    only_in_file1,
+    only_in_file2,
     suppressed_float_diffs: suppressed,
     summary: {
       chunks_with_differences: differences.length,

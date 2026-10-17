@@ -81,16 +81,16 @@ export function _open_face(path: string, face_index: number): fontkit.Font {
 /** `(font, is_cff, outline bounds by glyph id)` for a PostScript name, cached; the bounds fill in as glyphs are measured. */
 export function _font_outlines(ps_name: string): [fontkit.Font, boolean, _GlyphBounds] {
   const [path, face_index] = tc._resolve_face(ps_name);
-  const key = tkey(str(path), face_index);
+  const key = tkey(path.toString(), face_index);
   let cached = _glyph_cache.get(key);
   if (cached === undefined) {
     let font: fontkit.Font;
     try {
-      font = _open_face(str(path), face_index);
+      font = _open_face(path.toString(), face_index);
     } catch (exc) {
       if (!(exc instanceof Error) || !_is_os_error(exc)) throw exc;
       throw Object.assign(
-        new NotImplementedError(`font file for ${repr(ps_name)} is unreadable: ${str(path)}`),
+        new NotImplementedError(`font file for ${repr(ps_name)} is unreadable: ${path.toString()}`),
         { cause: exc },
       );
     }
@@ -227,7 +227,7 @@ export function text_ink_rect(doc: TextDocument): Record<string, number> {
     styles = tc._char_styles(doc, raw);
   } catch (exc) {
     if (!(exc instanceof tc.CompositionUnsupported)) throw exc;
-    throw Object.assign(_refuse(str(exc.message)), { cause: exc });
+    throw Object.assign(_refuse(exc.message), { cause: exc });
   }
   const strokes: number[] = [];
   for (const [start, end, style] of run_spans(doc._doc, "6", "6")) {
@@ -244,7 +244,7 @@ export function text_ink_rect(doc: TextDocument): Record<string, number> {
     }
   } catch (exc) {
     if (!(exc instanceof tc.CompositionUnsupported)) throw exc;
-    throw Object.assign(_refuse(str(exc.message)), { cause: exc });
+    throw Object.assign(_refuse(exc.message), { cause: exc });
   }
   return box.rect();
 }

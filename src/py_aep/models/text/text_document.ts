@@ -69,7 +69,7 @@ export function _box_coords(left: number, top: number, width: number, height: nu
     [left, top],
     [left, top],
   ]) {
-    coords.push(pyfloat(float(x)), pyfloat(float(y)));
+    coords.push(pyfloat(x), pyfloat(y));
   }
   return coords;
 }
@@ -794,7 +794,7 @@ export class TextDocument {
     if (this._char_style != null && value != null) {
       // Setting an explicit leading turns auto-leading off, matching AE.
       const total = u16_len(_raw_text(this));
-      _apply_char_key(this, 0, total, "5", pyfloat(float(value)));
+      _apply_char_key(this, 0, total, "5", pyfloat(value));
       _apply_char_key(this, 0, total, "4", false);
       this._propagate_cos();
     } else {
@@ -944,8 +944,8 @@ export class TextDocument {
 
   set box_text_size(value: number[]) {
     validate_box_size(value);
-    const width = float(value[0]);
-    const height = float(value[1]);
+    const width = value[0];
+    const height = value[1];
     const frame = this._ensure_frame();
     const coords = this._box_outline();
     let left: number;
@@ -986,7 +986,7 @@ export class TextDocument {
     const height = Math.abs(cos_num(coords[13]) - cos_num(coords[1]));
     const frame = this._box_frame();
     py_assert(frame != null);
-    cos_setitem(cos_item(frame, "1"), "0", _box_coords(float(value[0]), float(value[1]), width, height));
+    cos_setitem(cos_item(frame, "1"), "0", _box_coords(value[0], value[1], width, height));
     this._propagate_cos();
   }
 
@@ -1470,7 +1470,7 @@ export const _box_inset_spacing_set = requires_version(24)(function box_inset_sp
   /** Setter body for `box_inset_spacing`. */
   validate_positive_number(value);
   const meta = cos_setdefault(this._ensure_frame(), "2", new Map());
-  cos_setitem(meta, "9", pyfloat(float(value)));
+  cos_setitem(meta, "9", pyfloat(value));
   _numeric_sort(cos_dict(meta, "items"));
   this._propagate_cos();
 });
@@ -1510,7 +1510,7 @@ export const _box_first_baseline_alignment_minimum_set = requires_version(24)(fu
   const meta = cos_setdefault(this._ensure_frame(), "2", new Map());
   const sub = cos_setdefault(meta, "10", new Map());
   cos_setdefault(sub, "0", BoxFirstBaselineAlignment.to_binary(BoxFirstBaselineAlignment.ASCENT));
-  cos_setitem(sub, "1", pyfloat(float(value)));
+  cos_setitem(sub, "1", pyfloat(value));
   _numeric_sort(cos_dict(meta, "items"));
   this._propagate_cos();
 });

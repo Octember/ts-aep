@@ -2,7 +2,7 @@
 
 import { GuideItem } from "../binary/ldat_chunks.ts";
 import { GuideOrientationType } from "../enums/index.ts";
-import { float, descriptor, float_repr } from "../../pyrt/index.ts";
+import { descriptor, float_repr } from "../../pyrt/index.ts";
 import { ChunkField } from "./descriptors.ts";
 import { validate_f8 } from "./validators.ts";
 
@@ -63,7 +63,7 @@ export class Guide {
     const item = new GuideItem({
       orientation_type: GuideOrientationType.to_binary(orientation),
       position_type: 0,
-      position: float(position),
+      position,
     });
     return new this(item);
   }

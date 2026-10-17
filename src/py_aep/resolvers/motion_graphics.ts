@@ -42,7 +42,7 @@ import type { AVLayer } from "../models/layers/av_layer.ts";
 import type { Layer } from "../models/layers/layer.ts";
 import type { Property } from "../models/properties/property.ts";
 import type { PropertyGroup } from "../models/properties/property_group.ts";
-import { deferred, dict_get, py_bool, py_eq, float, int, json_dumps } from "../../pyrt/index.ts";
+import { deferred, py_eq, int, json_dumps } from "../../pyrt/index.ts";
 
 const _composition = deferred<typeof import("../models/items/composition.ts")>("py_aep/models/items/composition");
 import { FootageItem } from "../models/items/footage.ts";
@@ -103,8 +103,8 @@ export class PathNode {
  * every `* Control-0001` -\> 1).
  */
 export function _effect_param_index(layer: Layer, effect_mn: string, param_mn: string): number | null {
-  const defs = dict_get(layer.containing_comp._project._effect_param_defs, effect_mn);
-  if (!py_bool(defs)) return null;
+  const defs = layer.containing_comp._project._effect_param_defs.get(effect_mn) ?? null;
+  if (defs == null || defs.size === 0) return null;
   const keys = [...defs!.keys()];
   if (!keys.includes(param_mn)) return null;
   return 1 + keys.indexOf(param_mn);
@@ -310,7 +310,7 @@ export function font_caps_json(prop: Property): string {
   if (value instanceof TextDocument) {
     font = value.font || "";
     const fs = value.font_size;
-    if (fs != null) size = Number.isInteger(float(fs)) ? int(fs) : fs;
+    if (fs != null) size = Number.isInteger(fs) ? int(fs) : fs;
   }
   return json_dumps(
     {

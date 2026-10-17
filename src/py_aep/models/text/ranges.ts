@@ -320,7 +320,7 @@ export function _build_color_paint(rgb: number[]): CosDict {
       "0",
       new Map<string, CosNode>([
         ["0", 1],
-        ["1", [pyfloat(1.0), pyfloat(float(rgb[0])), pyfloat(float(rgb[1])), pyfloat(float(rgb[2]))]],
+        ["1", [pyfloat(1.0), pyfloat(rgb[0]), pyfloat(rgb[1]), pyfloat(rgb[2])]],
       ]),
     ],
   ]);
@@ -969,7 +969,7 @@ export class RangeField<T extends InstanceValue> {
   /** Create a RangeField that coerces to float. */
   static float(kind: RangeKind, key: string, kwargs: RangeFieldExtras<number> = {}): RangeField<number> {
     // The stored value is a Python float, so box it to keep `1.0` from serializing as `1`.
-    return new RangeField<number>(kind, key, { transform: cos_float, reverse: (x: number) => pyfloat(float(x)), ...kwargs });
+    return new RangeField<number>(kind, key, { transform: cos_float, reverse: (x: number) => pyfloat(x), ...kwargs });
   }
 
   /**
@@ -1520,7 +1520,7 @@ export class CharacterRange extends _TextRange {
     if (value == null) {
       _apply_char_key(this._doc_ref, start, end, "5", null);
     } else {
-      _apply_char_key(this._doc_ref, start, end, "5", pyfloat(float(value)));
+      _apply_char_key(this._doc_ref, start, end, "5", pyfloat(value));
       _apply_char_key(this._doc_ref, start, end, "4", false);
     }
     this._propagate();

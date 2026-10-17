@@ -9,7 +9,7 @@
  * points, type, and color stops AE writes for an SVG import.
  */
 
-import { float, max, min, py_eq, zip } from "../../pyrt/index.ts";
+import { max, min, py_eq, zip } from "../../pyrt/index.ts";
 import { to_f4 } from "../binary/bin_utils.ts";
 import { Gradient, GradientAlphaStop, GradientColorStop } from "../models/properties/gradient.ts";
 import { Shape } from "../models/properties/shape.ts";
@@ -204,8 +204,8 @@ export function _apply_paint(
 }
 
 export function _apply_stroke_style(sg: PropertyGroup, stroke: StrokeStyle): void {
-  _set_optional(sg, "ADBE Vector Stroke Line Cap", float(stroke.cap), 1.0);
-  _set_optional(sg, "ADBE Vector Stroke Line Join", float(stroke.join), 1.0);
+  _set_optional(sg, "ADBE Vector Stroke Line Cap", stroke.cap, 1.0);
+  _set_optional(sg, "ADBE Vector Stroke Line Join", stroke.join, 1.0);
   _set_optional(sg, "ADBE Vector Stroke Miter Limit", stroke.miter_limit, 4.0);
 }
 

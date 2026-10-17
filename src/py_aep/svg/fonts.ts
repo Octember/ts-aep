@@ -12,10 +12,8 @@ import * as fontkit from "fontkit";
 import * as host from "../../pyrt/host.ts";
 import {
   Path,
-  py_bool,
   setdefault,
   split,
-  str,
   strip,
 } from "../../pyrt/index.ts";
 
@@ -149,8 +147,8 @@ export function _name(font: fontkit.Font, ...ids: number[]): string | null {
   }
   for (const nid of ids) {
     const value = font.getName(NAME_KEYS.get(nid)!);
-    if (py_bool(value)) {
-      return str(value);
+    if (value) {
+      return value;
     }
   }
   return null;

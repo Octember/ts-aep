@@ -18,7 +18,6 @@ import {
   at,
   bytes_,
   bytes_eq,
-  float,
   floordiv,
   getitem,
   int,
@@ -48,7 +47,7 @@ export class _NaturalSpline {
 
   constructor(points: Array<[number, number]>) {
     const by_x = new Map<number, number>();
-    for (const [x, y] of points) by_x.set(float(x), float(y));
+    for (const [x, y] of points) by_x.set(x, y);
     const pts = sorted(by_x.entries());
     this.xs = pts.map((p) => p[0]);
     this.ys = pts.map((p) => p[1]);

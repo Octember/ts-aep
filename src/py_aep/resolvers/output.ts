@@ -6,7 +6,7 @@
  */
 
 import { OutputChannels, OutputColorDepth, TimeSpanSource } from "../enums/index.ts";
-import { IndexError, PyException, floordiv, format, getitem, int, mod, num_str, py_bool, py_or, round } from "../../pyrt/index.ts";
+import { IndexError, PyException, floordiv, format, getitem, int, mod, num_str, py_or, round } from "../../pyrt/index.ts";
 import type { CompItem } from "../models/items/composition.ts";
 
 // Roou format_id (4-char) to file extension.
@@ -221,7 +221,7 @@ export function format_frame_number(frame: number, fps: number): string {
  * @returns Timecode string like '0-00-00-00' (hours-minutes-seconds-frames).
  */
 export function format_timecode(seconds: number, fps: number, is_duration = false): string {
-  const fps_int = py_bool(fps) ? int(fps) : 1;
+  const fps_int = fps !== 0 ? int(fps) : 1;
   // Use ceiling for durations, floor for absolute times
   let total_frames: number;
   if (is_duration) {

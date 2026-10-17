@@ -10,7 +10,7 @@
 import "../binary/_register.ts";
 import { ListChunk, read_aep } from "../binary/chunk.ts";
 import type { Chunk } from "../binary/chunk.ts";
-import { BytesIO, bytes_, floordiv, format, getitem, range, str, ValueError } from "../../pyrt/index.ts";
+import { BytesIO, bytes_, floordiv, format, getitem, range, ValueError } from "../../pyrt/index.ts";
 import type { Path } from "../../pyrt/index.ts";
 
 /**
@@ -20,7 +20,7 @@ import type { Path } from "../../pyrt/index.ts";
  * @returns `LIST:<list_type>` for list chunks, otherwise the chunk type string.
  */
 export function chunk_label(chunk: Chunk): string {
-  const chunk_type = str(chunk.chunk_type);
+  const chunk_type = chunk.chunk_type;
   if (chunk_type === "LIST" && "list_type" in chunk) {
     return `LIST:${chunk.list_type}`;
   }

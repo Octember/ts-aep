@@ -128,7 +128,7 @@ export function build_folder_node(folder: FolderItem, project: Project, include_
     type: "Folder",
     name: folder.name,
     attrs: new Map<string, AttrValue>([
-      ["label", py_bool(folder.label) ? Label.name_of(folder.label).toLowerCase() : null],
+      ["label", folder.label !== 0 ? Label.name_of(folder.label).toLowerCase() : null],
     ]),
     children,
   };
@@ -353,7 +353,7 @@ export function format_text(
     }
   }
 
-  output.write(`${prefix}${connector}${icon} ${str(node.name)}${attrs_str}\n`);
+  output.write(`${prefix}${connector}${icon} ${node.name}${attrs_str}\n`);
 
   // Process children
   const children = node.children;
@@ -405,7 +405,7 @@ export function format_dot(node: Node, output: TextIO, max_depth: number | null 
     const color = colors.get(n.type) ?? "#cccccc";
 
     // Build label
-    const name = escape_dot(str(n.name));
+    const name = escape_dot(n.name);
     const attrs = n.attrs;
     const attrs_lines: string[] = [];
     for (const [k, v] of attrs) {
@@ -456,7 +456,7 @@ export function format_mermaid(node: Node, output: TextIO, max_depth: number | n
     if (max_depth != null && depth > max_depth) return "";
 
     const nid = get_node_id();
-    const name = escape_mermaid(str(n.name));
+    const name = escape_mermaid(n.name);
     const node_type = n.type;
 
     // Different shapes for different types

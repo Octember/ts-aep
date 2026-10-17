@@ -9,7 +9,7 @@
 // taking the member as `self`, e.g. `OutputChannels.label(member)`; same
 // values and lookups as the Python properties. Applies to every enum here.
 
-import { KeyError, ValueError, getitem, round, float, int, decode, repr, format, int_enum } from "../../pyrt/index.ts";
+import { KeyError, ValueError, getitem, round, int, decode, repr, format, int_enum } from "../../pyrt/index.ts";
 import type { EnumValue } from "../../pyrt/index.ts";
 
 /**
@@ -422,7 +422,7 @@ export const AudioSampleRate = int_enum("AudioSampleRate", {
 
   /** Convert to binary float for the `f8` field. */
   to_binary(value: number): number {
-    return float(round(value));
+    return round(value);
   },
 });
 export type AudioSampleRate = EnumValue<typeof AudioSampleRate>;

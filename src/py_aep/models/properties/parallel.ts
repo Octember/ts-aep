@@ -13,7 +13,7 @@
  * output pairs (`aep-compare` ground-truth workflow).
  */
 
-import { b, deferred, float, NotImplementedError, TypeError_, instance_dict } from "../../../pyrt/index.ts";
+import { b, deferred, NotImplementedError, TypeError_, instance_dict } from "../../../pyrt/index.ts";
 import { type Chunk, ListChunk } from "../../binary/chunk.ts";
 import { LdatItemType, type LdatItem } from "../../binary/ldat_chunks.ts";
 import { build_parallel_ldat_item, clone_chunk_tree, set_orientation_item_values } from "../../binary/mutations.ts";
@@ -150,20 +150,20 @@ export class _OrientationKind extends ParallelKind {
   }
 
   build_value_chunk(prop: Property, value: PropertyValue): Chunk {
-    const vals = Array.isArray(value) ? value.map((v) => float(v)) : [0.0, 0.0, 0.0];
+    const vals = Array.isArray(value) ? value : [0.0, 0.0, 0.0];
     return new OtdaChunk({ values: vals });
   }
 
   build_header_item(value: PropertyValue): LdatItem {
     return build_parallel_ldat_item(
       this.header_item_type,
-      Array.isArray(value) ? value.map((v) => float(v)) : null,
+      Array.isArray(value) ? value : null,
     );
   }
 
   update_header_item(item: LdatItem, value: PropertyValue): void {
     if (Array.isArray(value)) {
-      set_orientation_item_values(item, value.map((v) => float(v)));
+      set_orientation_item_values(item, value);
     }
   }
 
@@ -171,7 +171,7 @@ export class _OrientationKind extends ParallelKind {
     // Inside an otst the cdat doubles are little-endian and hold the
     // actual angles.
     if (Array.isArray(removed_value)) {
-      return new CdatChunk({ values: removed_value.slice(0, 3).map((v) => float(v)), is_le: true });
+      return new CdatChunk({ values: removed_value.slice(0, 3), is_le: true });
     }
     return new CdatChunk({ pad: _EMPTY_CDAT_PAD });
   }

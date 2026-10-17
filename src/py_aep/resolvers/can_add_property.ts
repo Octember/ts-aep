@@ -5,7 +5,7 @@
  * can be added to a specific indexed group.
  */
 
-import { py_bool, py_enum, type EnumValue } from "../../pyrt/index.ts";
+import { py_enum, type EnumValue } from "../../pyrt/index.ts";
 import { EXPRESSION_CONTROLS } from "../data/effect_controls.ts";
 import { MATCH_NAME_TO_AUTO_NAME } from "../data/match_names.ts";
 import { TEXT_ANIMATOR_POOL } from "../data/text_animator_pool.ts";
@@ -61,7 +61,7 @@ export const _ADDABLE_ANIMATOR_PROPERTY_MATCH_NAMES: ReadonlySet<string> = new S
 );
 export const _ANIMATOR_PROPERTY_DISPLAY_TO_MATCH: Map<string, string> = new Map(
   TEXT_ANIMATOR_POOL.filter(
-    (e) => py_bool(e.name) && !e.mn.startsWith("ADBE Text VF Axis"),
+    (e) => e.name && !e.mn.startsWith("ADBE Text VF Axis"),
   ).map((e): [string, string] => [e.name, e.mn]),
 );
 

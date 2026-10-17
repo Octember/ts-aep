@@ -16,7 +16,6 @@ import {
   ValueError,
   deferred,
   descriptor,
-  float,
   getattr,
   py_assert,
   repr,
@@ -72,7 +71,7 @@ export function _validate_interpolation_type(value: KeyframeInterpolationType, k
  * 24691, where AE counts 24692 units per second).
  */
 export function _timebase_units(frame_rate: number): number {
-  return float(frame_grid(frame_rate)[0]);
+  return frame_grid(frame_rate)[0];
 }
 
 /** Refuse a keyframe time that does not fit the 32-bit time field. */
@@ -499,7 +498,7 @@ export class Keyframe<V extends PropertyValue = PropertyValue> {
   _leave_spatial_auto_bezier(): void {
     // Only a spatial keyframe's KfPosition carries the flag.
     const kf_data = this._ldat_item.kf_data as KfPosition;
-    if (!getattr(kf_data, "spatial_auto_bezier", false)) return;
+    if (!("spatial_auto_bezier" in kf_data ? kf_data.spatial_auto_bezier : false)) return;
     const derived = this._auto_spatial_tangents();
     if (derived != null) {
       [kf_data.out_spatial_tangents, kf_data.in_spatial_tangents] = derived;
@@ -593,9 +592,9 @@ export class Keyframe<V extends PropertyValue = PropertyValue> {
     const as_vector = (keyframe: Keyframe): number[] | null => {
       const value = keyframe.value;
       const is_num = (x: unknown): boolean => typeof x === "number" || typeof x === "boolean";
-      if (is_num(value)) return [float(value as number)];
+      if (is_num(value)) return [value as number];
       if (Array.isArray(value) && value.every(is_num)) {
-        return value.map((component) => float(component));
+        return value;
       }
       return null;
     };
@@ -743,8 +742,8 @@ export class Keyframe<V extends PropertyValue = PropertyValue> {
   _write_kf_value(raw: number[] | number | null): void {
     const kf_data = this._ldat_item.kf_data;
     if (!("value" in kf_data)) return;
-    let new_: number[] | null = typeof raw === "number" ? [float(raw)] : null;
-    if (new_ == null && Array.isArray(raw)) new_ = raw.map((v) => float(v));
+    let new_: number[] | null = typeof raw === "number" ? [raw] : null;
+    if (new_ == null && Array.isArray(raw)) new_ = raw;
     if (new_ == null) return;
     if (new_.length !== kf_data.value.length) {
       if (this._property != null && this._property._parallel_kind() != null) {
@@ -1287,7 +1286,7 @@ export function _segment_speed(kf_a: Keyframe, kf_b: Keyframe): number[] {
   if (!(typeof val_b === "number" || Array.isArray(val_b))) return [0.0];
 
   if (typeof val_a === "number" && typeof val_b === "number") {
-    return [(float(val_b) - float(val_a)) / time_seconds];
+    return [(val_b - val_a) / time_seconds];
   }
 
   if (Array.isArray(val_a) && Array.isArray(val_b)) {

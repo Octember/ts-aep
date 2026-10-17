@@ -481,7 +481,7 @@ export class XmlFormatOptions extends FormatOptionsBase {
   _clamp_after_param(param_key: string): void {
     const rule_key = _PARAM_RULE_KEYS.get(param_key) ?? null;
     if (rule_key == null) return;
-    this._require_om()._apply_singleton_clamps(dict_get(CLAMP_DEPENDENTS, rule_key, []) as string[]);
+    this._require_om()._apply_singleton_clamps((CLAMP_DEPENDENTS.get(rule_key) ?? []) as string[]);
   }
 
   /**

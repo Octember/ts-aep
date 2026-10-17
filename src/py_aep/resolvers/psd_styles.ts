@@ -39,7 +39,6 @@ import {
   copysign,
   decode,
   dict_get,
-  float,
   fspath,
   getitem,
   int,
@@ -707,9 +706,9 @@ export function read_global_light(file: PathLike): [number, number] {
   fp.seek(26);
   for (const [resource_id, body] of iter_image_resources(fp)) {
     if (resource_id === 1037 && body.length >= 4) {
-      angle = float(struct.unpack(">i", bytes_.slice(body, 0, 4))[0]);
+      angle = struct.unpack(">i", bytes_.slice(body, 0, 4))[0];
     } else if (resource_id === 1049 && body.length >= 4) {
-      altitude = float(struct.unpack(">i", bytes_.slice(body, 0, 4))[0]);
+      altitude = struct.unpack(">i", bytes_.slice(body, 0, 4))[0];
     }
   }
   return [angle, altitude];
@@ -725,7 +724,7 @@ export function _blend_options_values(
     ["ADBE Global Altitude2", altitude],
   ]);
   if (blocks.fill_opacity != null) {
-    values.set("ADBE Layer Fill Opacity2", float(round((blocks.fill_opacity * 100) / 255)));
+    values.set("ADBE Layer Fill Opacity2", round((blocks.fill_opacity * 100) / 255));
   }
   if (blocks.blend_interior != null) {
     values.set("ADBE Blend Interior", _bool01(blocks.blend_interior));
@@ -913,12 +912,12 @@ export function _pads(reach: number, anti_aliased: boolean, shift = 0.0): [numbe
 export function _bevel_pads(instance: Map<string, _Value>, name: string): [number, number] | null {
   const style = dict_get(instance, "bvlS", "InrB");
   if (style === "InrB") return null;
-  const size = float(dict_get(instance, "blur", 0) as number);
+  const size = dict_get(instance, "blur", 0) as number;
   let height: number;
   if (style === "OtrB") {
     height = size;
   } else if (style === "Embs" || style === "PlEb") {
-    height = float(Math.ceil(size / 2));
+    height = Math.ceil(size / 2);
   } else {
     throw new NotImplementedError(
       `layer ${repr(name)}: the merged bounds of a ${repr(style)} bevel are not ` +
@@ -932,7 +931,7 @@ export function _bevel_pads(instance: Map<string, _Value>, name: string): [numbe
   } else {
     reach = height + 4;
   }
-  const softening = float(dict_get(instance, "Sftn", 0) as number);
+  const softening = dict_get(instance, "Sftn", 0) as number;
   if (softening > 0) {
     reach += Math.max(softening, 2) - 0.5;
   }
@@ -957,24 +956,24 @@ export function _instance_box(
   if (key === "DrSh" || key === "OrGl") {
     const precise = key === "OrGl" && (instance.get("GlwT") ?? null) === "PrBL";
     const reach = _blur_reach(
-      float(dict_get(instance, "blur", 0) as number),
-      float(dict_get(instance, "Ckmt", 0) as number),
+      dict_get(instance, "blur", 0) as number,
+      dict_get(instance, "Ckmt", 0) as number,
       precise,
     );
     [lead, trail] = _pads(reach, py_bool(dict_get(instance, "AntA", false)));
     if (key === "DrSh") {
       const angle = radians(
-        py_bool(instance.get("uglg")) ? global_angle : float(dict_get(instance, "lagl", 0) as number),
+        py_bool(instance.get("uglg")) ? global_angle : dict_get(instance, "lagl", 0) as number,
       );
-      const distance = float(dict_get(instance, "Dstn", 0) as number);
+      const distance = dict_get(instance, "Dstn", 0) as number;
       dx = _round_away(-Math.cos(angle) * distance);
       dy = _round_away(Math.sin(angle) * distance);
     }
   } else if (key === "FrFX") {
-    const size = float(dict_get(instance, "Sz  ", 0) as number);
+    const size = dict_get(instance, "Sz  ", 0) as number;
     const position = dict_get(instance, "Styl", "OutF");
     if (position === "InsF") return null;
-    const reach = position === "OutF" ? size : float(Math.ceil(size / 2));
+    const reach = position === "OutF" ? size : Math.ceil(size / 2);
     lead = trail = int(reach) + 2;
   } else if (key === "ebbl") {
     const pads = _bevel_pads(instance, name);

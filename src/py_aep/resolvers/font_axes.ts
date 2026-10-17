@@ -3,7 +3,7 @@
 import * as fontkit from "fontkit";
 import * as host from "../../pyrt/host.ts";
 
-import { ValueError, float, str } from "../../pyrt/index.ts";
+import { ValueError } from "../../pyrt/index.ts";
 import type { PathLike } from "../../pyrt/index.ts";
 
 export type _PathLike = PathLike;
@@ -48,7 +48,7 @@ export class FontDesignAxis {
  */
 export function read_design_axes(font_file: _PathLike, font_number: number = 0): FontDesignAxis[] {
   // NOTE(port): fontTools lazy=True defers table reads; fontkit reads eagerly. Results are identical, only I/O cost differs.
-  const opened = fontkit.create(host.fs.readFileSync(str(font_file)));
+  const opened = fontkit.create(host.fs.readFileSync(String(font_file)));
   // TODO(port): fontTools raises on an out-of-range fontNumber; here an
   // out-of-range index yields undefined and fails later on property access.
   const font: fontkit.Font | undefined = opened.fonts != null ? opened.fonts[font_number] : opened;
@@ -59,7 +59,7 @@ export function read_design_axes(font_file: _PathLike, font_number: number = 0):
   }
   try {
     if (!("fvar" in font.directory.tables)) {
-      throw new ValueError(`${str(font_file)} is not a variable font (it has no fvar table).`);
+      throw new ValueError(`${String(font_file)} is not a variable font (it has no fvar table).`);
     }
     const name_table = "name" in font.directory.tables ? font.name : null;
     const axes: FontDesignAxis[] = [];
@@ -79,9 +79,9 @@ export function read_design_axes(font_file: _PathLike, font_number: number = 0):
         new FontDesignAxis(
           axis_tag,
           (axis_name || axis_tag),
-          float(info.min),
-          float(info.default),
-          float(info.max),
+          info.min,
+          info.default,
+          info.max,
         ),
       );
     }

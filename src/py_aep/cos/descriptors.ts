@@ -18,7 +18,6 @@ import {
   KeyError,
   TypeError_,
   ValueError,
-  float,
   py_bool,
   pyfloat,
   repr,
@@ -232,7 +231,7 @@ export function bool_field<D extends boolean | null, O>(kw: CosFieldExtras<D, O>
 export function float_field<D extends number | null, O>(kw: CosFieldExtras<D, O>): CosFieldOptions<number | D, O> {
   return {
     transform: cos_float,
-    reverse: (x: number) => pyfloat(float(x)),
+    reverse: (x: number) => pyfloat(x),
     accepts: (v): v is number | D => (v === null ? kw.default === null : typeof v === "number"),
     ...kw,
   };

@@ -96,7 +96,7 @@ export function _label_or_name(key: string | null, v: RuleValue): string {
   const E = key == null ? null : _KEY_ENUM.get(key);
   if (E != null && E.has(v)) {
     const label = typeof E.label === "function" ? E.label(v) : null;
-    if (py_bool(label)) return label!;
+    if (label) return label!;
     return E.name_of(v);
   }
   return str(v);
