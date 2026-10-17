@@ -274,14 +274,14 @@ export function _follow_live_defaults(layer: CameraLayer | LightLayer): void {
   const transform = layer.transform;
   const position = transform.__getitem__("ADBE Position");
   position._default_value_source = () => layer._default_position();
-  for (let dim = 0; dim < 3; dim++) {
-    const follower = transform.__getitem__(`ADBE Position_${dim}`) as Property;
+  for (const dim of [0, 1, 2] as const) {
+    const follower = transform.__getitem__(`ADBE Position_${dim}`);
     follower._default_value_source = _component(() => layer._default_position(), dim);
   }
   if (layer instanceof CameraLayer) {
     const options = layer.__getitem__("ADBE Camera Options Group");
-    for (const match_name of ["ADBE Camera Zoom", "ADBE Camera Focus Distance"]) {
-      const prop = options.__getitem__(match_name) as Property;
+    for (const match_name of ["ADBE Camera Zoom", "ADBE Camera Focus Distance"] as const) {
+      const prop = options.__getitem__(match_name);
       prop._default_value_source = () => layer._default_zoom();
     }
   }

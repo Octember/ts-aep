@@ -31,9 +31,8 @@ export function _color_profile_utf8(root_chunks: Chunk[], marker: string): Utf8C
   for (const [i, chunk] of root_chunks.entries()) {
     if (chunk.chunk_type !== marker || i + 1 >= root_chunks.length) continue;
     const following = root_chunks[i + 1];
-    if (following.chunk_type !== "Utf8") continue;
-    const utf8 = following as Utf8Chunk;
-    if (utf8.value.includes("baseColorProfile")) return utf8;
+    if (following.chunk_type !== "Utf8" || !(following instanceof Utf8Chunk)) continue;
+    if (following.value.includes("baseColorProfile")) return following;
   }
   return null;
 }
@@ -49,13 +48,17 @@ export const _NHED_SETTINGS = [
   "transparency_grid_thumbnails",
 ] as const;
 
+/** The fields `_NHED_SETTINGS` names, which nhed and nnhd both declare with the same types. */
+type _NhedSettings = Pick<NhedChunk, (typeof _NHED_SETTINGS)[number]>;
+
 /** A synthetic nnhd carrying the settings of a project that has only nhed. */
 export function _nnhd_from_nhed(nhed: NhedChunk): NnhdChunk {
   const nnhd = new NnhdChunk({ synthetic: true });
-  for (const name of _NHED_SETTINGS) {
-    // setattr(nnhd, name, getattr(nhed, name)) with a computed name
-    (nnhd as Record<(typeof _NHED_SETTINGS)[number], number | boolean>)[name] = getattr(nhed, name);
-  }
+  // setattr(nnhd, name, getattr(nhed, name)) with a computed name
+  const copy_setting = <K extends keyof _NhedSettings>(dst: _NhedSettings, name: K): void => {
+    dst[name] = getattr(nhed, name);
+  };
+  for (const name of _NHED_SETTINGS) copy_setting(nnhd, name);
   return nnhd;
 }
 

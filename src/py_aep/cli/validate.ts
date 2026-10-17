@@ -103,8 +103,7 @@ export const _field_names_cache = new Map<Function, readonly string[] | null>();
 export function _property_accessors(cls: Function): string[] {
   const out: string[] = [];
   for (let p = cls.prototype; p && p !== Object.prototype; p = Object.getPrototypeOf(p)) {
-    for (const k of Object.getOwnPropertyNames(p)) {
-      const d = Object.getOwnPropertyDescriptor(p, k)!;
+    for (const [k, d] of Object.entries(Object.getOwnPropertyDescriptors(p))) {
       if (d.get || d.set) out.push(k);
     }
   }
@@ -128,7 +127,8 @@ export function _property_accessors(cls: Function): string[] {
  */
 export function _get_field_names(obj: object): readonly string[] | null {
   const cls = obj.constructor;
-  if (_field_names_cache.has(cls)) return _field_names_cache.get(cls)!;
+  const cached = _field_names_cache.get(cls);
+  if (cached !== undefined) return cached;
 
   const names = new Set<string>();
   // `is_dataclass(obj) and not isinstance(obj, type)`: attrs classes stand in for dataclasses.
@@ -172,7 +172,8 @@ export const _property_names_cache = new Map<Function, readonly string[]>();
  * Sorted for the same reason as `_get_field_names`.
  */
 export function _get_property_names(cls: Function): readonly string[] {
-  if (_property_names_cache.has(cls)) return _property_names_cache.get(cls)!;
+  const cached = _property_names_cache.get(cls);
+  if (cached !== undefined) return cached;
   const names = new Set<string>();
   // `dir(cls)` + `isinstance(attr, property)`: descriptor-backed fields are not
   // Python `property` objects, so registered descriptors are excluded.
@@ -1311,10 +1312,10 @@ export function compare_folder_hierarchy(
   }
 
   for (const [folder_id, exp_folder] of expected_folders) {
-    if (!parsed_folders.has(folder_id)) {
+    const parsed_folder = parsed_folders.get(folder_id);
+    if (parsed_folder === undefined) {
       result.add_diff(`Folder[${getitem(exp_folder, "name")}]`, "exists", "missing", "folders");
     } else {
-      const parsed_folder = parsed_folders.get(folder_id)!;
       if (!py_eq(getitem(exp_folder, "name"), parsed_folder.get("name") ?? null)) {
         result.add_diff(
           `Folder[id=${folder_id}].name`,

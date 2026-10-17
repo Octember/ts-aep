@@ -496,7 +496,7 @@ export const _parse_mask_atom = _suppress_materialization().decorate(function _p
 
   const mask_group = new MaskPropertyGroup({
     _tdmn: tdmn,
-    _tdgp: base._tdgp as ListChunk,
+    _tdgp: tdgp_chunk,
     _tdsb: base._tdsb,
     _name_utf8: base._name_utf8,
     _mkif: mkif_chunk,

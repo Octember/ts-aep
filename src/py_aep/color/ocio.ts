@@ -656,7 +656,7 @@ export function fnmatchcase(name: string, pat: string): boolean {
           else chunks[chunks.length - 1] += "-";
           // Remove empty ranges -- invalid in RE.
           for (let m = chunks.length - 1; m > 0; m--) {
-            if (chunks[m - 1].at(-1)! > chunks[m][0]) {
+            if (chunks[m - 1].slice(-1) > chunks[m][0]) {
               chunks[m - 1] = chunks[m - 1].slice(0, -1) + chunks[m].slice(1);
               chunks.splice(m, 1);
             }

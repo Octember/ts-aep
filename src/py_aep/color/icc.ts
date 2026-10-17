@@ -204,7 +204,8 @@ export class IccProfileLibrary {
             data = f.read_bytes();
           } catch (e: unknown) {
             // pyrt Path.read_bytes rethrows non-ENOENT Node errors (EACCES, EISDIR, ...) unwrapped.
-            if (!(e instanceof OSError || typeof (e as { code?: unknown })?.code === "string")) throw e;
+            const has_code = (typeof e === "object" || typeof e === "function") && e !== null && "code" in e;
+            if (!(e instanceof OSError || (has_code && typeof e.code === "string"))) throw e;
             continue;
           }
           if (data.length < 132 || !bytes_eq(bytes_.slice(data, 36, 40), b("acsp"))) continue;

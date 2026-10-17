@@ -220,8 +220,9 @@ export function _spec(
   pvt: PropertyValueType,
   kwargs: Partial<PropSpec> = {},
 ): PropSpec {
-  if (_PVT_KIND.has(pvt)) {
-    const [dimensions, is_spatial, color] = _PVT_KIND.get(pvt)!;
+  const kind = _PVT_KIND.get(pvt);
+  if (kind !== undefined) {
+    const [dimensions, is_spatial, color] = kind;
     kwargs = { dimensions, is_spatial, color, ...kwargs };
   }
   return new PropSpec(
@@ -2190,13 +2191,11 @@ export const _STYLE_HINT_BOUNDS_EXCEPTIONS: Map<string, [number, number]> = new 
 
 /** Stamp the AE materialization canon onto a Layer Styles leaf spec. */
 export function _style_leaf_canon(spec: PropSpec): PropSpec {
-  const suffix = spec.match_name.split("/").at(-1)!;
+  const suffix = spec.match_name.slice(spec.match_name.lastIndexOf("/") + 1);
   if (spec.color) return spec._replace({ pad2a: 1 });
   if (_STYLE_ENUM_SUFFIXES.has(suffix)) return spec._replace({ integer: true, value_hint_type: 1 });
   if (_STYLE_ANGLE_SUFFIXES.has(suffix)) return spec._replace({ integer: true, property_category: 0x06 });
-  const bounds = _STYLE_HINT_BOUNDS_EXCEPTIONS.has(spec.match_name)
-    ? _STYLE_HINT_BOUNDS_EXCEPTIONS.get(spec.match_name)!
-    : _STYLE_HINT_BOUNDS.get(suffix);
+  const bounds = _STYLE_HINT_BOUNDS_EXCEPTIONS.get(spec.match_name) ?? _STYLE_HINT_BOUNDS.get(suffix);
   if (bounds != null) return spec._replace({ value_hint_type: 0xffff, hint_bounds: bounds });
   return spec;
 }
