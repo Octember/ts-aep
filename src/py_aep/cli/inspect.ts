@@ -270,12 +270,15 @@ export type ArgumentOptions = {
   help?: string;
 };
 
-/** argparse's `Namespace`: dest name to parsed value, shaped dynamically by
- * the declared arguments. Genuinely dynamic (pass 4: `any` only behind a
- * named alias); the parser's type argument types the `parse_args` return. */
-export type Namespace = any;
+/** argparse's `Namespace`: dest name to parsed value. */
+export type Namespace = Record<string, ArgValue>;
 
-export class ArgumentParser<T = Namespace> {
+/**
+ * `T` is the namespace of one command (`InspectArgs`): the `parse_args`
+ * result, whose keys and value types the `add_argument` calls declare at
+ * runtime.
+ */
+export class ArgumentParser<T extends Namespace = Namespace> {
   private readonly prog: string;
   private readonly description: string;
   private readonly epilog: string;
@@ -328,7 +331,8 @@ export class ArgumentParser<T = Namespace> {
     return lines.join("\n") + this.epilog.replaceAll("%(prog)s", this.prog);
   }
 
-  parse_args(argv: string[] = process.argv.slice(2)): T {
+  parse_args(argv?: string[]): T;
+  parse_args(argv: string[] = process.argv.slice(2)): Namespace {
     const out: Namespace = {};
     for (const s of this.specs) out[s.dest] = s.default_;
     const rest: string[] = [];
