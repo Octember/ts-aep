@@ -5,6 +5,8 @@ import { fs } from "./host.ts";
 import { FileNotFoundError, OSError } from "./errors.ts";
 import type { Struct } from "./struct.ts";
 
+const PACK_SCRATCH = new Uint8Array(64);
+
 export class BytesIO {
   private buf: Uint8Array;
   private len: number;
@@ -53,26 +55,40 @@ export class BytesIO {
       grown.set(this.buf.subarray(0, this.len));
       this.buf = grown;
     }
-    if (this.pos > this.len) this.buf.fill(0, this.len, this.pos);
+    this.zero_gap();
     this.buf.set(data, this.pos);
     this.pos = end;
     if (end > this.len) this.len = end;
     return data.length;
   }
 
-  /** `fp.write(s.pack(*values))`, packing straight into the buffer when appending. */
+  /** `fp.write(s.pack(*values))` without allocating the packed bytes. */
   pack(s: Struct, values: any[]): number {
-    if (this.pos !== this.len) return this.write(s.pack(...values));
     const end = this.pos + s.size;
+    if (this.pos < this.len) {
+      if (end > this.len || s.size > PACK_SCRATCH.length) return this.write(s.pack(...values));
+      // Overwrite via scratch: a failed pack must leave the visible bytes alone.
+      s.pack_to(PACK_SCRATCH, 0, values);
+      for (let i = 0; i < s.size; i++) this.buf[this.pos + i] = PACK_SCRATCH[i];
+      this.pos = end;
+      return s.size;
+    }
     if (end > this.buf.length) {
       const grown = new Uint8Array(Math.max(end, this.buf.length * 2));
       grown.set(this.buf.subarray(0, this.len));
       this.buf = grown;
     }
     // Bytes past `len` are never observable, so a failed pack leaves no trace.
+    this.zero_gap();
     s.pack_to(this.buf, this.pos, values);
     this.pos = this.len = end;
     return s.size;
+  }
+
+  /** Zero the bytes between `len` and a position seeked past the end. */
+  private zero_gap(): void {
+    if (this.pos - this.len > 16) this.buf.fill(0, this.len, this.pos);
+    else for (let i = this.len; i < this.pos; i++) this.buf[i] = 0;
   }
 
   tell(): number {

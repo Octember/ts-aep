@@ -66,6 +66,9 @@ export class Struct {
   /** Compiled `unpack_from` body; null where code generation is blocked (CSP, Workers). */
   private unpacker: Unpacker | null | undefined;
 
+  /** Compiled `pack_to` body (after the arity check); null where code generation is blocked. */
+  private packer: Packer | null | undefined;
+
   unpack(data: Uint8Array): any[] {
     if (data.length !== this.size) {
       throw new StructError(`unpack requires a buffer of ${this.size} bytes`);
@@ -132,6 +135,8 @@ export class Struct {
     if (values.length !== this.n_values) {
       throw new StructError(`pack expected ${this.n_values} items for packing (got ${values.length})`);
     }
+    if (this.packer === undefined) this.packer = compile_pack(this.codes, this.le);
+    if (this.packer !== null) return this.packer(out, offset, values, to_int, pack_one, pack_s, range_error);
     const le = this.le;
     let p = offset;
     let vi = 0;
@@ -142,75 +147,133 @@ export class Struct {
         continue;
       }
       if (ch === "s" || ch === "p") {
-        const v = values[vi++];
-        if (!(v instanceof Uint8Array)) throw new StructError("argument for 's' must be a bytes object");
-        const n = Math.min(v.length, count);
-        for (let i = 0; i < n; i++) out[p + i] = v[i];
-        if (n < count) out.fill(0, p + n, p + count);
+        pack_s(out, p, values[vi++], count);
         p += count;
         continue;
       }
       for (let k = 0; k < count; k++) {
-        const v = values[vi++];
-        switch (ch) {
-          case "c":
-            if (!(v instanceof Uint8Array) || v.length !== 1) {
-              throw new StructError("char format requires a bytes object of length 1");
-            }
-            out[p] = v[0];
-            break;
-          case "?":
-            out[p] = v ? 1 : 0;
-            break;
-          case "q":
-          case "Q": {
-            const big = to_bigint(v);
-            if (ch === "Q") {
-              if (big < 0n || big > 0xffffffffffffffffn) throw new StructError("argument out of range");
-              SCRATCH_DV.setBigUint64(0, big, le);
-            } else {
-              if (big < -0x8000000000000000n || big > 0x7fffffffffffffffn) throw new StructError("argument out of range");
-              SCRATCH_DV.setBigInt64(0, big, le);
-            }
-            out.set(SCRATCH_U8, p);
-            break;
-          }
-          case "e":
-            put16(out, p, float_to_half(to_float(v)), le);
-            break;
-          case "f": {
-            const x = to_float(v);
-            if (Number.isFinite(x) && Math.abs(x) > FLOAT32_MAX && !Number.isFinite(Math.fround(x))) {
-              throw new OverflowError("float too large to pack with f format");
-            }
-            SCRATCH_DV.setFloat32(0, x, le);
-            out[p] = SCRATCH_U8[0];
-            out[p + 1] = SCRATCH_U8[1];
-            out[p + 2] = SCRATCH_U8[2];
-            out[p + 3] = SCRATCH_U8[3];
-            break;
-          }
-          case "d":
-            SCRATCH_DV.setFloat64(0, to_float(v), le);
-            out.set(SCRATCH_U8, p);
-            break;
-          default: {
-            const n = to_int(v);
-            const range = INT_RANGE[ch];
-            if (n < range[0] || n > range[1]) {
-              throw new StructError(`'${ch}' format requires ${range[0]} <= number <= ${range[1]}`);
-            }
-            // Uint8Array stores take the low 8 bits, which covers negative values.
-            switch (ch) {
-              case "b": case "B": out[p] = n; break;
-              case "h": case "H": put16(out, p, n, le); break;
-              default: put32(out, p, n, le); break;
-            }
-          }
-        }
+        pack_one(out, p, ch, values[vi++], le);
         p += SIZES[ch];
       }
     }
+  }
+}
+
+/** Pack an `s`/`p` field: `v` truncated or zero-padded to `count` bytes. */
+function pack_s(out: Uint8Array, p: number, v: any, count: number): void {
+  if (!(v instanceof Uint8Array)) throw new StructError("argument for 's' must be a bytes object");
+  const n = Math.min(v.length, count);
+  for (let i = 0; i < n; i++) out[p + i] = v[i];
+  if (n < count) out.fill(0, p + n, p + count);
+}
+
+function range_error(ch: string): StructError {
+  const range = INT_RANGE[ch];
+  return new StructError(`'${ch}' format requires ${range[0]} <= number <= ${range[1]}`);
+}
+
+/** Pack one value of a single-item code (anything but `x`, `s`, `p`) at `p`. */
+function pack_one(out: Uint8Array, p: number, ch: string, v: any, le: boolean): void {
+  switch (ch) {
+    case "c":
+      if (!(v instanceof Uint8Array) || v.length !== 1) {
+        throw new StructError("char format requires a bytes object of length 1");
+      }
+      out[p] = v[0];
+      break;
+    case "?":
+      out[p] = v ? 1 : 0;
+      break;
+    case "q":
+    case "Q": {
+      const big = to_bigint(v);
+      if (ch === "Q") {
+        if (big < 0n || big > 0xffffffffffffffffn) throw new StructError("argument out of range");
+        SCRATCH_DV.setBigUint64(0, big, le);
+      } else {
+        if (big < -0x8000000000000000n || big > 0x7fffffffffffffffn) throw new StructError("argument out of range");
+        SCRATCH_DV.setBigInt64(0, big, le);
+      }
+      out.set(SCRATCH_U8, p);
+      break;
+    }
+    case "e":
+      put16(out, p, float_to_half(to_float(v)), le);
+      break;
+    case "f": {
+      const x = to_float(v);
+      if (Number.isFinite(x) && Math.abs(x) > FLOAT32_MAX && !Number.isFinite(Math.fround(x))) {
+        throw new OverflowError("float too large to pack with f format");
+      }
+      SCRATCH_DV.setFloat32(0, x, le);
+      out[p] = SCRATCH_U8[0];
+      out[p + 1] = SCRATCH_U8[1];
+      out[p + 2] = SCRATCH_U8[2];
+      out[p + 3] = SCRATCH_U8[3];
+      break;
+    }
+    case "d":
+      SCRATCH_DV.setFloat64(0, to_float(v), le);
+      out.set(SCRATCH_U8, p);
+      break;
+    default: {
+      const n = to_int(v);
+      const range = INT_RANGE[ch];
+      if (n < range[0] || n > range[1]) throw range_error(ch);
+      // Uint8Array stores take the low 8 bits, which covers negative values.
+      switch (ch) {
+        case "b": case "B": out[p] = n; break;
+        case "h": case "H": put16(out, p, n, le); break;
+        default: put32(out, p, n, le); break;
+      }
+    }
+  }
+}
+
+type Packer = (
+  out: Uint8Array,
+  p: number,
+  v: any[],
+  to_int: (v: any) => number,
+  pack_one: (out: Uint8Array, p: number, ch: string, v: any, le: boolean) => void,
+  pack_s: (out: Uint8Array, p: number, v: any, count: number) => void,
+  range_error: (ch: string) => StructError,
+) => void;
+
+/** Straight-line `pack_to` for `codes`: integers inline, other codes through `pack_one` in order. */
+function compile_pack(codes: Code[], le: boolean): Packer | null {
+  const body = ["let n;"];
+  let k = 0;
+  let vi = 0;
+  for (const { ch, count } of codes) {
+    if (ch === "x") {
+      body.push(`out.fill(0,p+${k},p+${k + count});`);
+      k += count;
+      continue;
+    }
+    if (ch === "s" || ch === "p") {
+      body.push(`pack_s(out,p+${k},v[${vi++}],${count});`);
+      k += count;
+      continue;
+    }
+    if (vi + count > 256) return null;
+    for (let i = 0; i < count; i++) {
+      const range = INT_RANGE[ch];
+      if (range === undefined) {
+        body.push(`pack_one(out,p+${k},${JSON.stringify(ch)},v[${vi++}],${le});`);
+      } else {
+        body.push(`n=to_int(v[${vi++}]);if(n<${range[0]}||n>${range[1]})throw range_error(${JSON.stringify(ch)});`);
+        const size = SIZES[ch];
+        const order = le ? [...Array(size).keys()] : [...Array(size).keys()].reverse();
+        for (let b = 0; b < size; b++) body.push(`out[p+${k + order[b]}]=n${b ? `>>>${8 * b}` : ""};`);
+      }
+      k += SIZES[ch];
+    }
+  }
+  try {
+    return new Function("out", "p", "v", "to_int", "pack_one", "pack_s", "range_error", body.join("")) as Packer;
+  } catch {
+    return null;
   }
 }
 
