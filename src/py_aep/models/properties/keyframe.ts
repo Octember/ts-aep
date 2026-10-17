@@ -676,7 +676,7 @@ export class Keyframe<V extends PropertyValue = PropertyValue> {
     if (prop != null && prop._kf_value_container != null) {
       const kind = prop._parallel_kind();
       if (kind != null && kind !== TEXT_KIND) {
-        prop._write_parallel_kf_value(this, kind.coerce(value) as _ValueType, kind);
+        prop._write_parallel_kf_value(this, kind.coerce(value), kind);
         return;
       }
     }

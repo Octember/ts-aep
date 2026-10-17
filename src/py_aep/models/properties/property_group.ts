@@ -313,7 +313,7 @@ export function _reorder_and_fill(
       });
       ordered.push(group);
     } else {
-      const [v, d] = dict_get(value_overrides ?? new Map<string, [unknown, unknown]>(), mn, [_USE_VALUE, _USE_VALUE]);
+      const [v, d] = dict_get<string, [number | number[], number | number[]], [typeof _USE_VALUE, typeof _USE_VALUE]>(value_overrides ?? new Map(), mn, [_USE_VALUE, _USE_VALUE]);
       const prop = Property._new(spec, child_depth, {
         parent_property: container,
         value: v,
