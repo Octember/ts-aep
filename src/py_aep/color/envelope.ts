@@ -188,11 +188,11 @@ export class ColorProfile {
  * @param envelope_json - The raw `Utf8` chunk value (the outer JSON string).
  */
 export function parse_envelope(envelope_json: string): ColorProfile {
-  const outer: Map<string, unknown> = json_loads(envelope_json);
-  const base: Map<string, string> = getitem(outer, "baseColorProfile") as Map<string, string>;
+  const outer: Map<string, any> = json_loads(envelope_json);
+  const base: Map<string, string> = getitem(outer, "baseColorProfile");
   return new ColorProfile(
     getitem(base, "colorProfileName"),
-    getitem(outer, "baseProfileType") as number,
+    getitem(outer, "baseProfileType"),
     b64decode(getitem(base, "colorProfileData")),
   );
 }
@@ -205,6 +205,6 @@ export function parse_envelope(envelope_json: string): ColorProfile {
  * Unlike `parse_envelope`, this does not require `colorProfileData`.
  */
 export function envelope_profile_name(envelope_json: string): string {
-  const outer: Map<string, any> = json_loads(envelope_json);
-  return str(dict_get(dict_get(outer, "baseColorProfile", new Map()), "colorProfileName", "None"));
+  const outer: Map<string, Map<string, string>> = json_loads(envelope_json);
+  return str(dict_get(dict_get(outer, "baseColorProfile", new Map<string, string>()), "colorProfileName", "None"));
 }

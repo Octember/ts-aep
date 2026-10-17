@@ -58,6 +58,9 @@ export class _OcioLoader {
   } as const;
 }
 
+/** A parsed OCIO yaml mapping (`mapAsMap`): values are yaml-dynamic. */
+export type OcioNode = Map<string, any>;
+
 /**
  * `_ignore_tag(loader, suffix, node)`: the empty-prefix multi-constructor.
  *
@@ -90,7 +93,7 @@ export function _ignore_tag(loader: Document, suffix: string, node: unknown): un
  * `maxsize=8` eviction is unobservable: results are pure functions of the key.
  */
 export const _load_config_cached = lru_cache(
-  (config_path: string, _mtime_ns: bigint, _size: number): Map<string, any> | null => {
+  (config_path: string, _mtime_ns: bigint, _size: number): OcioNode | null => {
     let doc: unknown;
     try {
       doc = parse(decode(new Path(config_path).read_bytes(), "utf-8"), {
@@ -130,7 +133,7 @@ export function _config_stamp(config_path: Path): [bigint, number] | null {
  * The returned Map is shared with every other caller - treat it as
  * read-only.
  */
-export function _load_config(config_path: Path): Map<string, any> | null {
+export function _load_config(config_path: Path): OcioNode | null {
   const stamp = _config_stamp(config_path);
   if (stamp == null) return null;
   return _load_config_cached(config_path.path, stamp[0], stamp[1]);
@@ -288,7 +291,7 @@ export class _ConfigIndex {
   ) {}
 
   /** Tuple unpacking: `families, aliases, roles, displays = index`. */
-  *[Symbol.iterator](): Generator<unknown> {
+  *[Symbol.iterator](): Generator<Map<string, string> | Map<string, string[]>> {
     yield this.families;
     yield this.aliases;
     yield this.roles;
@@ -512,7 +515,7 @@ export function ocio_output_profile_id(config_path: Path, color_space: string): 
  * always, a `regex` rule by search, a `pattern` + `extension` rule by glob
  * (the extension case-insensitively).
  */
-export function _rule_matches(rule: Map<string, any>, file_path: string): boolean {
+export function _rule_matches(rule: OcioNode, file_path: string): boolean {
   if ((rule.get("name") ?? null) === "Default") return true;
   const regex = rule.get("regex") ?? null;
   if (typeof regex === "string") {

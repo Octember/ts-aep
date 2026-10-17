@@ -70,7 +70,7 @@ export function _write_value(buf: BytesIO, value: unknown, kw: { top_level?: boo
     // A CosString / _NulTailStr is a String object in TS (a str subclass in Python),
     // so a typeof check alone would miss it.
     _space(buf);
-    _write_string(buf, value as string);
+    _write_string(buf, value);
   } else if (value instanceof Uint8Array) {
     _space(buf);
     _write_hex_string(buf, value);
@@ -166,7 +166,7 @@ export function _write_identifier(buf: BytesIO, name: string): void {
  * raw ASCII / UTF-8 (e.g. bit-flag strings), in which case the original
  * single-byte encoding is reproduced for byte fidelity.
  */
-export function _write_string(buf: BytesIO, s: string): void {
+export function _write_string(buf: BytesIO, s: string | String): void {
   let raw: Uint8Array;
   if (getattr(s, "cos_utf16", true)) {
     raw = concat(b("\xfe\xff"), encode(String(s), "utf-16-be"));

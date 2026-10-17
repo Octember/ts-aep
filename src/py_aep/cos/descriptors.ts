@@ -71,12 +71,12 @@ export function _extract(
 }
 
 // NOTE(port): pyrt int()/float() do not raise TypeError for None/containers like CPython; this guard supplies it so `_extract` returns the default.
-export function _int_float_guard(fn: (x: unknown) => number): (x: unknown) => number {
+export function _int_float_guard(fn: (x: Parameters<typeof float>[0]) => number): (x: unknown) => number {
   return (x: unknown) => {
     if (!is_real(x) && typeof x !== "string" && typeof x !== "boolean" && typeof x !== "bigint") {
       throw new TypeError_(`argument must be a string or a real number, not '${type_name(x)}'`);
     }
-    return fn(x);
+    return fn(x as Parameters<typeof float>[0]);
   };
 }
 
