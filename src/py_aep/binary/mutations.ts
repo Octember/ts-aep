@@ -243,6 +243,7 @@ export function strip_synthetic(chunk: Chunk): void {
  * Synthetic chunks are excluded during serialization, so the clone
  * contains only real (non-synthetic) chunks.
  */
+export function clone_chunk_tree<T extends Chunk>(chunk: T): T extends ListChunk ? ListChunk : T;
 export function clone_chunk_tree(chunk: Chunk): Chunk {
   const buf = new BytesIO();
   const size = write_chunk(buf, chunk);

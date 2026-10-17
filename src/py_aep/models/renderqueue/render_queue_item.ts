@@ -854,13 +854,13 @@ export class RenderQueueItem {
 
     const new_rout_items = this._rout_items.map((ri) => deepcopy(ri));
 
-    const new_list_chunk = clone_chunk_tree(this._list_chunk) as ListChunk;
-    const new_lom = clone_chunk_tree(this._lom) as ListChunk;
+    const new_list_chunk = clone_chunk_tree(this._list_chunk);
+    const new_lom = clone_chunk_tree(this._lom);
 
     let new_rcom: ContainerChunk | null = null;
     let new_rcom_utf8: Utf8Chunk | null = null;
     if (this._rcom != null) {
-      new_rcom = clone_chunk_tree(this._rcom) as ContainerChunk;
+      new_rcom = clone_chunk_tree(this._rcom);
       if (new_rcom.chunks?.length > 0) {
         new_rcom_utf8 = new_rcom.chunks[0] as Utf8Chunk;
       }
