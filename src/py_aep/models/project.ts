@@ -115,6 +115,7 @@ import { parse_output_templates, parse_render_templates } from "../parsers/templ
 import { PlaceholderSource } from "./sources/placeholder.ts";
 import { UnsupportedSVGError, read_svg } from "../svg/index.ts";
 import { build_shape_layer_contents } from "../svg/build.ts";
+import type { AVLayer } from "./layers/av_layer.ts";
 
 /** `itertools.count(start)` (the clip-run counter). */
 // NOTE(port): matches `itertools.count(start)`: an unbounded counter yielding start, start+1, ...
@@ -2605,7 +2606,7 @@ export function _style_leaf_map(group: PropertyGroup): Map<string, Property> {
  * 0x01, enabled style 0x01, absent style 0x02; plain skeleton: 0x03 and
  * 0x02 - functional bits, fixture-pinned).
  */
-export function _serialize_import_layer_styles(layer: Layer, styles: PsdLayerStyles | null, source_name: string): void {
+export function _serialize_import_layer_styles(layer: AVLayer, styles: PsdLayerStyles | null, source_name: string): void {
   const container = layer.__getitem__("ADBE Layer Styles");
   // AE enables the container + Blend Options chain when any style is
   // enabled OR the layer carries blend-options data (a Photoshop Fill
@@ -2665,6 +2666,8 @@ export function _serialize_import_layer_styles(layer: Layer, styles: PsdLayerSty
   if (!styles.values?.size) return;
   const timebase = layer.containing_comp._cdta.internal_timebase;
   const source = layer.source;
+  // Python `cast("AVItem", layer.source)`: an imported layer always has one.
+  if (source == null) throw new AttributeError("'NoneType' object has no attribute 'width'");
   const point_aspect = (source.width * source.pixel_aspect) / source.height;
   const leaves = _style_leaf_map(container);
   for (const [match_name, value] of styles.values) {

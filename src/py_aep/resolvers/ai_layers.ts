@@ -28,12 +28,6 @@ import { CosParser, IndirectObject, IndirectReference, decode_pdf_text_string } 
 import { SyntaxError_, type CosDict, type CosNode, type CosString } from "../cos/cos.ts";
 import { is, py_str } from "../cos/kinds.ts";
 
-/**
- * A value whose kind is chosen by a tag read at runtime: PDF COS objects,
- * EXR header attributes, and host errors with ad-hoc fields.
- */
-export type Dynamic = any;
-
 /** Raised when a `.ai`/`.pdf` file's layers cannot be enumerated. */
 export class UnsupportedAiLayersError extends ValueError {}
 

@@ -4,6 +4,7 @@ import { deferred, descriptor } from "../../../pyrt/index.ts";
 import { BlendingMode, FrameBlendingType, LayerQuality, LayerSamplingQuality, LayerType, TrackMatteType } from "../../enums/index.ts";
 import {
   AttributeError,
+  type_name,
   NotImplementedError,
   ValueError,
   float_repr,
@@ -814,7 +815,11 @@ export class AVLayer extends Layer {
       throw new NotImplementedError("source_rect_at_time does not model text animators");
     }
     const path_options = text.__getitem__("ADBE Text Path Options");
-    if (py_bool(path_options.__getitem__("ADBE Text Path").value)) {
+    const text_path = path_options.__getitem__("ADBE Text Path");
+    if (!(text_path instanceof Property)) {
+      throw new AttributeError(`'${type_name(text_path)}' object has no attribute 'value'`);
+    }
+    if (py_bool(text_path.value)) {
       throw new NotImplementedError("source_rect_at_time does not model text on a path");
     }
     if (this._ldta.three_d_per_char) {

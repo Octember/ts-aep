@@ -16,7 +16,7 @@ import { VF_AXIS_PREFIX } from "../../data/match_names.ts";
 import { UNITS_TEXT_MAP } from "../../data/units.ts";
 import { can_add_property } from "../../resolvers/motion_graphics.ts";
 import { _USE_VALUE, PropSpec } from "../../synthesis/property.ts";
-import { ChunkField, type Dynamic } from "../descriptors.ts";
+import { ChunkField } from "../descriptors.ts";
 import { TextDocument } from "../text/text_document.ts";
 import { _validate_number, validate_bool, validate_enum, validate_f8, validate_name, validate_number, validate_sequence, validate_text } from "../validators.ts";
 import type { FolderItem } from "../items/folder.ts";

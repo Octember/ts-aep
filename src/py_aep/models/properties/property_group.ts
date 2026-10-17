@@ -44,7 +44,6 @@ import { Property, _values_equal, _vf_tag_from_str } from "./property.ts";
 import { _INDEXED_GROUP_MATCH_NAMES, PropertyBase } from "./property_base.ts";
 import type { MaskPropertyGroup } from "./mask_property_group.ts";
 import type { MatchNameTypes } from "./match_name_types.ts";
-import type { Dynamic } from "../descriptors.ts";
 
 
 const _mask_property_group = deferred<typeof import("./mask_property_group.ts")>("py_aep/models/properties/mask_property_group");
@@ -411,9 +410,6 @@ export function _derive_layer_styles_enabled(
  * @see https://ae-scripting.docsforadobe.dev/property/propertygroup/
  */
 export class PropertyGroup extends PropertyBase {
-  /** Child properties by attribute name, resolved through `__getattr__` (Python's dynamic `group.child_name`). */
-  [key: string]: Dynamic;
-
   /**
    * The child list as stored, WITHOUT running deferred child synthesis.
    *
@@ -927,14 +923,14 @@ export class PropertyGroup extends PropertyBase {
           "'ADBE Text Animator Properties' group of a text animator.",
       );
     }
-    // Typed Any: `.text.source_text` only resolves on a text layer.
-    const layer: Dynamic = this._containing_layer;
-
     let font_number = 0;
     if (font_file == null) {
       // The .aep stores only the PostScript name; its prefix is the
       // variable font's family (FontObject.familyPrefix semantics).
-      const text_doc = layer.text.source_text.value;
+      // Python `layer.text.source_text.value`: only a text layer has the group.
+      const text = this._containing_layer.text;
+      if (text == null) throw new AttributeError("'NoneType' object has no attribute 'source_text'");
+      const text_doc = text.__getitem__("ADBE Text Document").value;
       const ps_name: string = py_or(text_doc.font, "");
       const family = split(ps_name, "-", 1)[0];
       const resolved = family ? resolve_font_exact(family) : null;

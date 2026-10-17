@@ -50,9 +50,6 @@ type ChunkFieldKey<O, A extends string> = [keyof ChunkBody<O, A> & string] exten
 /** The type of field `F` on that body. */
 type RawField<O, A extends string, F extends string> = F extends keyof ChunkBody<O, A> ? ChunkBody<O, A>[F] : FieldValue;
 
-/** A value whose type is fixed only at runtime: parsed JSON, duck typing, effect fields. */
-export type Dynamic = any;
-
 /**
  * The model object a `ChunkField` reads through: its chunk body is found by
  * name (`getattr(obj, chunk_attr)`) and a synthetic body is materialized
