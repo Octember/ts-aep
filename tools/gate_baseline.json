@@ -4,14 +4,14 @@
   "samples": 644,
   "loose_types": {
     "0 pyrt": {
-      "any": 52,
+      "any": 51,
       "unknown": 109,
       "casts": 65
     },
     "1 binary+enums+data": {
       "any": 9,
       "unknown": 34,
-      "casts": 45
+      "casts": 44
     },
     "2 cos+color": {
       "any": 27,
