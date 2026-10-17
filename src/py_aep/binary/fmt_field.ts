@@ -131,7 +131,7 @@ export type FmtFieldOptions = {
  * - `coerce`: Type callable applied after unpacking (e.g. `bool`). On write, the inverse is applied
  *     (e.g. `int` for `bool`).
  */
-export function fmt_field(fmt: string, kw: FmtFieldOptions = {}): FieldSpec {
+export function fmt_field(fmt: string, kw: FmtFieldOptions = {}): FieldSpec<FieldValue> {
   const {
     default: default_given = _UNSET,
     repr = true,
@@ -176,7 +176,7 @@ export function fmt_field(fmt: string, kw: FmtFieldOptions = {}): FieldSpec {
  * @param item_cls - Class used to deserialize each item.
  * @param item_size - Fixed byte size of each serialized item.
  */
-export function items_field(item_cls: typeof FmtItem, item_size: number): FieldSpec {
+export function items_field(item_cls: typeof FmtItem, item_size: number): FieldSpec<FieldValue> {
   const md: Record<string, FieldValue> = {
     items: true,
     item_cls,
@@ -190,63 +190,63 @@ export function items_field(item_cls: typeof FmtItem, item_size: number): FieldS
 // ---------------------------------------------------------------------------
 
 /** Unsigned 1-byte integer field (`struct.unpack("B")`). */
-export function u1_field(kw: FmtFieldOptions = {}): FieldSpec {
+export function u1_field(kw: FmtFieldOptions = {}): FieldSpec<FieldValue> {
   return fmt_field("B", kw);
 }
 
 /** Unsigned 2-byte integer field (`struct.unpack("H")`). */
-export function u2_field(kw: FmtFieldOptions = {}): FieldSpec {
+export function u2_field(kw: FmtFieldOptions = {}): FieldSpec<FieldValue> {
   return fmt_field("H", kw);
 }
 
 /** Unsigned 4-byte integer field (`struct.unpack("I")`). */
-export function u4_field(kw: FmtFieldOptions = {}): FieldSpec {
+export function u4_field(kw: FmtFieldOptions = {}): FieldSpec<FieldValue> {
   return fmt_field("I", kw);
 }
 
 /** Unsigned 8-byte integer field (`struct.unpack("Q")`). */
-export function u8_field(kw: FmtFieldOptions = {}): FieldSpec {
+export function u8_field(kw: FmtFieldOptions = {}): FieldSpec<FieldValue> {
   return fmt_field("Q", kw);
 }
 
 /** Signed 2-byte integer field (`struct.unpack("h")`). */
-export function s2_field(kw: FmtFieldOptions = {}): FieldSpec {
+export function s2_field(kw: FmtFieldOptions = {}): FieldSpec<FieldValue> {
   return fmt_field("h", kw);
 }
 
 /** Signed 4-byte integer field (`struct.unpack("i")`). */
-export function s4_field(kw: FmtFieldOptions = {}): FieldSpec {
+export function s4_field(kw: FmtFieldOptions = {}): FieldSpec<FieldValue> {
   return fmt_field("i", kw);
 }
 
 /** 4-byte IEEE 754 float field (`struct.unpack("f")`). */
-export function f4_field(kw: FmtFieldOptions = {}): FieldSpec {
+export function f4_field(kw: FmtFieldOptions = {}): FieldSpec<FieldValue> {
   return fmt_field("f", kw);
 }
 
 /** 8-byte IEEE 754 double field (`struct.unpack("d")`). */
-export function f8_field(kw: FmtFieldOptions = {}): FieldSpec {
+export function f8_field(kw: FmtFieldOptions = {}): FieldSpec<FieldValue> {
   return fmt_field("d", kw);
 }
 
 /** Fixed-size raw bytes field (`struct.unpack("Ns")`). */
-export function bytes_field(n: number, kw: FmtFieldOptions = {}): FieldSpec {
+export function bytes_field(n: number, kw: FmtFieldOptions = {}): FieldSpec<FieldValue> {
   return fmt_field(`${n}s`, kw);
 }
 
 /** Fixed-size string field, decoded via `encoding`. */
-export function str_field(n: number, kw: FmtFieldOptions & { encoding?: string } = {}): FieldSpec {
+export function str_field(n: number, kw: FmtFieldOptions & { encoding?: string } = {}): FieldSpec<FieldValue> {
   const { encoding = "utf-8", ...rest } = kw;
   return fmt_field(`${n}s`, { ...rest, encoding });
 }
 
 /** Fixed-size ASCII string field. */
-export function ascii_field(n: number, kw: FmtFieldOptions = {}): FieldSpec {
+export function ascii_field(n: number, kw: FmtFieldOptions = {}): FieldSpec<FieldValue> {
   return fmt_field(`${n}s`, { ...kw, encoding: "ascii" });
 }
 
 /** 1-byte boolean field (`struct.unpack("B")`, coerced to `bool`). */
-export function bool_field(kw: FmtFieldOptions = {}): FieldSpec {
+export function bool_field(kw: FmtFieldOptions = {}): FieldSpec<FieldValue> {
   return fmt_field("B", { ...kw, coerce: py_bool });
 }
 
