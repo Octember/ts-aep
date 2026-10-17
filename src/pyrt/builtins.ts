@@ -22,8 +22,12 @@ export function py_bool(x: any): boolean {
   return true;
 }
 
+/** Types whose every value is falsy in Python. */
+export type Falsy = null | undefined | false | 0 | "" | 0n;
+
 /** `a or b` with Python truthiness (returns the operand, not a boolean). */
-export function py_or<A, B>(a: A, b: B): A | B {
+export function py_or<A, B>(a: A, b: B): Exclude<A, Falsy> | B;
+export function py_or(a: unknown, b: unknown): unknown {
   return py_bool(a) ? a : b;
 }
 
@@ -190,7 +194,14 @@ export function tkey(...parts: unknown[]): string {
   return JSON.stringify(parts, (_k, v) => (typeof v === "bigint" ? `${v}n` : v instanceof Uint8Array ? Array.from(v) : v));
 }
 
-/** `getattr(obj, name, default)` */
+/**
+ * `getattr(obj, name, default)`. A `name` declared on `obj`'s type reads as
+ * that property's type (or the default's, when one is given); any other name
+ * reads as `any`.
+ */
+export function getattr<O, N extends string & keyof NonNullable<O>>(obj: O, name: N): Required<NonNullable<O>>[N];
+export function getattr<O, N extends string & keyof NonNullable<O>, D>(obj: O, name: N, dflt: D): Required<NonNullable<O>>[N] | D;
+export function getattr(obj: any, name: string, ...dflt: [unknown?]): any;
 export function getattr(obj: any, name: string, ...dflt: [unknown?]): any {
   if (obj != null && name in Object(obj)) return obj[name];
   if (dflt.length) return dflt[0];
