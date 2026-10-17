@@ -35,7 +35,6 @@ import {
   py_bool,
   py_eq,
   py_or,
-  range,
   repr,
   round,
   warn,
@@ -1030,7 +1029,7 @@ export class Layer extends PropertyGroup {
     const scale_prop = transform.property("ADBE Scale");
     if (scale_prop.keyframes?.length > 0) {
       const scale_now = current("ADBE Scale");
-      const factors = Array.from(range(new_scale.length), (axis) =>
+      const factors = Array.from({ length: new_scale.length }, (_, axis) =>
         axis < scale_now.length && scale_now[axis] !== 0
           ? new_scale[axis] / scale_now[axis]
           : 1.0,
