@@ -19,14 +19,13 @@ import { clone_chunk_tree } from "../../binary/mutations.ts";
 import { TDSN_SENTINEL, type TdmnChunk, type TdsbChunk } from "../../binary/property_chunks.ts";
 import { find_by_type, index_by_identity } from "../../binary/utils.ts";
 import { MATCH_NAME_TO_AUTO_NAME } from "../../data/match_names.ts";
-import { ChunkField } from "../descriptors.ts";
+import { ChunkField, type EffectParamDefs } from "../descriptors.ts";
 import { validate_bool, validate_name } from "../validators.ts";
 import type { Utf8Chunk } from "../../binary/scalar_chunks.ts";
 import type { Layer } from "../layers/layer.ts";
 import type { MaskPropertyGroup } from "./mask_property_group.ts";
 import type { Property } from "./property.ts";
 import type { PropertyGroup } from "./property_group.ts";
-import type { EffectParamDefs } from "../../parsers/effect.ts";
 
 const _property_group = deferred<typeof import("./property_group.ts")>("py_aep/models/properties/property_group");
 const _property = deferred<typeof import("../../parsers/property.ts")>("py_aep/parsers/property");

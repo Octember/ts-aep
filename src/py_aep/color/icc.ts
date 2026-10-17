@@ -202,9 +202,9 @@ export class IccProfileLibrary {
           let data: Uint8Array;
           try {
             data = f.read_bytes();
-          } catch (e) {
+          } catch (e: unknown) {
             // pyrt Path.read_bytes rethrows non-ENOENT Node errors (EACCES, EISDIR, ...) unwrapped.
-            if (!(e instanceof OSError || typeof (e as { code?: unknown } | null)?.code === "string")) throw e;
+            if (!(e instanceof OSError || typeof (e as { code?: unknown })?.code === "string")) throw e;
             continue;
           }
           if (data.length < 132 || !bytes_eq(bytes_.slice(data, 36, 40), b("acsp"))) continue;

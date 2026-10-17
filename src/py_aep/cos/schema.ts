@@ -3,10 +3,10 @@
  *
  * Two layers, both run by the library:
  *
- * - {@link decode_btdk} is the single entry point from untyped data: it
- *   checks the whole parsed blob against {@link cos_node} (every value a
- *   COS kind, every dictionary string-keyed) and only then hands the tree
- *   to the text models as a {@link CosDict}. Nothing deeper is checked
+ * - {@link decode_btdk} is the single entry point from a parsed
+ *   {@link CosNode}: it checks the whole blob against {@link cos_node}
+ *   (every value a COS kind, every dictionary string-keyed) and only then
+ *   hands the tree to the text models as a {@link CosDict}. Nothing deeper is checked
  *   there, because py_aep never validates COS: a value of the wrong kind
  *   fails (or is tolerated) at the point of use, so the decode must not
  *   reject what Python would read later or never.
@@ -49,7 +49,7 @@ export const cos_node: z.ZodMiniType<CosNode> = z.lazy(() =>
 );
 
 /** Whether `tree` is a COS dictionary whose every value is a COS value (see {@link cos_node}). */
-function is_cos_dict(tree: unknown): tree is CosDict {
+function is_cos_dict(tree: CosNode): tree is CosDict {
   return tree instanceof Map && cos_node.safeParse(tree).success;
 }
 
@@ -58,7 +58,7 @@ function is_cos_dict(tree: unknown): tree is CosDict {
  * dictionary of COS values, else `null` (py_aep then gives the layer no
  * text documents, as for any non-dict blob).
  */
-export function decode_btdk(tree: unknown): CosDict | null {
+export function decode_btdk(tree: CosNode): CosDict | null {
   return is_cos_dict(tree) ? tree : null;
 }
 

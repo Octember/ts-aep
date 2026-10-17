@@ -12,6 +12,7 @@
 import type { EnumHelpers } from "../../pyrt/enum.ts";
 import { FLOAT32_MAX } from "../binary/bin_utils.ts";
 import { AE_VERSION_RE, FORMAT_VERSIONS } from "../binary/item_chunks.ts";
+import type { Dynamic } from "./descriptors.ts";
 import {
   Path,
   TypeError_,
@@ -33,9 +34,9 @@ import {
  * whatever the caller assigned, so it is checked at runtime; `instance` is not
  * read.
  */
-export type Validator = (value: unknown, instance?: unknown) => void;
+export type Validator = (value: Dynamic, instance?: unknown) => void;
 /** A validator whose bounds are computed from the model `instance` being written. */
-export type InstanceValidator<O> = (value: unknown, instance: O) => void;
+export type InstanceValidator<O> = (value: Dynamic, instance: O) => void;
 /** A bound: a number, or computed from the model instance being validated. */
 export type NumBound<O> = number | ((instance: O) => number | null) | null;
 /** Keyword arguments of `_validate_number`; a callable bound reads the model instance `O`. */
@@ -64,7 +65,7 @@ export function _validate_number<O>(kw: NumberKw<O | null> = {}): InstanceValida
   const { min: min_ = null, max: max_ = null, integer = false, exclusive_min = false } = kw;
   const type_label = integer ? "an integer" : "a number";
 
-  return function _validator(value: unknown, instance: O | null = null): void {
+  return function _validator(value: Dynamic, instance: O | null = null): void {
     if (Array.isArray(value)) {
       throw new TypeError_(`expected ${type_label}, got ${type_name(value)}`);
     }
@@ -125,7 +126,7 @@ export function validate_sequence<O>(kw: SequenceKw<O | null> = {}): InstanceVal
   const type_label = integer ? "an integer" : "a number";
   const _element_validator = _validate_number({ min: min_, max: max_, integer, exclusive_min });
 
-  return function _validator(value: unknown, instance: O | null = null): void {
+  return function _validator(value: Dynamic, instance: O | null = null): void {
     const n = typeof length === "function" ? length(instance) : length;
     if (!Array.isArray(value)) {
       throw new TypeError_(`expected a sequence${n != null ? ` of ${n} elements` : ""}`);
@@ -175,7 +176,7 @@ export function validate_enum(enum_cls: EnumHelpers<unknown>): Validator {
   const cached = _ENUM_VALIDATORS.get(enum_cls) ?? null;
   if (cached != null) return cached;
 
-  const _validator = function (value: unknown, instance: unknown = null): void {
+  const _validator = function (value: Dynamic, instance: unknown = null): void {
     // NOTE(port): enum members are plain numbers, so `has` also accepts member ints; Python's int branch accepts those too (enum_cls(value) succeeds), so outcomes match.
     if (enum_cls.has(value)) return;
     // Before the int branch: `bool` subclasses `int`, so `om.format =
@@ -204,12 +205,12 @@ export function validate_enum(enum_cls: EnumHelpers<unknown>): Validator {
  *
  * @param allowed - Iterable of valid values.
  */
-export function validate_one_of(allowed: Iterable<unknown>): Validator {
+export function validate_one_of(allowed: Iterable<Dynamic>): Validator {
   const allowed_list = [...allowed];
   const allowed_set = new Set(allowed_list);
   const formatted = allowed_list.map((v) => str(v)).join(", ");
 
-  return function _validator(value: unknown, instance: unknown = null): void {
+  return function _validator(value: Dynamic, instance: unknown = null): void {
     if (!allowed_set.has(value instanceof String ? String(value) : value)) {
       throw new ValueError(`must be one of [${formatted}], got ${repr(value)}`);
     }
@@ -235,7 +236,7 @@ export function _validate_str(
 ): Validator {
   const { allow_empty = true, max_length = null, max_bytes = null, allow_null = true } = kw;
 
-  return function _validator(value: any, instance: unknown = null): void {
+  return function _validator(value: Dynamic, instance: unknown = null): void {
     // `_NulTailStr` (a `str` subclass) arrives as a String object.
     if (!(typeof value === "string" || value instanceof String)) {
       throw new TypeError_(`expected a string, got ${type_name(value)}`);
@@ -272,7 +273,7 @@ export function _validate_path(
 ): Validator {
   const { must_exist = null, must_be_file = false } = kw;
 
-  return function _validator(value: unknown, instance: unknown = null): void {
+  return function _validator(value: Dynamic, instance: unknown = null): void {
     if (!(typeof value === "string" || value instanceof String || value instanceof Path)) {
       throw new TypeError_(`expected a file system path, got ${type_name(value)}`);
     }
@@ -288,7 +289,7 @@ export function _validate_path(
 }
 
 /** Validate that a value is a `bool` (rejects 0/1 integers). */
-export function validate_bool(value: unknown, instance: unknown = null): void {
+export function validate_bool(value: Dynamic, instance: unknown = null): void {
   if (typeof value !== "boolean") {
     throw new TypeError_(`expected a bool, got ${type_name(value)}`);
   }
@@ -414,7 +415,7 @@ export const validate_f4_point = validate_sequence({ length: 2, min: -FLOAT32_MA
  * The head chunk holds the major in 8 bits, the minor in 4 and the build
  * in 8.
  */
-export function validate_ae_version(value: unknown, instance: unknown = null): void {
+export function validate_ae_version(value: Dynamic, instance: unknown = null): void {
   if (!(typeof value === "string" || value instanceof String)) {
     throw new TypeError_(`expected a version string, got ${type_name(value)}`);
   }
@@ -435,7 +436,7 @@ export function validate_ae_version(value: unknown, instance: unknown = null): v
  * release py_aep has a file-format stamp for (`FORMAT_VERSIONS`: AE 15-18
  * and 22-26, there was no AE 19-21), or a newer one.
  */
-export function validate_ae_release(value: unknown, instance: unknown = null): void {
+export function validate_ae_release(value: Dynamic, instance: unknown = null): void {
   validate_ae_version(value);
   const major = int(split(str(value), ".", 1)[0]);
   if (!FORMAT_VERSIONS.has(major) && major < max([...FORMAT_VERSIONS.keys()])) {

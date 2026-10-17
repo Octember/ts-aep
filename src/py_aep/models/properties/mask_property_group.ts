@@ -6,7 +6,7 @@ import { TdmnChunk, TdsbChunk, TdsnChunk } from "../../binary/property_chunks.ts
 import { find_by_list_type, find_by_type } from "../../binary/utils.ts";
 import { MaskFeatherFalloff, MaskMode, MaskMotionBlur } from "../../enums/index.ts";
 import { keyframe_tensions } from "../../resolvers/roto_bezier.ts";
-import { ChunkField } from "../descriptors.ts";
+import { ChunkField, type Dynamic } from "../descriptors.ts";
 import { validate_bool, validate_rgb_color } from "../validators.ts";
 // NOTE(port): property_group.ts reaches this module only through `deferred(...)` (the
 // port of Python's in-method import), so `extends PropertyGroup` evaluates after it.
@@ -181,9 +181,9 @@ export class MaskPropertyGroup extends PropertyGroup {
    *     the cycle palette.
    */
   static _new(
-    parent_property_: any,
-    property_depth: any,
-    kw: any,
+    parent_property_: Dynamic,
+    property_depth: Dynamic,
+    kw: Dynamic,
   ): MaskPropertyGroup {
     const parent_property: PropertyGroup = parent_property_;
     const { name, mask_id }: { name: string; mask_id: number } = kw;

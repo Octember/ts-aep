@@ -12,6 +12,34 @@ import { py_eq } from "../../pyrt/index.ts";
 /** Sentinel indicating `PropSpec.default_value` should mirror `value`. */
 export const _USE_VALUE: unique symbol = Symbol("_USE_VALUE");
 
+type PropSpecField = PropSpec[
+  | "match_name"
+  | "auto_name"
+  | "value"
+  | "pvt"
+  | "dimensions"
+  | "is_spatial"
+  | "color"
+  | "integer"
+  | "min_value"
+  | "max_value"
+  | "default_value"
+  | "can_vary_over_time"
+  | "has_time_base"
+  | "min_major"
+  | "spatial_flags"
+  | "cvot"
+  | "value_hint_type"
+  | "units_text"
+  | "bound_chunks"
+  | "chunk_bounds_are_hints"
+  | "hint_bounds"
+  | "property_category"
+  | "pad2a"
+];
+
+type GroupSpecField = GroupSpec["match_name" | "auto_name" | "min_major" | "enable_flags"];
+
 /** Metadata for a synthesized property. */
 export class PropSpec {
   constructor(
@@ -104,12 +132,12 @@ export class PropSpec {
   }
 
   /** NamedTuple equality: elementwise over the fields (also against a plain tuple). */
-  __eq__(other: Iterable<unknown> | null | undefined): boolean {
+  __eq__(other: Iterable<PropSpecField> | null | undefined): boolean {
     if (other == null || typeof other[Symbol.iterator] !== "function" || typeof other === "string") return false;
     return py_eq([...this], [...other]);
   }
 
-  *[Symbol.iterator](): Generator<unknown> {
+  *[Symbol.iterator](): Generator<PropSpecField> {
     yield* [
       this.match_name,
       this.auto_name,
@@ -156,12 +184,12 @@ export class GroupSpec {
   ) {}
 
   /** NamedTuple equality: elementwise over the fields (also against a plain tuple). */
-  __eq__(other: Iterable<unknown> | null | undefined): boolean {
+  __eq__(other: Iterable<GroupSpecField> | null | undefined): boolean {
     if (other == null || typeof other[Symbol.iterator] !== "function" || typeof other === "string") return false;
     return py_eq([...this], [...other]);
   }
 
-  *[Symbol.iterator](): Generator<unknown> {
+  *[Symbol.iterator](): Generator<GroupSpecField> {
     yield* [this.match_name, this.auto_name, this.min_major, this.enable_flags];
   }
 }

@@ -8,7 +8,8 @@ import { label_index } from "../preferences.ts";
 import { AVLayer } from "./av_layer.ts";
 import type { CompItem } from "../items/composition.ts";
 import type { PropertyGroup } from "../properties/property_group.ts";
-import type { EffectParamDefs } from "../../parsers/effect.ts";
+import type { EffectParamDefs, Dynamic } from "../descriptors.ts";
+
 
 /**
  * The `TextLayer` object represents a text layer within a composition.
@@ -52,7 +53,7 @@ export class TextLayer extends AVLayer {
   ): PropertyGroup;
   static _new(kw: TextLayerNewKw): TextLayer;
   static _new(kw: unknown): AVLayer;
-  static _new(kw: any): unknown {
+  static _new(kw: Dynamic): unknown {
     const {
       name,
       layer_id,

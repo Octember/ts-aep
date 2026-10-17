@@ -25,7 +25,7 @@ import { can_add_layer } from "../../resolvers/motion_graphics.ts";
 import { shape_layer_rect } from "../../resolvers/shape_bounds.ts";
 import { text_ink_rect } from "../../resolvers/text_ink.ts";
 import { type Mat4, build_world_matrix, camera_ray, intersect_layer_plane, project_to_comp, transform_from_points } from "../../resolvers/transform.ts";
-import { ChunkField } from "../descriptors.ts";
+import { ChunkField, type EffectParamDefs, type Dynamic } from "../descriptors.ts";
 import type { Chunk } from "../../binary/chunk.ts";
 import type { CompItem } from "../items/composition.ts";
 import { Property } from "../properties/property.ts";
@@ -35,7 +35,6 @@ import { Layer } from "./layer.ts";
 import { AVItem } from "../items/av_item.ts";
 import { FootageItem } from "../items/footage.ts";
 import { SolidSource } from "../sources/solid.ts";
-import type { EffectParamDefs } from "../../parsers/effect.ts";
 const _composition = deferred<typeof import("../items/composition.ts")>("py_aep/models/items/composition");
 const _core = deferred<typeof import("../../synthesis/core.ts")>("py_aep/synthesis/core");
 
@@ -241,7 +240,7 @@ export class AVLayer extends Layer {
     match_name: string,
     auto_name: string,
     property_depth: number,
-    kw?: any,
+    kw?: Dynamic,
   ): PropertyGroup;
   static _new(kw: {
     name: string;
@@ -255,8 +254,8 @@ export class AVLayer extends Layer {
     root_tdgp_extra?: Chunk[] | null;
     effect_param_defs?: EffectParamDefs | null;
   }): AVLayer;
-  static _new(kw: any): AVLayer;
-  static _new(kw: any): any {
+  static _new(kw: Dynamic): AVLayer;
+  static _new(kw: Dynamic): Dynamic {
     const {
       name,
       layer_id,

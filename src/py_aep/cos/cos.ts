@@ -224,7 +224,7 @@ export class Token {
     return `Token(type=${enum_repr(TokenType, this.type)}, value=${repr_field(this.value)})`;
   }
 
-  __eq__(other: unknown): boolean {
+  __eq__(other: Token): boolean {
     return other instanceof Token && this.type === other.type && py_eq(this.value, other.value);
   }
 }
@@ -245,7 +245,7 @@ export class IndirectObject {
     return `IndirectObject(object_number=${repr(this.object_number)}, generation_number=${repr(this.generation_number)}, data=${repr_field(this.data)})`;
   }
 
-  __eq__(other: unknown): boolean {
+  __eq__(other: IndirectObject): boolean {
     return (
       other instanceof IndirectObject &&
       this.object_number === other.object_number &&
@@ -269,7 +269,7 @@ export class IndirectReference {
     return `IndirectReference(object_number=${repr(this.object_number)}, generation_number=${repr(this.generation_number)})`;
   }
 
-  __eq__(other: unknown): boolean {
+  __eq__(other: IndirectReference): boolean {
     return (
       other instanceof IndirectReference &&
       this.object_number === other.object_number &&
@@ -332,7 +332,7 @@ export class CosName {
     return `CosName(value=${repr(this.value)})`;
   }
 
-  __eq__(other: unknown): boolean {
+  __eq__(other: CosName): boolean {
     return other instanceof CosName && this.value === other.value;
   }
 }
@@ -351,7 +351,7 @@ export class Stream {
     return `Stream(dictionary=${repr_field(this.dictionary)}, data=${repr_bytes(this.data)})`;
   }
 
-  __eq__(other: unknown): boolean {
+  __eq__(other: Stream): boolean {
     return other instanceof Stream && py_eq(this.dictionary, other.dictionary) && py_eq(this.data, other.data);
   }
 }

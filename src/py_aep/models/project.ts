@@ -34,7 +34,7 @@ import { has_enabled_styles, parse_layer_styles, read_global_light } from "../re
 import type { PsdLayerStyles } from "../resolvers/psd_styles.ts";
 import { LayerGroupSpec, LayerSpec } from "../synthesis/layer.ts";
 import { _ADV_BLEND_SPECS, _BLEND_OPTIONS_SPECS, _LAYER_STYLE_CHILD_SPECS, _STYLE_ANGLE_SUFFIXES, _STYLE_ENUM_SUFFIXES, _STYLE_HINT_BOUNDS, _STYLE_HINT_BOUNDS_EXCEPTIONS, PropSpec } from "../synthesis/property.ts";
-import { ChunkField } from "./descriptors.ts";
+import { ChunkField, type EffectParamDefs, type Dynamic } from "./descriptors.ts";
 import { ImportOptions } from "./import_options.ts";
 import { CompItem } from "./items/composition.ts";
 import { FolderItem } from "./items/folder.ts";
@@ -115,7 +115,6 @@ import { parse_output_templates, parse_render_templates } from "../parsers/templ
 import { PlaceholderSource } from "./sources/placeholder.ts";
 import { UnsupportedSVGError, read_svg } from "../svg/index.ts";
 import { build_shape_layer_contents } from "../svg/build.ts";
-import type { EffectParamDefs } from "../parsers/effect.ts";
 
 /** `itertools.count(start)` (the clip-run counter). */
 // NOTE(port): matches `itertools.count(start)`: an unbounded counter yielding start, start+1, ...
@@ -133,7 +132,7 @@ export function ET_tostring(el: Element): string {
 
 
 /** `isinstance(x, (list, tuple))` as used by the port. */
-export function is_list_or_tuple(x: unknown): boolean {
+export function is_list_or_tuple(x: Dynamic): boolean {
   return Array.isArray(x);
 }
 
@@ -1897,7 +1896,7 @@ export class Project {
       let entries: [TextDocument, number][];
       if (source_text.keyframes?.length > 0) {
         entries = source_text.keyframes.map(
-          (kf) => [kf.value, kf.time - layer.start_time] as [TextDocument, number],
+          (kf) => [kf.value, kf.time - layer.start_time],
         );
       } else {
         entries = [[source_text.value, 0.0]];
@@ -2070,7 +2069,7 @@ export class Project {
     for (const footage of this.footages) {
       const key = footage._consolidation_key();
       if (key == null) continue;
-      setdefault(groups, key, [] as FootageItem[]).push(footage);
+      setdefault(groups, key, []).push(footage);
     }
     let removed = 0;
     for (const duplicates of groups.values()) {
@@ -2668,7 +2667,7 @@ export function _serialize_import_layer_styles(layer: Layer, styles: PsdLayerSty
   }
   if (!styles.values?.size) return;
   const timebase = layer.containing_comp._cdta.internal_timebase;
-  const source = layer.source as AVItem;
+  const source = layer.source;
   const point_aspect = (source.width * source.pixel_aspect) / source.height;
   const leaves = _style_leaf_map(container);
   for (const [match_name, value] of styles.values) {
