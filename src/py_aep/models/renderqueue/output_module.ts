@@ -1044,8 +1044,8 @@ export class OutputModule {
   }
 
   /** Clamp writer for a `Rouu` audio-format field (no validation). */
-  _write_audio_format_raw(field: string, value: number): void {
-    (this._roou as unknown as Record<string, number>)[field] = value;
+  _write_audio_format_raw(field: "audio_channels" | "audio_bit_depth", value: number): void {
+    this._roou[field] = value;
     this._sync_audio_format();
   }
 

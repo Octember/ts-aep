@@ -33,13 +33,13 @@ const _property_value = deferred<typeof import("../../parsers/property_value.ts"
 const _effect = deferred<typeof import("../../parsers/effect.ts")>("py_aep/parsers/effect");
 
 // NOTE(port): local twin of CPython `list.index` / `list.remove` (py_eq compare, ValueError "x is not in list"); no pyrt shim exists.
-export function list_index<T>(xs: T[], x: T): number {
+export function list_index<T>(xs: readonly T[], x: unknown): number {
   const i = xs.findIndex((y) => py_eq(y, x));
   if (i < 0) throw new ValueError(`${repr(x)} is not in list`);
   return i;
 }
 
-export function list_remove<T>(xs: T[], x: T): void {
+export function list_remove<T>(xs: T[], x: unknown): void {
   xs.splice(list_index(xs, x), 1);
 }
 
@@ -402,7 +402,7 @@ export class PropertyBase {
   get property_index(): number | null {
     const parent = this.parent_property;
     if (this.property_depth === 0 || parent == null) return null;
-    return list_index(parent.properties, this as unknown as Property | PropertyGroup);
+    return list_index(parent.properties, this);
   }
 
   /**
@@ -548,7 +548,7 @@ export class PropertyBase {
     const [parent, parent_tdgp] = this._can_mutate();
     const [start, end] = this._find_chunk_span(parent_tdgp);
     parent_tdgp.chunks.splice(start, end - start);
-    list_remove(parent.properties, this as unknown as Property | PropertyGroup);
+    list_remove(parent.properties, this);
     if (this._is_mask) _renumber_mask_auto_names(parent);
   }
 
@@ -622,7 +622,7 @@ export class PropertyBase {
     const new_prop = this._parse_clone(cloned, parent);
 
     // Insert in model list after original
-    const model_idx = list_index(parent.properties, this as unknown as Property | PropertyGroup);
+    const model_idx = list_index(parent.properties, this);
     parent.properties.splice(model_idx + 1, 0, new_prop as Property | PropertyGroup);
 
     if (this._is_mask) {

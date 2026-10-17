@@ -979,7 +979,7 @@ export class PropertyGroup extends PropertyBase {
       if (existing == null) {
         const created = new TdumChunk({ chunk_type, values: [bound] });
         tdbs.chunks.push(created);
-        (slot as unknown as Record<string, TdumChunk>)[attr] = created;
+        slot[attr] = created;
       } else {
         existing.values = [bound];
       }

@@ -810,15 +810,15 @@ export class Keyframe<V extends PropertyValue = PropertyValue> {
    * Only the written side is switched - the per-side setters are the
    * two halves of AE's one call.
    */
-  _on_ease_written(direction: string): void {
+  _on_ease_written(direction: "in" | "out"): void {
     this._ldat_item.temporal_auto_bezier = false;
     const bezier = KeyframeInterpolationType.BEZIER;
-    const name = `${direction}_interpolation_type`;
+    const name = `${direction}_interpolation_type` as const;
     if (getattr(this, name) !== bezier) {
       const prop = this._property;
       if (prop == null || prop.is_interpolation_type_valid(bezier)) {
         // NOTE(port): Python setattr() with a computed name; indexed assignment hits the same accessor.
-        (this as unknown as Record<string, KeyframeInterpolationType>)[name] = bezier;
+        this[name] = bezier;
       }
     }
     this._retime_roving_runs();
